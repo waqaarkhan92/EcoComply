@@ -261,7 +261,7 @@ Oblicore v1.0 introduces **5 new commercial pack types** and **Consultant Contro
 
 ## Implementation Status
 
-### ✅ Completed (6 documents)
+### ✅ Completed (18 documents)
 1. ✅ GAP_ANALYSIS_v1.0.md — Gap analysis complete
 2. ✅ EP_Compliance_Master_Plan.md — v1.0 pricing and pack types added
 3. ✅ EP_Compliance_Product_Logic_Specification.md — Pack generation logic and Consultant Control Centre logic added
