@@ -1,5 +1,5 @@
 # AI Microservice Prompts
-## EP Compliance Platform — Modules 1–3
+## Oblicore Platform — Modules 1–3
 **Document Version: 1.0 Status: Complete Depends On:**
 - AI Layer Design & Cost Optimization (1.5a)
 - AI Extraction Rules Library (1.6)
@@ -12,7 +12,7 @@
 
 # 1. Introduction
 ## Purpose
-This document contains production-ready prompt templates for all AI operations within the EP Compliance Platform. Each prompt is designed to:
+This document contains production-ready prompt templates for all AI operations within the Oblicore Platform. Each prompt is designed to:
 1. Minimize token usage through compressed system messages (<500 tokens)
 1. Maximize extraction accuracy through structured output schemas
 1. Enable confidence scoring for human review routing
@@ -3989,5 +3989,5 @@ If promoted variant causes issues:
 **END OF AI MICROSERVICE PROMPTS**
 
 *Document Version: 1.0*
-*Generated for: EP Compliance Platform*
+*Generated for: Oblicore Platform*
 *Sections 6.4-8.3 Complete*

@@ -1,5 +1,5 @@
 # Technical Architecture & Stack
-## EP Compliance Platform — Document 2.1
+## Oblicore Platform — Document 2.1
 
 **Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
 
@@ -10,7 +10,7 @@
 - ✅ Product Logic Specification (1.1) - Complete
 - ✅ Canonical Dictionary (1.2) - Complete
 
-**Purpose:** Defines the complete technical infrastructure, frameworks, and architectural decisions for the EP Compliance platform.
+**Purpose:** Defines the complete technical infrastructure, frameworks, and architectural decisions for the Oblicore platform.
 
 > [v1 UPDATE – Version Header – 2024-12-27]
 
@@ -1662,7 +1662,7 @@ Consultant Service
 
 # Summary
 
-This Technical Architecture & Stack document defines the complete technical infrastructure for the EP Compliance platform. Key decisions:
+This Technical Architecture & Stack document defines the complete technical infrastructure for the Oblicore platform. Key decisions:
 
 - **Database:** Supabase (PostgreSQL) with RLS for multi-tenant isolation
 - **Background Jobs:** BullMQ with Redis for reliable job processing

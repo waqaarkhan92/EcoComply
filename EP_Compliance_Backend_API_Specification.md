@@ -1,4 +1,4 @@
-# EP Compliance Backend API Specification
+# Oblicore Backend API Specification
 
 **Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
 
@@ -11,7 +11,7 @@
 - ✅ Background Jobs (2.3) - Complete
 - ✅ Notification & Messaging (2.4) - Complete
 
-**Purpose:** Defines the complete REST API specification for the EP Compliance platform, including all endpoints, request/response schemas, authentication, authorization, error handling, and integration points.
+**Purpose:** Defines the complete REST API specification for the Oblicore platform, including all endpoints, request/response schemas, authentication, authorization, error handling, and integration points.
 
 > [v1 UPDATE – Version Header – 2024-12-27]
 

@@ -1,4 +1,4 @@
-# EP Compliance Background Jobs Specification
+# Oblicore Background Jobs Specification
 
 **Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
 
@@ -10,7 +10,7 @@
 - ✅ Database Schema (2.2) - Complete
 - ✅ Technical Architecture (2.1) - Complete
 
-**Purpose:** Defines all background job types, their triggers, execution logic, error handling, retry mechanisms, and integration points for the EP Compliance platform.
+**Purpose:** Defines all background job types, their triggers, execution logic, error handling, retry mechanisms, and integration points for the Oblicore platform.
 
 > [v1 UPDATE – Version Header – 2024-12-27]
 
@@ -40,7 +40,7 @@
 
 ### Selected Framework: BullMQ with Redis
 
-The EP Compliance platform uses BullMQ with Redis for all background job processing. This framework was selected for:
+The Oblicore platform uses BullMQ with Redis for all background job processing. This framework was selected for:
 
 - **Reliability:** Built-in retry mechanisms and dead-letter queue support (required by PLS Section B.7.4)
 - **Scalability:** Horizontal scaling with multiple workers
@@ -94,7 +94,7 @@ Jobs are organized into dedicated queues based on function and priority:
 
 ## 1.2 Job Types Overview
 
-The EP Compliance platform defines **11 job types** across three categories:
+The Oblicore platform defines **11 job types** across three categories:
 
 ### Complete Job Type Registry
 
@@ -3786,7 +3786,7 @@ async function getJobSystemHealth(): Promise<{
 
 # Summary
 
-This complete specification defines all 10 background job types for the EP Compliance platform:
+This complete specification defines all 10 background job types for the Oblicore platform:
 
 ## Complete Job Type Registry
 

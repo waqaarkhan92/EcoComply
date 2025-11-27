@@ -1,4 +1,4 @@
-# EP Compliance Notification & Messaging Specification
+# Oblicore Notification & Messaging Specification
 
 **Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
 
@@ -11,7 +11,7 @@
 - ✅ Database Schema (2.2) - Complete
 - ✅ Background Jobs (2.3) - Complete
 
-**Purpose:** Defines the complete notification and messaging system, including email/SMS templates, escalation chains, delivery mechanisms, rate limiting, and integration with background jobs for the EP Compliance platform.
+**Purpose:** Defines the complete notification and messaging system, including email/SMS templates, escalation chains, delivery mechanisms, rate limiting, and integration with background jobs for the Oblicore platform.
 
 > [v1 UPDATE – Version Header – 2024-12-27]
 
@@ -37,7 +37,7 @@
 
 ## 1.1 Notification System Architecture
 
-The EP Compliance notification system provides multi-channel (email, SMS, in-app) notifications for compliance-related events, with intelligent escalation chains and preference management.
+The Oblicore notification system provides multi-channel (email, SMS, in-app) notifications for compliance-related events, with intelligent escalation chains and preference management.
 
 ### Key Features
 
@@ -159,7 +159,7 @@ function renderTemplate(template: string, variables: TemplateVariables): string 
 - **Neutral Background:** #E2E6E7 (Soft Slate)
 - **Dark Background:** #101314 (Dark Charcoal)
 - **Font:** System font stack (Arial, Helvetica, sans-serif)
-- **Logo:** EP Compliance logo (header)
+- **Logo:** Oblicore logo (header)
 - **Footer:** Company information, unsubscribe link
 
 ---
@@ -185,7 +185,7 @@ function renderTemplate(template: string, variables: TemplateVariables): string 
   <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <!-- Header -->
     <div style="background-color: #10B981; color: white; padding: 20px; text-align: center;">
-      <h1 style="margin: 0;">EP Compliance</h1>
+      <h1 style="margin: 0;">Oblicore</h1>
     </div>
     
     <!-- Body -->
@@ -212,7 +212,7 @@ function renderTemplate(template: string, variables: TemplateVariables): string 
     
     <!-- Footer -->
     <div style="background-color: #f3f4f6; padding: 20px; text-align: center; font-size: 12px; color: #6b7280;">
-      <p style="margin: 0;">{{company_name}} | EP Compliance Platform</p>
+      <p style="margin: 0;">{{company_name}} | Oblicore</p>
       <p style="margin: 5px 0;">
         <a href="{{unsubscribe_url}}" style="color: #6b7280;">Unsubscribe from deadline reminders</a>
       </p>
@@ -224,7 +224,7 @@ function renderTemplate(template: string, variables: TemplateVariables): string 
 
 **Plain Text Version:**
 ```
-EP Compliance - Upcoming Deadline Reminder
+Oblicore - Upcoming Deadline Reminder
 
 Hello,
 
@@ -240,7 +240,7 @@ Please ensure all required evidence is uploaded and linked to this obligation be
 View Obligation: {{action_url}}
 
 ---
-{{company_name}} | EP Compliance Platform
+{{company_name}} | Oblicore
 Unsubscribe: {{unsubscribe_url}}
 ```
 
@@ -319,7 +319,7 @@ Similar to 3-day template, but with:
   <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <!-- Header -->
     <div style="background-color: #EF4444; color: white; padding: 20px; text-align: center;">
-      <h1 style="margin: 0;">EP Compliance</h1>
+      <h1 style="margin: 0;">Oblicore</h1>
     </div>
     
     <!-- Body -->
@@ -350,7 +350,7 @@ Similar to 3-day template, but with:
     
     <!-- Footer -->
     <div style="background-color: #f3f4f6; padding: 20px; text-align: center; font-size: 12px; color: #6b7280;">
-      <p style="margin: 0;">{{company_name}} | EP Compliance Platform</p>
+      <p style="margin: 0;">{{company_name}} | Oblicore</p>
       <p style="margin: 5px 0;">
         <a href="{{unsubscribe_url}}" style="color: #6b7280;">Unsubscribe from overdue alerts</a>
       </p>

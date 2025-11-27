@@ -1,4 +1,4 @@
-# EP Compliance AI Integration Layer
+# Oblicore AI Integration Layer
 
 **Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
 
@@ -12,7 +12,7 @@
 - ✅ Backend API Specification (2.5) - Complete
 - ✅ Background Jobs Specification (2.3) - Complete
 
-**Purpose:** Defines the complete AI integration layer implementation for the EP Compliance platform, including OpenAI API integration, cost optimization, confidence scoring, rule library integration, error handling, and background job integration.
+**Purpose:** Defines the complete AI integration layer implementation for the Oblicore platform, including OpenAI API integration, cost optimization, confidence scoring, rule library integration, error handling, and background job integration.
 
 > [v1 UPDATE – Version Header – 2024-12-27]
 
@@ -43,7 +43,7 @@
 
 ## 1.1 Architecture Overview
 
-The AI Integration Layer serves as the bridge between the EP Compliance platform and OpenAI's API. It handles all aspects of AI-powered document extraction, including:
+The AI Integration Layer serves as the bridge between the Oblicore platform and OpenAI's API. It handles all aspects of AI-powered document extraction, including:
 
 - **Document Processing:** Extracting obligations, parameters, and run-hour records from permits and regulatory documents
 - **Cost Optimization:** Minimizing API costs through batching, caching, and token optimization

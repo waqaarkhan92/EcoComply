@@ -1,5 +1,5 @@
 # PRODUCT LOGIC SPECIFICATION (PLS)
-## EP Compliance Platform — Modules 1–3
+## Oblicore Platform — Modules 1–3
 
 **Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
 
@@ -433,7 +433,7 @@ When document is superseded:
 
 **Critical Rule:** The system displays the following disclaimer on all extraction results:
 
-> "Extracted obligations are derived by AI and may contain errors. Users must verify all extractions against original documents. EP Compliance does not guarantee completeness or accuracy of extractions. All compliance decisions remain the user's responsibility."
+> "Extracted obligations are derived by AI and may contain errors. Users must verify all extractions against original documents. Oblicore does not guarantee completeness or accuracy of extractions. All compliance decisions remain the user's responsibility."
 
 **Implementation:**
 - Disclaimer appears on every extraction review screen
@@ -3245,7 +3245,7 @@ For each gap, system suggests:
 - Table of contents
 - Bookmarks for navigation
 - Professional formatting
-- Watermark: "EP Compliance - Generated [date]"
+- Watermark: "Oblicore - Generated [date]"
 
 ### I.4.2 Regulator-Specific Templates
 
@@ -3856,5 +3856,5 @@ User uploads new permit version while obligations from old version are incomplet
 **END OF PRODUCT LOGIC SPECIFICATION**
 
 *Document Version: 1.0*  
-*Generated for: EP Compliance Platform*  
+*Generated for: Oblicore Platform*  
 *Source Documents: Master Commercial Plan (MCP), Master Build Order*

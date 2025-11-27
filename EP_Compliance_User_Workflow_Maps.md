@@ -1,5 +1,5 @@
 # USER WORKFLOW MAPS
-## EP Compliance Platform — Modules 1–3
+## Oblicore Platform — Modules 1–3
 
 **Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
 
@@ -35,7 +35,7 @@
 
 # 1. INTRODUCTION
 
-This document defines complete step-by-step user journey maps for all workflows in the EP Compliance Platform. Each workflow specifies the user actions, system responses, decision points, and error paths.
+This document defines complete step-by-step user journey maps for all workflows in the Oblicore Platform. Each workflow specifies the user actions, system responses, decision points, and error paths.
 
 **Terminology Note:** All entity names, field names, statuses, and enums match the Canonical Dictionary exactly.
 
@@ -2244,5 +2244,5 @@ This document defines complete step-by-step user journey maps for all workflows 
 **END OF USER WORKFLOW MAPS**
 
 *Document Version: 1.0*  
-*Generated for: EP Compliance Platform*  
+*Generated for: Oblicore Platform*  
 *Source Documents: Master Commercial Plan (MCP), Product Logic Specification (PLS), Canonical Dictionary*

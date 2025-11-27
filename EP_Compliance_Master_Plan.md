@@ -1,4 +1,4 @@
-# EP COMPLIANCE
+# Oblicore
 ## Master Commercial Profile & Go-To-Market Plan
 ### Environmental Compliance Platform for UK SMEs
 
@@ -10,7 +10,7 @@
 
 ## 1. EXECUTIVE SUMMARY
 
-EP Compliance transforms regulatory PDF permits into live compliance systems for UK SMEs. We solve a £2.4B annual problem: SMEs waste 15+ hours weekly managing permit obligations manually, face £5k–50k fines for non-compliance, and pay consultants £800/day for basic evidence management.
+Oblicore transforms regulatory PDF permits into live compliance systems for UK SMEs. We solve a £2.4B annual problem: SMEs waste 15+ hours weekly managing permit obligations manually, face £5k–50k fines for non-compliance, and pay consultants £800/day for basic evidence management.
 
 The platform launches with Module 1 (Environmental Permits) only. Modules 2 (Trade Effluent) and 3 (MCPD/Generators) are built after customer demand is validated through cross-sell triggers from Module 1 customers. This sequencing minimises build risk and accelerates time-to-revenue.
 
@@ -178,7 +178,7 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 
 ## 6. REGULATORY BOUNDARIES
 
-### What EP Compliance Does
+### What Oblicore Does
 
 - **Automates documentation:** Extract obligations, structure them, track deadlines
 - **Provides reminders:** Automated alerts for deadlines, renewals, monitoring
@@ -187,7 +187,7 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 - **Generates compliance packs:** Compile evidence into inspector-ready PDFs (5 pack types: Regulator, Tender, Board, Insurer, Audit)
 - **Tracks compliance status:** Shows which obligations have evidence, which are overdue
 
-### What EP Compliance Does NOT Do
+### What Oblicore Does NOT Do
 
 - **Does NOT replace environmental consultants:** We automate documentation, not compliance strategy
 - **Does NOT provide legal interpretations:** We extract obligations but do not interpret legal meaning
@@ -397,7 +397,7 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 
 ### Technical Moat: Iterative Rule Refinement
 
-EP Compliance improves extraction accuracy through systematic rule updates and pattern recognition. Each document parsed reveals new regulatory format variations, which are manually codified into rule libraries. Rule libraries expand to cover EA/SEPA/NRW format variations, water company consent patterns, MCPD registration formats. Industry-specific patterns (waste, food, manufacturing) are systematically identified and codified. Competitors cannot replicate accuracy without equivalent rule libraries (requires systematic analysis of 1,000+ documents = 2–3 years of pattern identification).
+Oblicore improves extraction accuracy through systematic rule updates and pattern recognition. Each document parsed reveals new regulatory format variations, which are manually codified into rule libraries. Rule libraries expand to cover EA/SEPA/NRW format variations, water company consent patterns, MCPD registration formats. Industry-specific patterns (waste, food, manufacturing) are systematically identified and codified. Competitors cannot replicate accuracy without equivalent rule libraries (requires systematic analysis of 1,000+ documents = 2–3 years of pattern identification).
 
 ### Switching Costs
 

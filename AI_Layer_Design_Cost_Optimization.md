@@ -1,5 +1,5 @@
 # AI Layer Design & Cost Optimization
-## EP Compliance Platform — Modules 1–3
+## Oblicore Platform — Modules 1–3
 
 **Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
 
@@ -2295,5 +2295,5 @@ async function calculateQualityMetrics(
 **END OF AI LAYER DESIGN & COST OPTIMIZATION**
 
 *Document Version: 1.0*  
-*Generated for: EP Compliance Platform*  
+*Generated for: Oblicore Platform*  
 *Source Documents: Product Logic Specification (PLS), Canonical Dictionary*

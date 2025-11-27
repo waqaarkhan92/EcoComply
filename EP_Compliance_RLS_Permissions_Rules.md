@@ -1,4 +1,4 @@
-# EP Compliance RLS & Permissions Rules Specification
+# Oblicore RLS & Permissions Rules Specification
 
 **Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
 
@@ -11,7 +11,7 @@
 - ✅ User Workflow Maps (1.3) - Complete
 - ✅ Database Schema (2.2) - Complete
 
-**Purpose:** Defines the complete Row Level Security (RLS) and permissions system for the EP Compliance platform, including all RLS policies, CRUD matrices, permission evaluation logic, and security implementation details.
+**Purpose:** Defines the complete Row Level Security (RLS) and permissions system for the Oblicore platform, including all RLS policies, CRUD matrices, permission evaluation logic, and security implementation details.
 
 > [v1 UPDATE – Version Header – 2024-12-27]
 
@@ -45,7 +45,7 @@
 
 ## 1.1 Security Architecture
 
-The EP Compliance platform uses **PostgreSQL Row Level Security (RLS)** to enforce data isolation and access control at the database level. This ensures that:
+The Oblicore platform uses **PostgreSQL Row Level Security (RLS)** to enforce data isolation and access control at the database level. This ensures that:
 
 - **Multi-tenant isolation:** Users can only access data from their assigned companies/sites
 - **Role-based access control:** Permissions are enforced based on user roles (Owner, Admin, Staff, Viewer, Consultant)
@@ -3414,7 +3414,7 @@ interface RLSPolicyConfig {
 
 **Document Complete**
 
-This specification defines the complete RLS and permissions system for the EP Compliance platform, including all 32 tables with RLS policies, complete CRUD matrices, permission evaluation logic, consultant isolation, service role handling, edge cases, performance considerations, deployment procedures, test cases, and TypeScript interfaces.
+This specification defines the complete RLS and permissions system for the Oblicore platform, including all 32 tables with RLS policies, complete CRUD matrices, permission evaluation logic, consultant isolation, service role handling, edge cases, performance considerations, deployment procedures, test cases, and TypeScript interfaces.
 
 **Document Status:** ✅ **COMPLETE**
 

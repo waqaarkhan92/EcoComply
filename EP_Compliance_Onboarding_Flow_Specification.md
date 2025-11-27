@@ -1,4 +1,4 @@
-# EP Compliance Onboarding Flow Specification
+# Oblicore Onboarding Flow Specification
 
 **Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
 
@@ -9,7 +9,7 @@
 - ✅ User Workflow Maps (1.3) - Complete
 - ✅ Frontend Routes (2.6) - Complete
 
-**Purpose:** Defines the complete onboarding flow system, including first-time user flows, tutorials, role-based variants, quick start optimization, and progress tracking for the EP Compliance platform.
+**Purpose:** Defines the complete onboarding flow system, including first-time user flows, tutorials, role-based variants, quick start optimization, and progress tracking for the Oblicore platform.
 
 > [v1 UPDATE – Version Header – 2024-12-27]
 
@@ -54,7 +54,7 @@
 
 ## 1.1 Onboarding System Architecture
 
-The EP Compliance onboarding system provides guided, step-by-step user journeys to help new users quickly understand and start using the platform. The system is optimized for quick time-to-value while providing comprehensive tutorials for users who want detailed guidance.
+The Oblicore onboarding system provides guided, step-by-step user journeys to help new users quickly understand and start using the platform. The system is optimized for quick time-to-value while providing comprehensive tutorials for users who want detailed guidance.
 
 ### Key Features
 
@@ -231,7 +231,7 @@ The first-time user flow guides new users through essential setup steps to get t
     - Banner: "Please verify your email to unlock all features"
     - Dismissible: User can dismiss, but banner reappears after 24 hours
 - **Email Template:**
-  - Subject: "Verify your EP Compliance account"
+  - Subject: "Verify your Oblicore account"
   - Content: Welcome message, verification code, verification link (alternative)
   - Branding: Uses primary color (#026A67), professional tone
 - **Success Action:** 
@@ -1446,7 +1446,7 @@ Get users to value in < 3 minutes by focusing on core steps only.
 - **Incomplete Onboarding:** Send reminder after 24 hours if incomplete
   - Trigger: Background job checks for incomplete onboarding after 24 hours
   - Query: `SELECT * FROM user_onboarding_progress WHERE user_id = :user_id AND created_at < NOW() - INTERVAL '24 hours' AND completed_at IS NULL AND skipped = false`
-  - Email template: "Complete your EP Compliance setup" (see Notification & Messaging 2.4)
+  - Email template: "Complete your Oblicore setup" (see Notification & Messaging 2.4)
 - **Progress Update:** Show progress in reminder email
   - Completed steps: "You've completed X of Y steps"
   - Next step: "Your next step is: [step name]"
@@ -4514,7 +4514,7 @@ function trackStepPerformance(step: string, duration: number) {
 
 **Document Complete - All Gaps Addressed**
 
-This specification now defines the complete onboarding flow system for the EP Compliance platform, including all required flow diagrams, detailed UI mockups, comprehensive error handling, implementation details, integration points, accessibility specifications, performance targets, testing requirements, and complete TypeScript interfaces.
+This specification now defines the complete onboarding flow system for the Oblicore platform, including all required flow diagrams, detailed UI mockups, comprehensive error handling, implementation details, integration points, accessibility specifications, performance targets, testing requirements, and complete TypeScript interfaces.
 
 
 ## 22.1 Onboarding State Interface
@@ -4563,7 +4563,7 @@ interface OnboardingStep {
 
 **Document Complete - All Gaps Addressed**
 
-This specification defines the complete onboarding flow system for the EP Compliance platform, optimized for quick time-to-value while providing comprehensive tutorials for users who want detailed guidance.
+This specification defines the complete onboarding flow system for the Oblicore platform, optimized for quick time-to-value while providing comprehensive tutorials for users who want detailed guidance.
 
 **Document Status:** ✅ **COMPLETE**
 

@@ -1,4 +1,4 @@
-# EP Compliance - New Pack Types Impact Analysis
+# Oblicore - New Pack Types Impact Analysis
 
 **Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
 

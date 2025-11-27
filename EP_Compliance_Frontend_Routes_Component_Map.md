@@ -1,4 +1,4 @@
-# EP Compliance Frontend Routes & Component Map
+# Oblicore Frontend Routes & Component Map
 
 **Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
 
@@ -10,7 +10,7 @@
 - ✅ User Workflow Maps (1.3) - Complete
 - ✅ Backend API (2.5) - Complete
 
-**Purpose:** Defines the complete frontend routing structure, component hierarchy, navigation patterns, and implementation specifications for the EP Compliance platform. This document ensures world-class design, mobile responsiveness, accessibility compliance, and optimal performance.
+**Purpose:** Defines the complete frontend routing structure, component hierarchy, navigation patterns, and implementation specifications for the Oblicore platform. This document ensures world-class design, mobile responsiveness, accessibility compliance, and optimal performance.
 
 > [v1 UPDATE – Version Header – 2024-12-27]
 
@@ -163,7 +163,7 @@ Each route includes metadata configuration:
 
 ```typescript
 export const metadata: Metadata = {
-  title: 'Page Title | EP Compliance',
+  title: 'Page Title | Oblicore',
   description: 'Page description for SEO and accessibility',
 };
 ```
@@ -2274,7 +2274,7 @@ function Footer({ version }: FooterProps) {
           <Link href="/support">Support</Link>
         </div>
         <div className="text-sm text-[#6B7280]">
-          © {new Date().getFullYear()} EP Compliance {version && `v${version}`}
+          © {new Date().getFullYear()} Oblicore {version && `v${version}`}
         </div>
       </div>
     </footer>
@@ -6871,7 +6871,7 @@ interface UseDocumentParams {
 
 ```typescript
 export const metadata: Metadata = {
-  title: 'Page Title | EP Compliance',
+  title: 'Page Title | Oblicore',
   description: 'Page description',
 };
 
@@ -6932,5 +6932,5 @@ export default function ProtectedPage() {
 
 **Document End**
 
-This document provides comprehensive specifications for implementing a world-class frontend for the EP Compliance platform, ensuring mobile responsiveness, accessibility compliance, optimal performance, and excellent user experience.
+This document provides comprehensive specifications for implementing a world-class frontend for the Oblicore platform, ensuring mobile responsiveness, accessibility compliance, optimal performance, and excellent user experience.
 

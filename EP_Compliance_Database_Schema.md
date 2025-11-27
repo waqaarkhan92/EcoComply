@@ -1,5 +1,5 @@
 # Database Schema
-## EP Compliance Platform — Document 2.2
+## Oblicore Platform — Document 2.2
 
 **Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
 
@@ -12,7 +12,7 @@
 - ✅ User Workflow Maps (1.3) - Complete
 - ✅ Technical Architecture (2.1) - Complete
 
-**Purpose:** Defines the complete database structure, including all tables, fields, indexes, constraints, and relationships for the EP Compliance platform.
+**Purpose:** Defines the complete database structure, including all tables, fields, indexes, constraints, and relationships for the Oblicore platform.
 
 > [v1 UPDATE – Version Header – 2024-12-27]
 
@@ -2167,7 +2167,7 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
 # Summary
 
-This Database Schema document defines the complete database structure for the EP Compliance platform. Key features:
+This Database Schema document defines the complete database structure for the Oblicore platform. Key features:
 
 - **Complete Coverage:** All tables, fields, indexes, and constraints from Canonical Dictionary
 - **PostgreSQL 15+ (Supabase):** Optimized for Supabase platform with RLS support

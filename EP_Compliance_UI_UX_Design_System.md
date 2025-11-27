@@ -1,4 +1,4 @@
-# EP Compliance UI/UX Design System Specification
+# Oblicore UI/UX Design System Specification
 
 **Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
 
@@ -10,7 +10,7 @@
 - ✅ Frontend Routes & Component Map (2.6) - Complete
 - ✅ Onboarding Flow Specification (2.7) - Complete
 
-**Purpose:** Defines the complete UI/UX design system for the EP Compliance platform, including design tokens, component specifications, navigation patterns, mobile responsiveness, accessibility guidelines, and implementation details. This document ensures world-class design, Procore-inspired aesthetics, and optimal user experience across all devices.
+**Purpose:** Defines the complete UI/UX design system for the Oblicore platform, including design tokens, component specifications, navigation patterns, mobile responsiveness, accessibility guidelines, and implementation details. This document ensures world-class design, Procore-inspired aesthetics, and optimal user experience across all devices.
 
 > [v1 UPDATE – Version Header – 2024-12-27]
 
@@ -39,7 +39,7 @@
 
 ## 1.1 Design Philosophy
 
-The EP Compliance platform follows a **Procore-inspired design philosophy** that emphasizes:
+The Oblicore platform follows a **Procore-inspired design philosophy** that emphasizes:
 
 - **Enterprise Authority:** Bold, confident styling - not "app cute"
 - **Dark Surfaces with Light Content Blocks:** High contrast for premium feel
@@ -695,7 +695,7 @@ function Footer({ version }: FooterProps) {
           </Link>
         </div>
         <div className="text-sm text-[#6B7280]">
-          © {new Date().getFullYear()} EP Compliance {version && `v${version}`}
+          © {new Date().getFullYear()} Oblicore {version && `v${version}`}
         </div>
       </div>
     </footer>
@@ -2203,7 +2203,7 @@ ConsultantClientDetail
 
 **Document Complete**
 
-This specification defines the complete UI/UX design system for the EP Compliance platform, including all design tokens, component specifications, navigation patterns, mobile responsiveness, accessibility guidelines, performance specifications, and implementation details.
+This specification defines the complete UI/UX design system for the Oblicore platform, including all design tokens, component specifications, navigation patterns, mobile responsiveness, accessibility guidelines, performance specifications, and implementation details.
 
 **Document Status:** ✅ **COMPLETE**
 

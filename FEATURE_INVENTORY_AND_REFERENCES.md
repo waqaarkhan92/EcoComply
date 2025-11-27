@@ -407,6 +407,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Background_Jobs_Specification.md` — Period-end review job
 - ✅ `EP_Compliance_Notification_Messaging_Specification.md` — Period-end review notifications
 - ✅ `EP_Compliance_Database_Schema.md` — Fields `review_status`, `period_end_review_date` in obligations table
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 5.2 (Background Job Tests - Period-End Review)
 - ✅ `Canonical_Dictionary.md` — Review status enums
 
 **Consistency Check:**
@@ -426,6 +427,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Background_Jobs_Specification.md` — Sustained failure monitoring job
 - ✅ `EP_Compliance_Notification_Messaging_Specification.md` — Sustained failure escalation notifications
 - ✅ `EP_Compliance_Database_Schema.md` — Table `escalations`, Fields `consecutive_failure_count`, `sustained_failure` in obligations table
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 5.2 (Background Job Tests - Sustained Failure Monitoring)
 - ✅ `Canonical_Dictionary.md` — Escalation types
 
 **Consistency Check:**
@@ -479,6 +481,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Database_Schema.md` — Field `enforcement_status` in evidence_items table
 - ✅ `EP_Compliance_Background_Jobs_Specification.md` — Evidence enforcement monitoring job
 - ✅ `EP_Compliance_Notification_Messaging_Specification.md` — Evidence enforcement notifications
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 5.2 (Background Job Tests - Evidence Enforcement)
 - ✅ `Canonical_Dictionary.md` — Evidence enforcement status enum
 
 **Consistency Check:**
@@ -1434,6 +1437,8 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Database_Schema.md` — Field `companies.stripe_customer_id`
 - ✅ `EP_Compliance_Product_Logic_Specification.md` — Section E (Pricing & Billing Logic)
 - ✅ `EP_Compliance_Technical_Architecture_Stack.md` — Stripe integration
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 4.5 (Payment Processing Tests)
+- ✅ `EP_Compliance_Deployment_DevOps_Strategy.md` — Section 4.1 (Stripe Integration Setup)
 - ✅ `Canonical_Dictionary.md` — Stripe customer ID field
 
 **Consistency Check:**
@@ -1452,6 +1457,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Backend_API_Specification.md` — Payment method endpoints
 - ✅ `EP_Compliance_Product_Logic_Specification.md` — Payment processing logic
 - ✅ `EP_Compliance_Technical_Architecture_Stack.md` — Stripe payment method management
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 4.5 (Payment Method Management Tests)
 
 **Consistency Check:**
 - ✅ Storage: Stripe secure storage — Consistent
@@ -1468,6 +1474,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Product_Logic_Specification.md` — Section E.4 (Billing Events)
 - ✅ `EP_Compliance_Background_Jobs_Specification.md` — Invoice generation job
 - ✅ `EP_Compliance_Backend_API_Specification.md` — Invoice endpoints
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 4.5 (Invoice Generation Tests)
 - ✅ `Canonical_Dictionary.md` — Invoice entities
 
 **Consistency Check:**
@@ -1487,6 +1494,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Background_Jobs_Specification.md` — Payment failure monitoring job
 - ✅ `EP_Compliance_Notification_Messaging_Specification.md` — Payment failure notifications
 - ✅ `EP_Compliance_Database_Schema.md` — Payment failure tracking fields
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 4.5 (Payment Failure Scenario Tests)
 
 **Consistency Check:**
 - ✅ Grace period: 7 days from billing date — Consistent
@@ -1505,6 +1513,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Database_Schema.md` — Field `companies.is_active` for suspension status
 - ✅ `EP_Compliance_Backend_API_Specification.md` — Subscription status endpoints
 - ✅ `EP_Compliance_RLS_Permissions_Rules.md` — Suspension access restrictions
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 4.5 (Subscription Suspension & Reactivation Tests)
 
 **Consistency Check:**
 - ✅ Suspension trigger: Payment failure after grace period — Consistent
@@ -1522,6 +1531,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Product_Logic_Specification.md` — Section E.2.3 (Per-Document Pricing - Proration Logic), Section E.2.4 (Combined Billing Calculation)
 - ✅ `EP_Compliance_Product_Logic_Specification.md` — Section E.4 (Billing Events - Proration)
 - ✅ `EP_Compliance_Database_Schema.md` — Proration calculation fields
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 4.5 (Proration Calculation Tests)
 
 **Consistency Check:**
 - ✅ Proration formula: `(base_price / days_in_period) * days_remaining` for additions — Consistent
@@ -1540,6 +1550,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `Canonical_Dictionary.md` — Enum `subscription_tier`, State transitions mention "User can upgrade/downgrade"
 - ✅ `EP_Compliance_Product_Logic_Specification.md` — Subscription tier logic
 - ✅ `EP_Compliance_Backend_API_Specification.md` — Subscription management endpoints
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 4.5 (Subscription Upgrade & Downgrade Tests)
 
 **Consistency Check:**
 - ✅ Subscription tiers: STARTER, PROFESSIONAL, ENTERPRISE — Consistent
@@ -1720,6 +1731,8 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Background_Jobs_Specification.md` — Section 3 (Document Processing Jobs)
 - ✅ `EP_Compliance_Database_Schema.md` — Table `background_jobs`
 - ✅ `EP_Compliance_Technical_Architecture_Stack.md` — Job infrastructure
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 5.2 (Background Job Tests - Document Processing)
+- ✅ `EP_Compliance_Deployment_DevOps_Strategy.md` — Section 5.2 (Background Jobs Infrastructure)
 - ✅ `Canonical_Dictionary.md` — Job types
 
 **Consistency Check:**
@@ -1737,6 +1750,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Product_Logic_Specification.md` — Section B.3 (Deadline Calculation Rules)
 - ✅ `EP_Compliance_Background_Jobs_Specification.md` — Section 2 (Core Monitoring Jobs)
 - ✅ `EP_Compliance_Database_Schema.md` — Table `deadlines`
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 5.2 (Background Job Tests - Deadline Generation)
 - ✅ `Canonical_Dictionary.md` — Deadline generation
 
 **Consistency Check:**
@@ -1755,6 +1769,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Background_Jobs_Specification.md` — Section 6.3 (Audit Pack Generation Job)
 - ✅ `EP_Compliance_Database_Schema.md` — Table `background_jobs` (job_type = 'AUDIT_PACK_GENERATION')
 - ✅ `EP_Compliance_Backend_API_Specification.md` — Pack generation endpoints
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 9 (v1.0 Pack Generation Testing)
 - ✅ `Canonical_Dictionary.md` — Job types
 
 **Consistency Check:**
@@ -2003,6 +2018,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Technical_Architecture_Stack.md` — Section 3.2 (Authentication & Authorization), Section 4.5 (Authentication Integration)
 - ✅ `EP_Compliance_Frontend_Routes_Component_Map.md` — Route `/login`
 - ✅ `EP_Compliance_Onboarding_Flow_Specification.md` — Login flow
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 3.2 (Authentication Tests - Login/Logout)
 - ✅ `Canonical_Dictionary.md` — Authentication entities
 
 **Consistency Check:**
@@ -2021,6 +2037,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Backend_API_Specification.md` — Section 2.1 (POST /api/v1/auth/logout)
 - ✅ `EP_Compliance_Frontend_Routes_Component_Map.md` — Logout functionality
 - ✅ `EP_Compliance_Technical_Architecture_Stack.md` — Session management
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 3.2 (Authentication Tests - Login/Logout)
 
 **Consistency Check:**
 - ✅ Token invalidation: Refresh token invalidated — Consistent
@@ -2038,6 +2055,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Frontend_Routes_Component_Map.md` — Password reset routes
 - ✅ `EP_Compliance_Onboarding_Flow_Specification.md` — Password reset flow
 - ✅ `EP_Compliance_Technical_Architecture_Stack.md` — Password reset integration
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 3.2 (Authentication Tests - Password Reset)
 
 **Consistency Check:**
 - ✅ Reset method: Email link/token — Consistent
@@ -2056,6 +2074,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Backend_API_Specification.md` — Email verification endpoints
 - ✅ `EP_Compliance_Frontend_Routes_Component_Map.md` — Route `/verify-email`
 - ✅ `EP_Compliance_Database_Schema.md` — Field `users.email_verified_at`
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 3.2 (Authentication Tests - Email Verification)
 
 **Consistency Check:**
 - ✅ Verification code: 6-digit numeric — Consistent
@@ -2073,6 +2092,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Backend_API_Specification.md` — Section 2.1 (POST /api/v1/auth/refresh)
 - ✅ `EP_Compliance_Technical_Architecture_Stack.md` — Token refresh logic
 - ✅ `EP_Compliance_Frontend_Routes_Component_Map.md` — Token refresh handling
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 3.2 (Authentication Tests - Token Refresh)
 
 **Consistency Check:**
 - ✅ Refresh endpoint: POST /api/v1/auth/refresh — Consistent
@@ -2089,6 +2109,8 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Technical_Architecture_Stack.md` — Section 3.2 (Session Management)
 - ✅ `EP_Compliance_Backend_API_Specification.md` — Session handling
 - ✅ `EP_Compliance_Frontend_Routes_Component_Map.md` — Session management
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 3.2 (Authentication Tests - Session Management)
+- ✅ `EP_Compliance_Deployment_DevOps_Strategy.md` — Section 3.2 (Session Storage Configuration)
 
 **Consistency Check:**
 - ✅ Storage: HTTP-only cookies (web), localStorage (mobile) — Consistent
@@ -2105,6 +2127,8 @@ This document ensures **true consistency** across all documentation by:
 **Referenced In:**
 - ✅ `EP_Compliance_Technical_Architecture_Stack.md` — Section 4.5 (OAuth support via Supabase)
 - ✅ `EP_Compliance_Backend_API_Specification.md` — OAuth endpoints (if implemented)
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 3.2 (Authentication Tests - OAuth Integration)
+- ✅ `EP_Compliance_Deployment_DevOps_Strategy.md` — Section 4.5 (OAuth Provider Configuration)
 
 **Consistency Check:**
 - ✅ Supported providers: Google, GitHub (via Supabase) — Consistent
@@ -2348,6 +2372,8 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Backend_API_Specification.md` — Section 7 (Rate Limiting)
 - ✅ `EP_Compliance_Technical_Architecture_Stack.md` — Rate limiting strategy
 - ✅ `EP_Compliance_Master_Build_Order.md` — Rate limiting implementation
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 4.3 (Rate Limiting Tests)
+- ✅ `EP_Compliance_Deployment_DevOps_Strategy.md` — Section 3.2 (Rate Limiting Configuration)
 
 **Consistency Check:**
 - ✅ Rate limit: 100 requests/hour per user — Consistent
@@ -2365,6 +2391,8 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Backend_API_Specification.md` — Section 1.2 (API Versioning)
 - ✅ `EP_Compliance_Technical_Architecture_Stack.md` — Section 3.1 (API Versioning)
 - ✅ `EP_Compliance_Master_Build_Order.md` — API versioning strategy
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 4.4 (API Versioning Tests)
+- ✅ `EP_Compliance_Deployment_DevOps_Strategy.md` — Section 3.1 (API Versioning Strategy)
 
 **Consistency Check:**
 - ✅ Versioning strategy: URL-based (/api/v1/...) — Consistent
@@ -2382,6 +2410,8 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Backend_API_Specification.md` — Section 1.0 (Health Check Endpoint)
 - ✅ `EP_Compliance_Technical_Architecture_Stack.md` — Section 9.3 (Health Check Endpoints)
 - ✅ `EP_Compliance_Background_Jobs_Specification.md` — Health check integration
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 4.5 (Health Check Tests)
+- ✅ `EP_Compliance_Deployment_DevOps_Strategy.md` — Section 6.2 (Health Check Monitoring Setup)
 
 **Consistency Check:**
 - ✅ Endpoint: GET /api/v1/health — Consistent
@@ -2400,6 +2430,8 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Technical_Architecture_Stack.md` — Section 3.3 (Error Response Structure)
 - ✅ `EP_Compliance_Master_Build_Order.md` — Error handling patterns
 - ✅ `EP_Compliance_User_Workflow_Maps.md` — Section 6 (Common Error Handling Patterns)
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 4.6 (Error Response Format Tests)
+- ✅ `EP_Compliance_Deployment_DevOps_Strategy.md` — Section 6.3 (Error Logging Configuration)
 
 **Consistency Check:**
 - ✅ Error format: Standardized JSON structure — Consistent
@@ -2417,6 +2449,8 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Technical_Architecture_Stack.md` — Section 1.6 (Real-time Subscriptions), Section 4.4 (Real-time Updates)
 - ✅ `EP_Compliance_RLS_Permissions_Rules.md` — Real-time subscription policies
 - ✅ `EP_Compliance_Database_Schema.md` — Real-time enabled tables
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 4.7 (Real-Time Subscription Tests)
+- ✅ `EP_Compliance_Deployment_DevOps_Strategy.md` — Section 3.3 (Supabase Realtime Configuration)
 
 **Consistency Check:**
 - ✅ Provider: Supabase Realtime — Consistent
@@ -2434,6 +2468,8 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Technical_Architecture_Stack.md` — Section 9.3 (Monitoring & Observability)
 - ✅ `EP_Compliance_Background_Jobs_Specification.md` — Logging strategy
 - ✅ `EP_Compliance_Master_Build_Order.md` — Logging implementation
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 4.8 (Logging Format Tests)
+- ✅ `EP_Compliance_Deployment_DevOps_Strategy.md` — Section 6.1 (Logging Infrastructure Setup)
 
 **Consistency Check:**
 - ✅ Log format: Structured JSON — Consistent
@@ -2453,6 +2489,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Frontend_Routes_Component_Map.md` — Upload progress bar, progress tracking
 - ✅ `EP_Compliance_Onboarding_Flow_Specification.md` — Upload progress indicators
 - ✅ `EP_Compliance_UI_UX_Design_System.md` — Progress bar components
+- ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 4.9 (Upload Progress Tests)
 
 **Consistency Check:**
 - ✅ Progress tracking: Bytes uploaded, total bytes, percentage — Consistent
@@ -2473,6 +2510,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Technical_Architecture_Stack.md` — Section 6.1 (Webhooks - If Any)
 - ✅ `EP_Compliance_Notification_Messaging_Specification.md` — Webhook callbacks for delivery providers
 - ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 11.8 (Webhook Endpoint Tests)
+- ✅ `EP_Compliance_Deployment_DevOps_Strategy.md` — Section 6.4 (Webhook Infrastructure Setup)
 
 **Consistency Check:**
 - ✅ Webhook events: document.extracted, obligation.deadline_approaching, etc. — Consistent

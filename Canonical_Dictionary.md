@@ -1,6 +1,6 @@
 CANONICAL DICTIONARY
 
-EP Compliance Platform — Modules 1–3
+Oblicore Platform — Modules 1–3
 
 **Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
 
@@ -123,7 +123,7 @@ B.1 Company
 
 Entity Name: Company
 
-Purpose: Represents a customer organisation using the EP Compliance platform. Top-level entity in the data hierarchy.
+Purpose: Represents a customer organisation using the Oblicore platform. Top-level entity in the data hierarchy.
 
 Key Attributes:
 
@@ -3799,6 +3799,12 @@ Values:
 
 * `REJECTED`: Review completed; extraction rejected (obligation invalid)
 
+* `PENDING_INTERPRETATION`: Obligation flagged as subjective, awaiting interpretation
+
+* `INTERPRETED`: Subjective obligation has been interpreted and locked
+
+* `NOT_APPLICABLE`: Obligation marked as not applicable by user
+
 State Transitions:
 
 * Initial state: PENDING
@@ -3809,9 +3815,15 @@ State Transitions:
 
 * PENDING → REJECTED (user rejects)
 
+* PENDING → PENDING_INTERPRETATION (subjective obligation flagged)
+
+* PENDING_INTERPRETATION → INTERPRETED (interpretation completed and locked)
+
+* PENDING_INTERPRETATION → NOT_APPLICABLE (user marks as N/A)
+
 * REJECTED → PENDING (if re-activated)
 
-PLS Reference: Section A.7 (Human Review Triggers), Section B.11 (Manual Override Rules)
+PLS Reference: Section A.7 (Human Review Triggers), Section B.11 (Manual Override Rules), Section A.6 (Subjective Obligation Flags)
 
 
 

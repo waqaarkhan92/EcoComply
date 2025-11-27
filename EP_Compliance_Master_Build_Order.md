@@ -1,4 +1,4 @@
-# ✅ EP COMPLIANCE — MASTER BUILD ORDER
+# ✅ Oblicore — MASTER BUILD ORDER
 
 **Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
 
