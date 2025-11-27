@@ -11,6 +11,28 @@
 
 ---
 
+# Table of Contents
+
+- [1. Introduction](#1-introduction)
+- [2. Module 1: Environmental Permits](#2-module-1-environmental-permits)
+  - [2.1 Permit Upload & Extraction](#21-permit-upload--extraction)
+  - [2.1.1 Subjective Interpretation Workflow](#211-subjective-interpretation-workflow)
+  - [2.2 Obligation Review & Editing](#22-obligation-review--editing)
+  - [2.3 Evidence Capture & Linking](#23-evidence-capture--linking)
+  - [2.4 Obligation Completion Workflow](#24-obligation-completion-workflow)
+  - [2.5 Monitoring Schedule Creation](#25-monitoring-schedule-creation)
+  - [2.5 Compliance Dashboard Navigation](#25-compliance-dashboard-navigation)
+  - [2.6 Pack Generation (v1.0)](#26-pack-generation-v10)
+  - [2.6.1 Pack Distribution Workflow (Growth Plan)](#261-pack-distribution-workflow-growth-plan)
+  - [2.7 Consultant Control Centre Workflows](#27-consultant-control-centre-workflows)
+    - [2.7.1 Consultant Onboarding Workflow](#271-consultant-onboarding-workflow)
+    - [2.7.2 Client Assignment Workflow](#272-client-assignment-workflow)
+    - [2.7.3 Consultant Pack Generation for Client](#273-consultant-pack-generation-for-client)
+- [3. Module 2: Trade Effluent](#3-module-2-trade-effluent)
+- [4. Module 3: MCPD/Generators](#4-module-3-mcpdgenerators)
+
+---
+
 # 1. INTRODUCTION
 
 This document defines complete step-by-step user journey maps for all workflows in the EP Compliance Platform. Each workflow specifies the user actions, system responses, decision points, and error paths.
@@ -718,6 +740,9 @@ This document defines complete step-by-step user journey maps for all workflows 
 
 7. **System:** Validates configuration
     - **If** Board Pack and user not Owner/Admin, **then** display error "Board Pack requires Owner/Admin role"
+    - **If** Board Pack and site_id provided, **then** display error "Board Pack requires company-level scope (no site_id)"
+    - **If** Board Pack and company_id missing, **then** display error "Board Pack requires company_id"
+    - **If** non-Board Pack and site_id missing, **then** display error "Pack type requires site_id"
     - **If** no Obligations match filters, **then** display warning "No data matches your filters"
     - **Else** proceed to generation
 

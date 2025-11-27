@@ -3169,8 +3169,12 @@ interface UpdateNotificationPreferenceRequest {
 **Request Schema:**
 ```typescript
 interface CreateAuditPackRequest {
-  site_id: string;
   pack_type: 'AUDIT_PACK' | 'REGULATOR_INSPECTION' | 'TENDER_CLIENT_ASSURANCE' | 'BOARD_MULTI_SITE_RISK' | 'INSURER_BROKER';
+  // Board Pack: company_id required, site_id must be null
+  // All other packs: site_id required, company_id derived from site
+  company_id?: string;  // Required for Board Pack only
+  site_id?: string;     // Required for all packs except Board Pack
+  document_id?: string; // Optional for Board Pack (multi-site), required for other packs
   date_range: {
     start: string; // ISO date
     end: string; // ISO date
@@ -3183,6 +3187,16 @@ interface CreateAuditPackRequest {
 }
 ```
 
+**Validation Rules:**
+- **If** `pack_type === 'BOARD_MULTI_SITE_RISK'`:
+  - `company_id` MUST be provided
+  - `site_id` MUST be `null` or omitted
+  - User MUST be Owner or Admin
+- **Else** (all other pack types):
+  - `site_id` MUST be provided
+  - `company_id` is derived from `site_id` (not required in request)
+  - `document_id` is required (except for Audit Pack which can be multi-document)
+
 **Plan-Based Access Control:**
 - Core Plan: `REGULATOR_INSPECTION`, `AUDIT_PACK` only
 - Growth Plan: All pack types
@@ -3190,7 +3204,14 @@ interface CreateAuditPackRequest {
 
 **Validation:**
 - Validates user plan has access to requested `pack_type`
+- **If** `pack_type === 'BOARD_MULTI_SITE_RISK'`:
+  - Validates `company_id` is provided and `site_id` is null
+  - Validates user is Owner or Admin (returns `403 FORBIDDEN` if Staff)
+- **Else**:
+  - Validates `site_id` is provided
+  - Validates user has access to site
 - Returns `403 FORBIDDEN` if pack type not available for user's plan
+- Returns `422 UNPROCESSABLE_ENTITY` if validation fails (missing company_id for Board Pack, missing site_id for other packs)
 
 **Response:** 202 Accepted
 ```json
@@ -3317,7 +3338,7 @@ Content-Length: {file_size}
 
 **Purpose:** Generate Tender/Client Assurance Pack (Growth plan)
 
-**Authentication:** Required (Owner, Admin, Staff)
+**Authentication:** Required (Owner, Admin, Staff, Consultant for assigned clients)
 
 **Plan Requirement:** Growth Plan or Consultant Edition
 
@@ -3375,9 +3396,9 @@ Content-Length: {file_size}
 
 ## 16.9 POST /api/v1/packs/insurer
 
-**Purpose:** Generate Insurer/Broker Pack (Growth plan, bundled with Tender pack)
+**Purpose:** Generate Insurer/Broker Pack (Growth plan, requires Growth Plan same as Tender Pack — independent pack type)
 
-**Authentication:** Required (Owner, Admin, Staff)
+**Authentication:** Required (Owner, Admin, Staff, Consultant for assigned clients)
 
 **Plan Requirement:** Growth Plan or Consultant Edition
 
@@ -6618,7 +6639,12 @@ interface BackgroundJobResponse {
 
 **Validation:**
 - Validates consultant has `ACTIVE` assignment to client company
+- **If** `pack_type === 'BOARD_MULTI_SITE_RISK'`:
+  - Returns `403 FORBIDDEN` - "Consultants cannot generate Board Packs (requires Owner/Admin role)"
+  - **Rationale:** Board Pack contains company-wide risk data requiring executive-level access
+- Validates pack type access based on client's plan
 - Returns `403 FORBIDDEN` if consultant not assigned to client
+- Returns `422 UNPROCESSABLE_ENTITY` if Board Pack requested (consultants cannot generate)
 
 **Error Codes:**
 - `403 FORBIDDEN` - Consultant not assigned to client

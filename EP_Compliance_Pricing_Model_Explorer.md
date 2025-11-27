@@ -20,7 +20,7 @@ EP Compliance uses plan-based pricing with pack capabilities:
 |------|-------|----------|
 | **Core Plan** | £149/month per site | Module 1 + Regulator Pack + Audit Pack |
 | **Growth Plan** | £249/month per site | Core Plan + Tender Pack + Board Pack + Insurer Pack |
-| **Consultant Edition** | £299/month | Growth Plan + Multi-client access + Client pack generation |
+| **Consultant Edition** | £299/month per consultant | Growth Plan + Multi-client access (unlimited clients) + Client pack generation |
 
 **Module Add-Ons (all plans):**
 - Module 2 — Trade Effluent: £59/month per site

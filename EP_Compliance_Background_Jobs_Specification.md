@@ -2714,9 +2714,9 @@ function detectKeywords(
 ```typescript
 interface AuditPackGenerationJobInput {
   pack_type: 'AUDIT_PACK' | 'REGULATOR_INSPECTION' | 'TENDER_CLIENT_ASSURANCE' | 'BOARD_MULTI_SITE_RISK' | 'INSURER_BROKER'; // Required: Pack type
+  company_id: UUID;            // Required: Always required
   document_id?: UUID;           // Optional: Target document (required for most pack types, not Board Pack)
-  company_id: UUID;            // Required: Company ID
-  site_id?: UUID;              // Optional: Site ID (required for most pack types, not Board Pack)
+  site_id?: UUID;              // Required for all packs except BOARD_MULTI_SITE_RISK (must be null for Board Pack)
   date_range_start: Date;      // Required: Compliance period start
   date_range_end: Date;        // Required: Compliance period end
   filters_applied?: {          // Optional: Filtering options
@@ -2730,6 +2730,27 @@ interface AuditPackGenerationJobInput {
   recipient_name?: string;     // Optional: Recipient name
   purpose?: string;            // Optional: Pack purpose
   requested_by: UUID;          // Required: User requesting generation
+}
+
+**Validation Function:**
+```typescript
+function validatePackGenerationInput(input: AuditPackGenerationJobInput): void {
+  if (input.pack_type === 'BOARD_MULTI_SITE_RISK') {
+    if (input.site_id !== null && input.site_id !== undefined) {
+      throw new ValidationError('Board Pack must have site_id = null');
+    }
+    if (!input.company_id) {
+      throw new ValidationError('Board Pack requires company_id');
+    }
+    // Role validation: Board Pack requires Owner/Admin (validated at API level, re-check here)
+  } else {
+    if (!input.site_id) {
+      throw new ValidationError(`${input.pack_type} requires site_id`);
+    }
+    if (!input.company_id) {
+      throw new ValidationError(`${input.pack_type} requires company_id`);
+    }
+  }
 }
 ```
 
@@ -3006,12 +3027,16 @@ interface AuditPackContent {
 {
   alert_type: 'SYSTEM',
   severity: 'ERROR',
-  title: 'Audit Pack Generation Failed',
-  message: `Failed to generate audit pack for ${document.title}. Error: ${error_message}`,
+  title: 'Pack Generation Failed',
+  message: `Failed to generate ${pack_type} pack. Error: ${error_message}`,
   entity_type: 'AUDIT_PACK',
   entity_id: job_id
 }
 ```
+
+**Pack Type-Specific Error Messages:**
+- **Board Pack:** "Board Pack generation failed: {error_message}. Ensure company_id is provided and site_id is null."
+- **Other Packs:** "Pack generation failed: {error_message}. Ensure site_id is provided."
 
 ---
 

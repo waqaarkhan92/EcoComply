@@ -1228,7 +1228,34 @@ PackDetailPage
 
 **URL Pattern:** `/companies/:companyId/packs/board`  
 **File:** `app/(dashboard)/companies/[companyId]/packs/board/page.tsx`  
-**Access:** Growth Plan, Owner/Admin only
+**Access:** Growth Plan, Owner/Admin role only
+
+**Component Structure:**
+```
+BoardPackGenerationPage
+├── RoleGuard (Owner/Admin only — redirects Staff users)
+├── PlanGuard (Growth Plan or Consultant Edition)
+├── CompanyHeader
+│   ├── CompanyName
+│   └── SiteCount
+├── PackConfigurationForm
+│   ├── DateRangeSelector
+│   ├── IncludeAllSitesToggle (always true for Board Pack, disabled)
+│   ├── RecipientNameInput
+│   └── PurposeTextarea (optional)
+└── GenerateButton
+```
+
+**Validation:**
+- **Role Check:** Must be Owner or Admin (Staff redirected with error message)
+- **Plan Check:** Must be Growth Plan or Consultant Edition
+- **Company Scope:** Validates company_id is provided, site_id is null
+- **API Call:** Sends `company_id`, `pack_type: 'BOARD_MULTI_SITE_RISK'`, `site_id: null`
+
+**Error Handling:**
+- Role insufficient: "Board Pack requires Owner or Admin role"
+- Plan insufficient: "Upgrade to Growth Plan to generate Board Packs"
+- Validation error: "Board Pack requires company-level scope"
 
 **Purpose:** Board Pack generation (multi-site aggregation)
 

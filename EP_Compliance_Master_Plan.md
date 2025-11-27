@@ -15,8 +15,8 @@ EP Compliance transforms regulatory PDF permits into live compliance systems for
 The platform launches with Module 1 (Environmental Permits) only. Modules 2 (Trade Effluent) and 3 (MCPD/Generators) are built after customer demand is validated through cross-sell triggers from Module 1 customers. This sequencing minimises build risk and accelerates time-to-revenue.
 
 **Revenue Targets:**
-- **Year 1:** 50 customers × £174 ARPU = £8,700 MRR (£104k ARR)
-- **Year 2:** 200 customers × £201 ARPU = £40,200 MRR (£482k ARR)
+- **Year 1:** 50 customers × £189 ARPU = £9,450 MRR (£113.4k ARR)
+- **Year 2:** 200 customers × £224 ARPU = £44,800 MRR (£537.6k ARR)
 
 ---
 
@@ -98,7 +98,7 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 - Obligation extraction engine (LLM-powered parsing, deadline detection, subjective obligation flagging)
 - Evidence management system (file upload, obligation linking, audit trail)
 - Monitoring scheduler (recurring tasks, deadline alerts)
-- Audit pack generator (evidence compilation, inspector-ready PDFs)
+- Pack generator (5 pack types: Regulator, Tender, Board, Insurer, Audit — evidence compilation, inspector-ready PDFs)
 
 **Module-Specific Rule Libraries (20% per module):**
 - **Module 1:** EA/SEPA/NRW permit patterns, standard conditions library
@@ -121,7 +121,7 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 - Evidence capture (mobile-responsive upload, photos, CSV import)
 - Monitoring schedule (auto-generated, customisable frequencies)
 - Compliance dashboard (traffic light status, overdue obligations, upcoming deadlines)
-- Audit pack generator (one-click, inspector-ready PDFs)
+- Pack generator (5 pack types: Regulator, Tender, Board, Insurer, Audit — one-click, inspector-ready PDFs)
 - Multi-site support (site switcher, consolidated view, permissions)
 - Alerts & notifications (email/SMS, escalation chains)
 - Human override workflow (edit obligations, override frequencies, mark N/A)
@@ -133,7 +133,7 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 - **Regulator/Inspection Pack** (included in Core plan): Inspector-ready compliance evidence compilation
 - **Tender/Client Assurance Pack** (Growth plan): Compliance summary for client tenders and assurance
 - **Board/Multi-Site Risk Pack** (Growth plan): Multi-site risk summary and compliance trends for board reporting
-- **Insurer/Broker Pack** (bundled with Tender pack): Risk narrative and compliance controls for insurance purposes
+- **Insurer/Broker Pack** (requires Growth Plan, same as Tender Pack): Risk narrative and compliance controls for insurance purposes. Independent pack type — can be generated separately from Tender Pack.
 - **Audit Pack** (all plans): Full evidence compilation for internal audits
 
 **ROI:** Replaces £6,400/year consultant fees (8 days → 2 days). Saves 6–10 hours/week internal time (£9,360–15,600/year value). Prevents £5k–10k fine risk annually (40% failure rate → 5%). **Total value: £20,760–32,000/year. Cost: £1,788/year. ROI: 500–900%.**
@@ -184,7 +184,7 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 - **Provides reminders:** Automated alerts for deadlines, renewals, monitoring
 - **Manages evidence:** Store, link, organise evidence files
 - **Maps obligations:** Structured obligation trees with dependencies
-- **Generates audit packs:** Compile evidence into inspector-ready PDFs
+- **Generates compliance packs:** Compile evidence into inspector-ready PDFs (5 pack types: Regulator, Tender, Board, Insurer, Audit)
 - **Tracks compliance status:** Shows which obligations have evidence, which are overdue
 
 ### What EP Compliance Does NOT Do
@@ -231,7 +231,7 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 
 | Component | Price | Notes |
 |-----------|-------|-------|
-| **Module 1 — Environmental Permits** | £149/month per site | Includes 1 permit, unlimited users, unlimited evidence, tasks, alerts, schedules, audit pack |
+| **Module 1 — Environmental Permits** | £149/month per site | Includes 1 permit, unlimited users, unlimited evidence, tasks, alerts, schedules, Regulator Pack + Audit Pack |
 | **Additional Permit** | £49/month each | For sites with multiple permits |
 | **Additional Site** | £99/month each | For multi-site operators |
 | **Module 2 — Trade Effluent (Add-On)** | £59/month per site | Requires prerequisite module (enforced via `modules.requires_module_id`, currently Module 1). Unlimited consents per site |
@@ -268,17 +268,17 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 
 ### ARPU Build-Up & Customer Mix
 
-**Year 1 Mix (£174 ARPU):**
-- 60% Module 1 only (£149)
-- 25% Module 1 + extra permits (£198)
-- 10% Module 1 + Module 2 (£208)
-- 5% Full platform (£287)
+**Year 1 Mix (£189 ARPU):**
+- 60% Core Plan only (£149)
+- 25% Core Plan + extra permits (£198)
+- 10% Growth Plan (£249)
+- 5% Consultant Edition (£299)
 
-**Year 2 Mix (£201 ARPU):**
-- 40% Module 1 only
-- 20% + extra permits
-- 25% + Module 2
-- 15% Full platform
+**Year 2 Mix (£224 ARPU):**
+- 50% Core Plan only (£149)
+- 20% Core Plan + extra permits (£198)
+- 25% Growth Plan (£249)
+- 5% Consultant Edition (£299)
 
 ### TAM/SAM Analysis
 
@@ -310,7 +310,7 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 
 **Hyper-Targeted Outbound:** Download EA public enforcement register. Filter all waste sites with enforcement action in last 18 months. Prioritise: WTN failures, odour complaints, waste storage breaches, fire prevention issues. Message: "I noticed you had an enforcement notice in May 2024. Your permit has 73 obligations — you're likely missing some. We can surface all obligations in 60 seconds."
 
-**Demo Flow:** Upload their real permit → Extract obligations live (60 seconds max) → Show evidence gaps → Show monitoring schedule → Show audit pack → Offer 14-day access with onboarding done for them.
+**Demo Flow:** Upload their real permit → Extract obligations live (60 seconds max) → Show evidence gaps → Show monitoring schedule → Show Regulator Pack → Offer 14-day access with onboarding done for them.
 
 **Target:** 30 waste operators × £149 = **£4,470 MRR by Month 3**
 

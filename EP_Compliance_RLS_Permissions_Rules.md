@@ -1358,84 +1358,202 @@ USING (
 
 **Policy:** `audit_packs_select_site_access`
 
+> [v1 UPDATE – Board Pack SELECT Exception – 2024-12-27]
+
 ```sql
 CREATE POLICY audit_packs_select_site_access ON audit_packs
 FOR SELECT
 USING (
-  site_id IN (
-    SELECT site_id FROM user_site_assignments
-    WHERE user_id = auth.uid()
+  -- Board Pack: company-level access (site_id = NULL, Owner/Admin only)
+  (
+    pack_type = 'BOARD_MULTI_SITE_RISK'
+    AND site_id IS NULL
+    AND company_id IN (
+      SELECT company_id FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('owner', 'admin')
+    )
+  )
+  OR
+  -- Other Pack Types: site-level access
+  (
+    pack_type != 'BOARD_MULTI_SITE_RISK'
+    AND site_id IS NOT NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+    )
+  )
+  OR
+  -- Consultants: client assignment check
+  (
+    pack_type != 'BOARD_MULTI_SITE_RISK'
+    AND site_id IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM consultant_client_assignments
+      WHERE consultant_id = auth.uid()
+      AND client_company_id = company_id
+      AND status = 'ACTIVE'
+    )
   )
 );
 ```
 
 **Access Logic:**
-- Users can see audit packs from their assigned sites
+- **Board Pack:** Only Owners/Admins can view (company-level access)
+- **Other Pack Types:** Users can see packs from their assigned sites
+- **Consultants:** Can view packs for assigned clients
 
 ### INSERT Policy
 
 **Policy:** `audit_packs_insert_staff_access`
 
+> [v1 UPDATE – Board Pack RLS Exception – 2024-12-27]
+
 ```sql
 CREATE POLICY audit_packs_insert_staff_access ON audit_packs
 FOR INSERT
 WITH CHECK (
-  site_id IN (
-    SELECT site_id FROM user_site_assignments
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff', 'consultant')
+  -- Board Pack: company-level access (site_id = NULL, Owner/Admin only)
+  (
+    pack_type = 'BOARD_MULTI_SITE_RISK'
+    AND site_id IS NULL
+    AND company_id IN (
+      SELECT company_id FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('owner', 'admin')
+    )
+  )
+  OR
+  -- Regular users: site-level access (site_id required)
+  (
+    pack_type != 'BOARD_MULTI_SITE_RISK'
+    AND site_id IS NOT NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('owner', 'admin', 'staff')
+    )
+  )
+  OR
+  -- Consultants: client assignment check (site_id required, not Board Pack)
+  (
+    pack_type != 'BOARD_MULTI_SITE_RISK'
+    AND site_id IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM consultant_client_assignments
+      WHERE consultant_id = auth.uid()
+      AND client_company_id = company_id
+      AND status = 'ACTIVE'
+    )
   )
 );
 ```
 
 **Access Logic:**
-- Owners, Admins, Staff, and Consultants can generate audit packs
+- **Board Pack:** Only Owners/Admins can generate (company-level access, site_id = NULL)
+- **Other Pack Types:** Owners, Admins, Staff can generate (site-level access)
+- **Consultants:** Can generate packs for assigned clients (site-level access, not Board Pack)
+- **Rationale:** Board Pack contains company-wide risk data requiring executive-level access
 
 ### UPDATE Policy
 
 **Policy:** `audit_packs_update_staff_access`
 
+> [v1 UPDATE – Board Pack UPDATE Exception – 2024-12-27]
+
 ```sql
 CREATE POLICY audit_packs_update_staff_access ON audit_packs
 FOR UPDATE
 USING (
-  site_id IN (
-    SELECT site_id FROM user_site_assignments
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+  -- Board Pack: company-level access (Owner/Admin only)
+  (
+    pack_type = 'BOARD_MULTI_SITE_RISK'
+    AND site_id IS NULL
+    AND company_id IN (
+      SELECT company_id FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('owner', 'admin')
+    )
+  )
+  OR
+  -- Other Pack Types: site-level access
+  (
+    pack_type != 'BOARD_MULTI_SITE_RISK'
+    AND site_id IS NOT NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('owner', 'admin', 'staff')
+    )
   )
 )
 WITH CHECK (
-  site_id IN (
-    SELECT site_id FROM user_site_assignments
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+  -- Same conditions for WITH CHECK
+  (
+    pack_type = 'BOARD_MULTI_SITE_RISK'
+    AND site_id IS NULL
+    AND company_id IN (
+      SELECT company_id FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('owner', 'admin')
+    )
+  )
+  OR
+  (
+    pack_type != 'BOARD_MULTI_SITE_RISK'
+    AND site_id IS NOT NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('owner', 'admin', 'staff')
+    )
   )
 );
 ```
 
 **Access Logic:**
-- Owners, Admins, and Staff can update audit packs
+- **Board Pack:** Only Owners/Admins can update (company-level access)
+- **Other Pack Types:** Owners, Admins, and Staff can update (site-level access)
 
 ### DELETE Policy
 
 **Policy:** `audit_packs_delete_owner_admin_access`
 
+> [v1 UPDATE – Board Pack DELETE Exception – 2024-12-27]
+
 ```sql
 CREATE POLICY audit_packs_delete_owner_admin_access ON audit_packs
 FOR DELETE
 USING (
-  EXISTS (
-    SELECT 1 FROM user_site_assignments
-    WHERE user_id = auth.uid()
-    AND site_id = audit_packs.site_id
-    AND role IN ('owner', 'admin')
+  -- Board Pack: company-level access (Owner/Admin only)
+  (
+    pack_type = 'BOARD_MULTI_SITE_RISK'
+    AND site_id IS NULL
+    AND company_id IN (
+      SELECT company_id FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('owner', 'admin')
+    )
+  )
+  OR
+  -- Other Pack Types: site-level access (Owner/Admin only)
+  (
+    pack_type != 'BOARD_MULTI_SITE_RISK'
+    AND site_id IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND site_id = audit_packs.site_id
+      AND role IN ('owner', 'admin')
+    )
   )
 );
 ```
 
 **Access Logic:**
-- Only Owners and Admins can delete audit packs
+- **Board Pack:** Only Owners/Admins can delete (company-level access)
+- **Other Pack Types:** Only Owners/Admins can delete (site-level access)
 
 
 # 5. Module 2 Tables RLS Policies (Trade Effluent)
@@ -2770,23 +2888,13 @@ USING (
 
 **Updated Policy:** `audit_packs_insert_staff_access` (extends existing policy)
 
-```sql
-CREATE POLICY audit_packs_insert_staff_access ON audit_packs
-FOR INSERT
-WITH CHECK (
-  site_id IN (
-    SELECT site_id FROM user_site_assignments
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff', 'consultant')
-  )
-  -- Pack type access validated at application level (plan check)
-);
-```
+> **Note:** This policy is superseded by the updated policy in Section 11.2 above, which includes Board Pack exceptions. This section is kept for reference but the policy in Section 11.2 is authoritative.
 
 **Access Logic:**
-- Owners, Admins, Staff, and Consultants can generate packs
+- **Board Pack:** Only Owners/Admins can generate (company-level access, site_id = NULL)
+- **Other Pack Types:** Owners, Admins, Staff can generate (site-level access)
+- **Consultants:** Can generate packs for assigned clients (site-level access, not Board Pack)
 - Pack type access validated at API level based on user plan
-- Consultants can only generate packs for assigned clients
 
 ## 12.3 Pack View Access
 

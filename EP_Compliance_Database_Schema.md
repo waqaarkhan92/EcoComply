@@ -667,26 +667,34 @@ CREATE UNIQUE INDEX uq_obligation_evidence_links ON obligation_evidence_links(ob
 
 **Purpose:** Stores generated audit pack documents (all pack types: Audit, Regulator, Tender, Board, Insurer)
 
-**Entity:** AuditPack
+**Entity:** Pack (stored in `audit_packs` table — supports all 5 pack types)
 
 **RLS Enabled:** Yes
 
 **Soft Delete:** No
 
+**v1.0 Note:** This table stores all pack types (Audit, Regulator, Tender, Board, Insurer). The table name `audit_packs` is maintained for backward compatibility.
+
 ```sql
 CREATE TABLE audit_packs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    document_id UUID REFERENCES documents(id) ON DELETE CASCADE, -- NULL for Board Pack (multi-site)
     company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-    site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+    site_id UUID REFERENCES sites(id) ON DELETE CASCADE, -- NULL for Board Pack (multi-site), REQUIRED for all other pack types
+    -- Validation: Board Pack MUST have site_id = NULL, all other pack types MUST have site_id NOT NULL
+    CHECK ((pack_type = 'BOARD_MULTI_SITE_RISK' AND site_id IS NULL) OR (pack_type != 'BOARD_MULTI_SITE_RISK' AND site_id IS NOT NULL)),
     pack_type TEXT NOT NULL DEFAULT 'AUDIT_PACK'
         CHECK (pack_type IN (
+            -- v1.0 Pack Types (primary)
             'AUDIT_PACK',
             'REGULATOR_INSPECTION',
             'TENDER_CLIENT_ASSURANCE',
             'BOARD_MULTI_SITE_RISK',
             'INSURER_BROKER',
+            -- Legacy (deprecated, maintained for backward compatibility only)
             'COMBINED'
+            -- Note: MODULE_1, MODULE_2, MODULE_3 pack types removed in v1.0
+            -- Legacy packs with these types should be migrated to AUDIT_PACK
         )),
     title TEXT NOT NULL,
     date_range_start DATE NOT NULL,
@@ -715,9 +723,9 @@ CREATE TABLE audit_packs (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_audit_packs_document_id ON audit_packs(document_id);
+CREATE INDEX idx_audit_packs_document_id ON audit_packs(document_id) WHERE document_id IS NOT NULL; -- NULL for Board Pack
 CREATE INDEX idx_audit_packs_company_id ON audit_packs(company_id);
-CREATE INDEX idx_audit_packs_site_id ON audit_packs(site_id);
+CREATE INDEX idx_audit_packs_site_id ON audit_packs(site_id) WHERE site_id IS NOT NULL; -- NULL for Board Pack
 CREATE INDEX idx_audit_packs_created_at ON audit_packs(created_at);
 CREATE INDEX idx_audit_packs_generated_by ON audit_packs(generated_by);
 CREATE INDEX idx_audit_packs_pack_type ON audit_packs(pack_type);

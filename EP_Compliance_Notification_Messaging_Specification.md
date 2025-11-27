@@ -559,9 +559,26 @@ Similar structure, with:
 
 ### 2.9.2 Tender Pack Ready Notification
 
+> [v1 UPDATE – Pack Type-Specific Messaging – 2024-12-27]
+
 **Subject Line Template:**
 ```
 📋 Tender Pack Ready: {{pack_name}}
+```
+
+**Email Body Template:**
+```
+Your Tender/Client Assurance Pack has been generated and is ready for distribution.
+
+This pack contains a client-facing compliance summary suitable for tender submissions. It emphasizes compliance strengths and highlights remediation plans for any gaps.
+
+Pack Details:
+- Client: {{client_name}}
+- Site: {{site_name}}
+- Date Range: {{date_range_start}} to {{date_range_end}}
+- Generated: {{generation_date}}
+
+[Download Pack]({{pack_download_url}}) | [Distribute Pack]({{pack_distribute_url}})
 ```
 
 **Variables:**
@@ -569,8 +586,12 @@ Similar structure, with:
 - `pack_type`: "TENDER_CLIENT_ASSURANCE"
 - `generation_date`: string
 - `client_name`: string
+- `site_name`: string
+- `date_range_start`: string
+- `date_range_end`: string
 - `download_url`: string
 - `share_url`: string (if shared link generated)
+- `pack_distribute_url`: string
 
 **Reference:** Product Logic Specification Section I.8.3 (Tender/Client Assurance Pack Logic)
 
@@ -578,9 +599,29 @@ Similar structure, with:
 
 ### 2.9.3 Board Pack Ready Notification
 
+> [v1 UPDATE – Pack Type-Specific Messaging – 2024-12-27]
+
 **Subject Line Template:**
 ```
 📊 Board Pack Ready: Multi-Site Compliance Summary
+```
+
+**Email Body Template:**
+```
+Your Board/Multi-Site Risk Pack has been generated and is ready for download.
+
+This pack contains company-wide compliance trends and risk analysis for executive reporting. It aggregates data across all your sites and provides board-level insights.
+
+Pack Details:
+- Company: {{company_name}}
+- Total Sites: {{total_sites}}
+- Compliance Score: {{compliance_score}}%
+- Date Range: {{date_range_start}} to {{date_range_end}}
+- Generated: {{generation_date}}
+
+[Download Pack]({{pack_download_url}})
+
+Note: This pack is company-level and requires Owner/Admin access.
 ```
 
 **Variables:**
@@ -589,6 +630,8 @@ Similar structure, with:
 - `generation_date`: string
 - `total_sites`: number
 - `compliance_score`: number
+- `date_range_start`: string
+- `date_range_end`: string
 - `download_url`: string
 
 **Reference:** Product Logic Specification Section I.8.4 (Board/Multi-Site Risk Pack Logic)
@@ -596,6 +639,56 @@ Similar structure, with:
 ---
 
 ### 2.9.4 Insurer Pack Ready Notification
+
+> [v1 UPDATE – Pack Type-Specific Messaging – 2024-12-27]
+
+**Subject Line Template:**
+```
+🛡️ Insurer Pack Ready: {{pack_name}}
+```
+
+**Email Body Template:**
+```
+Your Insurer/Broker Pack has been generated and is ready for distribution.
+
+This pack contains a risk narrative and compliance controls summary suitable for insurance purposes. It emphasizes compliance controls and provides evidence overview for broker/insurer review.
+
+Pack Details:
+- Broker: {{broker_name}}
+- Site: {{site_name}}
+- Date Range: {{date_range_start}} to {{date_range_end}}
+- Generated: {{generation_date}}
+
+[Download Pack]({{pack_download_url}}) | [Distribute Pack]({{pack_distribute_url}})
+```
+
+**Variables:**
+- `pack_name`: string - Pack title
+- `pack_type`: "INSURER_BROKER"
+- `generation_date`: string
+- `broker_name`: string (optional)
+- `site_name`: string
+- `date_range_start`: string
+- `date_range_end`: string
+- `download_url`: string
+- `pack_distribute_url`: string
+
+**Reference:** Product Logic Specification Section I.8.5 (Insurer/Broker Pack Logic)
+
+---
+
+### 2.9.5 Audit Pack Ready Notification
+
+**Subject:** 📄 Audit Pack Ready: {{pack_name}}
+
+**Body:**
+Your Audit Pack has been generated and is ready for download.
+
+This pack contains full evidence compilation for internal audits. It includes all obligations, complete evidence files, and compliance status.
+
+**Download:** [View Pack]({{pack_download_url}})
+
+**Reference:** Product Logic Specification Section I.8 (v1.0 Pack Types — Generation Logic)
 
 **Subject Line Template:**
 ```

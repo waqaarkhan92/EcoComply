@@ -80,7 +80,7 @@ Company
               └─→ Obligation(s)
                     └─→ Schedule(s)
                     └─→ Evidence Item(s)
-                          └─→ Audit Pack(s)
+                          └─→ Pack(s) (5 types: Regulator, Tender, Board, Insurer, Audit)
 ```
 
 ### A.1.3 Module Activation Rules
@@ -278,7 +278,7 @@ The following phrases trigger subjective flagging:
    - User must navigate to interpretation workflow
 7. **If** `interpretation_notes` is populated, **then**:
    - Obligation can be marked complete normally
-   - Interpretation notes are stored and included in audit pack
+   - Interpretation notes are stored and included in packs (all pack types)
    - **Interpretation Locking:** Once interpretation notes are saved, they are locked (immutable)
    - **Interpretation Approval:** No separate approval step required. Interpretation notes added by Staff/Admin/Owner are immediately valid. The `interpreted_by` field serves as the approval record (the person who interpreted is the approver).
    - **Interpretation History:** All interpretation changes logged immutably:
@@ -297,7 +297,7 @@ The following phrases trigger subjective flagging:
 For subjective obligations:
 - System prompts: "How will you demonstrate compliance with this obligation?"
 - User must provide evidence type AND interpretation rationale
-- Audit pack includes both evidence and rationale
+- Packs include both evidence and rationale (all pack types)
 
 ---
 
@@ -365,7 +365,7 @@ When document is superseded:
 
 - All versions retained indefinitely
 - Users can view any historical version
-- Audit packs can be generated for historical versions
+- Packs can be generated for historical versions (all pack types)
 - Evidence linked to specific version at time of linking
 
 ---
@@ -390,7 +390,7 @@ When document is superseded:
 - **Standard Documents (<50 pages):** 30 seconds timeout
 - **Large Documents (≥50 pages):** 5 minutes timeout
 - **OCR Processing:** 60 seconds timeout
-- **Audit Pack Generation:** 60 seconds (standard), 5 minutes (large packs with >500 items)
+- **Pack Generation:** 60 seconds (standard), 5 minutes (large packs with >500 items) — applies to all pack types
 
 **Enforcement:**
 - All AI operations must use these values
@@ -437,7 +437,7 @@ When document is superseded:
 
 **Implementation:**
 - Disclaimer appears on every extraction review screen
-- Disclaimer included in all audit pack headers
+- Disclaimer included in all pack headers (all pack types)
 - Users must check "I have reviewed and verified these obligations" before finalising document setup
 
 ---
@@ -958,7 +958,7 @@ Before link is saved:
 **Audit Trail:**
 - All period-end reviews logged in `audit_logs`
 - Review responses logged with timestamp and user
-- "No breach" confirmations included in audit pack
+- "No breach" confirmations included in packs (all pack types)
 
 ### B.5.1 Completeness Definition
 
@@ -1141,24 +1141,28 @@ Changes logged with `modified_by`, `modified_at`, `previous_values`.
 
 ---
 
-## B.8 Audit Pack Logic
+## B.8 Pack Logic (Legacy — See Section I.8 for v1.0 Pack Types)
 
-### B.8.1 Audit Pack Definition
+> **Note:** This section describes the original audit pack logic. For v1.0 pack types (Regulator, Tender, Board, Insurer, Audit), see Section I.8.
 
-An audit pack is a compiled PDF document containing:
+### B.8.1 Pack Definition
+
+A pack is a compiled PDF document containing (applies to all pack types):
 - Document metadata
 - All obligations (active)
 - Evidence for each obligation
 - Compliance status summary
 - Gap analysis
 
-### B.8.2 Audit Pack Generation Triggers
+### B.8.2 Pack Generation Triggers
 
-1. **Manual:** User clicks "Generate Audit Pack"
+1. **Manual:** User clicks "Generate Pack" (selects pack type)
 2. **Scheduled:** Configurable (weekly, monthly, pre-inspection)
 3. **On-Demand:** Before regulator inspection (user-initiated)
 
-### B.8.3 Audit Pack Structure
+**v1.0 Update:** Pack type selection determines content structure. See Section I.8 for pack type-specific logic.
+
+### B.8.3 Pack Structure (Base Structure — Pack Types Customize Content)
 
 **Section 1: Cover Page**
 - Company name
@@ -1220,20 +1224,39 @@ For each obligation:
   - Subsequent deletions/archivals do not affect already-generated pack
   - Pack version number incremented if regenerated
 
-### B.8.4 Audit Pack Filters
+### B.8.4 Pack Filters (Applies to All Pack Types)
 
-Users can filter audit pack content:
+> **v1.0 Update:** Filter options apply to all pack types. Pack type determines which filters are most relevant. See Section I.8 for pack type-specific filter recommendations.
+
+Users can filter pack content:
 - By date range
 - By compliance status (all, complete only, gaps only)
 - By obligation category
 - By specific conditions
+- By pack type (v1.0: Regulator, Tender, Board, Insurer, Audit)
 
-### B.8.5 Audit Pack Export Formats
+**Pack Type-Specific Filter Recommendations:**
+- **Regulator Pack:** All obligations, all statuses (shows gaps prominently)
+- **Tender Pack:** Complete obligations preferred, evidence samples
+- **Board Pack:** All sites, aggregated metrics
+- **Insurer Pack:** Risk-focused filters, compliance controls
+- **Audit Pack:** All obligations, full evidence
+
+### B.8.5 Pack Export Formats (Applies to All Pack Types)
+
+> **v1.0 Update:** Export formats apply to all pack types. Pack type determines default format. See Section I.8 for pack type-specific format requirements.
 
 **Supported Export Formats:**
-- **PDF (Default):** Formatted report for human review and printing
-- **JSON (Machine-Readable):** Structured data for programmatic access and integration
-- **XML (Regulatory Format):** Standardized format for regulator submissions
+- **PDF (Default):** Formatted report for human review and printing (all pack types)
+- **JSON (Machine-Readable):** Structured data for programmatic access and integration (all pack types)
+- **XML (Regulatory Format):** Standardized format for regulator submissions (Regulator Pack preferred)
+
+**Pack Type-Specific Format Notes:**
+- **Regulator Pack:** PDF/A archival format (required), XML optional
+- **Tender Pack:** PDF (client-facing format)
+- **Board Pack:** PDF (executive summary format)
+- **Insurer Pack:** PDF (risk narrative format)
+- **Audit Pack:** PDF (full evidence compilation)
 
 **JSON Export Schema:**
 ```json
@@ -1385,9 +1408,9 @@ Users can filter audit pack content:
 |------|-------------|
 | **Owner** | Full access; billing; user management; company settings |
 | **Admin** | Full access except billing; user management for assigned sites |
-| **Staff** | View/edit obligations; upload evidence; generate audit packs; assigned sites only |
+| **Staff** | View/edit obligations; upload evidence; generate packs (all pack types per plan); assigned sites only |
 | **Viewer** | Read-only access; can view but not edit; assigned sites only |
-| **Consultant** | Multi-company access; Staff permissions across client companies; Upload restricted to assigned client companies/sites only |
+| **Consultant** | Multi-company access; Staff permissions across client companies; Generate all pack types for assigned clients; Upload restricted to assigned client companies/sites only |
 
 ### B.10.2 Permission Matrix (Action-Based)
 
@@ -1397,7 +1420,7 @@ Users can filter audit pack content:
 | Edit obligations | ✅ | ✅ | ✅ | ❌ | ✅ |
 | Upload documents | ✅ | ✅ | ✅ | ❌ | ✅ |
 | Upload evidence | ✅ | ✅ | ✅ | ❌ | ✅ |
-| Generate audit packs | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Generate packs (all pack types per plan) | ✅ | ✅ | ✅ | ✅ | ✅ (all types for clients) |
 | Activate modules | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Manage users | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Billing access | ✅ | ❌ | ❌ | ❌ | ❌ |
@@ -1425,7 +1448,7 @@ Users can filter audit pack content:
 | **Schedules** | CRUD | CRUD | CRU | R | CRU (client schedules only) |
 | **Module Activations** | CRUD | CRUD | - | R | - |
 | **Cross-Sell Triggers** | CRUD | CRUD | R | R | R (client triggers only) |
-| **Audit Packs** | CRUD | CRUD | CRU | R | CRU (client packs only) |
+| **Packs (all pack types)** | CRUD | CRUD | CRU | R | CRU (client packs only, all pack types) |
 | **Rule Library Patterns** | CRUD | R | R | - | - |
 | **Extraction Logs** | CRUD | CRUD | R | R | R (client logs only) |
 | **System Settings** | CRUD | R | - | - | - |
@@ -1435,13 +1458,13 @@ Users can filter audit pack content:
 - **Admin:** Full access except system settings (read-only) and rule library (read-only)
 - **Staff:** Can create/update most entities, cannot delete or manage users/modules
 - **Viewer:** Read-only access to all entities
-- **Consultant:** Staff-level permissions but scoped to client companies only (multi-company access)
+- **Consultant:** Staff-level permissions but scoped to client companies only (multi-company access). Can generate all pack types for assigned clients. See Section C.5 for Consultant Control Centre logic.
 - **Evidence Deletion:** Evidence cannot be deleted by any user role (see Section H.7.2). Evidence can only be archived by system after retention period.
 
 **RLS Implementation Notes:**
 - RLS policies enforce these permissions at the database level
 - Policies check `company_id` for entity access
-- Consultant role requires additional `company_id IN (SELECT company_id FROM consultant_company_access WHERE user_id = auth.uid())` check
+- Consultant role requires additional check via `consultant_client_assignments` table: `company_id IN (SELECT client_company_id FROM consultant_client_assignments WHERE consultant_id = auth.uid() AND status = 'ACTIVE')`. See Section C.5.2 for Consultant Access Logic.
 - Delete operations require additional validation (e.g., cannot delete company with active sites)
 
 ### B.10.2.2 Viewer Role RLS Rules (Detailed)
@@ -1477,8 +1500,8 @@ Users can filter audit pack content:
 - **SELECT:** Allowed for schedules linked to obligations on sites where user is assigned
 - **INSERT/UPDATE/DELETE:** Denied (no write access)
 
-**Audit Packs:**
-- **SELECT:** Allowed for audit packs on sites where user is assigned
+**Packs (all pack types):**
+- **SELECT:** Allowed for packs on sites where user is assigned (or company-level for Board Pack)
 - **INSERT/UPDATE/DELETE:** Denied (no write access)
 
 **Enforcement:**
@@ -1491,25 +1514,30 @@ Users can filter audit pack content:
 **Purpose:** Explicit rules for cross-client data isolation for consultants to ensure regulatory compliance and privacy.
 
 **Data Isolation Rules:**
-- **RLS Enforcement:** Consultants can only access data for companies/sites they are assigned to (via `user_roles` table)
+- **RLS Enforcement:** Consultants can only access data for companies/sites they are assigned to (via `consultant_client_assignments` table)
 - **Upload Restrictions:** Consultants can only upload documents/evidence to assigned client companies/sites
 - **Cross-Client Prohibition:** Consultants cannot:
   - View data from unassigned clients
   - Upload documents to unassigned clients
   - Link evidence across different clients
-  - Generate audit packs for unassigned clients
+  - Generate packs for unassigned clients (all pack types restricted to assigned clients)
 
 **Assignment Logic:**
-- Consultants are assigned to specific companies/sites via `user_roles` table
-- `user_roles.role = 'CONSULTANT'` AND `user_roles.company_id` / `user_roles.site_id` defines access scope
+- Consultants are assigned to specific client companies via `consultant_client_assignments` table
+- `consultant_client_assignments.consultant_id` = consultant user ID
+- `consultant_client_assignments.client_company_id` = client company ID
+- `consultant_client_assignments.status = 'ACTIVE'` = active assignment
 - System validates all consultant actions against assignment scope
+- See Section C.5.6 for Consultant Client Assignment Workflow
 
 **RLS Policies for Consultants:**
-- **Companies:** `SELECT` only for companies where `user_roles.user_id = current_user_id AND user_roles.role = 'CONSULTANT'`
-- **Sites:** `SELECT` only for sites where `user_roles.user_id = current_user_id AND user_roles.role = 'CONSULTANT' AND user_roles.site_id = sites.id`
-- **Documents:** `SELECT/INSERT/UPDATE` only for documents on assigned sites
-- **Obligations:** `SELECT/INSERT/UPDATE` only for obligations linked to documents on assigned sites
-- **Evidence:** `SELECT/INSERT/UPDATE` only for evidence on assigned sites
+- **Companies:** `SELECT` only for companies where `client_company_id IN (SELECT client_company_id FROM consultant_client_assignments WHERE consultant_id = auth.uid() AND status = 'ACTIVE')`
+- **Sites:** `SELECT` only for sites where `company_id IN (SELECT client_company_id FROM consultant_client_assignments WHERE consultant_id = auth.uid() AND status = 'ACTIVE')`
+- **Documents:** `SELECT/INSERT/UPDATE` only for documents on assigned client sites
+- **Obligations:** `SELECT/INSERT/UPDATE` only for obligations linked to documents on assigned client sites
+- **Evidence:** `SELECT/INSERT/UPDATE` only for evidence on assigned client sites
+- **Packs:** `SELECT/INSERT/UPDATE` only for packs associated with assigned client companies (all pack types)
+- See Section C.5.2 for detailed Consultant Access Logic and RLS & Permissions Rules Section 11 for RLS policies
 
 **Enforcement:**
 - RLS policies enforced at database level (PostgreSQL Row Level Security)
@@ -1815,7 +1843,11 @@ Improvement conditions are time-bound requirements with specific deadlines.
 5. Old permit marked "Superseded"
 6. Evidence history migrated where obligations match
 
-### C.1.9 Module 1 Audit Pack Structure
+### C.1.9 Module 1 Pack Structure (Legacy — See Section I.8 for v1.0 Pack Types)
+
+> **v1.0 Update:** This section describes Module 1 pack structure. For v1.0 pack types (Regulator, Tender, Board, Insurer, Audit), see Section I.8. Module 1 data is used in all pack types.
+
+**Note:** Module 1 data (permits, obligations, evidence) is used in all 5 pack types. Pack type determines content structure and presentation format. See Section I.8 for pack type-specific logic.
 
 **Additional Module 1 Elements:**
 - Permit summary (activities, regulator, permit number)
@@ -3224,16 +3256,18 @@ For each gap, system suggests:
 | NRW (Wales) | Welsh/English bilingual options |
 | NIEA (N. Ireland) | NIEA terminology |
 
-## I.5 Audit Pack Compilation
+## I.5 Pack Compilation (Base Process — All Pack Types)
 
 ### I.5.1 Compilation Process
 
-1. User initiates generation (or scheduled trigger)
-2. System queries all relevant data
+1. User initiates generation (selects pack type, or scheduled trigger)
+2. System queries all relevant data (pack type-specific)
 3. Evidence files retrieved from storage
-4. PDF generated with formatting
-5. Stored in audit_packs table
-6. User notified: "Audit pack ready for download"
+4. PDF generated with pack type-specific formatting
+5. Stored in audit_packs table (with pack_type field)
+6. User notified: "[Pack Type] pack ready for download"
+
+**v1.0 Update:** Pack type determines content structure. See Section I.8 for pack type-specific compilation logic.
 
 ### I.5.2 Generation Time Limits
 
@@ -3241,7 +3275,7 @@ For each gap, system suggests:
 - Large packs (>100 evidence items): Background processing, email when ready
 - Maximum evidence items: 500 per pack
 
-## I.6 Audit Pack Content Filters
+## I.6 Pack Content Filters (Applies to All Pack Types)
 
 ### I.6.1 Available Filters
 
@@ -3261,21 +3295,27 @@ For each gap, system suggests:
 - Conditions: All
 - Evidence: Include
 
-## I.7 Audit Pack Generation Triggers
+## I.7 Pack Generation Triggers (Applies to All Pack Types)
 
 ### I.7.1 Trigger Types
 
 | Trigger | Initiator |
 |---------|-----------|
-| Manual | User clicks "Generate Audit Pack" |
+| Manual | User clicks "Generate Pack" (selects pack type) |
 | Scheduled | Configured schedule (weekly/monthly) |
 | Pre-inspection | User marks upcoming inspection |
 | Deadline-based | Auto-generate before permit renewal |
+
+**v1.0 Update:** Pack type selection is part of manual trigger. See Section I.8.6 for pack type selection logic.
 
 ### I.7.2 Scheduled Generation
 
 - User configures schedule in settings
 - Options: Weekly (Friday), Monthly (last day), Quarterly
+- **Pack Type Selection:** User must select pack type for scheduled generation
+  - Default: Regulator Pack for Core Plan
+  - Default: Audit Pack for Growth Plan
+  - User can override default in schedule settings
 - Generated pack sent via email to configured recipients
 
 ---
@@ -3291,7 +3331,7 @@ For each gap, system suggests:
 - `REGULATOR_INSPECTION` — Inspector-ready compliance pack (Core plan, included)
 - `TENDER_CLIENT_ASSURANCE` — Compliance summary for tenders (Growth plan)
 - `BOARD_MULTI_SITE_RISK` — Multi-site risk summary (Growth plan)
-- `INSURER_BROKER` — Risk narrative for insurance (bundled with Tender pack)
+- `INSURER_BROKER` — Risk narrative for insurance (requires Growth Plan, same as Tender Pack — independent pack type)
 
 **Pack Type Access Control:**
 - Core Plan: `REGULATOR_INSPECTION`, `AUDIT_PACK`
@@ -3371,12 +3411,24 @@ For each gap, system suggests:
 - Cross-site evidence completeness
 - Historical compliance trends from `audit_packs` table
 
+**Access Requirements:**
+- **Plan:** Growth Plan or Consultant Edition
+- **Role:** Owner or Admin only (Staff cannot generate Board Packs)
+- **Rationale:** Board Pack contains company-wide risk data requiring executive-level access
+
 **Generation Rules:**
 - Multi-site aggregation (requires `company_id` scope)
 - Board-level summary (not detailed evidence)
 - Trend visualization (compliance over time)
 - Risk-focused presentation
 - Suitable for executive reporting
+
+**Validation Rules:**
+- Board Pack MUST have `company_id` (required)
+- Board Pack MUST have `site_id = NULL` (enforced — multi-site scope)
+- All other pack types require both `company_id` AND `site_id`
+- System validates: `IF pack_type = 'BOARD_MULTI_SITE_RISK' THEN site_id MUST BE NULL`
+- System validates: `IF pack_type = 'BOARD_MULTI_SITE_RISK' THEN user role MUST BE 'OWNER' OR 'ADMIN'`
 
 **Multi-Site Aggregation Logic:**
 ```sql
@@ -3400,6 +3452,12 @@ GROUP BY c.id
 
 **Purpose:** Risk narrative and compliance controls for insurance purposes.
 
+**Pack Type:** `INSURER_BROKER` — Separate pack type (not automatically bundled)
+
+**Access:** Growth Plan required (same as Tender Pack, but independent generation)
+
+**Note:** "Bundled" refers to plan requirement (both require Growth Plan), not automatic generation. Users can generate Insurer Pack independently of Tender Pack.
+
 **Content Structure:**
 1. Risk narrative (compliance risk overview)
 2. Compliance controls summary (evidence of controls in place)
@@ -3418,6 +3476,7 @@ GROUP BY c.id
 - Evidence overview (not exhaustive)
 - Professional insurance-ready format
 - Suitable for broker/insurer sharing
+- Independent generation (not tied to Tender Pack generation)
 
 ## I.8.6 Pack Type Selection Logic
 
@@ -3460,10 +3519,11 @@ function canGeneratePackType(userPlan: string, packType: string): boolean {
 - `SHARED_LINK` — Shareable link generated (time-limited, access-controlled)
 
 **Distribution Rules:**
-- All pack types support download
-- Growth Plan packs support email distribution
-- Growth Plan packs support shared link generation
-- Consultant Edition: Can distribute client packs to clients
+- **Download:** All pack types, all plans (Core Plan can download Regulator Pack and Audit Pack)
+- **Email:** Growth Plan packs only (Tender, Board, Insurer, Audit). Core Plan Regulator Pack download only (no email distribution).
+- **Shared Link:** Growth Plan packs only (Tender, Board, Insurer, Audit)
+- **Rationale:** Email/shared link distribution is premium feature for client-facing packs (Tender, Board, Insurer)
+- **Consultant Edition:** Can distribute client packs to clients (all distribution methods available for assigned clients)
 
 **Shared Link Security:**
 - Time-limited (default: 30 days)
@@ -3480,8 +3540,15 @@ function canGeneratePackType(userPlan: string, packType: string): boolean {
 
 **Consultant Role:**
 - Consultant is a `User` with `role = 'CONSULTANT'` in `user_roles` table
+- Consultant must have `plan = 'CONSULTANT'` (Consultant Edition subscription)
+- Role and plan must match: `role = 'CONSULTANT'` requires `plan = 'CONSULTANT'`
 - Consultant can be assigned to multiple client companies
 - Consultant access is scoped via `consultant_client_assignments` table
+
+**Validation:**
+- System enforces: If `role = 'CONSULTANT'`, then `plan` MUST be `'CONSULTANT'`
+- Cannot have Consultant role without Consultant Edition subscription
+- Consultant Edition subscription grants `role = 'CONSULTANT'` automatically
 
 **Consultant Assignment:**
 - Assignment stored in `consultant_client_assignments` table
@@ -3699,7 +3766,7 @@ User uploads new permit version while obligations from old version are incomplet
 **Actions:**
 1. Alert sent (escalating)
 2. Dashboard shows overdue badge
-3. Audit pack gap analysis includes
+3. Pack gap analysis includes (all pack types)
 4. User can:
    - Upload evidence (changes status to Late Complete)
    - Mark N/A with reason (changes status to N/A)
@@ -3712,7 +3779,7 @@ User uploads new permit version while obligations from old version are incomplet
 **Actions:**
 1. Evidence linked post-deadline
 2. Status: Complete (Late)
-3. Late flag visible in audit pack
+3. Late flag visible in packs (all pack types)
 4. No further alerts
 
 ## J.9 Evidence Missing Scenarios
@@ -3727,7 +3794,7 @@ User uploads new permit version while obligations from old version are incomplet
 1. Status: Incomplete
 2. Alert: "Evidence expected but not found for [period]"
 3. User can upload retroactively
-4. Audit pack notes evidence gap
+4. Packs note evidence gap (all pack types)
 
 ### J.9.2 Evidence Uploaded but Not Linked
 
