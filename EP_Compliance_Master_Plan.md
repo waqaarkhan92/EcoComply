@@ -2,6 +2,10 @@
 ## Master Commercial Profile & Go-To-Market Plan
 ### Environmental Compliance Platform for UK SMEs
 
+**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+
+> [v1 UPDATE – Version Header – 2024-12-27]
+
 ---
 
 ## 1. EXECUTIVE SUMMARY
@@ -123,6 +127,15 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 - Human override workflow (edit obligations, override frequencies, mark N/A)
 - Permit variations & version control
 
+> [v1 UPDATE – Pack Types – 2024-12-27]
+
+**v1.0 Pack Capabilities:**
+- **Regulator/Inspection Pack** (included in Core plan): Inspector-ready compliance evidence compilation
+- **Tender/Client Assurance Pack** (Growth plan): Compliance summary for client tenders and assurance
+- **Board/Multi-Site Risk Pack** (Growth plan): Multi-site risk summary and compliance trends for board reporting
+- **Insurer/Broker Pack** (bundled with Tender pack): Risk narrative and compliance controls for insurance purposes
+- **Audit Pack** (all plans): Full evidence compilation for internal audits
+
 **ROI:** Replaces £6,400/year consultant fees (8 days → 2 days). Saves 6–10 hours/week internal time (£9,360–15,600/year value). Prevents £5k–10k fine risk annually (40% failure rate → 5%). **Total value: £20,760–32,000/year. Cost: £1,788/year. ROI: 500–900%.**
 
 **Standalone Purchase:** ✅ Yes — Module 1 is the entry point for all customers.
@@ -187,7 +200,34 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 
 ## 7. COMMERCIAL MODEL
 
-### Pricing Structure
+> [v1 UPDATE – Pricing Tiers – 2024-12-27]
+
+### v1.0 Pricing Tiers
+
+**Core Plan — £149/month per site**
+- Module 1 (Environmental Permits) — 1 permit included
+- Regulator/Inspection Pack (included)
+- Audit Pack (included)
+- Unlimited users, evidence, tasks, alerts, schedules
+- Additional permits: £49/month each
+- Additional sites: £99/month each
+
+**Growth Plan — £249/month per site**
+- Everything in Core Plan
+- Tender/Client Assurance Pack (included)
+- Board/Multi-Site Risk Pack (included)
+- Insurer/Broker Pack (included)
+- Module 2 (Trade Effluent) add-on: £59/month per site
+- Module 3 (MCPD/Generators) add-on: £79/month per company
+
+**Consultant Edition — £299/month**
+- Everything in Growth Plan
+- Multi-client access (unlimited client companies)
+- Client pack generation for assigned clients
+- Consultant Control Centre dashboard
+- Client assignment management
+
+### Legacy Pricing Structure (Pre-v1.0)
 
 | Component | Price | Notes |
 |-----------|-------|-------|
@@ -214,9 +254,17 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 - **Months 9–12:** Adds second site = £356/month (+139%)
 - **Month 12+:** Adds MCPD module = £435/month (+192%)
 
-**Full Platform ARPU:**
+**Full Platform ARPU (Pre-v1.0):**
 - **Year 1:** £174/month
 - **Year 2:** £201/month
+
+> [v1 UPDATE – ARPU Calculations – 2024-12-27]
+
+**v1.0 ARPU Projections:**
+- **Year 1:** £189/month (60% Core Plan, 30% Growth Plan, 10% Consultant Edition)
+- **Year 2:** £224/month (50% Core Plan, 40% Growth Plan, 10% Consultant Edition)
+- **Growth Plan Upsell Rate:** 25% of Core Plan customers upgrade within 6 months
+- **Consultant Edition Penetration:** 5% of customers (consultants managing multiple clients)
 
 ### ARPU Build-Up & Customer Mix
 
@@ -304,6 +352,14 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 - Founder direct sales (LinkedIn, cold email, EA enforcement register targeting)
 - Compliance consultants (referral partnerships)
 - Industry associations (CIWM, LARAC)
+
+> [v1 UPDATE – Consultant Control Centre – 2024-12-27]
+
+**Consultant Control Centre Distribution:**
+- **Direct Consultant Sales:** Target environmental compliance consultants managing 5+ client sites
+- **Consultant Onboarding:** Dedicated consultant signup flow with multi-client access
+- **Consultant Referral Program:** Consultants earn referral fees for client signups
+- **Consultant Partnerships:** White-label pack generation for consultant firms
 
 **Secondary:**
 - Trade publications (letsrecycle.com, MRW)

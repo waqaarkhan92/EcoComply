@@ -1,5 +1,7 @@
 # EP Compliance Frontend Routes & Component Map
 
+**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+
 **Document Version:** 1.0  
 **Status:** Complete  
 **Created by:** Cursor  
@@ -9,6 +11,8 @@
 - ✅ Backend API (2.5) - Complete
 
 **Purpose:** Defines the complete frontend routing structure, component hierarchy, navigation patterns, and implementation specifications for the EP Compliance platform. This document ensures world-class design, mobile responsiveness, accessibility compliance, and optimal performance.
+
+> [v1 UPDATE – Version Header – 2024-12-27]
 
 ---
 
@@ -1131,9 +1135,119 @@ RunHourTrackingPage
 
 ---
 
-## 3.7 Audit Pack Routes
+## 3.7 Pack Routes (v1.0)
 
-### Route: `/sites/[siteId]/audit-packs`
+> [v1 UPDATE – Pack Routes – 2024-12-27]
+
+### Route: `/sites/[siteId]/packs`
+
+**URL Pattern:** `/sites/:siteId/packs`  
+**File:** `app/(dashboard)/sites/[siteId]/packs/page.tsx`  
+**Access:** Authenticated users with site access
+
+**Component Structure:**
+```
+PacksListPage
+├── PacksHeader
+│   ├── PageTitle
+│   ├── PageDescription
+│   └── GeneratePackButton (with pack type selector)
+├── PackTypeTabs
+│   ├── AllTab
+│   ├── RegulatorTab
+│   ├── TenderTab
+│   ├── BoardTab
+│   ├── InsurerTab
+│   └── AuditTab
+├── PacksFilterBar
+│   ├── StatusFilter
+│   ├── DateRangeFilter
+│   └── ClearFiltersButton
+├── PacksList
+│   └── PackRow (repeated)
+│       ├── PackTypeBadge
+│       ├── PackTitle
+│       ├── PackDateRange
+│       ├── PackStatusBadge
+│       ├── PackStats
+│       └── PackActions
+│           ├── ViewButton
+│           ├── DownloadButton
+│           ├── ShareButton (if Growth Plan)
+│           └── DeleteButton
+└── GeneratePackModal
+    ├── PackTypeSelector
+    │   ├── RegulatorOption (Core Plan)
+    │   ├── TenderOption (Growth Plan)
+    │   ├── BoardOption (Growth Plan)
+    │   ├── InsurerOption (Growth Plan)
+    │   └── AuditOption (All Plans)
+    ├── PackTypeSpecificForm
+    └── GenerateButton
+```
+
+**Plan-Based Access:**
+- Core Plan: Regulator Pack, Audit Pack options only
+- Growth Plan: All pack types available
+- Consultant Edition: All pack types (for assigned clients)
+
+---
+
+### Route: `/sites/[siteId]/packs/[packId]`
+
+**URL Pattern:** `/sites/:siteId/packs/:packId`  
+**File:** `app/(dashboard)/sites/[siteId]/packs/[packId]/page.tsx`  
+**Access:** Authenticated users with site access
+
+**Component Structure:**
+```
+PackDetailPage
+├── PackHeader
+│   ├── PackTypeBadge
+│   ├── PackTitle
+│   ├── PackStatusBadge
+│   └── PackActionsMenu
+│       ├── DownloadButton
+│       ├── ShareButton (if Growth Plan)
+│       ├── DistributeButton (if Growth Plan)
+│       ├── RegenerateButton
+│       └── DeleteButton
+├── PackTabs
+│   ├── PreviewTab
+│   ├── MetadataTab
+│   └── DistributionTab (if Growth Plan)
+├── PackPreview
+└── PackDistributionSection (if Growth Plan)
+    ├── EmailDistributionForm
+    └── SharedLinkSection
+```
+
+---
+
+### Route: `/companies/[companyId]/packs/board`
+
+**URL Pattern:** `/companies/:companyId/packs/board`  
+**File:** `app/(dashboard)/companies/[companyId]/packs/board/page.tsx`  
+**Access:** Growth Plan, Owner/Admin only
+
+**Purpose:** Board Pack generation (multi-site aggregation)
+
+**Component Structure:**
+```
+BoardPackPage
+├── BoardPackHeader
+├── MultiSiteSelector
+├── DateRangeSelector
+└── GenerateBoardPackButton
+```
+
+**Reference:** Product Logic Specification Section I.8.4 (Board/Multi-Site Risk Pack Logic)
+
+---
+
+### Route: `/sites/[siteId]/audit-packs` (Legacy Route)
+
+**Note:** Legacy route maintained for backward compatibility. Redirects to `/sites/[siteId]/packs` with filter for Audit Pack type.
 
 **URL Pattern:** `/sites/:siteId/audit-packs`  
 **File:** `app/(dashboard)/sites/[siteId]/audit-packs/page.tsx`  
@@ -1337,6 +1451,121 @@ AuditPackDetailPage
 **Error States:**
 - Generation failed: Error message with retry button
 - PDF not available: Clear message
+
+---
+
+> [v1 UPDATE – Consultant Routes – 2024-12-27]
+
+## 3.8 Consultant Control Centre Routes
+
+### Route: `/consultant/dashboard`
+
+**URL Pattern:** `/consultant/dashboard`  
+**File:** `app/(dashboard)/consultant/dashboard/page.tsx`  
+**Access:** Consultant role only
+
+**Component Structure:**
+```
+ConsultantDashboardPage
+├── DashboardHeader
+│   ├── PageTitle
+│   └── QuickActions
+├── OverviewCards
+│   ├── TotalClientsCard
+│   ├── ActiveClientsCard
+│   ├── TotalSitesCard
+│   └── ComplianceScoreCard
+├── RecentActivitySection
+│   └── ActivityTimeline
+├── UpcomingDeadlinesSection
+│   └── DeadlinesList (across all clients)
+└── ClientComplianceSummary
+    └── ClientComplianceTable
+```
+
+**Data Fetching:**
+- `useConsultantDashboard()` - Fetch aggregated dashboard data
+- `useConsultantClients()` - Fetch client list
+- `useConsultantUpcomingDeadlines()` - Fetch deadlines across clients
+
+---
+
+### Route: `/consultant/clients`
+
+**URL Pattern:** `/consultant/clients`  
+**File:** `app/(dashboard)/consultant/clients/page.tsx`  
+**Access:** Consultant role only
+
+**Component Structure:**
+```
+ConsultantClientsPage
+├── ClientsHeader
+│   ├── PageTitle
+│   └── AddClientButton (if allowed)
+├── ClientsFilterBar
+│   ├── StatusFilter
+│   └── SearchInput
+├── ClientsList
+│   └── ClientCard (repeated)
+│       ├── ClientName
+│       ├── SiteCount
+│       ├── ComplianceScore
+│       ├── OverdueCount
+│       └── ClientActions
+│           ├── ViewButton
+│           └── GeneratePackButton
+└── AddClientModal (if allowed)
+```
+
+---
+
+### Route: `/consultant/clients/[clientId]`
+
+**URL Pattern:** `/consultant/clients/:clientId`  
+**File:** `app/(dashboard)/consultant/clients/[clientId]/page.tsx`  
+**Access:** Consultant role, assigned client only
+
+**Component Structure:**
+```
+ConsultantClientPage
+├── ClientHeader
+│   ├── ClientName
+│   ├── ComplianceBadge
+│   └── ClientActions
+├── ClientTabs
+│   ├── OverviewTab
+│   ├── SitesTab
+│   ├── DocumentsTab
+│   ├── ObligationsTab
+│   └── PacksTab
+└── ClientContent (tab-specific)
+```
+
+**Data Fetching:**
+- `useConsultantClient(clientId)` - Fetch client details
+- `useConsultantClientSites(clientId)` - Fetch client sites
+- `useConsultantClientPacks(clientId)` - Fetch client packs
+
+---
+
+### Route: `/consultant/packs`
+
+**URL Pattern:** `/consultant/packs`  
+**File:** `app/(dashboard)/consultant/packs/page.tsx`  
+**Access:** Consultant role only
+
+**Purpose:** View all packs generated for all assigned clients
+
+**Component Structure:**
+```
+ConsultantPacksPage
+├── PacksHeader
+├── ClientFilter
+├── PackTypeFilter
+└── PacksList (with client attribution)
+```
+
+---
 - Download failed: Error message with retry button
 
 ---

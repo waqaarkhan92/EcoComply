@@ -1,5 +1,7 @@
 # EP Compliance Backend API Specification
 
+**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+
 **Document Version:** 1.0  
 **Status:** Complete  
 **Created by:** Cursor  
@@ -10,6 +12,8 @@
 - ✅ Notification & Messaging (2.4) - Complete
 
 **Purpose:** Defines the complete REST API specification for the EP Compliance platform, including all endpoints, request/response schemas, authentication, authorization, error handling, and integration points.
+
+> [v1 UPDATE – Version Header – 2024-12-27]
 
 ---
 
@@ -32,19 +36,22 @@
 15. [Review Queue Endpoints](#14-review-queue-endpoints)
 16. [Alerts Endpoints](#15-alerts-endpoints)
 17. [Audit Pack Generator Endpoints](#16-audit-pack-generator-endpoints)
-18. [Module 2 Endpoints](#17-module-2-endpoints)
-19. [Module 3 Endpoints](#18-module-3-endpoints)
-20. [Users Endpoints](#19-users-endpoints)
-21. [Companies Endpoints](#20-companies-endpoints)
-22. [Multi-Site Endpoints](#21-multi-site-endpoints)
-23. [Module Activation Endpoints](#22-module-activation-endpoints)
-24. [Admin Endpoints](#23-admin-endpoints)
-25. [Regulator Questions Endpoints](#24-regulator-questions-endpoints)
-26. [Background Jobs Endpoints](#25-background-jobs-endpoints)
-27. [File Upload Specifications](#26-file-upload-specifications)
-28. [Webhook Endpoints](#27-webhook-endpoints)
-29. [OpenAPI Specification](#28-openapi-specification)
-30. [TypeScript Interfaces](#29-typescript-interfaces)
+18. [v1.0 Pack-Specific Endpoints](#16-v10-pack-specific-endpoints)
+19. [Pack Distribution Endpoints](#16-pack-distribution-endpoints)
+20. [Module 2 Endpoints](#17-module-2-endpoints)
+21. [Module 3 Endpoints](#18-module-3-endpoints)
+22. [Users Endpoints](#19-users-endpoints)
+23. [Companies Endpoints](#20-companies-endpoints)
+24. [Multi-Site Endpoints](#21-multi-site-endpoints)
+25. [Module Activation Endpoints](#22-module-activation-endpoints)
+26. [Admin Endpoints](#23-admin-endpoints)
+27. [Regulator Questions Endpoints](#24-regulator-questions-endpoints)
+28. [Background Jobs Endpoints](#25-background-jobs-endpoints)
+29. [Consultant Control Centre Endpoints](#26-consultant-control-centre-endpoints)
+30. [File Upload Specifications](#27-file-upload-specifications)
+31. [Webhook Endpoints](#28-webhook-endpoints)
+32. [OpenAPI Specification](#29-openapi-specification)
+33. [TypeScript Interfaces](#30-typescript-interfaces)
 
 ---
 
@@ -3134,9 +3141,11 @@ interface UpdateNotificationPreferenceRequest {
 
 ## 16.2 POST /api/v1/audit-packs
 
-**Purpose:** Trigger audit pack generation
+> [v1 UPDATE – Pack Type Parameter – 2024-12-27]
 
-**Authentication:** Required (Owner, Admin, Staff)
+**Purpose:** Trigger audit pack generation (supports all pack types)
+
+**Authentication:** Required (Owner, Admin, Staff, Consultant for assigned clients)
 
 **Request:**
 - **Method:** POST
@@ -3144,12 +3153,16 @@ interface UpdateNotificationPreferenceRequest {
 ```json
 {
   "site_id": "uuid",
+  "pack_type": "AUDIT_PACK",
   "date_range": {
     "start": "2025-01-01",
     "end": "2025-12-31"
   },
   "obligation_ids": ["uuid1", "uuid2"],
-  "include_archived": false
+  "include_archived": false,
+  "recipient_type": "INTERNAL",
+  "recipient_name": "Internal Audit",
+  "purpose": "Annual compliance review"
 }
 ```
 
@@ -3157,14 +3170,27 @@ interface UpdateNotificationPreferenceRequest {
 ```typescript
 interface CreateAuditPackRequest {
   site_id: string;
+  pack_type: 'AUDIT_PACK' | 'REGULATOR_INSPECTION' | 'TENDER_CLIENT_ASSURANCE' | 'BOARD_MULTI_SITE_RISK' | 'INSURER_BROKER';
   date_range: {
     start: string; // ISO date
     end: string; // ISO date
   };
   obligation_ids?: string[]; // Optional: specific obligations
   include_archived?: boolean; // Default: false
+  recipient_type?: 'REGULATOR' | 'CLIENT' | 'BOARD' | 'INSURER' | 'INTERNAL';
+  recipient_name?: string;
+  purpose?: string;
 }
 ```
+
+**Plan-Based Access Control:**
+- Core Plan: `REGULATOR_INSPECTION`, `AUDIT_PACK` only
+- Growth Plan: All pack types
+- Consultant Edition: All pack types (for assigned clients)
+
+**Validation:**
+- Validates user plan has access to requested `pack_type`
+- Returns `403 FORBIDDEN` if pack type not available for user's plan
 
 **Response:** 202 Accepted
 ```json
@@ -3251,6 +3277,216 @@ Content-Length: {file_size}
 - `202 ACCEPTED` - Generation in progress
 
 **Rate Limiting:** 10 downloads/hour per user
+
+---
+
+> [v1 UPDATE – Pack-Specific Endpoints – 2024-12-27]
+
+# 16. v1.0 Pack-Specific Endpoints
+
+## 16.6 POST /api/v1/packs/regulator
+
+**Purpose:** Generate Regulator/Inspection Pack (Core plan, included)
+
+**Authentication:** Required (Owner, Admin, Staff)
+
+**Plan Requirement:** Core Plan or higher
+
+**Request:**
+- **Method:** POST
+- **Body:**
+```json
+{
+  "site_id": "uuid",
+  "document_id": "uuid",
+  "date_range": {
+    "start": "2025-01-01",
+    "end": "2025-12-31"
+  },
+  "recipient_name": "Environment Agency Inspector"
+}
+```
+
+**Response:** 202 Accepted (same as Section 16.2)
+
+**Reference:** Product Logic Specification Section I.8.2 (Regulator/Inspection Pack Logic)
+
+---
+
+## 16.7 POST /api/v1/packs/tender
+
+**Purpose:** Generate Tender/Client Assurance Pack (Growth plan)
+
+**Authentication:** Required (Owner, Admin, Staff)
+
+**Plan Requirement:** Growth Plan or Consultant Edition
+
+**Request:**
+- **Method:** POST
+- **Body:**
+```json
+{
+  "site_id": "uuid",
+  "document_id": "uuid",
+  "date_range": {
+    "start": "2025-01-01",
+    "end": "2025-12-31"
+  },
+  "recipient_name": "Client Name",
+  "purpose": "Tender submission"
+}
+```
+
+**Response:** 202 Accepted (same as Section 16.2)
+
+**Reference:** Product Logic Specification Section I.8.3 (Tender/Client Assurance Pack Logic)
+
+---
+
+## 16.8 POST /api/v1/packs/board
+
+**Purpose:** Generate Board/Multi-Site Risk Pack (Growth plan)
+
+**Authentication:** Required (Owner, Admin)
+
+**Plan Requirement:** Growth Plan or Consultant Edition
+
+**Request:**
+- **Method:** POST
+- **Body:**
+```json
+{
+  "company_id": "uuid",
+  "date_range": {
+    "start": "2025-01-01",
+    "end": "2025-12-31"
+  },
+  "include_all_sites": true
+}
+```
+
+**Note:** Board Pack requires `company_id` (not `site_id`) for multi-site aggregation.
+
+**Response:** 202 Accepted (same as Section 16.2)
+
+**Reference:** Product Logic Specification Section I.8.4 (Board/Multi-Site Risk Pack Logic)
+
+---
+
+## 16.9 POST /api/v1/packs/insurer
+
+**Purpose:** Generate Insurer/Broker Pack (Growth plan, bundled with Tender pack)
+
+**Authentication:** Required (Owner, Admin, Staff)
+
+**Plan Requirement:** Growth Plan or Consultant Edition
+
+**Request:**
+- **Method:** POST
+- **Body:**
+```json
+{
+  "site_id": "uuid",
+  "document_id": "uuid",
+  "date_range": {
+    "start": "2025-01-01",
+    "end": "2025-12-31"
+  },
+  "recipient_name": "Insurance Broker",
+  "purpose": "Insurance renewal"
+}
+```
+
+**Response:** 202 Accepted (same as Section 16.2)
+
+**Reference:** Product Logic Specification Section I.8.5 (Insurer/Broker Pack Logic)
+
+---
+
+> [v1 UPDATE – Pack Distribution Endpoints – 2024-12-27]
+
+# 16. Pack Distribution Endpoints
+
+## 16.10 GET /api/v1/packs/{packId}/share
+
+**Purpose:** Generate shareable link for pack
+
+**Authentication:** Required (Owner, Admin, Staff)
+
+**Plan Requirement:** Growth Plan or Consultant Edition
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `packId` (UUID, required) - Pack identifier
+- **Query Parameters:**
+  - `expires_in_days` (optional, default: 30) - Link expiration in days
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "shareable_link": "https://app.oblicore.com/share/packs/{token}",
+    "token": "uuid-token",
+    "expires_at": "2025-02-01T12:00:00Z",
+    "view_count": 0
+  }
+}
+```
+
+**Error Codes:**
+- `403 FORBIDDEN` - Pack type doesn't support sharing (Core Plan packs)
+- `404 NOT_FOUND` - Pack not found
+
+---
+
+## 16.11 POST /api/v1/packs/{packId}/distribute
+
+**Purpose:** Distribute pack via email or shared link
+
+**Authentication:** Required (Owner, Admin, Staff)
+
+**Plan Requirement:** Growth Plan or Consultant Edition
+
+**Request:**
+- **Method:** POST
+- **Path Parameters:**
+  - `packId` (UUID, required) - Pack identifier
+- **Body:**
+```json
+{
+  "distribution_method": "EMAIL",
+  "recipients": [
+    {
+      "email": "recipient@example.com",
+      "name": "Recipient Name"
+    }
+  ],
+  "message": "Please find attached compliance pack"
+}
+```
+
+**Distribution Methods:**
+- `EMAIL`: Send pack via email attachment
+- `SHARED_LINK`: Generate and send shareable link
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "distribution_id": "uuid",
+    "status": "SENT",
+    "sent_at": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `403 FORBIDDEN` - Pack type doesn't support distribution
+- `404 NOT_FOUND` - Pack not found
+- `422 UNPROCESSABLE_ENTITY` - Invalid recipients
+
+**Reference:** Product Logic Specification Section I.8.7 (Pack Distribution Logic)
 
 ---
 
@@ -6255,7 +6491,233 @@ interface BackgroundJobResponse {
 
 ---
 
-# 26. File Upload Specifications
+> [v1 UPDATE – Consultant Control Centre Endpoints – 2024-12-27]
+
+# 26. Consultant Control Centre Endpoints
+
+## 26.1 GET /api/v1/consultant/clients
+
+**Purpose:** List consultant's assigned clients
+
+**Authentication:** Required (Consultant role only)
+
+**Request:**
+- **Method:** GET
+- **Query Parameters:**
+  - `status` (optional, default: ACTIVE) - Filter by assignment status
+  - `cursor` (optional) - Cursor for pagination
+  - `limit` (optional) - Page size
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "client_company_id": "uuid",
+      "company_name": "Client Company Name",
+      "status": "ACTIVE",
+      "assigned_at": "2025-01-01T12:00:00Z",
+      "site_count": 3,
+      "compliance_summary": {
+        "total_obligations": 45,
+        "overdue_count": 2,
+        "compliance_score": 0.95
+      }
+    }
+  ],
+  "pagination": {...}
+}
+```
+
+**Error Codes:**
+- `403 FORBIDDEN` - User is not a consultant
+
+**Rate Limiting:** 100 requests/hour per consultant
+
+**Reference:** Product Logic Specification Section C.5.3 (Consultant Dashboard Logic)
+
+---
+
+## 26.2 GET /api/v1/consultant/dashboard
+
+**Purpose:** Get consultant dashboard with aggregated client data
+
+**Authentication:** Required (Consultant role only)
+
+**Request:**
+- **Method:** GET
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "total_clients": 12,
+    "active_clients": 10,
+    "total_sites": 25,
+    "compliance_overview": {
+      "total_obligations": 450,
+      "overdue_count": 8,
+      "approaching_deadline_count": 15,
+      "avg_compliance_score": 0.92
+    },
+    "recent_activity": [
+      {
+        "client_company_id": "uuid",
+        "client_name": "Client Name",
+        "activity_type": "PACK_GENERATED",
+        "activity_description": "Regulator pack generated",
+        "timestamp": "2025-01-01T12:00:00Z"
+      }
+    ],
+    "upcoming_deadlines": [
+      {
+        "client_company_id": "uuid",
+        "client_name": "Client Name",
+        "deadline_date": "2025-01-15",
+        "obligation_title": "Monthly monitoring report"
+      }
+    ]
+  }
+}
+```
+
+**Error Codes:**
+- `403 FORBIDDEN` - User is not a consultant
+
+**Rate Limiting:** 60 requests/hour per consultant
+
+**Reference:** Product Logic Specification Section C.5.3 (Consultant Dashboard Logic)
+
+---
+
+## 26.3 POST /api/v1/consultant/clients/{clientId}/packs
+
+**Purpose:** Generate pack for assigned client
+
+**Authentication:** Required (Consultant role only)
+
+**Request:**
+- **Method:** POST
+- **Path Parameters:**
+  - `clientId` (UUID, required) - Client company ID
+- **Body:**
+```json
+{
+  "pack_type": "REGULATOR_INSPECTION",
+  "site_id": "uuid",
+  "document_id": "uuid",
+  "date_range": {
+    "start": "2025-01-01",
+    "end": "2025-12-31"
+  },
+  "recipient_name": "Client Contact Name"
+}
+```
+
+**Response:** 202 Accepted (same as Section 16.2)
+
+**Validation:**
+- Validates consultant has `ACTIVE` assignment to client company
+- Returns `403 FORBIDDEN` if consultant not assigned to client
+
+**Error Codes:**
+- `403 FORBIDDEN` - Consultant not assigned to client
+- `404 NOT_FOUND` - Client company not found
+
+**Rate Limiting:** 10 generations/hour per consultant per client
+
+**Reference:** Product Logic Specification Section C.5.4 (Consultant Pack Generation)
+
+---
+
+## 26.4 POST /api/v1/consultant/clients/{clientId}/packs/{packId}/distribute
+
+**Purpose:** Distribute client pack to client contacts
+
+**Authentication:** Required (Consultant role only)
+
+**Request:**
+- **Method:** POST
+- **Path Parameters:**
+  - `clientId` (UUID, required) - Client company ID
+  - `packId` (UUID, required) - Pack identifier
+- **Body:**
+```json
+{
+  "distribution_method": "EMAIL",
+  "recipients": [
+    {
+      "email": "client@example.com",
+      "name": "Client Contact"
+    }
+  ],
+  "message": "Please find attached compliance pack"
+}
+```
+
+**Response:** 200 OK (same as Section 16.11)
+
+**Validation:**
+- Validates consultant has `ACTIVE` assignment to client company
+- Validates pack belongs to client company
+
+**Error Codes:**
+- `403 FORBIDDEN` - Consultant not assigned to client or pack not accessible
+- `404 NOT_FOUND` - Client or pack not found
+
+**Reference:** Product Logic Specification Section C.5.4 (Consultant Pack Generation)
+
+---
+
+## 26.5 GET /api/v1/consultant/clients/{clientId}
+
+**Purpose:** Get client company details and compliance summary
+
+**Authentication:** Required (Consultant role only)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `clientId` (UUID, required) - Client company ID
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "company_id": "uuid",
+    "company_name": "Client Company Name",
+    "site_count": 3,
+    "sites": [
+      {
+        "site_id": "uuid",
+        "site_name": "Site Name",
+        "compliance_status": "COMPLIANT",
+        "overdue_obligations": 0
+      }
+    ],
+    "compliance_summary": {
+      "total_obligations": 45,
+      "complete_count": 43,
+      "overdue_count": 2,
+      "compliance_score": 0.95
+    },
+    "assignment": {
+      "status": "ACTIVE",
+      "assigned_at": "2025-01-01T12:00:00Z"
+    }
+  }
+}
+```
+
+**Error Codes:**
+- `403 FORBIDDEN` - Consultant not assigned to client
+- `404 NOT_FOUND` - Client company not found
+
+**Rate Limiting:** 100 requests/hour per consultant
+
+---
+
+# 27. File Upload Specifications
 
 ## 18.1 File Size Limits
 
@@ -6342,7 +6804,7 @@ interface UploadProgressResponse {
 
 ---
 
-# 27. Webhook Endpoints
+# 28. Webhook Endpoints
 
 ## 27.1 POST /api/v1/webhooks
 
@@ -6567,7 +7029,7 @@ X-Webhook-Timestamp: {unix_timestamp}
 
 ---
 
-# 28. OpenAPI Specification
+# 29. OpenAPI Specification
 
 ## 28.1 OpenAPI 3.0 Structure
 
@@ -6618,7 +7080,7 @@ DocumentResponse:
 
 ---
 
-# 29. TypeScript Interfaces
+# 30. TypeScript Interfaces
 
 ## 29.1 Common Interfaces
 

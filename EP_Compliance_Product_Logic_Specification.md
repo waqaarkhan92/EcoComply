@@ -1,9 +1,13 @@
 # PRODUCT LOGIC SPECIFICATION (PLS)
 ## EP Compliance Platform — Modules 1–3
 
+**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+
 **Document Version:** 1.0  
 **Status:** Complete  
 **Depends On:** Master Commercial Plan (MCP)
+
+> [v1 UPDATE – Version Header – 2024-12-27]
 
 ---
 
@@ -3273,6 +3277,298 @@ For each gap, system suggests:
 - User configures schedule in settings
 - Options: Weekly (Friday), Monthly (last day), Quarterly
 - Generated pack sent via email to configured recipients
+
+---
+
+> [v1 UPDATE – Pack Generation Logic – 2024-12-27]
+
+# I.8 v1.0 Pack Types — Generation Logic
+
+## I.8.1 Pack Type Enum
+
+**Pack Types:**
+- `AUDIT_PACK` — Full evidence compilation (existing, all plans)
+- `REGULATOR_INSPECTION` — Inspector-ready compliance pack (Core plan, included)
+- `TENDER_CLIENT_ASSURANCE` — Compliance summary for tenders (Growth plan)
+- `BOARD_MULTI_SITE_RISK` — Multi-site risk summary (Growth plan)
+- `INSURER_BROKER` — Risk narrative for insurance (bundled with Tender pack)
+
+**Pack Type Access Control:**
+- Core Plan: `REGULATOR_INSPECTION`, `AUDIT_PACK`
+- Growth Plan: All pack types
+- Consultant Edition: All pack types for assigned clients
+
+## I.8.2 Regulator/Inspection Pack Logic
+
+**Purpose:** Inspector-ready compliance evidence compilation for regulatory inspections.
+
+**Content Structure:**
+1. Cover page (company name, site name, permit reference, generation date)
+2. Executive summary (compliance status overview, key metrics)
+3. Permit summary (permit details, expiry date, conditions count)
+4. Compliance dashboard summary (traffic light status, obligation counts)
+5. Obligation matrix (all obligations with evidence status)
+6. Gap analysis (overdue + missing evidence, prioritized)
+7. Evidence appendix (full evidence files organized by condition)
+8. Improvement condition status (if applicable)
+9. Revision history
+
+**Data Sources (reuses existing data only):**
+- `documents` table (permit details)
+- `obligations` table (all obligations with status)
+- `evidence_items` table (linked evidence)
+- `obligation_evidence_links` table (evidence-to-obligation mapping)
+- `schedules` table (monitoring schedules)
+- `deadlines` table (upcoming deadlines)
+
+**Generation Rules:**
+- Includes all obligations regardless of status
+- Shows complete evidence trail
+- Highlights gaps prominently
+- Professional regulator-ready formatting
+- PDF/A archival format
+
+## I.8.3 Tender/Client Assurance Pack Logic
+
+**Purpose:** Compliance summary for client tenders and assurance requests.
+
+**Content Structure:**
+1. Cover page (company name, compliance summary, generation date)
+2. Compliance overview (high-level status, key metrics)
+3. Evidence samples (representative evidence, not full appendix)
+4. Risk assessment (compliance risk summary, gap highlights)
+5. Action plan (remediation steps for identified gaps)
+6. Compliance certification statement
+
+**Data Sources (reuses existing data only):**
+- Same as Regulator Pack but filtered/aggregated differently
+- Evidence samples: Latest evidence per obligation category
+- Risk assessment: Derived from gap analysis
+
+**Generation Rules:**
+- Summary-focused (not exhaustive evidence)
+- Emphasizes compliance strengths
+- Highlights remediation plans for gaps
+- Professional client-facing format
+- Suitable for external sharing
+
+## I.8.4 Board/Multi-Site Risk Pack Logic
+
+**Purpose:** Multi-site risk summary and compliance trends for board reporting.
+
+**Content Structure:**
+1. Executive summary (multi-site compliance overview)
+2. Risk dashboard (aggregated metrics across all sites)
+3. Site-by-site compliance matrix
+4. Trend analysis (compliance trends over time)
+5. Key metrics (overdue obligations, evidence gaps, inspection readiness)
+6. Risk prioritization (sites requiring attention)
+7. Action items (board-level recommendations)
+
+**Data Sources (reuses existing data only):**
+- Aggregates data from `sites` table (all company sites)
+- Cross-site obligation aggregation
+- Cross-site evidence completeness
+- Historical compliance trends from `audit_packs` table
+
+**Generation Rules:**
+- Multi-site aggregation (requires `company_id` scope)
+- Board-level summary (not detailed evidence)
+- Trend visualization (compliance over time)
+- Risk-focused presentation
+- Suitable for executive reporting
+
+**Multi-Site Aggregation Logic:**
+```sql
+-- Example: Aggregate compliance metrics across all company sites
+SELECT 
+  COUNT(DISTINCT s.id) as total_sites,
+  COUNT(DISTINCT o.id) as total_obligations,
+  COUNT(DISTINCT CASE WHEN o.status = 'OVERDUE' THEN o.id END) as overdue_count,
+  COUNT(DISTINCT e.id) as total_evidence_items,
+  AVG(compliance_score) as avg_compliance_score
+FROM companies c
+JOIN sites s ON s.company_id = c.id
+LEFT JOIN documents d ON d.site_id = s.id
+LEFT JOIN obligations o ON o.document_id = d.id
+LEFT JOIN evidence_items e ON e.site_id = s.id
+WHERE c.id = :company_id
+GROUP BY c.id
+```
+
+## I.8.5 Insurer/Broker Pack Logic
+
+**Purpose:** Risk narrative and compliance controls for insurance purposes.
+
+**Content Structure:**
+1. Risk narrative (compliance risk overview)
+2. Compliance controls summary (evidence of controls in place)
+3. Evidence overview (summary of evidence types, not full files)
+4. Gap analysis (identified risks and mitigation)
+5. Compliance certification (compliance status statement)
+
+**Data Sources (reuses existing data only):**
+- Same data sources as other packs
+- Focused on risk narrative and controls
+- Evidence overview (not full evidence files)
+
+**Generation Rules:**
+- Risk-focused narrative
+- Emphasizes compliance controls
+- Evidence overview (not exhaustive)
+- Professional insurance-ready format
+- Suitable for broker/insurer sharing
+
+## I.8.6 Pack Type Selection Logic
+
+**User Selection Flow:**
+1. User navigates to pack generation
+2. System checks user's plan (Core/Growth/Consultant)
+3. System displays available pack types based on plan
+4. User selects pack type
+5. System validates plan access (enforces Growth plan for Tender/Board/Insurer packs)
+6. System generates pack with appropriate content structure
+
+**Plan-Based Access:**
+- Core Plan: `REGULATOR_INSPECTION`, `AUDIT_PACK` only
+- Growth Plan: All pack types
+- Consultant Edition: All pack types (for assigned clients)
+
+**Pack Type Validation:**
+```typescript
+function canGeneratePackType(userPlan: string, packType: string): boolean {
+  const corePackTypes = ['REGULATOR_INSPECTION', 'AUDIT_PACK'];
+  const growthPackTypes = ['TENDER_CLIENT_ASSURANCE', 'BOARD_MULTI_SITE_RISK', 'INSURER_BROKER'];
+  
+  if (corePackTypes.includes(packType)) {
+    return true; // Available to all plans
+  }
+  
+  if (growthPackTypes.includes(packType)) {
+    return userPlan === 'GROWTH' || userPlan === 'CONSULTANT';
+  }
+  
+  return false;
+}
+```
+
+## I.8.7 Pack Distribution Logic
+
+**Distribution Methods:**
+- `DOWNLOAD` — User downloads pack directly
+- `EMAIL` — Pack sent via email to specified recipients
+- `SHARED_LINK` — Shareable link generated (time-limited, access-controlled)
+
+**Distribution Rules:**
+- All pack types support download
+- Growth Plan packs support email distribution
+- Growth Plan packs support shared link generation
+- Consultant Edition: Can distribute client packs to clients
+
+**Shared Link Security:**
+- Time-limited (default: 30 days)
+- Access-controlled (requires authentication or password)
+- Tracked (views logged in `pack_distributions` table)
+
+---
+
+> [v1 UPDATE – Consultant Control Centre – 2024-12-27]
+
+# C.5 Consultant Control Centre Logic
+
+## C.5.1 Consultant User Model
+
+**Consultant Role:**
+- Consultant is a `User` with `role = 'CONSULTANT'` in `user_roles` table
+- Consultant can be assigned to multiple client companies
+- Consultant access is scoped via `consultant_client_assignments` table
+
+**Consultant Assignment:**
+- Assignment stored in `consultant_client_assignments` table
+- Fields: `consultant_id`, `client_company_id`, `assigned_at`, `status`
+- Status: `ACTIVE` (can access) or `INACTIVE` (access revoked)
+
+## C.5.2 Consultant Access Logic
+
+**Access Scope:**
+- Consultant can only access assigned client companies
+- Consultant can access all sites within assigned companies
+- Consultant can view/edit obligations, evidence, schedules for assigned clients
+- Consultant can generate packs for assigned clients
+- Consultant cannot manage billing or company settings
+
+**Access Validation:**
+```typescript
+function canConsultantAccessCompany(consultantId: UUID, companyId: UUID): boolean {
+  const assignment = await db.query(`
+    SELECT 1 FROM consultant_client_assignments
+    WHERE consultant_id = :consultantId
+      AND client_company_id = :companyId
+      AND status = 'ACTIVE'
+  `);
+  return assignment.length > 0;
+}
+```
+
+## C.5.3 Consultant Dashboard Logic
+
+**Dashboard Content:**
+- Client list (all assigned clients with compliance status)
+- Client compliance overview (aggregated metrics)
+- Recent activity (client updates, pack generations)
+- Upcoming deadlines (across all clients)
+- Client alerts (overdue obligations, gaps)
+
+**Multi-Client Aggregation:**
+- Aggregates data from all assigned client companies
+- Shows cross-client compliance trends
+- Highlights clients requiring attention
+- Provides client switching interface
+
+## C.5.4 Consultant Pack Generation
+
+**Pack Generation for Clients:**
+- Consultant can generate any pack type for assigned clients
+- Pack generation follows same logic as regular users
+- Packs are associated with client company (not consultant's company)
+- Consultant can distribute packs to clients via email/shared link
+
+**Client Pack Distribution:**
+- Consultant can email packs directly to client contacts
+- Consultant can generate shareable links for clients
+- Distribution tracked in `pack_distributions` table
+- Client receives notification when pack is distributed
+
+## C.5.5 Consultant Permissions Matrix
+
+| Action | Consultant Permission |
+|--------|----------------------|
+| View assigned clients | ✅ Yes |
+| View client obligations | ✅ Yes (assigned clients only) |
+| Edit client obligations | ✅ Yes (assigned clients only) |
+| Upload client evidence | ✅ Yes (assigned clients only) |
+| Generate client packs | ✅ Yes (all pack types for assigned clients) |
+| Distribute client packs | ✅ Yes (email/shared link) |
+| Manage client users | ❌ No |
+| Manage client billing | ❌ No |
+| Manage client company settings | ❌ No |
+| Access unassigned clients | ❌ No |
+
+## C.5.6 Consultant Client Assignment Workflow
+
+**Assignment Process:**
+1. Client company owner/admin assigns consultant
+2. System creates `consultant_client_assignments` record
+3. Consultant receives notification: "You've been assigned to [Client Company]"
+4. Consultant can now access client data
+5. Consultant appears in client's user list (read-only view)
+
+**Revocation Process:**
+1. Client company owner/admin revokes consultant access
+2. System updates `consultant_client_assignments.status = 'INACTIVE'`
+3. Consultant immediately loses access to client data
+4. Consultant receives notification: "Access to [Client Company] revoked"
+5. Historical pack generations remain (consultant attribution preserved)
 
 ---
 

@@ -1,6 +1,8 @@
 # Technical Architecture & Stack
 ## EP Compliance Platform — Document 2.1
 
+**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+
 **Document Version:** 1.0  
 **Status:** Complete  
 **Created By:** Cursor  
@@ -9,6 +11,8 @@
 - ✅ Canonical Dictionary (1.2) - Complete
 
 **Purpose:** Defines the complete technical infrastructure, frameworks, and architectural decisions for the EP Compliance platform.
+
+> [v1 UPDATE – Version Header – 2024-12-27]
 
 ---
 
@@ -1580,6 +1584,79 @@ User Uploads PDF
          └─→ Store Results in DB
              └─→ Update Document Status
 ```
+
+---
+
+> [v1 UPDATE – Pack Generation Service Architecture – 2024-12-27]
+
+## 10.1 Pack Generation Service Architecture
+
+**Service:** Pack Generation Service
+
+**Purpose:** Handles generation of all pack types (Audit, Regulator, Tender, Board, Insurer)
+
+**Architecture:**
+```
+Pack Generation Service
+├── Pack Type Router
+│   ├── Routes to pack-specific generator based on pack_type
+│   └── Validates plan access
+├── Pack Generators (per type)
+│   ├── RegulatorPackGenerator
+│   ├── TenderPackGenerator
+│   ├── BoardPackGenerator
+│   ├── InsurerPackGenerator
+│   └── AuditPackGenerator
+├── PDF Renderer
+│   ├── Template Engine
+│   └── PDF/A Generator
+└── Storage Service
+    └── Supabase Storage Integration
+```
+
+**Pack Type-Specific Logic:**
+- Each pack generator implements `PackGenerator` interface
+- Generators reuse existing data (obligations, evidence, schedules)
+- Different content structures per pack type (see PLS Section I.8)
+
+**Multi-Site Aggregation (Board Pack):**
+- Aggregates data across all company sites
+- Requires `company_id` scope (not `site_id`)
+- Performance optimization: Parallel queries per site, then aggregation
+
+**Reference:** Product Logic Specification Section I.8 (v1.0 Pack Types — Generation Logic)
+
+---
+
+## 10.2 Consultant Feature Infrastructure
+
+**Service:** Consultant Control Centre Service
+
+**Purpose:** Manages consultant client assignments and multi-client access
+
+**Architecture:**
+```
+Consultant Service
+├── Client Assignment Manager
+│   ├── Assignment CRUD operations
+│   └── Assignment validation
+├── Multi-Client Data Aggregator
+│   ├── Cross-client compliance metrics
+│   ├── Cross-client deadline aggregation
+│   └── Cross-client activity timeline
+├── Consultant Dashboard Service
+│   ├── Dashboard data aggregation
+│   └── Client switching logic
+└── RLS Policy Integration
+    └── Consultant isolation enforcement
+```
+
+**Data Aggregation:**
+- Aggregates data from `consultant_client_assignments` table
+- Filters queries by assigned client companies
+- Caches dashboard data for performance
+
+**Reference:** Product Logic Specification Section C.5 (Consultant Control Centre Logic)
 
 ---
 

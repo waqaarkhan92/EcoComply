@@ -1,5 +1,7 @@
 # EP Compliance Onboarding Flow Specification
 
+**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+
 **Document Version:** 1.0  
 **Status:** Complete  
 **Created by:** Cursor  
@@ -8,6 +10,8 @@
 - ✅ Frontend Routes (2.6) - Complete
 
 **Purpose:** Defines the complete onboarding flow system, including first-time user flows, tutorials, role-based variants, quick start optimization, and progress tracking for the EP Compliance platform.
+
+> [v1 UPDATE – Version Header – 2024-12-27]
 
 ---
 
@@ -967,6 +971,8 @@ The module activation flow guides users through activating additional modules (M
 
 # 7. Consultant Onboarding
 
+> [v1 UPDATE – Consultant Onboarding v1.0 – 2024-12-27]
+
 ## 7.1 Flow Overview
 
 Consultant onboarding is optimized for users who manage multiple clients.
@@ -997,7 +1003,13 @@ Consultant onboarding is optimized for users who manage multiple clients.
 - **Actions:** Switch clients, view client-specific data
 - **Duration:** ~30 seconds
 
-**Step 5: Completion**
+**Step 5: Pack Generation Tutorial** (> [v1 UPDATE – Pack Feature Discovery – 2024-12-27])
+- **Content:** "Generate compliance packs for your clients"
+- **Visual:** Pack type selector demo
+- **Actions:** Show pack types available, demo pack generation
+- **Duration:** ~1 minute
+
+**Step 6: Completion**
 - **Content:** "Consultant onboarding complete!"
 - **Visual:** Success message
 - **Actions:** "Go to Dashboard" button
@@ -1009,6 +1021,9 @@ Consultant onboarding is optimized for users who manage multiple clients.
 - **Client Access Request Form:** Request access to client sites
 - **Multi-Client Dashboard:** Client switcher, client data isolation
 - **Client Data Isolation Indicator:** Visual boundary between clients
+- **Pack Generation Demo:** Show pack types available for consultants
+
+**Reference:** Product Logic Specification Section C.5 (Consultant Control Centre Logic)
 
 ---
 
@@ -1316,7 +1331,11 @@ Get users to value in < 3 minutes by focusing on core steps only.
 
 - **After 3 Obligations Tracked:** "Add more sites to track multiple locations"
 - **After 5 Evidence Items:** "Activate Module 2 for parameter tracking"
-- **After 10 Obligations:** "Generate audit pack for compliance review"
+- **After 10 Obligations:** "Generate pack for compliance review"
+- **Pack Feature Discovery:** 
+  - Core Plan: Show Regulator Pack and Audit Pack options
+  - Growth Plan: Show all pack types (Regulator, Tender, Board, Insurer, Audit)
+  - Tooltip: "Upgrade to Growth Plan to unlock Tender, Board, and Insurer packs"
 
 ## 14.4 UI Elements
 

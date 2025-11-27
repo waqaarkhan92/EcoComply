@@ -1,5 +1,7 @@
 # EP Compliance Testing & QA Strategy
 
+**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+
 **Document Version:** 1.0  
 **Status:** Complete  
 **Created by:** Cursor  
@@ -10,6 +12,8 @@
 - ✅ Background Jobs Specification (2.3) - Complete
 
 **Purpose:** Defines the complete testing and QA strategy for the EP Compliance platform, including test framework selection, unit testing, integration testing, E2E testing, performance benchmarks, test data management, and CI/CD integration.
+
+> [v1 UPDATE – Version Header – 2024-12-27]
 
 ---
 
@@ -23,14 +27,16 @@
 6. [Permit Parsing Test Suite](#6-permit-parsing-test-suite)
 7. [Module 2/3 Cross-Sell Trigger Testing](#7-module-23-cross-sell-trigger-testing)
 8. [RLS Permission Testing](#8-rls-permission-testing)
-9. [API Key Management Testing](#9-api-key-management-testing)
-10. [AI Integration Layer Testing](#10-ai-integration-layer-testing)
-11. [Notification & Messaging Testing](#11-notification--messaging-testing)
-12. [Performance Benchmarks](#12-performance-benchmarks)
-13. [Test Data Management](#13-test-data-management)
-14. [CI/CD Integration](#14-cicd-integration)
-15. [Test Maintenance](#15-test-maintenance)
-16. [TypeScript Interfaces](#16-typescript-interfaces)
+9. [v1.0 Pack Generation Testing](#9-v10-pack-generation-testing)
+10. [v1.0 Consultant Feature Testing](#10-v10-consultant-feature-testing)
+11. [API Key Management Testing](#11-api-key-management-testing)
+12. [AI Integration Layer Testing](#12-ai-integration-layer-testing)
+13. [Notification & Messaging Testing](#13-notification--messaging-testing)
+14. [Performance Benchmarks](#14-performance-benchmarks)
+15. [Test Data Management](#15-test-data-management)
+16. [CI/CD Integration](#16-cicd-integration)
+17. [Test Maintenance](#17-test-maintenance)
+18. [TypeScript Interfaces](#18-typescript-interfaces)
 
 ---
 
@@ -1959,7 +1965,285 @@ it('should perform efficiently with consultant isolation', async () => {
 
 ---
 
-## 8.6 RLS Testing Implementation
+> [v1 UPDATE – Pack Generation Testing – 2024-12-27]
+
+## 9. v1.0 Pack Generation Testing
+
+### 9.1 Pack Type Access Control Tests
+
+**Test Case 1: Core Plan can only generate Regulator and Audit packs**
+
+**Setup:**
+- Create user with Core Plan
+- Create site with active documents
+
+**Test:**
+```typescript
+it('should restrict Core Plan to Regulator and Audit packs only', async () => {
+  const response = await api.post('/api/v1/packs/tender', {
+    site_id: siteId,
+    pack_type: 'TENDER_CLIENT_ASSURANCE',
+    date_range: { start: '2025-01-01', end: '2025-12-31' }
+  });
+  
+  expect(response.status).toBe(403);
+  expect(response.body.error).toContain('pack type not available');
+});
+```
+
+**Expected:** Returns 403 FORBIDDEN for Growth Plan pack types
+
+---
+
+**Test Case 2: Growth Plan can generate all pack types**
+
+**Setup:**
+- Create user with Growth Plan
+- Create site with active documents
+
+**Test:**
+```typescript
+it('should allow Growth Plan to generate all pack types', async () => {
+  const packTypes = [
+    'REGULATOR_INSPECTION',
+    'TENDER_CLIENT_ASSURANCE',
+    'BOARD_MULTI_SITE_RISK',
+    'INSURER_BROKER',
+    'AUDIT_PACK'
+  ];
+  
+  for (const packType of packTypes) {
+    const response = await api.post(`/api/v1/packs/${packType.toLowerCase()}`, {
+      site_id: siteId,
+      pack_type: packType,
+      date_range: { start: '2025-01-01', end: '2025-12-31' }
+    });
+    
+    expect(response.status).toBe(202); // Accepted
+  }
+});
+```
+
+**Expected:** All pack types accepted for Growth Plan
+
+---
+
+### 9.2 Pack Content Structure Tests
+
+**Test Case 3: Regulator Pack includes all required sections**
+
+**Test:**
+```typescript
+it('should generate Regulator Pack with correct structure', async () => {
+  const pack = await generatePack({
+    pack_type: 'REGULATOR_INSPECTION',
+    site_id: siteId,
+    document_id: documentId,
+    date_range: { start: '2025-01-01', end: '2025-12-31' }
+  });
+  
+  expect(pack.sections).toContain('Cover Page');
+  expect(pack.sections).toContain('Executive Summary');
+  expect(pack.sections).toContain('Permit Summary');
+  expect(pack.sections).toContain('Compliance Dashboard');
+  expect(pack.sections).toContain('Obligation Matrix');
+  expect(pack.sections).toContain('Gap Analysis');
+  expect(pack.sections).toContain('Evidence Appendix');
+});
+```
+
+**Reference:** Product Logic Specification Section I.8.2 (Regulator/Inspection Pack Logic)
+
+---
+
+**Test Case 4: Board Pack includes multi-site aggregation**
+
+**Test:**
+```typescript
+it('should generate Board Pack with multi-site data', async () => {
+  const company = await createCompany();
+  const site1 = await createSite(company.id);
+  const site2 = await createSite(company.id);
+  const site3 = await createSite(company.id);
+  
+  // Add obligations to each site
+  await createObligations(site1.id, 10);
+  await createObligations(site2.id, 15);
+  await createObligations(site3.id, 8);
+  
+  const pack = await generatePack({
+    pack_type: 'BOARD_MULTI_SITE_RISK',
+    company_id: company.id,
+    date_range: { start: '2025-01-01', end: '2025-12-31' }
+  });
+  
+  expect(pack.total_sites).toBe(3);
+  expect(pack.total_obligations).toBe(33); // 10 + 15 + 8
+  expect(pack.site_by_site_matrix).toHaveLength(3);
+});
+```
+
+**Reference:** Product Logic Specification Section I.8.4 (Board/Multi-Site Risk Pack Logic)
+
+---
+
+### 9.3 Pack Distribution Tests
+
+**Test Case 5: Email distribution sends pack to recipients**
+
+**Test:**
+```typescript
+it('should distribute pack via email', async () => {
+  const pack = await generatePack({ pack_type: 'TENDER_CLIENT_ASSURANCE' });
+  
+  const response = await api.post(`/api/v1/packs/${pack.id}/distribute`, {
+    distribution_method: 'EMAIL',
+    recipients: [
+      { email: 'recipient@example.com', name: 'Recipient Name' }
+    ],
+    message: 'Please find attached compliance pack'
+  });
+  
+  expect(response.status).toBe(200);
+  expect(emailService.send).toHaveBeenCalledWith(
+    expect.objectContaining({
+      to: 'recipient@example.com',
+      attachments: expect.arrayContaining([
+        expect.objectContaining({ filename: expect.stringContaining('.pdf') })
+      ])
+    })
+  );
+});
+```
+
+---
+
+**Test Case 6: Shared link generation creates unique token**
+
+**Test:**
+```typescript
+it('should generate unique shared link token', async () => {
+  const pack = await generatePack({ pack_type: 'TENDER_CLIENT_ASSURANCE' });
+  
+  const response = await api.get(`/api/v1/packs/${pack.id}/share`, {
+    params: { expires_in_days: 30 }
+  });
+  
+  expect(response.status).toBe(200);
+  expect(response.data.shareable_link).toContain('/share/packs/');
+  expect(response.data.token).toMatch(/^[a-f0-9-]{36}$/); // UUID format
+  expect(response.data.expires_at).toBeDefined();
+});
+```
+
+---
+
+> [v1 UPDATE – Consultant Feature Testing – 2024-12-27]
+
+## 10. v1.0 Consultant Feature Testing
+
+### 10.1 Consultant Client Assignment Tests
+
+**Test Case 1: Consultant can only access assigned clients**
+
+**Setup:**
+- Create consultant user
+- Create two client companies (A and B)
+- Assign consultant to company A only
+
+**Test:**
+```typescript
+it('should restrict consultant to assigned clients only', async () => {
+  const consultantSupabase = createClient(TEST_SUPABASE_URL, consultantToken);
+  
+  // Should access company A
+  const { data: companyA } = await consultantSupabase
+    .from('companies')
+    .select('*')
+    .eq('id', companyAId)
+    .single();
+  
+  expect(companyA).toBeDefined();
+  
+  // Should NOT access company B
+  const { data: companyB, error } = await consultantSupabase
+    .from('companies')
+    .select('*')
+    .eq('id', companyBId)
+    .single();
+  
+  expect(companyB).toBeNull();
+  expect(error).toBeDefined();
+});
+```
+
+**RLS Policy:** `consultant_client_assignments_select_consultant_access`
+
+---
+
+**Test Case 2: Consultant can generate packs for assigned clients**
+
+**Test:**
+```typescript
+it('should allow consultant to generate packs for assigned clients', async () => {
+  const response = await api.post(`/api/v1/consultant/clients/${clientAId}/packs`, {
+    pack_type: 'REGULATOR_INSPECTION',
+    site_id: siteId,
+    date_range: { start: '2025-01-01', end: '2025-12-31' }
+  }, {
+    headers: { Authorization: `Bearer ${consultantToken}` }
+  });
+  
+  expect(response.status).toBe(202); // Accepted
+});
+```
+
+---
+
+**Test Case 3: Consultant cannot generate packs for unassigned clients**
+
+**Test:**
+```typescript
+it('should prevent consultant from generating packs for unassigned clients', async () => {
+  const response = await api.post(`/api/v1/consultant/clients/${clientBId}/packs`, {
+    pack_type: 'REGULATOR_INSPECTION',
+    site_id: siteId,
+    date_range: { start: '2025-01-01', end: '2025-12-31' }
+  }, {
+    headers: { Authorization: `Bearer ${consultantToken}` }
+  });
+  
+  expect(response.status).toBe(403);
+  expect(response.body.error).toContain('not assigned');
+});
+```
+
+---
+
+### 10.2 Consultant Dashboard Tests
+
+**Test Case 4: Consultant dashboard aggregates client data**
+
+**Test:**
+```typescript
+it('should aggregate data from all assigned clients', async () => {
+  const response = await api.get('/api/v1/consultant/dashboard', {
+    headers: { Authorization: `Bearer ${consultantToken}` }
+  });
+  
+  expect(response.status).toBe(200);
+  expect(response.data.total_clients).toBeGreaterThan(0);
+  expect(response.data.compliance_overview).toBeDefined();
+  expect(response.data.recent_activity).toBeDefined();
+  expect(response.data.upcoming_deadlines).toBeDefined();
+});
+```
+
+**Reference:** Product Logic Specification Section C.5.3 (Consultant Dashboard Logic)
+
+---
+
+## 11. API Key Management Testing
 
 ### Unit Tests
 

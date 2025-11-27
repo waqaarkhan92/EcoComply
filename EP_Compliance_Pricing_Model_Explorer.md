@@ -2,11 +2,37 @@
 ## Pricing Model Explorer
 ### Alternative Pricing Strategies & Commercial Analysis
 
+**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+
+> [v1 UPDATE – Version Header – 2024-12-27]
+
 ---
 
 ## 1. CURRENT PRICING MODEL (SUMMARY)
 
-EP Compliance uses a modular, site-based pricing structure optimised for UK SME budgets:
+> [v1 UPDATE – v1.0 Pricing Tiers – 2024-12-27]
+
+**v1.0 Pricing Structure:**
+
+EP Compliance uses plan-based pricing with pack capabilities:
+
+| Plan | Price | Includes |
+|------|-------|----------|
+| **Core Plan** | £149/month per site | Module 1 + Regulator Pack + Audit Pack |
+| **Growth Plan** | £249/month per site | Core Plan + Tender Pack + Board Pack + Insurer Pack |
+| **Consultant Edition** | £299/month | Growth Plan + Multi-client access + Client pack generation |
+
+**Module Add-Ons (all plans):**
+- Module 2 — Trade Effluent: £59/month per site
+- Module 3 — MCPD/Generators: £79/month per company
+- Additional Permit: £49/month each
+- Additional Site: £99/month each
+
+**v1.0 ARPU:** £189/month (Year 1) → £224/month (Year 2)
+
+**Legacy Pricing (Pre-v1.0):**
+
+EP Compliance used a modular, site-based pricing structure optimised for UK SME budgets:
 
 | Component | Price | Basis |
 |-----------|-------|-------|
@@ -16,7 +42,7 @@ EP Compliance uses a modular, site-based pricing structure optimised for UK SME 
 | Additional Permit | £49/month | Per permit |
 | Additional Site | £99/month | Per site |
 
-**Current ARPU:** £174/month (Year 1) → £201/month (Year 2)
+**Legacy ARPU:** £174/month (Year 1) → £201/month (Year 2)
 
 For full pricing rationale, expansion waterfall, and ROI calculations, see MCP Section 7 (Commercial Model).
 

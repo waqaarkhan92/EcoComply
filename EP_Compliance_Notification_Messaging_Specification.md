@@ -1,5 +1,7 @@
 # EP Compliance Notification & Messaging Specification
 
+**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+
 **Document Version:** 1.0  
 **Status:** Complete  
 **Created by:** Cursor  
@@ -10,6 +12,8 @@
 - ✅ Background Jobs (2.3) - Complete
 
 **Purpose:** Defines the complete notification and messaging system, including email/SMS templates, escalation chains, delivery mechanisms, rate limiting, and integration with background jobs for the EP Compliance platform.
+
+> [v1 UPDATE – Version Header – 2024-12-27]
 
 ---
 
@@ -99,6 +103,14 @@ The system supports the following notification types:
 | Run-Hour Breach (90%) | Background Job | EMAIL, IN_APP | Level 1 → Level 2 |
 | Run-Hour Breach (100%) | Background Job | EMAIL, SMS, IN_APP | Level 1 → Level 2 → Level 3 |
 | Audit Pack Ready | Background Job | EMAIL, IN_APP | None |
+| Regulator Pack Ready | Background Job | EMAIL, IN_APP | None |
+| Tender Pack Ready | Background Job | EMAIL, IN_APP | None |
+| Board Pack Ready | Background Job | EMAIL, IN_APP | None |
+| Insurer Pack Ready | Background Job | EMAIL, IN_APP | None |
+| Pack Distributed | Background Job | EMAIL, IN_APP | None |
+| Consultant Client Assigned | System Event | EMAIL, IN_APP | None |
+| Consultant Client Pack Generated | Background Job | EMAIL, IN_APP | None |
+| Consultant Client Activity | System Event | EMAIL, IN_APP | None |
 | Excel Import Ready for Review | Background Job | EMAIL, IN_APP | None |
 | Excel Import Completed | Background Job | EMAIL, IN_APP | None |
 | Excel Import Failed | Background Job | EMAIL, IN_APP | None |
@@ -522,7 +534,157 @@ Similar structure, with:
 
 ---
 
-## 2.9 Excel Import Notification Templates
+> [v1 UPDATE – Pack-Specific Notifications – 2024-12-27]
+
+## 2.9 v1.0 Pack-Specific Notification Templates
+
+### 2.9.1 Regulator Pack Ready Notification
+
+**Subject Line Template:**
+```
+✅ Regulator Pack Ready: {{pack_name}}
+```
+
+**Variables:**
+- `pack_name`: string - Pack title
+- `pack_type`: "REGULATOR_INSPECTION"
+- `generation_date`: string
+- `site_name`: string
+- `download_url`: string
+- `recipient_name`: string (optional)
+
+**Reference:** Product Logic Specification Section I.8.2 (Regulator/Inspection Pack Logic)
+
+---
+
+### 2.9.2 Tender Pack Ready Notification
+
+**Subject Line Template:**
+```
+📋 Tender Pack Ready: {{pack_name}}
+```
+
+**Variables:**
+- `pack_name`: string - Pack title
+- `pack_type`: "TENDER_CLIENT_ASSURANCE"
+- `generation_date`: string
+- `client_name`: string
+- `download_url`: string
+- `share_url`: string (if shared link generated)
+
+**Reference:** Product Logic Specification Section I.8.3 (Tender/Client Assurance Pack Logic)
+
+---
+
+### 2.9.3 Board Pack Ready Notification
+
+**Subject Line Template:**
+```
+📊 Board Pack Ready: Multi-Site Compliance Summary
+```
+
+**Variables:**
+- `company_name`: string
+- `pack_type`: "BOARD_MULTI_SITE_RISK"
+- `generation_date`: string
+- `total_sites`: number
+- `compliance_score`: number
+- `download_url`: string
+
+**Reference:** Product Logic Specification Section I.8.4 (Board/Multi-Site Risk Pack Logic)
+
+---
+
+### 2.9.4 Insurer Pack Ready Notification
+
+**Subject Line Template:**
+```
+🛡️ Insurer Pack Ready: {{pack_name}}
+```
+
+**Variables:**
+- `pack_name`: string - Pack title
+- `pack_type`: "INSURER_BROKER"
+- `generation_date`: string
+- `broker_name`: string (optional)
+- `download_url`: string
+
+**Reference:** Product Logic Specification Section I.8.5 (Insurer/Broker Pack Logic)
+
+---
+
+### 2.9.5 Pack Distribution Notification
+
+**Subject Line Template:**
+```
+📤 Pack Distributed: {{pack_name}}
+```
+
+**Variables:**
+- `pack_name`: string
+- `distribution_method`: "EMAIL" | "SHARED_LINK"
+- `recipients`: Array<string> - Recipient emails/names
+- `shared_link`: string (if SHARED_LINK)
+- `expires_at`: string (if SHARED_LINK)
+
+**Reference:** Product Logic Specification Section I.8.7 (Pack Distribution Logic)
+
+---
+
+> [v1 UPDATE – Consultant Notifications – 2024-12-27]
+
+## 2.10 Consultant Notification Templates
+
+### 2.10.1 Client Assigned Notification
+
+**Subject Line Template:**
+```
+👥 New Client Assigned: {{client_company_name}}
+```
+
+**Variables:**
+- `client_company_name`: string
+- `assigned_at`: string
+- `client_dashboard_url`: string
+- `site_count`: number
+
+**Reference:** Product Logic Specification Section C.5.6 (Consultant Client Assignment Workflow)
+
+---
+
+### 2.10.2 Client Pack Generated Notification
+
+**Subject Line Template:**
+```
+📋 Pack Generated for {{client_company_name}}: {{pack_name}}
+```
+
+**Variables:**
+- `client_company_name`: string
+- `pack_name`: string
+- `pack_type`: string
+- `generation_date`: string
+- `client_pack_url`: string
+
+---
+
+### 2.10.3 Client Activity Alert Notification
+
+**Subject Line Template:**
+```
+🔔 Activity Alert: {{client_company_name}} - {{activity_type}}
+```
+
+**Variables:**
+- `client_company_name`: string
+- `activity_type`: string (e.g., "Overdue Obligation", "New Evidence Uploaded")
+- `activity_description`: string
+- `activity_timestamp`: string
+- `client_dashboard_url`: string
+
+---
+
+## 2.11 Excel Import Notification Templates
 
 ### 2.9.1 Excel Import Ready for Review Template
 
@@ -1247,6 +1409,14 @@ CREATE TABLE notifications (
       'RUN_HOUR_BREACH_90',
       'RUN_HOUR_BREACH_100',
       'AUDIT_PACK_READY',
+      'REGULATOR_PACK_READY',
+      'TENDER_PACK_READY',
+      'BOARD_PACK_READY',
+      'INSURER_PACK_READY',
+      'PACK_DISTRIBUTED',
+      'CONSULTANT_CLIENT_ASSIGNED',
+      'CONSULTANT_CLIENT_PACK_GENERATED',
+      'CONSULTANT_CLIENT_ACTIVITY',
       'SYSTEM_ALERT',
       'ESCALATION'
     )),
@@ -1340,6 +1510,14 @@ CREATE TABLE user_notification_preferences (
       'RUN_HOUR_BREACH_90',
       'RUN_HOUR_BREACH_100',
       'AUDIT_PACK_READY',
+      'REGULATOR_PACK_READY',
+      'TENDER_PACK_READY',
+      'BOARD_PACK_READY',
+      'INSURER_PACK_READY',
+      'PACK_DISTRIBUTED',
+      'CONSULTANT_CLIENT_ASSIGNED',
+      'CONSULTANT_CLIENT_PACK_GENERATED',
+      'CONSULTANT_CLIENT_ACTIVITY',
       'SYSTEM_ALERT',
       'ESCALATION',
       'ALL' -- For default preferences
@@ -2509,6 +2687,14 @@ type NotificationType =
   | 'RUN_HOUR_BREACH_90'
   | 'RUN_HOUR_BREACH_100'
   | 'AUDIT_PACK_READY'
+  | 'REGULATOR_PACK_READY'
+  | 'TENDER_PACK_READY'
+  | 'BOARD_PACK_READY'
+  | 'INSURER_PACK_READY'
+  | 'PACK_DISTRIBUTED'
+  | 'CONSULTANT_CLIENT_ASSIGNED'
+  | 'CONSULTANT_CLIENT_PACK_GENERATED'
+  | 'CONSULTANT_CLIENT_ACTIVITY'
   | 'SYSTEM_ALERT'
   | 'ESCALATION';
 

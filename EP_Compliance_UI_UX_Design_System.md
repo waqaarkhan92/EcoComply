@@ -1,5 +1,7 @@
 # EP Compliance UI/UX Design System Specification
 
+**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+
 **Document Version:** 1.0  
 **Status:** Complete  
 **Created by:** Cursor  
@@ -9,6 +11,8 @@
 - ✅ Onboarding Flow Specification (2.7) - Complete
 
 **Purpose:** Defines the complete UI/UX design system for the EP Compliance platform, including design tokens, component specifications, navigation patterns, mobile responsiveness, accessibility guidelines, and implementation details. This document ensures world-class design, Procore-inspired aesthetics, and optimal user experience across all devices.
+
+> [v1 UPDATE – Version Header – 2024-12-27]
 
 ---
 
@@ -1975,6 +1979,225 @@ interface SpacingTokens {
   24: '96px';
 }
 ```
+
+---
+
+> [v1 UPDATE – Pack UI Components – 2024-12-27]
+
+# 15. v1.0 Pack UI Components
+
+## 15.1 Pack Type Selector Component
+
+**Component:** `PackTypeSelector`
+
+**Purpose:** Allows users to select pack type for generation (plan-based filtering)
+
+**Props:**
+```typescript
+interface PackTypeSelectorProps {
+  userPlan: 'CORE' | 'GROWTH' | 'CONSULTANT';
+  selectedPackType?: PackType;
+  onSelect: (packType: PackType) => void;
+  disabled?: boolean;
+}
+```
+
+**Visual Design:**
+- Card-based selection interface
+- Each pack type shown as card with icon, name, description
+- Disabled state for unavailable pack types (grayed out, tooltip explains plan requirement)
+- Selected state: Teal border (#026A67), checkmark icon
+
+**Pack Type Cards:**
+- **Regulator Pack:** 🏛️ Icon, "Inspector-Ready Compliance Pack", Available: Core+
+- **Tender Pack:** 📋 Icon, "Client Assurance & Tender Pack", Available: Growth+
+- **Board Pack:** 📊 Icon, "Multi-Site Risk Summary", Available: Growth+ (Owner/Admin only)
+- **Insurer Pack:** 🛡️ Icon, "Insurance & Broker Pack", Available: Growth+
+- **Audit Pack:** 📁 Icon, "Full Evidence Compilation", Available: All plans
+
+**Reference:** Product Logic Specification Section I.8.6 (Pack Type Selection Logic)
+
+---
+
+## 15.2 Pack Generation Modal Component
+
+**Component:** `GeneratePackModal`
+
+**Purpose:** Modal for configuring and generating packs
+
+**Props:**
+```typescript
+interface GeneratePackModalProps {
+  packType: PackType;
+  siteId?: UUID;
+  companyId?: UUID; // Required for Board Pack
+  onGenerate: (config: PackGenerationConfig) => void;
+  onClose: () => void;
+}
+```
+
+**Component Structure:**
+```
+GeneratePackModal
+├── ModalHeader
+│   ├── PackTypeBadge
+│   ├── ModalTitle
+│   └── CloseButton
+├── ModalContent
+│   ├── PackTypeSpecificForm
+│   │   ├── DateRangeSelector
+│   │   ├── DocumentSelector (if applicable)
+│   │   ├── RecipientFields (if applicable)
+│   │   └── PurposeField (optional)
+│   └── PreviewSection
+│       ├── EstimatedSize
+│       └── EstimatedTime
+└── ModalFooter
+    ├── CancelButton
+    └── GenerateButton
+```
+
+**Pack Type-Specific Fields:**
+- **Regulator Pack:** Date range, document selector, recipient name
+- **Tender Pack:** Date range, document selector, client name, purpose
+- **Board Pack:** Date range, company scope (all sites), recipient name
+- **Insurer Pack:** Date range, document selector, broker name, purpose
+- **Audit Pack:** Date range, document selector, filters
+
+---
+
+## 15.3 Pack Distribution Component
+
+**Component:** `PackDistributionPanel`
+
+**Purpose:** Distribute packs via email or shared link (Growth Plan only)
+
+**Props:**
+```typescript
+interface PackDistributionPanelProps {
+  packId: UUID;
+  packType: PackType;
+  userPlan: 'CORE' | 'GROWTH' | 'CONSULTANT';
+  onDistribute: (config: DistributionConfig) => void;
+}
+```
+
+**Component Structure:**
+```
+PackDistributionPanel
+├── DistributionMethodTabs
+│   ├── EmailTab
+│   └── SharedLinkTab
+├── EmailDistributionForm (if EmailTab)
+│   ├── RecipientsInput
+│   ├── MessageTextarea
+│   └── SendButton
+└── SharedLinkSection (if SharedLinkTab)
+    ├── LinkDisplay
+    ├── ExpirationSelector
+    ├── CopyButton
+    └── ShareButton
+```
+
+**Visual Design:**
+- Teal accent for distribution actions (#026A67)
+- Success state: Green checkmark when distributed
+- Link display: Monospace font, copy button prominent
+
+---
+
+> [v1 UPDATE – Consultant Interface Design – 2024-12-27]
+
+# 16. Consultant Control Centre Interface Design
+
+## 16.1 Consultant Dashboard Layout
+
+**Layout:** Multi-column dashboard with client cards and aggregated metrics
+
+**Component Structure:**
+```
+ConsultantDashboard
+├── DashboardHeader
+│   ├── WelcomeMessage
+│   └── QuickActions
+├── MetricsRow
+│   ├── TotalClientsCard
+│   ├── ActiveClientsCard
+│   ├── TotalSitesCard
+│   └── AvgComplianceScoreCard
+├── RecentActivitySection
+│   └── ActivityTimeline (cross-client)
+└── ClientComplianceTable
+    ├── ClientRow (repeated)
+    │   ├── ClientName
+    │   ├── SiteCount
+    │   ├── ComplianceScore
+    │   ├── OverdueCount
+    │   └── ActionsMenu
+    └── ViewAllClientsLink
+```
+
+**Visual Design:**
+- Client cards: White background, subtle shadow
+- Compliance score: Color-coded (green/yellow/red)
+- Hover state: Slight elevation, cursor pointer
+- Click: Navigate to client detail page
+
+---
+
+## 16.2 Client List Component
+
+**Component:** `ConsultantClientList`
+
+**Purpose:** Display all assigned clients with compliance status
+
+**Props:**
+```typescript
+interface ConsultantClientListProps {
+  clients: ConsultantClient[];
+  onClientSelect: (clientId: UUID) => void;
+  onGeneratePack: (clientId: UUID, packType: PackType) => void;
+}
+```
+
+**Visual Design:**
+- Table layout: Client name, sites, compliance score, overdue count, actions
+- Compliance score: Progress bar with color coding
+- Actions menu: Generate pack, view details, view packs
+- Empty state: "No clients assigned" with onboarding CTA
+
+---
+
+## 16.3 Client Detail View Component
+
+**Component:** `ConsultantClientDetail`
+
+**Purpose:** View single client's compliance data
+
+**Component Structure:**
+```
+ConsultantClientDetail
+├── ClientHeader
+│   ├── ClientName
+│   ├── ComplianceBadge
+│   └── ClientActions
+│       ├── GeneratePackButton
+│       └── ViewPacksButton
+├── ClientTabs
+│   ├── OverviewTab
+│   ├── SitesTab
+│   ├── DocumentsTab
+│   ├── ObligationsTab
+│   └── PacksTab
+└── TabContent
+```
+
+**Visual Design:**
+- Client header: Prominent, dark background (#101314) with white text
+- Tabs: Standard tab navigation, active tab highlighted in teal
+- Content: Standard table/list layouts per tab
+
+**Reference:** Product Logic Specification Section C.5.3 (Consultant Dashboard Logic)
 
 ---
 

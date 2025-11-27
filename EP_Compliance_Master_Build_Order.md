@@ -1,23 +1,36 @@
 # ✅ EP COMPLIANCE — MASTER BUILD ORDER
 
+**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+
 **The Complete, Final, Unified Dependency Flow**
 
 *Nothing missing. No contradictions. No drift.*
+
+> [v1 UPDATE – Version Header – 2024-12-27]
 
 ---
 
 ## 📋 **DOCUMENT STATUS**
 
-- ✅ **Master Commercial Plan (MCP):** Complete
-- ✅ **Product Logic Specification (1.1):** Complete
-- ✅ **Canonical Dictionary (1.2):** Complete
-- ✅ **User Workflow Maps (1.3):** Complete
+- ✅ **Master Commercial Plan (MCP):** Complete (v1.0 updated)
+- ✅ **Product Logic Specification (1.1):** Complete (v1.0 updated)
+- ✅ **Canonical Dictionary (1.2):** Complete (v1.0 updated)
+- ✅ **User Workflow Maps (1.3):** Complete (v1.0 updated)
 - ✅ **AI Layer Design & Cost Optimization (1.5a):** Complete
 - ✅ **AI Extraction Rules Library (1.6):** Complete
 - ✅ **AI Microservice Prompts (1.7):** Complete (29 production-ready prompts)
-- ✅ **Technical Architecture & Stack (2.1):** Complete
-- ✅ **Database Schema (2.2):** Complete
-- ⏳ **All other documents:** To be generated in this exact order
+- ✅ **Technical Architecture & Stack (2.1):** Complete (v1.0 updated)
+- ✅ **Database Schema (2.2):** Complete (v1.0 updated)
+- ✅ **Backend API Specification (2.5):** Complete (v1.0 updated)
+- ✅ **RLS & Permissions Rules (2.8):** Complete (v1.0 updated)
+- ✅ **Background Jobs Specification (2.3):** Complete (v1.0 updated)
+- ✅ **Notification & Messaging (2.4):** Complete (v1.0 updated)
+- ✅ **Frontend Routes & Component Map (2.6):** Complete (v1.0 updated)
+- ✅ **UI/UX Design System (2.9):** Complete (v1.0 updated)
+- ✅ **Testing QA Strategy (2.11):** Complete (v1.0 updated)
+- ✅ **Onboarding Flow Specification (2.7):** Complete (v1.0 updated)
+- ✅ **Pricing Model Explorer:** Complete (v1.0 updated)
+- ✅ **New Packs Impact Analysis:** Complete (marked as pre-v1.0 analysis)
 
 ## 🔄 **CRITICAL ORDER CORRECTION**
 
@@ -9215,6 +9228,65 @@ MCP (0.1)
 
 ---
 
+> [v1 UPDATE – v1.0 Features Build Order – 2024-12-27]
+
+# 🔵 **LEVEL 2.5 — v1.0 COMMERCIAL CAPABILITIES**
+
+## **v1.0 Pack Types Implementation Order**
+
+**Status:** ✅ Complete  
+**Added:** 2024-12-27
+
+### Build Sequence:
+
+1. **Foundation (Database & Logic)**
+   - ✅ Extend `audit_packs` table with `pack_type` and distribution fields
+   - ✅ Create `consultant_client_assignments` table
+   - ✅ Create `pack_distributions` table
+   - ✅ Add pack type enum to Canonical Dictionary
+   - ✅ Add pack generation logic to Product Logic Specification (Section I.8)
+   - ✅ Add Consultant Control Centre logic (Section C.5)
+
+2. **Backend (API & Jobs)**
+   - ✅ Update pack generation endpoints with pack_type parameter
+   - ✅ Add pack-specific endpoints (regulator, tender, board, insurer)
+   - ✅ Add pack distribution endpoints
+   - ✅ Add Consultant Control Centre endpoints
+   - ✅ Extend pack generation job to handle all pack types
+   - ✅ Add pack distribution job
+   - ✅ Add consultant client sync job
+
+3. **Security (RLS & Permissions)**
+   - ✅ Add consultant client assignments RLS policies
+   - ✅ Add pack access policies (plan-based)
+   - ✅ Add pack distribution policies
+   - ✅ Update existing policies for consultant role
+
+4. **Frontend (UI & Routes)**
+   - ✅ Add pack type selector component
+   - ✅ Add pack generation modal (pack type-specific)
+   - ✅ Add pack distribution panel
+   - ✅ Add Consultant Dashboard routes
+   - ✅ Add Consultant Client Management routes
+   - ✅ Add pack management routes
+
+5. **Testing & QA**
+   - ✅ Add pack generation test cases (all 5 types)
+   - ✅ Add consultant feature test cases
+   - ✅ Add pack distribution test cases
+   - ✅ Add consultant RLS test cases
+
+6. **Commercial & Documentation**
+   - ✅ Update Master Commercial Plan with v1.0 pricing
+   - ✅ Update Pricing Model Explorer
+   - ✅ Update Onboarding Flow with pack discovery
+   - ✅ Update User Workflow Maps with pack workflows
+   - ✅ Update Notification templates for pack types
+
+**Reference:** CHANGELOG.md for complete v1.0 update summary
+
+---
+
 # ✅ **VERIFICATION CHECKLIST**
 
 Before generating each document, verify:
@@ -9229,6 +9301,9 @@ Before generating each document, verify:
 - [ ] Database structure matches Database Schema
 - [ ] API endpoints match Backend API
 - [ ] UI flows match Frontend Routes
+- [ ] v1.0 pack types implemented per Product Logic Specification Section I.8
+- [ ] Consultant features implemented per Product Logic Specification Section C.5
+- [ ] Plan-based access control enforced for pack types
 
 ---
 

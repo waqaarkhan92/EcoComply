@@ -2,7 +2,11 @@ CANONICAL DICTIONARY
 
 EP Compliance Platform — Modules 1–3
 
+**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+
 Document Version: 1.0 Status: Complete Depends On: Master Commercial Plan (MCP), Product Logic Specification (PLS) Purpose: Single source of truth for all entities, tables, fields, enums, statuses, and naming conventions
+
+> [v1 UPDATE – Version Header – 2024-12-27]
 
 
 
@@ -4583,6 +4587,8 @@ PLS Reference: Section A.7.2 (Review Workflow)
 
 D.10 Audit Pack Enums
 
+> [v1 UPDATE – Pack Type Enum – 2024-12-27]
+
 Enum: pack_type
 
 Type: TEXT with CHECK constraint
@@ -4591,15 +4597,29 @@ Used In: audit_packs.pack_type
 
 Values:
 
-* `COMBINED`: All active modules combined (default)
+**v1.0 Commercial Pack Types:**
+* `AUDIT_PACK`: Full evidence compilation for internal audits (all plans)
+* `REGULATOR_INSPECTION`: Inspector-ready compliance pack (Core plan, included)
+* `TENDER_CLIENT_ASSURANCE`: Compliance summary for tenders (Growth plan)
+* `BOARD_MULTI_SITE_RISK`: Multi-site risk summary (Growth plan)
+* `INSURER_BROKER`: Risk narrative for insurance (bundled with Tender pack, Growth plan)
 
+**Legacy Module-Specific Pack Types (deprecated in v1.0, maintained for backward compatibility):**
+* `COMBINED`: All active modules combined
 * Dynamic module-specific values: Pack types for individual modules are determined at runtime by querying the `modules` table. The system generates pack types like `MODULE_1`, `MODULE_2`, `MODULE_3`, etc., based on active modules in the `modules` table.
 
 **Implementation Note:**
-- The `COMBINED` value is fixed and always available
-- Module-specific pack types (e.g., `MODULE_1`, `MODULE_2`) are generated dynamically from active modules
-- Validation: Pack type must be either `COMBINED` or match a `module_code` from the `modules` table where `is_active = true`
-- To add a new module-specific pack type, simply add the module to the `modules` table; the pack type becomes available automatically
+- v1.0 pack types are fixed enum values (not dynamic)
+- Pack type determines content structure and access control
+- Plan-based access: Core Plan can generate `REGULATOR_INSPECTION` and `AUDIT_PACK` only
+- Growth Plan can generate all pack types
+- Consultant Edition can generate all pack types for assigned clients
+- Legacy module-specific pack types remain for backward compatibility
+
+**Pack Type Access Control:**
+- Core Plan: `REGULATOR_INSPECTION`, `AUDIT_PACK`
+- Growth Plan: All pack types
+- Consultant Edition: All pack types (for assigned clients)
 
 State Transitions:
 
@@ -4607,9 +4627,9 @@ State Transitions:
 
 * Determines pack content and structure
 
-* Module-specific pack types are validated against `modules` table at generation time
+* Plan-based access enforced at generation time
 
-PLS Reference: Section I.1 (Module-Specific Pack Structures), Section D.5 (Cross-Module Audit Pack)
+PLS Reference: Section I.8 (v1.0 Pack Types — Generation Logic), Section I.1 (Module-Specific Pack Structures), Section D.5 (Cross-Module Audit Pack)
 
 
 
@@ -8172,7 +8192,42 @@ PLS Reference: Section A.1.3 (Module Activation Rules), Section D.1 (Module Prer
 
 
 
-K.8 Cross-Sell Trigger (Shared)
+> [v1 UPDATE – Consultant Entity – 2024-12-27]
+
+K.8 Consultant Client Assignment (Shared)
+
+Entity: ConsultantClientAssignment
+
+Table: consultant_client_assignments
+
+Used By: Consultant Control Centre (v1.0)
+
+Fields:
+- id: UUID PRIMARY KEY
+- consultant_id: UUID NOT NULL REFERENCES users(id) — Consultant user (must have CONSULTANT role)
+- client_company_id: UUID NOT NULL REFERENCES companies(id) — Client company assigned to consultant
+- assigned_at: TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+- status: TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE'))
+- assigned_by: UUID REFERENCES users(id) — User who created assignment
+- created_at: TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+
+Business Logic:
+- Consultant can be assigned to multiple client companies
+- Assignment grants consultant access to all sites within client company
+- Status 'ACTIVE' grants access, 'INACTIVE' revokes access
+- Consultant can only access assigned client companies (enforced via RLS)
+- Assignment can be created by client company Owner/Admin or system admin
+- Historical assignments preserved (status change, not deletion)
+
+RLS Enabled: Yes
+
+Soft Delete: No (uses status field instead)
+
+PLS Reference: Section C.5 (Consultant Control Centre Logic), Section B.10 (User Roles Logic)
+
+---
+
+K.9 Cross-Sell Trigger (Shared)
 
 Entity: CrossSellTrigger
 

@@ -1,5 +1,6 @@
 # EP Compliance Background Jobs Specification
 
+**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
 
 **Document Version:** 1.0  
 **Status:** Complete  
@@ -10,6 +11,8 @@
 - ✅ Technical Architecture (2.1) - Complete
 
 **Purpose:** Defines all background job types, their triggers, execution logic, error handling, retry mechanisms, and integration points for the EP Compliance platform.
+
+> [v1 UPDATE – Version Header – 2024-12-27]
 
 
 
@@ -107,7 +110,9 @@ The EP Compliance platform defines **11 job types** across three categories:
 | 8 | AER Generation | `aer-generation` | NORMAL | API trigger / Cron (annual) | Annual return compilation and generation |
 | 9 | Permit Renewal Reminder | `deadline-alerts` | NORMAL | Cron (daily) | Notifications for approaching permit renewals |
 | 10 | Cross-Sell Trigger Detection | `cross-sell-triggers` | LOW | Cron (6-hourly) | Effluent keyword detection, run-hour breach detection |
-| 11 | Audit Pack Generation | `audit-pack-generation` | NORMAL | API trigger | Evidence compilation into inspector-ready PDFs |
+| 11 | Audit Pack Generation | `audit-pack-generation` | NORMAL | API trigger | Evidence compilation into PDFs (all pack types) |
+| 12 | Pack Distribution | `pack-distribution` | NORMAL | API trigger | Distribute packs via email/shared link |
+| 13 | Consultant Client Sync | `consultant-sync` | LOW | Scheduled/Manual | Sync consultant assignments and dashboard |
 
 ### Queue Assignments by Priority
 
@@ -2687,9 +2692,11 @@ function detectKeywords(
 
 ## 6.3 Audit Pack Generation Job
 
-**Purpose:** Compiles evidence into inspector-ready PDF audit packs with reference integrity validation.
+> [v1 UPDATE – Pack Type Support – 2024-12-27]
 
-**Reference:** PLS Section B.8.3 (Reference Integrity Validation)
+**Purpose:** Compiles evidence into PDF packs (all pack types: Audit, Regulator, Tender, Board, Insurer) with reference integrity validation.
+
+**Reference:** PLS Section B.8.3 (Reference Integrity Validation), Section I.8 (v1.0 Pack Types — Generation Logic)
 
 ### Job Configuration
 
@@ -2706,9 +2713,10 @@ function detectKeywords(
 
 ```typescript
 interface AuditPackGenerationJobInput {
-  document_id: UUID;           // Required: Target document
+  pack_type: 'AUDIT_PACK' | 'REGULATOR_INSPECTION' | 'TENDER_CLIENT_ASSURANCE' | 'BOARD_MULTI_SITE_RISK' | 'INSURER_BROKER'; // Required: Pack type
+  document_id?: UUID;           // Optional: Target document (required for most pack types, not Board Pack)
   company_id: UUID;            // Required: Company ID
-  site_id: UUID;               // Required: Site ID
+  site_id?: UUID;              // Optional: Site ID (required for most pack types, not Board Pack)
   date_range_start: Date;      // Required: Compliance period start
   date_range_end: Date;        // Required: Compliance period end
   filters_applied?: {          // Optional: Filtering options
@@ -2718,6 +2726,9 @@ interface AuditPackGenerationJobInput {
   };
   include_evidence_files?: boolean; // Default: true
   output_format?: 'PDF' | 'ZIP';    // Default: 'PDF'
+  recipient_type?: 'REGULATOR' | 'CLIENT' | 'BOARD' | 'INSURER' | 'INTERNAL'; // Optional: Pack recipient type
+  recipient_name?: string;     // Optional: Recipient name
+  purpose?: string;            // Optional: Pack purpose
   requested_by: UUID;          // Required: User requesting generation
 }
 ```
@@ -2801,40 +2812,48 @@ Step 4: Validate Evidence Reference Integrity
 │      })                                                     │
 └─────────────────────────────────────────────────────────────┘
 
-Step 5: Compile Audit Pack Content
+Step 5: Compile Pack Content (Pack Type-Specific)
 ┌─────────────────────────────────────────────────────────────┐
-│  Build audit pack structure:                                │
+│  Build pack structure based on pack_type:                  │
 │                                                             │
-│  5a. Cover page:                                            │
-│      - Company name, site name                              │
-│      - Document title, permit number                        │
-│      - Date range, generation date                          │
-│      - Prepared by (user name)                              │
+│  IF pack_type = 'REGULATOR_INSPECTION':                    │
+│    5a. Cover page (inspector-ready)                        │
+│    5b. Executive summary (compliance status)                │
+│    5c. Permit summary                                       │
+│    5d. Compliance dashboard                                 │
+│    5e. Obligation matrix (all obligations)                 │
+│    5f. Gap analysis (prioritized)                           │
+│    5g. Evidence appendix (full files)                       │
 │                                                             │
-│  5b. Summary section:                                       │
-│      - Total obligations: :count                            │
-│      - Complete: :complete_count                            │
-│      - Pending: :pending_count                              │
-│      - Overdue: :overdue_count                              │
-│      - Evidence items: :evidence_count                      │
+│  IF pack_type = 'TENDER_CLIENT_ASSURANCE':                 │
+│    5a. Cover page (client-facing)                          │
+│    5b. Compliance overview (summary)                        │
+│    5c. Evidence samples (representative)                    │
+│    5d. Risk assessment                                      │
+│    5e. Action plan (remediation)                            │
 │                                                             │
-│  5c. Compliance matrix:                                     │
-│      - Obligation reference                                 │
-│      - Description (truncated)                              │
-│      - Category                                             │
-│      - Frequency                                            │
-│      - Status                                               │
-│      - Evidence count                                       │
+│  IF pack_type = 'BOARD_MULTI_SITE_RISK':                  │
+│    5a. Executive summary (multi-site)                      │
+│    5b. Risk dashboard (aggregated)                          │
+│    5c. Site-by-site compliance matrix                       │
+│    5d. Trend analysis                                       │
+│    5e. Key metrics                                          │
+│    5f. Risk prioritization                                  │
+│    5g. Action items (board-level)                           │
 │                                                             │
-│  5d. Obligation details:                                    │
-│      For each obligation:                                   │
-│      - Full text                                            │
-│      - Deadlines in period                                  │
-│      - Linked evidence (with integrity status)              │
+│  IF pack_type = 'INSURER_BROKER':                          │
+│    5a. Risk narrative                                       │
+│    5b. Compliance controls summary                         │
+│    5c. Evidence overview (not full files)                  │
+│    5d. Gap analysis (risk-focused)                          │
+│    5e. Compliance certification                             │
 │                                                             │
-│  5e. Evidence appendix (if include_evidence_files=true):   │
-│      - Embedded evidence files or                           │
-│      - Evidence file list with storage references           │
+│  IF pack_type = 'AUDIT_PACK':                             │
+│    5a. Cover page                                           │
+│    5b. Summary section                                       │
+│    5c. Compliance matrix                                     │
+│    5d. Obligation details                                    │
+│    5e. Evidence appendix (full files)                       │
 └─────────────────────────────────────────────────────────────┘
 
 Step 6: Generate PDF
@@ -2862,6 +2881,7 @@ Step 7: Store PDF and Create Database Record
 │  7b. Create audit_packs record:                             │
 │      INSERT INTO audit_packs (                              │
 │        document_id, site_id, company_id,                   │
+│        pack_type, recipient_type, recipient_name, purpose,│
 │        date_range_start, date_range_end,                   │
 │        filters_applied, storage_path,                      │
 │        total_obligations, complete_count, pending_count,   │
@@ -2996,6 +3016,140 @@ interface AuditPackContent {
 ---
 
 
+
+---
+
+> [v1 UPDATE – Pack Distribution Job – 2024-12-27]
+
+## 6.4 Pack Distribution Job
+
+**Purpose:** Distributes generated packs via email or shared link
+
+**Reference:** Product Logic Specification Section I.8.7 (Pack Distribution Logic)
+
+### Job Configuration
+
+| Property | Value |
+|----------|-------|
+| Job Type | `PACK_DISTRIBUTION` |
+| Queue | `pack-distribution` |
+| Priority | NORMAL |
+| Trigger | API endpoint: `POST /api/v1/packs/{packId}/distribute` |
+| Timeout | 300 seconds (5 minutes) |
+| Max Retries | 2 |
+
+### Input Parameters
+
+```typescript
+interface PackDistributionJobInput {
+  pack_id: UUID;               // Required: Pack to distribute
+  distribution_method: 'EMAIL' | 'SHARED_LINK'; // Required: Distribution method
+  recipients?: Array<{          // Required for EMAIL
+    email: string;
+    name?: string;
+  }>;
+  message?: string;            // Optional: Email message
+  expires_in_days?: number;   // Optional: Link expiration (default: 30)
+  requested_by: UUID;          // Required: User requesting distribution
+}
+```
+
+### Execution Steps
+
+**For EMAIL Distribution:**
+1. Load pack from `audit_packs` table
+2. Download PDF from storage
+3. Send email with PDF attachment to recipients
+4. Create `pack_distributions` record
+5. Send notification to requester
+
+**For SHARED_LINK Distribution:**
+1. Load pack from `audit_packs` table
+2. Generate unique token (`shared_link_token`)
+3. Set expiration (`shared_link_expires_at`)
+4. Update `audit_packs` record with token and expiration
+5. Create `pack_distributions` record
+6. Send email with shareable link to recipients (if provided)
+7. Send notification to requester
+
+### Error Handling
+
+| Error Type | Action |
+|------------|--------|
+| Pack not found | Fail immediately (no retry) |
+| Email send failure | Retry with exponential backoff |
+| Storage access error | Retry with exponential backoff |
+| Token generation collision | Retry with new token |
+
+### Retry Logic
+
+- Max 2 retries for transient errors
+- Email failures: retry with exponential backoff (2s, 4s)
+
+---
+
+> [v1 UPDATE – Consultant Client Sync Job – 2024-12-27]
+
+## 6.5 Consultant Client Sync Job
+
+**Purpose:** Syncs consultant client assignments and updates consultant dashboard data
+
+**Reference:** Product Logic Specification Section C.5.3 (Consultant Dashboard Logic)
+
+### Job Configuration
+
+| Property | Value |
+|----------|-------|
+| Job Type | `CONSULTANT_CLIENT_SYNC` |
+| Queue | `consultant-sync` |
+| Priority | LOW |
+| Trigger | Scheduled (daily at 2 AM), Manual trigger |
+| Timeout | 600 seconds (10 minutes) |
+| Max Retries | 1 |
+
+### Input Parameters
+
+```typescript
+interface ConsultantClientSyncJobInput {
+  consultant_id?: UUID;        // Optional: Specific consultant (if null, sync all)
+  sync_type: 'ASSIGNMENTS' | 'DASHBOARD' | 'FULL'; // Required: Sync scope
+}
+```
+
+### Execution Steps
+
+**For ASSIGNMENTS Sync:**
+1. Query `consultant_client_assignments` for consultant
+2. Validate assignments (check client companies exist, consultant role valid)
+3. Update assignment status if needed
+4. Log sync results
+
+**For DASHBOARD Sync:**
+1. For each assigned client:
+   - Aggregate compliance metrics
+   - Calculate compliance scores
+   - Identify upcoming deadlines
+   - Collect recent activity
+2. Cache dashboard data (optional)
+3. Update consultant dashboard view
+
+**For FULL Sync:**
+1. Run ASSIGNMENTS sync
+2. Run DASHBOARD sync
+3. Send summary notification to consultant
+
+### Error Handling
+
+| Error Type | Action |
+|------------|--------|
+| Consultant not found | Skip consultant, continue |
+| Client company deleted | Mark assignment as INACTIVE |
+| Sync timeout | Log warning, continue with next consultant |
+
+### Retry Logic
+
+- Max 1 retry for transient errors
+- Individual consultant failures don't block other consultants
 
 ---
 

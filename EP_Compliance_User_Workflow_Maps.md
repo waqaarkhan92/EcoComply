@@ -1,9 +1,13 @@
 # USER WORKFLOW MAPS
 ## EP Compliance Platform — Modules 1–3
 
+**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+
 **Document Version:** 1.0  
 **Status:** Complete  
 **Depends On:** Master Commercial Plan (MCP), Product Logic Specification (PLS), Canonical Dictionary
+
+> [v1 UPDATE – Version Header – 2024-12-27]
 
 ---
 
@@ -679,85 +683,235 @@ This document defines complete step-by-step user journey maps for all workflows 
 
 ---
 
-## 2.6 Audit Pack Generation
+## 2.6 Pack Generation (v1.0)
+
+> [v1 UPDATE – Pack Generation Workflows – 2024-12-27]
 
 ### Starting Point
-- **Trigger:** User clicks "Generate Audit Pack" OR scheduled generation trigger
-- **Prerequisites:** At least one active Document with Obligations exists
+- **Trigger:** User clicks "Generate Pack" OR scheduled generation trigger
+- **Prerequisites:** At least one active Document with Obligations exists; User plan has access to pack type
 
 ### Step-by-Step Flow
 
-1. **User:** Clicks "Generate Audit Pack" button
-    - OR **System:** Scheduled trigger fires (weekly/monthly/pre-inspection)
+1. **User:** Clicks "Generate Pack" button
 
-2. **System:** Displays generation options
-    - Document selection (single permit or all)
-    - Date range (default: current compliance year)
-    - Status filter (All, Complete only, Gaps only)
-    - Category filter (All or specific categories)
-    - Evidence inclusion toggle (Include/Exclude evidence files)
+2. **System:** Displays pack type selector
+    - Shows available pack types based on user plan
+    - Core Plan: Regulator Pack, Audit Pack only
+    - Growth Plan: All pack types
+    - Consultant Edition: All pack types (for assigned clients)
 
-3. **User:** Configures options and clicks "Generate"
+3. **User:** Selects pack type
 
-4. **System:** Validates configuration
+4. **System:** Validates plan access
+    - **If** pack type not available for plan, **then** display upgrade prompt
+    - **Else** proceed to configuration
+
+5. **System:** Displays pack-specific configuration form:
+    - **Regulator Pack:** Date range, document selector, recipient name
+    - **Tender Pack:** Date range, document selector, client name, purpose
+    - **Board Pack:** Date range, company scope (all sites), recipient name
+    - **Insurer Pack:** Date range, document selector, broker name, purpose
+    - **Audit Pack:** Date range, document selector, filters
+
+6. **User:** Configures options and clicks "Generate"
+
+7. **System:** Validates configuration
+    - **If** Board Pack and user not Owner/Admin, **then** display error "Board Pack requires Owner/Admin role"
     - **If** no Obligations match filters, **then** display warning "No data matches your filters"
     - **Else** proceed to generation
 
-5. **System:** Initiates generation
-    - Creates AuditPack record with `status = GENERATING`
+8. **System:** Initiates generation
+    - Creates AuditPack record with `pack_type`, `status = GENERATING`
     - **If** estimated size > 100 evidence items:
       - Display message "Large pack - generating in background"
       - Send email notification when ready
     - **Else** proceed synchronously
 
-6. **System:** Compiles audit pack content:
+9. **System:** Compiles pack content (pack type-specific structure):
+    - **Regulator Pack:** Inspector-ready format (see PLS Section I.8.2)
+    - **Tender Pack:** Client-facing summary (see PLS Section I.8.3)
+    - **Board Pack:** Multi-site aggregation (see PLS Section I.8.4)
+    - **Insurer Pack:** Risk narrative (see PLS Section I.8.5)
+    - **Audit Pack:** Full evidence compilation (existing structure)
 
-    **Section 1: Cover Page**
-    - Company name, Site name, Document reference
-    - Generation date, Compliance period covered
+10. **System:** Generates PDF with pack type-specific formatting
 
-    **Section 2: Summary Dashboard**
-    - Total Obligations: N
-    - Complete: N (%), Pending: N (%), Overdue: N (%)
+11. **System:** Stores completed pack
+    - Updates AuditPack record with `pack_type`, file path, `status = COMPLETED`
+    - Records: `generated_by`, `generated_at`, `recipient_type`, `recipient_name`, `purpose`
 
-    **Section 3: Obligation Matrix**
-    - Condition reference, Obligation text, Category
-    - Frequency, Evidence count, Last evidence date, Status
-
-    **Section 4: Evidence Appendix**
-    - Full-size evidence files organised by Obligation
-    - Page numbers cross-referenced
-
-    **Section 5: Gap Analysis**
-    - List of OVERDUE Obligations
-    - List of INCOMPLETE Obligations (compliance period ended without evidence)
-    - List of Obligations without evidence for current period
-    - Recommended actions per gap
-
-7. **System:** Generates PDF
-    - Applies PDF/A format (archival)
-    - Adds page numbers, table of contents, bookmarks
-    - Adds watermark: "EP Compliance - Generated [date]"
-    - Includes disclaimer header
-
-8. **System:** Stores completed audit pack
-    - Updates AuditPack record with file path
-    - Sets `status = COMPLETED`
-    - Records: `generated_by`, `generated_at`, filters applied
-
-9. **System:** Notifies user
+12. **System:** Notifies user
     - **If** synchronous: Display download prompt
-    - **If** background: Send email with download link
+    - **If** background: Send pack type-specific email notification
 
-10. **User:** Downloads audit pack PDF
+13. **User:** Downloads pack PDF
 
 ### End States
-- **Audit Pack Ready:** PDF generated and available for download
+- **Pack Ready:** PDF generated and available for download
 - **Background Processing:** Large pack queued; email notification pending
 
 ### Error Paths
-- **Generation Timeout (>60 seconds for standard, >5 minutes for large):** Offer retry or background processing
-- **Maximum Evidence Exceeded (>500 items):** Display error; prompt user to narrow filters
+- **Plan Access Denied:** Display upgrade prompt with pack type benefits
+- **Generation Timeout:** Offer retry or background processing
+- **Maximum Evidence Exceeded:** Display error; prompt user to narrow filters
+
+**Reference:** Product Logic Specification Section I.8 (v1.0 Pack Types — Generation Logic)
+
+---
+
+## 2.6.1 Pack Distribution Workflow (Growth Plan)
+
+> [v1 UPDATE – Pack Distribution Workflow – 2024-12-27]
+
+### Starting Point
+- **Trigger:** User clicks "Distribute Pack" on pack detail page
+- **Prerequisites:** Pack exists, User has Growth Plan or Consultant Edition
+
+### Step-by-Step Flow
+
+1. **User:** Clicks "Distribute Pack" button
+
+2. **System:** Displays distribution method selector
+    - Email distribution
+    - Shared link generation
+
+3. **User:** Selects distribution method
+
+4. **IF Email Distribution:**
+    - **User:** Enters recipient emails and optional message
+    - **User:** Clicks "Send"
+    - **System:** Sends email with pack PDF attachment
+    - **System:** Creates `pack_distributions` record
+    - **System:** Notifies user "Pack distributed successfully"
+
+5. **IF Shared Link:**
+    - **User:** Configures expiration (default: 30 days)
+    - **User:** Clicks "Generate Link"
+    - **System:** Generates unique token
+    - **System:** Updates `audit_packs` record with `shared_link_token` and `shared_link_expires_at`
+    - **System:** Creates `pack_distributions` record
+    - **System:** Displays shareable link
+    - **User:** Copies link or sends via email
+
+### End States
+- **Email Sent:** Pack distributed via email
+- **Link Generated:** Shareable link created and displayed
+
+**Reference:** Product Logic Specification Section I.8.7 (Pack Distribution Logic)
+
+---
+
+## 2.7 Consultant Control Centre Workflows
+
+> [v1 UPDATE – Consultant Workflows – 2024-12-27]
+
+### 2.7.1 Consultant Onboarding Workflow
+
+**Starting Point:**
+- **Trigger:** User signs up with Consultant role OR existing user upgrades to Consultant Edition
+- **Prerequisites:** User account exists
+
+**Step-by-Step Flow:**
+
+1. **User:** Signs up or upgrades to Consultant Edition
+
+2. **System:** Displays Consultant onboarding flow
+    - Welcome message
+    - Consultant features overview
+    - Client assignment instructions
+
+3. **User:** Completes consultant profile
+    - Company name (consultant firm)
+    - Contact information
+    - Specializations
+
+4. **System:** Creates consultant account
+    - Sets `role = 'CONSULTANT'` in `user_roles` table
+    - Grants Consultant Edition access
+
+5. **System:** Displays Consultant Dashboard
+    - Empty state: "No clients assigned yet"
+    - CTA: "Add your first client" or "Wait for client assignment"
+
+**End State:** Consultant account ready, awaiting client assignments
+
+**Reference:** Product Logic Specification Section C.5.1 (Consultant User Model)
+
+---
+
+### 2.7.2 Client Assignment Workflow
+
+**Starting Point:**
+- **Trigger:** Client company Owner/Admin assigns consultant
+- **Prerequisites:** Consultant account exists, Client company exists
+
+**Step-by-Step Flow:**
+
+1. **Client Owner/Admin:** Navigates to Company Settings → Users
+
+2. **Client Owner/Admin:** Clicks "Assign Consultant"
+
+3. **System:** Displays consultant search/select interface
+    - Search by email or consultant firm name
+    - Display consultant profile
+
+4. **Client Owner/Admin:** Selects consultant and clicks "Assign"
+
+5. **System:** Creates `consultant_client_assignments` record
+    - `consultant_id` = selected consultant
+    - `client_company_id` = current company
+    - `status = 'ACTIVE'`
+    - `assigned_by` = current user
+
+6. **System:** Notifies consultant
+    - Email: "You've been assigned to [Client Company]"
+    - In-app notification
+    - Consultant Dashboard updated
+
+7. **Consultant:** Receives notification and can now access client data
+
+**End State:** Consultant has access to assigned client company
+
+**Reference:** Product Logic Specification Section C.5.6 (Consultant Client Assignment Workflow)
+
+---
+
+### 2.7.3 Consultant Pack Generation for Client
+
+**Starting Point:**
+- **Trigger:** Consultant clicks "Generate Pack" for assigned client
+- **Prerequisites:** Consultant assigned to client, Client has active documents
+
+**Step-by-Step Flow:**
+
+1. **Consultant:** Navigates to Consultant Dashboard → Clients → [Client Name]
+
+2. **Consultant:** Clicks "Generate Pack" for client
+
+3. **System:** Displays pack type selector (all pack types available)
+
+4. **Consultant:** Selects pack type and configures options
+
+5. **System:** Validates consultant assignment
+    - **If** consultant not assigned to client, **then** display error "Access denied"
+    - **Else** proceed to generation
+
+6. **System:** Generates pack (same as regular pack generation)
+
+7. **System:** Associates pack with client company (not consultant's company)
+
+8. **System:** Notifies consultant and client contacts
+    - Consultant: "Pack generated for [Client Name]"
+    - Client: "Your consultant generated a [Pack Type] pack"
+
+**End State:** Pack generated and available to both consultant and client
+
+**Reference:** Product Logic Specification Section C.5.4 (Consultant Pack Generation)
+
+---
+
+## 2.8 Multi-Site Management
 
 ---
 

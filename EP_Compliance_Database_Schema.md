@@ -1,6 +1,8 @@
 # Database Schema
 ## EP Compliance Platform — Document 2.2
 
+**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+
 **Document Version:** 1.0  
 **Status:** Complete  
 **Created by:** Cursor  
@@ -11,6 +13,8 @@
 - ✅ Technical Architecture (2.1) - Complete
 
 **Purpose:** Defines the complete database structure, including all tables, fields, indexes, constraints, and relationships for the EP Compliance platform.
+
+> [v1 UPDATE – Version Header – 2024-12-27]
 
 ---
 
@@ -659,7 +663,9 @@ CREATE UNIQUE INDEX uq_obligation_evidence_links ON obligation_evidence_links(ob
 
 ## 4.8 audit_packs
 
-**Purpose:** Stores generated audit pack documents
+> [v1 UPDATE – Pack Type Fields – 2024-12-27]
+
+**Purpose:** Stores generated audit pack documents (all pack types: Audit, Regulator, Tender, Board, Insurer)
 
 **Entity:** AuditPack
 
@@ -673,7 +679,15 @@ CREATE TABLE audit_packs (
     document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
     company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
-    pack_type TEXT NOT NULL,
+    pack_type TEXT NOT NULL DEFAULT 'AUDIT_PACK'
+        CHECK (pack_type IN (
+            'AUDIT_PACK',
+            'REGULATOR_INSPECTION',
+            'TENDER_CLIENT_ASSURANCE',
+            'BOARD_MULTI_SITE_RISK',
+            'INSURER_BROKER',
+            'COMBINED'
+        )),
     title TEXT NOT NULL,
     date_range_start DATE NOT NULL,
     date_range_end DATE NOT NULL,
@@ -688,7 +702,16 @@ CREATE TABLE audit_packs (
     generation_time_ms INTEGER,
     generated_by UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
     generation_trigger TEXT NOT NULL DEFAULT 'MANUAL' 
-        CHECK (generation_trigger IN ('MANUAL', 'SCHEDULED', 'PRE_INSPECTION')),
+        CHECK (generation_trigger IN ('MANUAL', 'SCHEDULED', 'PRE_INSPECTION', 'DEADLINE_BASED')),
+    -- v1.0 Pack-specific fields
+    recipient_type TEXT 
+        CHECK (recipient_type IN ('REGULATOR', 'CLIENT', 'BOARD', 'INSURER', 'INTERNAL')),
+    recipient_name TEXT,
+    purpose TEXT,
+    distribution_method TEXT 
+        CHECK (distribution_method IN ('DOWNLOAD', 'EMAIL', 'SHARED_LINK')),
+    shared_link_token TEXT UNIQUE,
+    shared_link_expires_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
@@ -697,7 +720,104 @@ CREATE INDEX idx_audit_packs_company_id ON audit_packs(company_id);
 CREATE INDEX idx_audit_packs_site_id ON audit_packs(site_id);
 CREATE INDEX idx_audit_packs_created_at ON audit_packs(created_at);
 CREATE INDEX idx_audit_packs_generated_by ON audit_packs(generated_by);
+CREATE INDEX idx_audit_packs_pack_type ON audit_packs(pack_type);
+CREATE INDEX idx_audit_packs_shared_link_token ON audit_packs(shared_link_token) WHERE shared_link_token IS NOT NULL;
 ```
+
+**v1.0 Pack Type Fields:**
+- `pack_type`: Enum of 5 commercial pack types + legacy types
+- `recipient_type`: Who the pack is for (REGULATOR, CLIENT, BOARD, INSURER, INTERNAL)
+- `recipient_name`: Name of recipient (optional)
+- `purpose`: Purpose of pack generation (optional)
+- `distribution_method`: How pack was distributed (DOWNLOAD, EMAIL, SHARED_LINK)
+- `shared_link_token`: Unique token for shareable links (nullable)
+- `shared_link_expires_at`: Expiration timestamp for shared links (nullable)
+
+**Migration Note:** Existing `audit_packs` records will have `pack_type = 'AUDIT_PACK'` by default. New v1.0 pack types can be added without migration.
+
+---
+
+## 4.9 consultant_client_assignments
+
+> [v1 UPDATE – Consultant Control Centre – 2024-12-27]
+
+**Purpose:** Tracks consultant assignments to client companies for Consultant Control Centre
+
+**Entity:** ConsultantClientAssignment
+
+**RLS Enabled:** Yes
+
+**Soft Delete:** No (uses status field)
+
+```sql
+CREATE TABLE consultant_client_assignments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    consultant_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    client_company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'ACTIVE'
+        CHECK (status IN ('ACTIVE', 'INACTIVE')),
+    assigned_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    assigned_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    UNIQUE(consultant_id, client_company_id)
+);
+
+CREATE INDEX idx_consultant_client_assignments_consultant_id ON consultant_client_assignments(consultant_id);
+CREATE INDEX idx_consultant_client_assignments_client_company_id ON consultant_client_assignments(client_company_id);
+CREATE INDEX idx_consultant_client_assignments_status ON consultant_client_assignments(status) WHERE status = 'ACTIVE';
+```
+
+**Business Logic:**
+- Consultant must have `role = 'CONSULTANT'` in `user_roles` table
+- Assignment grants consultant access to all sites within client company
+- Status 'ACTIVE' grants access, 'INACTIVE' revokes access
+- Unique constraint prevents duplicate assignments
+- Historical assignments preserved (status change, not deletion)
+
+**Reference:** Product Logic Specification Section C.5 (Consultant Control Centre Logic)
+
+---
+
+## 4.10 pack_distributions
+
+> [v1 UPDATE – Pack Distribution – 2024-12-27]
+
+**Purpose:** Tracks pack distribution history (email, shared links) for analytics and audit
+
+**Entity:** PackDistribution
+
+**RLS Enabled:** Yes
+
+**Soft Delete:** No
+
+```sql
+CREATE TABLE pack_distributions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    pack_id UUID NOT NULL REFERENCES audit_packs(id) ON DELETE CASCADE,
+    distributed_to TEXT NOT NULL,
+    distributed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    distribution_method TEXT NOT NULL
+        CHECK (distribution_method IN ('EMAIL', 'SHARED_LINK')),
+    email_address TEXT,
+    shared_link_token TEXT,
+    viewed_at TIMESTAMP WITH TIME ZONE,
+    view_count INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_pack_distributions_pack_id ON pack_distributions(pack_id);
+CREATE INDEX idx_pack_distributions_distributed_at ON pack_distributions(distributed_at);
+CREATE INDEX idx_pack_distributions_shared_link_token ON pack_distributions(shared_link_token) WHERE shared_link_token IS NOT NULL;
+```
+
+**Business Logic:**
+- Tracks each distribution instance (email send, link generation)
+- `distributed_to`: Recipient identifier (email address or name)
+- `viewed_at`: Timestamp when shared link was first viewed
+- `view_count`: Number of times shared link was accessed
+- Used for analytics and compliance audit trail
+
+**Reference:** Product Logic Specification Section I.8.7 (Pack Distribution Logic)
 
 ---
 
@@ -1815,6 +1935,39 @@ The schema uses CHECK constraints instead of PostgreSQL ENUM types for flexibili
 - Values: `HEALTHY`, `STALE`, `FAILED`
 - Used in: `background_jobs.health_status`
 
+> [v1 UPDATE – Pack Type Enum – 2024-12-27]
+
+### pack_type
+- Values: `AUDIT_PACK`, `REGULATOR_INSPECTION`, `TENDER_CLIENT_ASSURANCE`, `BOARD_MULTI_SITE_RISK`, `INSURER_BROKER`, `COMBINED`
+- Used in: `audit_packs.pack_type`
+- **v1.0 Pack Types:**
+  - `AUDIT_PACK`: Full evidence compilation (all plans)
+  - `REGULATOR_INSPECTION`: Inspector-ready pack (Core plan, included)
+  - `TENDER_CLIENT_ASSURANCE`: Compliance summary for tenders (Growth plan)
+  - `BOARD_MULTI_SITE_RISK`: Multi-site risk summary (Growth plan)
+  - `INSURER_BROKER`: Risk narrative for insurance (Growth plan)
+  - `COMBINED`: Legacy combined pack type (backward compatibility)
+
+### generation_trigger
+- Values: `MANUAL`, `SCHEDULED`, `PRE_INSPECTION`, `DEADLINE_BASED`
+- Used in: `audit_packs.generation_trigger`
+- **v1.0 Addition:** `DEADLINE_BASED` added for auto-generation before permit renewal
+
+### recipient_type
+- Values: `REGULATOR`, `CLIENT`, `BOARD`, `INSURER`, `INTERNAL`
+- Used in: `audit_packs.recipient_type`
+- **v1.0 Addition:** Identifies pack recipient type
+
+### distribution_method
+- Values: `DOWNLOAD`, `EMAIL`, `SHARED_LINK`
+- Used in: `audit_packs.distribution_method`, `pack_distributions.distribution_method`
+- **v1.0 Addition:** Tracks how pack was distributed
+
+### consultant_assignment_status
+- Values: `ACTIVE`, `INACTIVE`
+- Used in: `consultant_client_assignments.status`
+- **v1.0 Addition:** Tracks consultant client assignment status
+
 ## 12.3 Module 2 Enums (Trade Effluent)
 
 ### parameter_type
@@ -1924,6 +2077,8 @@ ALTER TABLE deadlines ENABLE ROW LEVEL SECURITY;
 ALTER TABLE evidence_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE obligation_evidence_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_packs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE consultant_client_assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pack_distributions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE parameters ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lab_results ENABLE ROW LEVEL SECURITY;
 ALTER TABLE exceedances ENABLE ROW LEVEL SECURITY;

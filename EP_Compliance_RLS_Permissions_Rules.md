@@ -1,5 +1,7 @@
 # EP Compliance RLS & Permissions Rules Specification
 
+**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+
 **Document Version:** 1.0  
 **Status:** Complete  
 **Created by:** Cursor  
@@ -10,6 +12,8 @@
 - ✅ Database Schema (2.2) - Complete
 
 **Purpose:** Defines the complete Row Level Security (RLS) and permissions system for the EP Compliance platform, including all RLS policies, CRUD matrices, permission evaluation logic, and security implementation details.
+
+> [v1 UPDATE – Version Header – 2024-12-27]
 
 ---
 
@@ -25,12 +29,15 @@
 8. [Complete CRUD Matrices](#8-complete-crud-matrices)
 9. [Permission Evaluation Logic](#9-permission-evaluation-logic)
 10. [Consultant Data Isolation](#10-consultant-data-isolation)
-11. [Service Role Handling](#11-service-role-handling)
-12. [Edge Cases & Special Scenarios](#12-edge-cases--special-scenarios)
-13. [Performance Considerations](#13-performance-considerations)
-14. [RLS Policy Deployment](#14-rls-policy-deployment)
-15. [Permission Testing](#15-permission-testing)
-16. [TypeScript Interfaces](#16-typescript-interfaces)
+11. [v1.0 Consultant Client Assignments RLS Policies](#11-v10-consultant-client-assignments-rls-policies)
+12. [v1.0 Pack Access Policies](#12-v10-pack-access-policies)
+13. [v1.0 Pack Distribution Policies](#13-v10-pack-distribution-policies)
+14. [Service Role Handling](#14-service-role-handling)
+15. [Edge Cases & Special Scenarios](#15-edge-cases--special-scenarios)
+16. [Performance Considerations](#16-performance-considerations)
+17. [RLS Policy Deployment](#17-rls-policy-deployment)
+18. [Permission Testing](#18-permission-testing)
+19. [TypeScript Interfaces](#19-typescript-interfaces)
 
 ---
 
@@ -2636,7 +2643,288 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 ---
 
-# 11. Service Role Handling
+> [v1 UPDATE – Consultant Client Assignments RLS – 2024-12-27]
+
+# 11. v1.0 Consultant Client Assignments RLS Policies
+
+## 11.1 consultant_client_assignments Table
+
+**Table:** `consultant_client_assignments`  
+**RLS Enabled:** Yes  
+**Soft Delete:** No (uses status field)
+
+### SELECT Policy
+
+**Policy:** `consultant_client_assignments_select_consultant_access`
+
+```sql
+CREATE POLICY consultant_client_assignments_select_consultant_access ON consultant_client_assignments
+FOR SELECT
+USING (
+  consultant_id = auth.uid()
+  OR EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_id = auth.uid()
+    AND company_id = consultant_client_assignments.client_company_id
+    AND role IN ('owner', 'admin')
+  )
+);
+```
+
+**Access Logic:**
+- Consultants can see their own assignments
+- Client company Owners/Admins can see assignments to their company
+
+### INSERT Policy
+
+**Policy:** `consultant_client_assignments_insert_owner_admin_access`
+
+```sql
+CREATE POLICY consultant_client_assignments_insert_owner_admin_access ON consultant_client_assignments
+FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_id = auth.uid()
+    AND company_id = consultant_client_assignments.client_company_id
+    AND role IN ('owner', 'admin')
+  )
+  AND EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_id = consultant_client_assignments.consultant_id
+    AND role = 'consultant'
+  )
+);
+```
+
+**Access Logic:**
+- Only client company Owners/Admins can create assignments
+- Validates that assigned user has CONSULTANT role
+
+### UPDATE Policy
+
+**Policy:** `consultant_client_assignments_update_owner_admin_access`
+
+```sql
+CREATE POLICY consultant_client_assignments_update_owner_admin_access ON consultant_client_assignments
+FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_id = auth.uid()
+    AND company_id = consultant_client_assignments.client_company_id
+    AND role IN ('owner', 'admin')
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_id = auth.uid()
+    AND company_id = consultant_client_assignments.client_company_id
+    AND role IN ('owner', 'admin')
+  )
+);
+```
+
+**Access Logic:**
+- Only client company Owners/Admins can update assignments (e.g., change status)
+
+### DELETE Policy
+
+**Policy:** `consultant_client_assignments_delete_owner_admin_access`
+
+```sql
+CREATE POLICY consultant_client_assignments_delete_owner_admin_access ON consultant_client_assignments
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_id = auth.uid()
+    AND company_id = consultant_client_assignments.client_company_id
+    AND role IN ('owner', 'admin')
+  )
+);
+```
+
+**Access Logic:**
+- Only client company Owners/Admins can delete assignments
+
+**Reference:** Product Logic Specification Section C.5.6 (Consultant Client Assignment Workflow)
+
+---
+
+> [v1 UPDATE – Pack Access Policies – 2024-12-27]
+
+# 12. v1.0 Pack Access Policies
+
+## 12.1 Pack Type Access Control
+
+**Plan-Based Access:**
+- Core Plan: `REGULATOR_INSPECTION`, `AUDIT_PACK` only
+- Growth Plan: All pack types
+- Consultant Edition: All pack types (for assigned clients)
+
+**Enforcement:** Application-level (plan check) + RLS (site/company access)
+
+## 12.2 Pack Generation Access
+
+**Updated Policy:** `audit_packs_insert_staff_access` (extends existing policy)
+
+```sql
+CREATE POLICY audit_packs_insert_staff_access ON audit_packs
+FOR INSERT
+WITH CHECK (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND role IN ('owner', 'admin', 'staff', 'consultant')
+  )
+  -- Pack type access validated at application level (plan check)
+);
+```
+
+**Access Logic:**
+- Owners, Admins, Staff, and Consultants can generate packs
+- Pack type access validated at API level based on user plan
+- Consultants can only generate packs for assigned clients
+
+## 12.3 Pack View Access
+
+**Policy:** `audit_packs_select_site_access` (existing, no changes)
+
+**Pack Type Filtering:**
+- All users can view packs from their assigned sites
+- Pack type visibility not restricted (users see all pack types they have access to generate)
+
+## 12.4 Board Pack Multi-Site Access
+
+**Special Case:** Board Pack requires `company_id` scope (not `site_id`)
+
+**Policy:** `audit_packs_select_board_pack_access`
+
+```sql
+CREATE POLICY audit_packs_select_board_pack_access ON audit_packs
+FOR SELECT
+USING (
+  (
+    pack_type = 'BOARD_MULTI_SITE_RISK'
+    AND company_id IN (
+      SELECT company_id FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('owner', 'admin')
+    )
+  )
+  OR (
+    pack_type != 'BOARD_MULTI_SITE_RISK'
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Board Packs: Only Owners/Admins of company can view
+- Other Packs: Standard site-based access
+
+**Reference:** Product Logic Specification Section I.8.4 (Board/Multi-Site Risk Pack Logic)
+
+---
+
+> [v1 UPDATE – Pack Distribution Policies – 2024-12-27]
+
+# 13. v1.0 Pack Distribution Policies
+
+## 13.1 pack_distributions Table
+
+**Table:** `pack_distributions`  
+**RLS Enabled:** Yes  
+**Soft Delete:** No
+
+### SELECT Policy
+
+**Policy:** `pack_distributions_select_pack_access`
+
+```sql
+CREATE POLICY pack_distributions_select_pack_access ON pack_distributions
+FOR SELECT
+USING (
+  pack_id IN (
+    SELECT id FROM audit_packs
+    WHERE site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+    )
+    OR company_id IN (
+      SELECT company_id FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('owner', 'admin')
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Users can see distributions for packs they can access
+
+### INSERT Policy
+
+**Policy:** `pack_distributions_insert_staff_access`
+
+```sql
+CREATE POLICY pack_distributions_insert_staff_access ON pack_distributions
+FOR INSERT
+WITH CHECK (
+  pack_id IN (
+    SELECT id FROM audit_packs
+    WHERE site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('owner', 'admin', 'staff', 'consultant')
+    )
+  )
+  -- Distribution method access validated at application level (Growth Plan required)
+);
+```
+
+**Access Logic:**
+- Owners, Admins, Staff, and Consultants can create distributions
+- Distribution method access validated at API level (Growth Plan required for EMAIL/SHARED_LINK)
+
+## 13.2 Shared Link Access
+
+**Policy:** `audit_packs_select_shared_link_access`
+
+```sql
+CREATE POLICY audit_packs_select_shared_link_access ON audit_packs
+FOR SELECT
+USING (
+  -- Standard site access
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+  )
+  OR
+  -- Shared link access (no authentication required if token valid)
+  (
+    shared_link_token IS NOT NULL
+    AND shared_link_expires_at > NOW()
+    -- Token validation happens at application level
+  )
+);
+```
+
+**Access Logic:**
+- Shared links bypass standard RLS (token-based access)
+- Token validation and expiration checked at application level
+- Shared link access logged in `pack_distributions` table
+
+**Reference:** Product Logic Specification Section I.8.7 (Pack Distribution Logic)
+
+---
+
+# 14. Service Role Handling
 
 ## 11.1 Service Role vs User JWT
 
@@ -2677,7 +2965,7 @@ WITH CHECK (auth.role() = 'service_role');
 
 ---
 
-# 12. Edge Cases & Special Scenarios
+# 15. Edge Cases & Special Scenarios
 
 ## 12.1 Soft Delete Handling
 
@@ -2793,7 +3081,7 @@ USING (
 
 ---
 
-# 13. Performance Considerations
+# 16. Performance Considerations
 
 ## 13.1 Index Requirements
 
@@ -2836,7 +3124,7 @@ CREATE INDEX idx_{table}_site_id ON {table}(site_id);
 
 ---
 
-# 14. RLS Policy Deployment
+# 17. RLS Policy Deployment
 
 ## 14.1 Migration Strategy
 
@@ -2904,7 +3192,7 @@ migrations/
 
 ---
 
-# 15. Permission Testing
+# 18. Permission Testing
 
 ## 15.1 Test Cases for Core Tables
 
@@ -2974,7 +3262,7 @@ migrations/
 
 ---
 
-# 16. TypeScript Interfaces
+# 19. TypeScript Interfaces
 
 ## 16.1 Permission Check Interfaces
 
