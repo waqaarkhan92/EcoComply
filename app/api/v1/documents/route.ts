@@ -9,6 +9,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, paginatedResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { parsePaginationParams, parseFilterParams, parseSortParams, createCursor } from '@/lib/api/pagination';
+import { getQueue, QUEUE_NAMES } from '@/lib/queue/queue-manager';
 
 export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
@@ -338,12 +339,75 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Enqueue background job for document processing
+    try {
+      const documentQueue = getQueue(QUEUE_NAMES.DOCUMENT_PROCESSING);
+      
+      // Create background_jobs record
+      const { data: jobRecord, error: jobError } = await supabaseAdmin
+        .from('background_jobs')
+        .insert({
+          job_type: 'DOCUMENT_EXTRACTION',
+          status: 'PENDING',
+          priority: 'NORMAL',
+          entity_type: 'documents',
+          entity_id: document.id,
+          company_id: site.company_id,
+          payload: JSON.stringify({
+            document_id: document.id,
+            company_id: site.company_id,
+            site_id: siteId,
+            module_id: module1.id,
+            file_path: storagePath,
+            document_type: dbDocumentType,
+            regulator: metadata.regulator || null,
+            permit_reference: metadata.reference_number || null,
+          }),
+        })
+        .select('id')
+        .single();
+
+      if (!jobError && jobRecord) {
+        // Enqueue job in BullMQ
+        await documentQueue.add(
+          'DOCUMENT_EXTRACTION',
+          {
+            document_id: document.id,
+            company_id: site.company_id,
+            site_id: siteId,
+            module_id: module1.id,
+            file_path: storagePath,
+            document_type: dbDocumentType,
+            regulator: metadata.regulator || null,
+            permit_reference: metadata.reference_number || null,
+          },
+          {
+            jobId: jobRecord.id, // Use database job ID as BullMQ job ID
+            priority: 5, // Normal priority
+          }
+        );
+
+        // Update document status to PROCESSING
+        await supabaseAdmin
+          .from('documents')
+          .update({ extraction_status: 'PROCESSING' })
+          .eq('id', document.id);
+      } else {
+        console.error('Failed to create background job record:', jobError);
+        // Continue anyway - job can be retried manually
+      }
+    } catch (error: any) {
+      console.error('Failed to enqueue document processing job:', error);
+      // Continue anyway - job can be retried manually
+    }
+
     // Return response with file URL
     return successResponse(
       {
         ...document,
         file_url: urlData?.publicUrl || '',
         page_count: null, // Will be set during processing
+        extraction_status: 'PROCESSING', // Updated status
       },
       201,
       { request_id: requestId }

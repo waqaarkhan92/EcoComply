@@ -25,7 +25,7 @@ interface EnvConfig {
   TWILIO_PHONE_NUMBER?: string;
 
   // Redis (optional for Phase 2, required for Phase 4+)
-  REDIS_URL: string;
+  REDIS_URL?: string;
 
   // JWT
   JWT_SECRET: string;

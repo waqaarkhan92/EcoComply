@@ -12,7 +12,8 @@
     "validate-env": "tsx scripts/validate-env.ts",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "worker": "tsx workers/index.ts"
   },
   "repository": {
     "type": "git",
@@ -46,6 +47,8 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.86.0",
     "@upstash/redis": "^1.35.7",
+    "bullmq": "^5.65.0",
+    "ioredis": "^5.8.2",
     "next": "^16.0.5",
     "openai": "^6.9.1",
     "pdf-parse": "^2.4.5",
