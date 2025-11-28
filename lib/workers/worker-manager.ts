@@ -8,6 +8,9 @@ import { Worker, WorkerOptions } from 'bullmq';
 import { getRedisConnection } from '../queue/queue-manager';
 import { QUEUE_NAMES } from '../queue/queue-manager';
 import { processDocumentJob } from '../jobs/document-processing-job';
+import { processMonitoringScheduleJob } from '../jobs/monitoring-schedule-job';
+import { processDeadlineAlertJob } from '../jobs/deadline-alert-job';
+import { processEvidenceReminderJob } from '../jobs/evidence-reminder-job';
 
 // Worker instances
 const workers: Map<string, Worker> = new Map();
@@ -70,6 +73,78 @@ export function startAllWorkers(): void {
   });
 
   workers.set(QUEUE_NAMES.DOCUMENT_PROCESSING, documentWorker);
+
+  // Monitoring Schedule Worker
+  const monitoringWorker = createWorker(
+    QUEUE_NAMES.MONITORING_SCHEDULE,
+    async (job) => {
+      if (job.name === 'MONITORING_SCHEDULE') {
+        await processMonitoringScheduleJob(job);
+      } else {
+        throw new Error(`Unknown job type: ${job.name}`);
+      }
+    }
+  );
+
+  monitoringWorker.on('completed', (job) => {
+    console.log(`Monitoring schedule job ${job.id} completed`);
+  });
+
+  monitoringWorker.on('failed', (job, error) => {
+    console.error(`Monitoring schedule job ${job?.id} failed:`, error);
+  });
+
+  workers.set(QUEUE_NAMES.MONITORING_SCHEDULE, monitoringWorker);
+
+  // Deadline Alerts Worker
+  const deadlineAlertsWorker = createWorker(
+    QUEUE_NAMES.DEADLINE_ALERTS,
+    async (job) => {
+      if (job.name === 'DEADLINE_ALERT') {
+        await processDeadlineAlertJob(job);
+      } else {
+        throw new Error(`Unknown job type: ${job.name}`);
+      }
+    },
+    {
+      concurrency: 10, // Higher concurrency for alert jobs
+    }
+  );
+
+  deadlineAlertsWorker.on('completed', (job) => {
+    console.log(`Deadline alert job ${job.id} completed`);
+  });
+
+  deadlineAlertsWorker.on('failed', (job, error) => {
+    console.error(`Deadline alert job ${job?.id} failed:`, error);
+  });
+
+  workers.set(QUEUE_NAMES.DEADLINE_ALERTS, deadlineAlertsWorker);
+
+  // Evidence Reminders Worker
+  const evidenceRemindersWorker = createWorker(
+    QUEUE_NAMES.EVIDENCE_REMINDERS,
+    async (job) => {
+      if (job.name === 'EVIDENCE_REMINDER') {
+        await processEvidenceReminderJob(job);
+      } else {
+        throw new Error(`Unknown job type: ${job.name}`);
+      }
+    },
+    {
+      concurrency: 10, // Higher concurrency for reminder jobs
+    }
+  );
+
+  evidenceRemindersWorker.on('completed', (job) => {
+    console.log(`Evidence reminder job ${job.id} completed`);
+  });
+
+  evidenceRemindersWorker.on('failed', (job, error) => {
+    console.error(`Evidence reminder job ${job?.id} failed:`, error);
+  });
+
+  workers.set(QUEUE_NAMES.EVIDENCE_REMINDERS, evidenceRemindersWorker);
 
   console.log('All workers started successfully');
 }

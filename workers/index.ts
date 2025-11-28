@@ -1,13 +1,19 @@
 /**
  * Background Job Workers
  * Entry point for worker service
- * Run this as a separate process: node workers/index.js
+ * Run this as a separate process: npm run worker
  */
 
 import { startAllWorkers, stopAllWorkers } from '../lib/workers/worker-manager';
+import { scheduleRecurringJobs } from '../lib/jobs/cron-scheduler';
 
 // Start all workers
 startAllWorkers();
+
+// Schedule recurring jobs
+scheduleRecurringJobs().catch((error) => {
+  console.error('Failed to schedule recurring jobs:', error);
+});
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
