@@ -2366,7 +2366,7 @@ This document ensures **true consistency** across all documentation by:
 
 ## 16.1 Rate Limiting
 
-**Feature Description:** API rate limiting to prevent abuse. Rate limit headers: X-Rate-Limit-Limit, X-Rate-Limit-Remaining, X-Rate-Limit-Reset. Default: 100 requests/hour per user. Returns 429 Too Many Requests when exceeded.
+**Feature Description:** API rate limiting to prevent abuse. Rate limit headers: X-Rate-Limit-Limit, X-Rate-Limit-Remaining, X-Rate-Limit-Reset. Default: 100 requests/minute per user. Returns 429 Too Many Requests when exceeded.
 
 **Referenced In:**
 - ✅ `EP_Compliance_Backend_API_Specification.md` — Section 7 (Rate Limiting)
@@ -2376,7 +2376,7 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `EP_Compliance_Deployment_DevOps_Strategy.md` — Section 3.2 (Rate Limiting Configuration)
 
 **Consistency Check:**
-- ✅ Rate limit: 100 requests/hour per user — Consistent
+- ✅ Rate limit: 100 requests/minute per user — Consistent
 - ✅ Headers: X-Rate-Limit-* headers — Consistent
 - ✅ Error code: 429 Too Many Requests — Consistent
 - ✅ Scope: Per user — Consistent

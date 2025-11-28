@@ -1511,7 +1511,11 @@ CREATE TABLE notifications (
       'CONSULTANT_CLIENT_PACK_GENERATED',
       'CONSULTANT_CLIENT_ACTIVITY',
       'SYSTEM_ALERT',
-      'ESCALATION'
+      'ESCALATION',
+      'DEADLINE_ALERT',
+      'EXCEEDANCE',
+      'BREACH',
+      'MODULE_ACTIVATION'
     )),
   channel TEXT NOT NULL 
     CHECK (channel IN ('EMAIL', 'SMS', 'IN_APP', 'PUSH')),
@@ -1538,6 +1542,10 @@ CREATE TABLE notifications (
   escalation_level INTEGER CHECK (escalation_level >= 1 AND escalation_level <= 3),
   escalation_state TEXT DEFAULT 'PENDING'
     CHECK (escalation_state IN ('PENDING', 'ESCALATED_LEVEL_1', 'ESCALATED_LEVEL_2', 'ESCALATED_LEVEL_3', 'RESOLVED')),
+  escalation_delay_minutes INTEGER DEFAULT 60 
+    CHECK (escalation_delay_minutes >= 0),
+  max_retries INTEGER DEFAULT 3 
+    CHECK (max_retries >= 0),
   
   -- Entity Reference
   entity_type TEXT, -- 'obligation', 'deadline', 'evidence', 'audit_pack', etc.

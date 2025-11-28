@@ -1352,7 +1352,8 @@ USING (
 CREATE POLICY evidence_items_select_site_access ON evidence_items
 FOR SELECT
 USING (
-  site_id IN (
+  is_archived = false
+  AND site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
   )
