@@ -5732,7 +5732,7 @@ Phase 8: Module 2 (Trade Effluent) and Module 3 (MCPD/Generators) functional
 - [ ] ✅ Phase 1 Checkpoint Passed
 
 **Phase 2: Core API**
-- [ ] 2.1 API Setup
+- [x] 2.1 API Setup ✅ (Next.js API routes, middleware, health endpoint)
 - [ ] 2.2 Authentication
 - [ ] 2.3 Core Entities
 - [ ] 2.4 Document Upload
