@@ -5739,6 +5739,7 @@ Phase 8: Module 2 (Trade Effluent) and Module 3 (MCPD/Generators) functional
 - [x] 2.5 Obligations Endpoints ✅ (List, Get, Update, Mark Not Applicable)
 - [x] 2.6 Evidence Endpoints ✅ (Upload, List, Get, Link, Unlink, Download)
 - [x] 2.7 Standard API Features ✅ (Pagination, Error Handling, Rate Limiting)
+- [x] 2.9 Excel Import Endpoints ✅ (Upload, Preview, Confirm, Status)
 - [ ] 2.3 Core Entities
 - [ ] 2.4 Document Upload
 - [ ] 2.5 Obligations
