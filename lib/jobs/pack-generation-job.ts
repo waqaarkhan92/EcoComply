@@ -262,7 +262,8 @@ async function generatePackPDF(packType: string, packData: any, pack: any): Prom
           doc.fontSize(10).text(`- ${evidence.title || evidence.file_name} (${evidence.upload_date})`);
         }
       } else {
-        doc.fontSize(10).text('No evidence linked', { color: 'red' });
+        doc.fontSize(10).fillColor('red').text('No evidence linked');
+        doc.fillColor('black'); // Reset to black
       }
 
       doc.moveDown();
