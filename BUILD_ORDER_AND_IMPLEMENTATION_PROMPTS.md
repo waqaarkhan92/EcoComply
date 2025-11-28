@@ -354,6 +354,73 @@ Reference: EP_Compliance_Master_Plan.md Section 7 for pricing.
 - No foreign key constraint violations
 - All tables have proper indexes
 
+## Phase 1 Automated Tests
+
+**Task 1.7.1: Create Automated Test Suite**
+
+**Implementation Prompt:**
+```
+Create automated test suite for Phase 1 (Database & RLS):
+
+1. Install test dependencies:
+   npm install --save-dev jest @types/jest ts-jest pg
+
+2. Create test file: tests/integration/database/rls-security.test.ts
+
+3. Test RLS isolation (automates manual check #5):
+   - Create two test companies and users
+   - Use Supabase service role to bypass RLS for setup
+   - Switch to authenticated role with User 1's auth_user_id
+   - Query companies table → Should only return User 1's company
+   - Switch to User 2's auth_user_id
+   - Query companies table → Should only return User 2's company
+   - Assert: User 1 cannot see User 2's data
+
+4. Test helper functions:
+   - Test has_company_access() with valid/invalid combinations
+   - Test has_site_access() with valid/invalid combinations
+   - Test role_has_permission() with different roles
+
+5. Test schema integrity:
+   - Verify all 36 tables exist
+   - Verify all foreign keys are valid
+   - Verify all indexes exist
+   - Verify modules table has 3 rows
+
+6. Test RLS policy count:
+   - Query pg_policies → Should have ~111 policies
+   - Verify each tenant table has SELECT, INSERT, UPDATE, DELETE policies
+
+Reference: Phase 1 Manual Verification steps (automate what's possible)
+```
+
+**Test File Structure:**
+```
+tests/
+├── integration/
+│   └── database/
+│       ├── rls-security.test.ts      # RLS isolation tests
+│       ├── helper-functions.test.ts  # RLS helper function tests
+│       └── schema-integrity.test.ts  # Schema validation tests
+└── setup/
+    └── test-db.ts                    # Test database connection
+```
+
+**Run Tests:**
+```bash
+npm run test:integration:database
+```
+
+**Expected Output:**
+```
+✓ RLS isolation: User 1 cannot see User 2's data
+✓ Helper functions: has_company_access works correctly
+✓ Schema integrity: All 36 tables exist
+✓ RLS policies: ~111 policies created
+```
+
+**Note:** These tests automate the manual RLS security check. You still need to manually verify in Supabase Dashboard for visual confirmation, but the automated tests catch regressions.
+
 ## Phase 1 Manual Verification (CRITICAL - You Must Check)
 
 **⚠️ DO NOT TRUST TESTS ALONE - You must visually verify these yourself:**
@@ -869,6 +936,109 @@ Implement rate limiting middleware:
 - RLS prevents unauthorized access
 - Cursor-based pagination functional
 
+## Phase 2 Automated Tests
+
+**Task 2.8.1: Create API Integration Test Suite**
+
+**Implementation Prompt:**
+```
+Create automated API integration tests for Phase 2:
+
+1. Install test dependencies:
+   npm install --save-dev supertest @types/supertest
+
+2. Create test file: tests/integration/api/auth.test.ts
+
+3. Test signup flow (automates manual check #2):
+   - POST /api/v1/auth/signup with valid data
+   - Assert: 201 Created
+   - Assert: Response contains user object and token
+   - Assert: Company record created in database
+   - Assert: User record created in database
+   - Assert: user_roles record created with role = 'OWNER'
+   - Assert: module_activations record created for Module 1
+
+4. Test login flow:
+   - POST /api/v1/auth/login with valid credentials
+   - Assert: 200 OK with token
+   - POST /api/v1/auth/login with invalid credentials
+   - Assert: 401 Unauthorized
+
+5. Test protected routes (automates manual check #4):
+   - GET /api/v1/companies without token
+   - Assert: 401 Unauthorized
+   - GET /api/v1/companies with valid token
+   - Assert: 200 OK with company data
+   - GET /api/v1/companies with invalid token
+   - Assert: 401 Unauthorized
+
+6. Test RLS enforcement via API (automates manual check #5):
+   - Create User A in Company A
+   - Create User B in Company B
+   - Login as User A → GET /api/v1/companies
+   - Assert: Only Company A in response
+   - Login as User B → GET /api/v1/companies
+   - Assert: Only Company B in response
+   - Assert: User A cannot see User B's data
+
+7. Test document upload:
+   - POST /api/v1/documents/upload with test PDF
+   - Assert: 201 Created
+   - Assert: Document record created in database
+   - Assert: File exists in storage bucket
+
+8. Test pagination:
+   - GET /api/v1/obligations?limit=10
+   - Assert: Response has pagination object
+   - Assert: cursor and has_more fields present
+
+9. Test rate limiting:
+   - Make 101 requests in 1 minute
+   - Assert: Request 101 returns 429 Too Many Requests
+   - Assert: Rate limit headers present
+
+10. Test error handling:
+    - POST /api/v1/auth/signup with invalid email
+    - Assert: 400 Bad Request with error object
+    - GET /api/v1/obligations/00000000-0000-0000-0000-000000000000
+    - Assert: 404 Not Found
+
+Reference: Phase 2 Manual Verification steps (automate what's possible)
+```
+
+**Test File Structure:**
+```
+tests/
+├── integration/
+│   └── api/
+│       ├── auth.test.ts              # Authentication tests
+│       ├── rls-enforcement.test.ts   # RLS via API tests
+│       ├── documents.test.ts         # Document upload tests
+│       ├── pagination.test.ts        # Pagination tests
+│       └── rate-limiting.test.ts     # Rate limiting tests
+└── helpers/
+    ├── test-client.ts                # API test client helper
+    └── test-data.ts                   # Test data factories
+```
+
+**Run Tests:**
+```bash
+npm run test:integration:api
+```
+
+**Expected Output:**
+```
+✓ Signup: Creates user, company, and activates Module 1
+✓ Login: Returns token for valid credentials
+✓ Protected routes: Requires authentication
+✓ RLS enforcement: Users cannot see other companies' data
+✓ Document upload: Creates document and stores file
+✓ Pagination: Returns cursor and has_more
+✓ Rate limiting: Blocks after 100 requests/minute
+```
+
+**Note:** These tests automate the manual API checks. You still need to manually test in Postman/browser for visual confirmation, but automated tests catch regressions and run on every commit.
+
 ## Phase 2 Manual Verification (CRITICAL - You Must Check)
 
 **⚠️ DO NOT TRUST TESTS ALONE - You must manually test the API:**
@@ -1199,6 +1369,89 @@ Implement confidence scoring:
 **Manual Verification Status:** ⬜ Not Started | ⬜ In Progress | ⬜ Complete
 
 **⚠️ DO NOT PROCEED TO PHASE 4 until you have manually verified extraction works with REAL documents.**
+
+## Phase 3 Automated Tests
+
+**Task 3.4.1: Create AI Extraction Test Suite**
+
+**Implementation Prompt:**
+```
+Create automated tests for AI extraction (Phase 3):
+
+1. Install test dependencies:
+   npm install --save-dev @playwright/test
+
+2. Create test file: tests/integration/ai/extraction.test.ts
+
+3. Test document extraction (partially automates manual check #1):
+   - Upload test PDF via API
+   - Wait for background job to complete
+   - Assert: document.extraction_status = 'EXTRACTED'
+   - Assert: obligations table has records
+   - Assert: obligation_count > 0
+   - Assert: All obligations have obligation_text (not empty)
+   - Assert: All obligations have confidence_score (0-100)
+
+4. Test confidence score thresholds:
+   - Assert: Obligations with confidence <70% are in review_queue_items
+   - Assert: Obligations with confidence >=85% are not in review_queue
+
+5. Test pattern matching:
+   - Upload document with known pattern
+   - Assert: extraction_logs has rule_library_hit = true
+   - Assert: Cost is lower (no LLM call)
+
+6. Test large document timeout:
+   - Upload 60+ page PDF
+   - Assert: Uses 5-minute timeout (check logs)
+   - Assert: Extraction completes (may take 2-5 minutes)
+
+7. Test error handling:
+   - Upload corrupted PDF
+   - Assert: document.extraction_status = 'PROCESSING_FAILED' or 'OCR_FAILED'
+   - Assert: Error message in extraction_logs
+
+8. Test extraction accuracy (semi-automated):
+   - Upload test PDF with known obligations
+   - Extract obligations
+   - Compare extracted text to expected text (fuzzy match)
+   - Assert: At least 80% of obligations match expected text
+   - Note: Full accuracy check still requires manual verification
+
+Reference: Phase 3 Manual Verification steps (automate what's possible)
+```
+
+**Test File Structure:**
+```
+tests/
+├── integration/
+│   └── ai/
+│       ├── extraction.test.ts        # Extraction workflow tests
+│       ├── confidence-scores.test.ts # Confidence threshold tests
+│       ├── pattern-matching.test.ts  # Pattern matching tests
+│       └── error-handling.test.ts    # Error scenario tests
+└── fixtures/
+    ├── test-permit-small.pdf         # 5-page test PDF
+    ├── test-permit-large.pdf         # 60-page test PDF
+    └── test-permit-corrupted.pdf     # Corrupted PDF for error testing
+```
+
+**Run Tests:**
+```bash
+npm run test:integration:ai
+```
+
+**Expected Output:**
+```
+✓ Document extraction: Creates obligations from PDF
+✓ Confidence scores: Low-confidence items flagged for review
+✓ Pattern matching: Uses rule library when pattern matches
+✓ Large documents: Uses 5-minute timeout
+✓ Error handling: Handles corrupted PDFs gracefully
+⚠ Extraction accuracy: 85% match (manual verification still recommended)
+```
+
+**Note:** Extraction accuracy test is semi-automated. It compares extracted text to expected text, but you should still manually verify with real PDFs to ensure quality.
 
 ## Phase 3 Progress Checkpoint
 
@@ -1755,6 +2008,123 @@ Implement obligation detail (app/(dashboard)/obligations/[id]/page.tsx):
 
 **⚠️ DO NOT PROCEED TO PHASE 6 until you have manually tested all pages in a browser.**
 
+## Phase 5 Automated Tests (E2E)
+
+**Task 5.6.1: Create E2E Test Suite**
+
+**Implementation Prompt:**
+```
+Create E2E tests for frontend (Phase 5) using Playwright:
+
+1. Install Playwright:
+   npm install --save-dev @playwright/test
+   npx playwright install
+
+2. Create test file: tests/e2e/signup-flow.test.ts
+
+3. Test signup page (automates manual check #1):
+   - Navigate to /signup
+   - Assert: Form fields visible (company_name, email, password)
+   - Fill form with invalid email
+   - Assert: Validation error displayed
+   - Fill form with weak password
+   - Assert: Password strength indicator shows
+   - Fill form with valid data
+   - Submit form
+   - Assert: Redirects to onboarding or dashboard
+   - Assert: No console errors
+
+4. Test login page (automates manual check #2):
+   - Navigate to /login
+   - Assert: Login form renders
+   - Fill form with wrong password
+   - Assert: Error message displayed
+   - Fill form with correct credentials
+   - Assert: Redirects to dashboard
+
+5. Test dashboard (automates manual check #3):
+   - Login as test user
+   - Navigate to /dashboard
+   - Assert: Dashboard page loads
+   - Assert: Stats cards visible (even if 0)
+   - Assert: Navigation sidebar works
+   - Assert: API calls succeed (check network tab)
+   - Assert: No console errors
+
+6. Test document upload (automates manual check #4):
+   - Navigate to /documents
+   - Assert: Upload button/modal exists
+   - Upload test PDF file
+   - Assert: File selected, upload progress shown
+   - Wait for upload to complete
+   - Assert: Document appears in list
+   - Click on document
+   - Assert: Document detail page loads
+
+7. Test obligations list (automates manual check #5):
+   - Navigate to /obligations
+   - Assert: Table renders with columns
+   - If obligations exist, assert: They display correctly
+   - Click on obligation
+   - Assert: Obligation detail page loads
+   - Assert: Status badges show correct colors
+
+8. Test mobile responsive (automates manual check #6):
+   - Set viewport to mobile (375px)
+   - Navigate to dashboard
+   - Assert: Layout adapts (sidebar becomes hamburger)
+   - Click hamburger menu
+   - Assert: Menu opens
+   - Assert: Tables scroll horizontally
+
+9. Test error states (automates manual check #7):
+   - Block API requests (route.continue with abort)
+   - Navigate to dashboard
+   - Assert: Error message displayed (not blank page)
+   - Assert: Retry button visible
+
+Reference: Phase 5 Manual Verification steps (automate what's possible)
+```
+
+**Test File Structure:**
+```
+tests/
+├── e2e/
+│   ├── signup-flow.test.ts          # Signup page tests
+│   ├── login-flow.test.ts           # Login page tests
+│   ├── dashboard.test.ts            # Dashboard tests
+│   ├── document-upload.test.ts      # Document upload tests
+│   ├── obligations.test.ts         # Obligations page tests
+│   ├── responsive.test.ts          # Mobile responsive tests
+│   └── error-handling.test.ts      # Error state tests
+└── helpers/
+    ├── test-user.ts                 # Test user helpers
+    └── page-objects/                # Page object models
+        ├── signup.page.ts
+        ├── login.page.ts
+        └── dashboard.page.ts
+```
+
+**Run Tests:**
+```bash
+npm run test:e2e
+# Or with UI mode:
+npm run test:e2e:ui
+```
+
+**Expected Output:**
+```
+✓ Signup: Form validation and submission works
+✓ Login: Authentication flow works
+✓ Dashboard: Page loads and displays data
+✓ Document upload: File upload and display works
+✓ Obligations: List and detail pages work
+✓ Mobile responsive: Layout adapts correctly
+✓ Error handling: Error states display correctly
+```
+
+**Note:** E2E tests automate the manual browser checks. They run in headless mode by default, but you can run with UI mode (`npm run test:e2e:ui`) to watch tests execute.
+
 ## Phase 5 Progress Checkpoint
 
 **Before moving to Phase 6, verify:**
@@ -1999,6 +2369,120 @@ Implement notification center:
 
 **⚠️ DO NOT PROCEED TO PHASE 7 until you have manually completed a full user journey.**
 
+## Phase 6 Automated Tests (Complete User Journey)
+
+**Task 6.4.1: Create Complete User Journey E2E Tests**
+
+**Implementation Prompt:**
+```
+Create E2E tests for complete user workflows (Phase 6):
+
+1. Create test file: tests/e2e/complete-journey.test.ts
+
+2. Test complete user journey (automates manual check #1):
+   - Step 1: Signup as new user
+     - Navigate to /signup
+     - Fill form and submit
+     - Assert: Redirects to onboarding
+   - Step 2: Complete onboarding
+     - Create site (fill site form)
+     - Upload permit PDF
+     - Assert: Onboarding progress updates
+   - Step 3: Wait for extraction
+     - Poll background_jobs table until COMPLETED
+     - Assert: document.extraction_status = 'EXTRACTED'
+   - Step 4: View extracted obligations
+     - Navigate to /obligations
+     - Assert: Obligations displayed
+   - Step 5: Upload evidence
+     - Navigate to /evidence
+     - Upload evidence file
+     - Assert: Evidence appears in list
+   - Step 6: Link evidence to obligation
+     - Navigate to obligation detail
+     - Click "Link Evidence"
+     - Select evidence file
+     - Assert: Evidence linked (check database)
+   - Step 7: Generate Regulator Pack
+     - Navigate to /packs
+     - Click "Generate Regulator Pack"
+     - Wait for pack generation
+     - Assert: Pack status = 'GENERATED'
+   - Step 8: Download pack PDF
+     - Click "Download" button
+     - Assert: PDF file downloaded
+     - Assert: PDF file size > 0
+     - Assert: PDF is valid (can be opened)
+
+3. Test pack generation for all types:
+   - Generate Regulator Pack → Assert: PDF generated
+   - Generate Audit Pack → Assert: PDF generated
+   - Generate Tender Pack → Assert: PDF generated
+   - Generate Board Pack → Assert: PDF generated
+   - Generate Insurer Pack → Assert: PDF generated
+   - For each pack: Assert: PDF contains correct sections
+
+4. Test notification system (automates manual check #3):
+   - Create obligation with deadline in 6 days
+   - Wait for background job to run
+   - Assert: Notification record created in database
+   - Assert: notification_type = 'DEADLINE_WARNING_7D'
+   - If email configured: Assert: Email sent
+
+5. Test multi-site workflow (automates manual check #4):
+   - Create company with 2 sites
+   - Upload document to Site 1
+   - Upload document to Site 2
+   - Navigate to dashboard
+   - Assert: Data from both sites visible
+   - Filter to Site 1 only
+   - Assert: Only Site 1 data visible
+   - Generate Board Pack
+   - Assert: Pack includes both sites
+
+6. Test onboarding flow (automates manual check #5):
+   - Create new test account
+   - Navigate through onboarding steps
+   - Assert: Progress bar updates
+   - Skip optional step
+   - Assert: Can proceed
+   - Go back to previous step
+   - Assert: Can edit previous step
+   - Complete onboarding
+   - Assert: Redirects to dashboard
+
+Reference: Phase 6 Manual Verification steps (automate what's possible)
+```
+
+**Test File Structure:**
+```
+tests/
+├── e2e/
+│   ├── complete-journey.test.ts     # Full user journey test
+│   ├── pack-generation.test.ts      # All pack types test
+│   ├── notifications.test.ts        # Notification system test
+│   ├── multi-site.test.ts           # Multi-site workflow test
+│   └── onboarding.test.ts           # Onboarding flow test
+└── fixtures/
+    └── test-permit.pdf               # Test permit PDF
+```
+
+**Run Tests:**
+```bash
+npm run test:e2e:journey
+```
+
+**Expected Output:**
+```
+✓ Complete journey: Signup → Upload → Extract → Link Evidence → Generate Pack
+✓ Pack generation: All 5 pack types generate correctly
+✓ Notifications: Deadline warnings created and sent
+✓ Multi-site: Data isolation and aggregation work
+✓ Onboarding: Flow completes successfully
+```
+
+**Note:** These tests automate the complete user journey. They take longer to run (5-10 minutes) but verify end-to-end functionality. You should still manually test with real users for UX feedback.
+
 ## Phase 6 Progress Checkpoint
 
 **Before moving to Phase 7, verify:**
@@ -2055,7 +2539,9 @@ Implement notification center:
 
 **Duration:** 2-3 weeks  
 **Complexity:** Medium  
-**Dependencies:** All previous phases complete
+**Dependencies:** All previous phases
+
+**Testing:** Automated production readiness tests included (Phase 7.3) - runs security, performance, and data integrity tests automatically complete
 
 ## Phase 7.1: End-to-End Testing
 
@@ -2181,6 +2667,95 @@ Generate API documentation:
 **Manual Verification Status:** ⬜ Not Started | ⬜ In Progress | ⬜ Complete
 
 **⚠️ DO NOT LAUNCH until you have manually verified everything works in staging.**
+
+## Phase 7 Automated Tests (Production Readiness)
+
+**Task 7.3.1: Create Production Readiness Test Suite**
+
+**Implementation Prompt:**
+```
+Create automated production readiness tests (Phase 7):
+
+1. Create test file: tests/e2e/production-readiness.test.ts
+
+2. Test production-like environment (automates manual check #1):
+   - Deploy to staging environment
+   - Run complete user journey test
+   - Assert: All steps complete successfully
+   - Measure: Page load times <3s
+   - Measure: API response times <200ms (p95)
+
+3. Test security (automates manual check #2):
+   - Create two user accounts in staging
+   - Login as User 1 → Create data
+   - Login as User 2 → Query User 1's data
+   - Assert: User 2 cannot see User 1's data (403 Forbidden)
+   - Assert: RLS policies enforced
+
+4. Test data integrity (automates manual check #3):
+   - Upload 10 test documents
+   - Assert: All documents processed
+   - Count obligations extracted
+   - Assert: Obligation count matches expected
+   - Assert: Evidence links correctly
+   - Generate pack
+   - Assert: Pack contains correct data
+
+5. Test error recovery (automates manual check #4):
+   - Upload corrupted PDF
+   - Assert: Error handled gracefully (not 500 error)
+   - Assert: User can retry
+   - Simulate network error during upload
+   - Assert: Error message displayed
+   - Assert: Can retry upload
+
+6. Test performance benchmarks:
+   - Measure API response times
+   - Assert: p95 < 200ms
+   - Measure page load times
+   - Assert: <3s for all pages
+   - Measure extraction times
+   - Assert: <30s for standard documents
+
+7. Test monitoring and health checks:
+   - GET /api/v1/health
+   - Assert: All services healthy
+   - Assert: Response time <100ms
+   - Check error tracking (Sentry)
+   - Assert: Errors logged correctly
+
+Reference: Phase 7 Manual Verification steps (automate what's possible)
+```
+
+**Test File Structure:**
+```
+tests/
+├── e2e/
+│   └── production-readiness.test.ts  # Production readiness tests
+├── performance/
+│   ├── api-benchmark.test.ts        # API performance tests
+│   └── page-load.test.ts            # Page load time tests
+└── security/
+    └── rls-production.test.ts        # Production security tests
+```
+
+**Run Tests:**
+```bash
+# Run in staging environment
+STAGING_URL=https://staging.oblicore.com npm run test:e2e:production
+```
+
+**Expected Output:**
+```
+✓ Production environment: All features work in staging
+✓ Security: RLS policies prevent cross-tenant access
+✓ Data integrity: All data processed correctly
+✓ Error recovery: Errors handled gracefully
+✓ Performance: All benchmarks met
+✓ Monitoring: Health checks pass
+```
+
+**Note:** These tests should run in staging before production deployment. They verify production readiness but don't replace manual user testing for UX feedback.
 
 ## Phase 7 Progress Checkpoint
 
@@ -2409,6 +2984,112 @@ echo "Frontend validation complete"
    ```bash
    git revert <feature-commit-hash>
    ```
+
+---
+
+# CI/CD Integration (Automated Test Execution)
+
+## GitHub Actions Setup
+
+**Task: Add CI/CD Pipeline**
+
+**Implementation Prompt:**
+```
+Create GitHub Actions workflow for automated testing:
+
+1. Create file: .github/workflows/test.yml
+
+2. Configure workflow to run on every push and PR:
+   - Run unit tests
+   - Run integration tests (database, API)
+   - Run E2E tests (frontend, complete journey)
+   - Run linting
+   - Run type checking
+   - Block merge if any test fails
+
+3. Set up test database:
+   - Use Supabase test project
+   - Run migrations before tests
+   - Clean up after tests
+
+4. Set up test environment:
+   - Install dependencies
+   - Build application
+   - Start test server
+   - Run tests
+   - Generate coverage report
+
+Reference: TESTING_AND_QUALITY_ASSURANCE_STRATEGY.md
+```
+
+**Workflow File:**
+```yaml
+name: Test Suite
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run unit tests
+        run: npm run test:unit
+      
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+      
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          BASE_URL: http://localhost:3000
+      
+      - name: Run linting
+        run: npm run lint
+      
+      - name: Run type check
+        run: npm run type-check
+```
+
+**Benefits:**
+- Tests run automatically on every commit
+- Prevents broken code from being merged
+- Catches regressions early
+- Provides confidence before manual testing
+
+---
+
+# What's Automated vs Manual
+
+## ✅ Fully Automated (No Manual Check Needed)
+- RLS security isolation (automated test verifies data isolation)
+- API authentication (automated test verifies auth works)
+- API endpoint functionality (automated test verifies all endpoints)
+- Frontend page rendering (E2E tests verify pages load)
+- Complete user journey (E2E tests verify full workflow)
+- Performance benchmarks (automated tests measure and verify)
+- Error handling (automated tests verify error states)
+
+## ⚠️ Semi-Automated (Automated + Manual Verification)
+- AI extraction accuracy (automated test checks extraction works, but manual verification ensures quality)
+- Pack PDF content (automated test verifies PDF generated, but manual check ensures content is correct)
+- UI/UX feel (automated test verifies functionality, but manual check ensures good UX)
+
+## 🔍 Manual Only (Requires Human Judgment)
+- Visual design (does it look good?)
+- User experience (is it intuitive?)
+- Real-world document accuracy (does extraction match real permits?)
+- Business logic correctness (does it make business sense?)
+- Accessibility (WCAG compliance - can be partially automated)
 
 ---
 
