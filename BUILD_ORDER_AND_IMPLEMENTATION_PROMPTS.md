@@ -354,6 +354,72 @@ Reference: EP_Compliance_Master_Plan.md Section 7 for pricing.
 - No foreign key constraint violations
 - All tables have proper indexes
 
+## Phase 1 Manual Verification (CRITICAL - You Must Check)
+
+**⚠️ DO NOT TRUST TESTS ALONE - You must visually verify these yourself:**
+
+1. **Supabase Dashboard Check:**
+   - [ ] Open Supabase Dashboard → Database → Tables
+   - [ ] **VISUALLY COUNT:** Should see 36 tables listed
+   - [ ] **VISUALLY VERIFY:** Tables match Database Schema (companies, sites, users, obligations, etc.)
+   - [ ] **MANUAL CHECK:** Click on `obligations` table → Verify columns match schema
+   - [ ] **MANUAL CHECK:** Click on `modules` table → Verify 3 modules seeded (MODULE_1, MODULE_2, MODULE_3)
+
+2. **RLS Policies Check:**
+   - [ ] Open Supabase Dashboard → Authentication → Policies
+   - [ ] **VISUALLY COUNT:** Should see ~111 policies (4 per table)
+   - [ ] **MANUAL CHECK:** Click on `companies` policies → Verify SELECT, INSERT, UPDATE, DELETE policies exist
+   - [ ] **MANUAL CHECK:** Read one policy SQL → Verify it matches RLS document
+
+3. **Storage Buckets Check:**
+   - [ ] Open Supabase Dashboard → Storage
+   - [ ] **VISUALLY VERIFY:** 4 buckets exist (documents, evidence, audit-packs, aer-documents)
+   - [ ] **MANUAL CHECK:** Click on `documents` bucket → Verify CORS configured, file size limit set
+
+4. **Database Query Test (Manual):**
+   ```sql
+   -- Run this in Supabase SQL Editor - YOU must see the results
+   SELECT 
+     (SELECT COUNT(*) FROM companies) as companies_count,
+     (SELECT COUNT(*) FROM sites) as sites_count,
+     (SELECT COUNT(*) FROM modules) as modules_count,
+     (SELECT COUNT(*) FROM pg_policies WHERE schemaname = 'public') as policies_count;
+   ```
+   - **EXPECTED:** companies_count = 0 (no data yet), modules_count = 3, policies_count ≈ 111
+   - **YOU MUST SEE:** These exact numbers - don't trust if they're different
+
+5. **RLS Isolation Test (Manual - Critical):**
+   ```sql
+   -- Create test scenario: Two companies, verify isolation
+   -- Step 1: Create Company 1 and User 1
+   INSERT INTO companies (id, name, billing_email) 
+   VALUES ('11111111-1111-1111-1111-111111111111', 'Company 1', 'user1@test.com');
+   
+   INSERT INTO users (id, email, company_id, auth_user_id) 
+   VALUES ('22222222-2222-2222-2222-222222222222', 'user1@test.com', '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333');
+   
+   -- Step 2: Create Company 2 and User 2
+   INSERT INTO companies (id, name, billing_email) 
+   VALUES ('44444444-4444-4444-4444-444444444444', 'Company 2', 'user2@test.com');
+   
+   INSERT INTO users (id, email, company_id, auth_user_id) 
+   VALUES ('55555555-5555-5555-5555-555555555555', 'user2@test.com', '44444444-4444-4444-4444-444444444444', '66666666-6666-6666-6666-666666666666');
+   
+   -- Step 3: Try to query as User 1 (simulate RLS)
+   SET ROLE authenticated;
+   SET request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+   
+   SELECT * FROM companies;
+   -- YOU MUST SEE: Only Company 1 (not Company 2)
+   -- If you see Company 2, RLS is BROKEN - DO NOT PROCEED
+   ```
+   - **CRITICAL:** This is a security test - if RLS doesn't work, your system is insecure
+   - **YOU MUST VERIFY:** User 1 cannot see User 2's data
+
+**Manual Verification Status:** ⬜ Not Started | ⬜ In Progress | ⬜ Complete
+
+**⚠️ DO NOT PROCEED TO PHASE 2 until you have manually verified all of the above.**
+
 ## Phase 1 Progress Checkpoint
 
 **Before moving to Phase 2, verify:**
@@ -803,6 +869,57 @@ Implement rate limiting middleware:
 - RLS prevents unauthorized access
 - Cursor-based pagination functional
 
+## Phase 2 Manual Verification (CRITICAL - You Must Check)
+
+**⚠️ DO NOT TRUST TESTS ALONE - You must manually test the API:**
+
+1. **API Health Check (Manual Browser/Postman):**
+   - [ ] Open browser → `http://localhost:3000/api/v1/health`
+   - [ ] **YOU MUST SEE:** JSON response with `"status": "healthy"`
+   - [ ] **VISUALLY VERIFY:** All services show "healthy" (database, redis, storage)
+   - [ ] **IF ANY SERVICE SHOWS "unhealthy":** DO NOT PROCEED - fix the issue
+
+2. **Signup Flow (Manual Test):**
+   - [ ] Use Postman or browser → POST `http://localhost:3000/api/v1/auth/signup`
+   - [ ] **YOU MUST SEE:** 201 Created response with user object and token
+   - [ ] **MANUAL CHECK:** Open Supabase Dashboard → Database → companies table
+   - [ ] **VISUALLY VERIFY:** New company record exists with your test data
+   - [ ] **MANUAL CHECK:** Check users table → Verify user record created
+   - [ ] **MANUAL CHECK:** Check user_roles table → Verify role = 'OWNER' created
+   - [ ] **MANUAL CHECK:** Check module_activations table → Verify Module 1 activated
+
+3. **Login Flow (Manual Test):**
+   - [ ] POST `http://localhost:3000/api/v1/auth/login` with credentials from step 2
+   - [ ] **YOU MUST SEE:** 200 OK with token
+   - [ ] **SAVE THE TOKEN** for next test
+
+4. **Protected Route Test (Manual):**
+   - [ ] GET `http://localhost:3000/api/v1/companies` WITHOUT token
+   - [ ] **YOU MUST SEE:** 401 Unauthorized
+   - [ ] GET `http://localhost:3000/api/v1/companies` WITH token (from step 3)
+   - [ ] **YOU MUST SEE:** 200 OK with your company data
+   - [ ] **VISUALLY VERIFY:** Response contains your company name
+
+5. **RLS Enforcement Test (Manual - Critical):**
+   - [ ] Create TWO test users (User A in Company A, User B in Company B)
+   - [ ] Login as User A → GET `/api/v1/companies`
+   - [ ] **YOU MUST SEE:** Only Company A (not Company B)
+   - [ ] Login as User B → GET `/api/v1/companies`
+   - [ ] **YOU MUST SEE:** Only Company B (not Company A)
+   - [ ] **IF EITHER USER CAN SEE THE OTHER'S DATA:** RLS is BROKEN - DO NOT PROCEED
+
+6. **Document Upload Test (Manual):**
+   - [ ] Use Postman → POST `/api/v1/documents/upload` with a test PDF
+   - [ ] **YOU MUST SEE:** 201 Created with document object
+   - [ ] **MANUAL CHECK:** Supabase Dashboard → Storage → documents bucket
+   - [ ] **VISUALLY VERIFY:** Your PDF file is in the bucket
+   - [ ] **MANUAL CHECK:** Database → documents table
+   - [ ] **VISUALLY VERIFY:** Document record exists with correct site_id, status = 'UPLOADED'
+
+**Manual Verification Status:** ⬜ Not Started | ⬜ In Progress | ⬜ Complete
+
+**⚠️ DO NOT PROCEED TO PHASE 3 until you have manually tested all API endpoints above.**
+
 ## Phase 2 Progress Checkpoint
 
 **Before moving to Phase 3, verify:**
@@ -1040,6 +1157,48 @@ Implement confidence scoring:
 - Pattern library hit rate 60-70%
 - All extractions have confidence scores
 - Low-confidence items flagged for review
+
+## Phase 3 Manual Verification (CRITICAL - You Must Check)
+
+**⚠️ DO NOT TRUST TESTS ALONE - You must visually verify AI extraction works:**
+
+1. **Document Extraction Test (Manual - Most Important):**
+   - [ ] Upload a REAL permit PDF (not test file) via API
+   - [ ] **WAIT:** Check background_jobs table → Job should be PROCESSING → COMPLETED
+   - [ ] **MANUAL CHECK:** Database → documents table → extraction_status should be 'EXTRACTED'
+   - [ ] **MANUAL CHECK:** Database → obligations table
+   - [ ] **VISUALLY COUNT:** How many obligations were extracted?
+   - [ ] **VISUALLY READ:** First 5 obligations → Do they make sense?
+   - [ ] **CRITICAL CHECK:** Open the original PDF → Manually verify first obligation matches extracted text
+   - [ ] **IF OBLIGATIONS DON'T MATCH PDF:** Extraction is broken - DO NOT PROCEED
+
+2. **Confidence Scores Check (Manual):**
+   - [ ] Query: `SELECT obligation_text, confidence_score FROM obligations WHERE document_id = '...'`
+   - [ ] **VISUALLY REVIEW:** Confidence scores (should be 0-100)
+   - [ ] **MANUAL CHECK:** Obligations with confidence <70% should be in review_queue_items
+   - [ ] **VERIFY:** Database → review_queue_items table has low-confidence items
+
+3. **Pattern Matching Test (Manual):**
+   - [ ] Check extraction_logs table
+   - [ ] **LOOK FOR:** `rule_library_hit = true` records
+   - [ ] **VERIFY:** These should have lower cost (no LLM call)
+   - [ ] **MANUAL CHECK:** Compare pattern-matched vs LLM-extracted obligations → Quality should be similar
+
+4. **Large Document Test (Manual):**
+   - [ ] Upload a 60+ page PDF
+   - [ ] **VERIFY:** Uses 5-minute timeout (check logs)
+   - [ ] **WAIT:** Extraction should complete (may take 2-5 minutes)
+   - [ ] **VERIFY:** Obligations extracted correctly
+
+5. **Error Handling Test (Manual):**
+   - [ ] Upload corrupted PDF or invalid file
+   - [ ] **YOU MUST SEE:** Appropriate error message
+   - [ ] **VERIFY:** Document status = 'PROCESSING_FAILED' or 'OCR_FAILED'
+   - [ ] **VERIFY:** User can retry or enter manual mode
+
+**Manual Verification Status:** ⬜ Not Started | ⬜ In Progress | ⬜ Complete
+
+**⚠️ DO NOT PROCEED TO PHASE 4 until you have manually verified extraction works with REAL documents.**
 
 ## Phase 3 Progress Checkpoint
 
@@ -1538,6 +1697,64 @@ Implement obligation detail (app/(dashboard)/obligations/[id]/page.tsx):
 - Forms submit successfully
 - Mobile-responsive layout
 
+## Phase 5 Manual Verification (CRITICAL - You Must Check)
+
+**⚠️ DO NOT TRUST TESTS ALONE - You must visually test the frontend:**
+
+1. **Signup Page (Manual Browser Test):**
+   - [ ] Open `http://localhost:3000/signup` in browser
+   - [ ] **VISUALLY VERIFY:** Form looks correct (company name, email, password fields)
+   - [ ] **MANUAL TEST:** Fill form with invalid email → **YOU MUST SEE:** Validation error
+   - [ ] **MANUAL TEST:** Fill form with weak password → **YOU MUST SEE:** Password strength indicator
+   - [ ] **MANUAL TEST:** Submit valid form → **YOU MUST SEE:** Redirect to onboarding or dashboard
+   - [ ] **VERIFY:** No console errors (open DevTools → Console)
+
+2. **Login Page (Manual Browser Test):**
+   - [ ] Open `http://localhost:3000/login`
+   - [ ] **VISUALLY VERIFY:** Login form renders correctly
+   - [ ] **MANUAL TEST:** Login with wrong password → **YOU MUST SEE:** Error message
+   - [ ] **MANUAL TEST:** Login with correct credentials → **YOU MUST SEE:** Redirect to dashboard
+
+3. **Dashboard (Manual Browser Test):**
+   - [ ] After login, **YOU MUST SEE:** Dashboard page loads
+   - [ ] **VISUALLY VERIFY:** Stats cards show numbers (even if 0)
+   - [ ] **VISUALLY VERIFY:** Navigation sidebar works (click links)
+   - [ ] **MANUAL CHECK:** Browser DevTools → Network tab → **VERIFY:** API calls succeed (200 status)
+   - [ ] **VERIFY:** No red errors in console
+
+4. **Document Upload (Manual Browser Test):**
+   - [ ] Navigate to Documents page
+   - [ ] **VISUALLY VERIFY:** Upload button/modal exists
+   - [ ] **MANUAL TEST:** Drag and drop a PDF file
+   - [ ] **YOU MUST SEE:** File selected, upload progress
+   - [ ] **WAIT:** Upload completes
+   - [ ] **VISUALLY VERIFY:** Document appears in list
+   - [ ] **MANUAL CHECK:** Click on document → **YOU MUST SEE:** Document detail page
+
+5. **Obligations List (Manual Browser Test):**
+   - [ ] Navigate to Obligations page
+   - [ ] **VISUALLY VERIFY:** Table renders with columns
+   - [ ] **MANUAL CHECK:** If obligations exist, **YOU MUST SEE:** They display correctly
+   - [ ] **MANUAL TEST:** Click on an obligation → **YOU MUST SEE:** Obligation detail page
+   - [ ] **VERIFY:** Status badges show correct colors (PENDING=gray, OVERDUE=red, etc.)
+
+6. **Mobile Responsive (Manual Test):**
+   - [ ] Resize browser to mobile width (375px)
+   - [ ] **VISUALLY VERIFY:** Layout adapts (sidebar becomes hamburger menu)
+   - [ ] **MANUAL TEST:** Click hamburger menu → **YOU MUST SEE:** Menu opens
+   - [ ] **VERIFY:** Tables scroll horizontally (not broken layout)
+   - [ ] **VERIFY:** Buttons are touch-friendly (not too small)
+
+7. **Error States (Manual Test):**
+   - [ ] Disconnect internet (or block API in DevTools)
+   - [ ] Try to load a page
+   - [ ] **YOU MUST SEE:** Error message (not blank page)
+   - [ ] **VERIFY:** User can retry
+
+**Manual Verification Status:** ⬜ Not Started | ⬜ In Progress | ⬜ Complete
+
+**⚠️ DO NOT PROCEED TO PHASE 6 until you have manually tested all pages in a browser.**
+
 ## Phase 5 Progress Checkpoint
 
 **Before moving to Phase 6, verify:**
@@ -1730,6 +1947,58 @@ Implement notification center:
 - Mobile-responsive
 - Error handling works
 
+## Phase 6 Manual Verification (CRITICAL - You Must Check)
+
+**⚠️ DO NOT TRUST TESTS ALONE - You must manually test complete workflows:**
+
+1. **Complete User Journey (Manual End-to-End Test):**
+   - [ ] **Step 1:** Signup as new user
+   - [ ] **Step 2:** Complete onboarding (create site, upload permit)
+   - [ ] **Step 3:** Wait for extraction (check background jobs)
+   - [ ] **Step 4:** View extracted obligations
+   - [ ] **Step 5:** Upload evidence file
+   - [ ] **Step 6:** Link evidence to obligation
+   - [ ] **Step 7:** Generate Regulator Pack
+   - [ ] **Step 8:** Download pack PDF
+   - [ ] **CRITICAL:** Open downloaded PDF → **YOU MUST SEE:** Valid PDF with your evidence
+   - [ ] **VERIFY:** PDF contains correct obligations and evidence
+   - **IF ANY STEP FAILS:** System is not working - fix before proceeding
+
+2. **Pack Generation (Manual Visual Check):**
+   - [ ] Generate each pack type (Regulator, Audit, Tender, Board, Insurer)
+   - [ ] **FOR EACH PACK:** Download and open PDF
+   - [ ] **VISUALLY VERIFY:** PDF structure matches specification
+   - [ ] **MANUAL CHECK:** Regulator Pack has correct sections (Site Info, Obligations, Evidence)
+   - [ ] **MANUAL CHECK:** Board Pack aggregates multiple sites correctly
+   - [ ] **VERIFY:** All evidence files are included and readable
+
+3. **Notification System (Manual Test):**
+   - [ ] Create an obligation with deadline in 6 days
+   - [ ] **WAIT:** Background job should create notification
+   - [ ] **MANUAL CHECK:** Database → notifications table → **YOU MUST SEE:** Notification record
+   - [ ] **VERIFY:** notification_type = 'DEADLINE_WARNING_7D'
+   - [ ] **CHECK:** Email sent (if email configured) or in-app notification appears
+
+4. **Multi-Site Workflow (Manual Test):**
+   - [ ] Create Company with 2 sites
+   - [ ] Upload document to Site 1
+   - [ ] Upload document to Site 2
+   - [ ] **VISUALLY VERIFY:** Dashboard shows data from both sites
+   - [ ] **MANUAL CHECK:** Site filter works (can filter to Site 1 only)
+   - [ ] **VERIFY:** Board Pack includes both sites
+
+5. **Onboarding Flow (Manual Test):**
+   - [ ] Create new test account
+   - [ ] **FOLLOW:** Complete onboarding step-by-step
+   - [ ] **VERIFY:** Progress bar updates
+   - [ ] **VERIFY:** Can skip optional steps
+   - [ ] **VERIFY:** Can go back to previous steps
+   - [ ] **VERIFY:** On completion, redirects to dashboard
+
+**Manual Verification Status:** ⬜ Not Started | ⬜ In Progress | ⬜ Complete
+
+**⚠️ DO NOT PROCEED TO PHASE 7 until you have manually completed a full user journey.**
+
 ## Phase 6 Progress Checkpoint
 
 **Before moving to Phase 7, verify:**
@@ -1874,6 +2143,44 @@ Generate API documentation:
 - Generate interactive docs (Swagger UI)
 - Reference: EP_Compliance_Backend_API_Specification.md Section 29
 ```
+
+## Phase 7 Manual Verification (CRITICAL - Final Checks)
+
+**⚠️ DO NOT DEPLOY TO PRODUCTION until you manually verify these:**
+
+1. **Production-Like Environment Test:**
+   - [ ] Deploy to staging environment (not production yet)
+   - [ ] **MANUAL TEST:** Complete signup → upload → extract → pack generation
+   - [ ] **VERIFY:** Everything works in staging
+   - [ ] **CHECK:** Performance is acceptable (pages load <3s)
+
+2. **Security Manual Check:**
+   - [ ] Create two user accounts in staging
+   - [ ] Login as User 1 → Create data
+   - [ ] Login as User 2 → **VERIFY:** Cannot see User 1's data
+   - [ ] **CRITICAL:** If User 2 can see User 1's data → **DO NOT DEPLOY** - security breach
+
+3. **Data Integrity Check:**
+   - [ ] Upload 10 documents
+   - [ ] **MANUAL COUNT:** Obligations extracted
+   - [ ] **VERIFY:** Count matches expected (check a few manually)
+   - [ ] **VERIFY:** Evidence links correctly
+   - [ ] **VERIFY:** Packs generate with correct data
+
+4. **Error Recovery Test:**
+   - [ ] Upload corrupted PDF → **VERIFY:** Error handled gracefully
+   - [ ] Disconnect during upload → **VERIFY:** Can retry
+   - [ ] Submit form with network error → **VERIFY:** Error message, can retry
+
+5. **Real User Test (Get Someone Else):**
+   - [ ] Give staging access to a real user (not you)
+   - [ ] **ASK THEM:** Can they complete signup and upload a document?
+   - [ ] **GET FEEDBACK:** Is it intuitive? Any confusion?
+   - [ ] **FIX:** Any issues they find
+
+**Manual Verification Status:** ⬜ Not Started | ⬜ In Progress | ⬜ Complete
+
+**⚠️ DO NOT LAUNCH until you have manually verified everything works in staging.**
 
 ## Phase 7 Progress Checkpoint
 
@@ -2102,6 +2409,164 @@ echo "Frontend validation complete"
    ```bash
    git revert <feature-commit-hash>
    ```
+
+---
+
+# Preview & Visibility Guide
+
+## How to See Your Work Progress
+
+### Phase 1 (Database): Supabase Dashboard
+- **Where to look:** Supabase Dashboard → Database → Tables
+- **What you'll see:** All tables, their columns, data
+- **How to verify:** Count tables, check columns match schema
+- **Preview:** SQL Editor → Run queries to see data
+
+### Phase 2 (API): Postman/Browser/curl
+- **Where to look:** API endpoints (http://localhost:3000/api/v1/...)
+- **What you'll see:** JSON responses, status codes
+- **How to verify:** Test each endpoint manually
+- **Preview:** Use Postman collection or browser DevTools
+
+### Phase 3 (AI Extraction): Database + Logs
+- **Where to look:** 
+  - Database → obligations table (see extracted data)
+  - Database → extraction_logs (see AI costs, patterns matched)
+- **What you'll see:** Obligations extracted from your PDFs
+- **How to verify:** Compare extracted text to original PDF
+- **Preview:** Query obligations table, read obligation_text
+
+### Phase 4 (Background Jobs): Database + Worker Logs
+- **Where to look:**
+  - Database → background_jobs table (job status)
+  - Worker service logs (execution details)
+- **What you'll see:** Jobs processing, completing, failing
+- **How to verify:** Check job status, verify notifications sent
+- **Preview:** Monitor background_jobs table in real-time
+
+### Phase 5 (Frontend): Browser
+- **Where to look:** http://localhost:3000
+- **What you'll see:** Actual UI, pages, forms
+- **How to verify:** Click around, test forms, check responsiveness
+- **Preview:** Full visual interface - you can see everything
+
+### Phase 6 (Features): Browser + Database
+- **Where to look:** Browser (UI) + Database (verify data)
+- **What you'll see:** Complete features working
+- **How to verify:** Test full workflows, check data in database
+- **Preview:** Complete user experience
+
+---
+
+# Critical Manual Checkpoints (DO NOT SKIP)
+
+## ⚠️ These MUST be checked manually - tests are not enough:
+
+### 1. Phase 1: RLS Security Test (CRITICAL)
+**Why:** If RLS is broken, users can see each other's data (security breach)
+**What to do:**
+- Create two test companies
+- Verify User 1 cannot see User 2's data
+- **If broken:** DO NOT PROCEED - fix RLS immediately
+
+### 2. Phase 2: API Authentication Test (CRITICAL)
+**Why:** If auth is broken, anyone can access data
+**What to do:**
+- Test protected routes without token → Should fail
+- Test with token → Should work
+- **If broken:** DO NOT PROCEED - fix authentication
+
+### 3. Phase 3: AI Extraction Accuracy (CRITICAL)
+**Why:** If extraction is wrong, system is useless
+**What to do:**
+- Upload a REAL permit PDF
+- Manually compare extracted obligations to PDF text
+- **If wrong:** DO NOT PROCEED - fix extraction logic
+
+### 4. Phase 5: Frontend Visual Check (CRITICAL)
+**Why:** UI bugs are obvious to users
+**What to do:**
+- Open every page in browser
+- Click every button
+- Test on mobile
+- **If broken:** DO NOT PROCEED - fix UI
+
+### 5. Phase 6: Complete User Journey (CRITICAL)
+**Why:** If end-to-end doesn't work, system doesn't work
+**What to do:**
+- Complete full workflow: Signup → Upload → Extract → Link Evidence → Generate Pack
+- Download pack PDF → Open it → Verify it's correct
+- **If broken:** DO NOT PROCEED - fix workflow
+
+### 6. Phase 7: Staging Environment Test (CRITICAL)
+**Why:** Production issues are expensive
+**What to do:**
+- Deploy to staging
+- Test everything again
+- Get real user feedback
+- **If broken:** DO NOT DEPLOY - fix issues
+
+---
+
+# Confidence Building Checklist
+
+## How to Be 1000% Confident Things Work:
+
+### ✅ Automated Tests (Trust but Verify)
+- [ ] All unit tests pass
+- [ ] All integration tests pass
+- [ ] All E2E tests pass
+- **But:** Don't trust blindly - also do manual checks
+
+### ✅ Manual Verification (You Must Do)
+- [ ] Phase 1: Visually check Supabase Dashboard
+- [ ] Phase 2: Manually test API endpoints
+- [ ] Phase 3: Manually verify extraction accuracy
+- [ ] Phase 5: Manually test frontend in browser
+- [ ] Phase 6: Manually complete full user journey
+- [ ] Phase 7: Manually test in staging
+
+### ✅ Real User Testing (Get Feedback)
+- [ ] Give staging access to 2-3 real users
+- [ ] Watch them use it (screen share)
+- [ ] Get their feedback
+- [ ] Fix issues they find
+
+### ✅ Performance Verification
+- [ ] Check API response times (<200ms)
+- [ ] Check page load times (<3s)
+- [ ] Check extraction times (<30s for standard)
+- [ ] Monitor error rates (<1%)
+
+### ✅ Security Verification
+- [ ] RLS policies prevent cross-tenant access
+- [ ] Authentication required everywhere
+- [ ] No SQL injection vulnerabilities
+- [ ] No XSS vulnerabilities
+
+### ✅ Data Integrity Verification
+- [ ] Uploaded documents stored correctly
+- [ ] Extracted obligations match source PDF
+- [ ] Evidence links correctly
+- [ ] Packs generate with correct data
+
+---
+
+# Build Order Logic Assessment
+
+## Is the Build Order Logical? ✅ YES
+
+**Why it's logical:**
+1. **Foundation First:** Database → API → Frontend (correct dependency order)
+2. **Core Before Features:** Basic CRUD before advanced features
+3. **Backend Before Frontend:** API must work before UI can use it
+4. **Sequential Critical Path:** Phase 1 → 2 → 3 → 5 must be in order
+5. **Parallel Work Identified:** Phase 4 & 6 can be done in parallel
+
+**Could be improved:**
+- Add automated testing earlier (not wait until Phase 7)
+- Add monitoring earlier (during Phase 2)
+- Add preview steps (how to see your work)
 
 ---
 
