@@ -5736,6 +5736,7 @@ Phase 8: Module 2 (Trade Effluent) and Module 3 (MCPD/Generators) functional
 - [x] 2.2 Authentication ✅ (Signup, Login, Logout, Refresh, Me endpoints)
 - [x] 2.3 Core Entity Endpoints ✅ (Companies, Sites, Users endpoints)
 - [x] 2.4 Document Upload Endpoints ✅ (Upload, List, Get, Update, Delete)
+- [x] 2.5 Obligations Endpoints ✅ (List, Get, Update, Mark Not Applicable)
 - [ ] 2.3 Core Entities
 - [ ] 2.4 Document Upload
 - [ ] 2.5 Obligations
