@@ -150,7 +150,7 @@ The Oblicore platform defines **11 job types** across three categories:
 | Priority | NORMAL |
 | Trigger | Cron: `0 * * * *` (every hour at minute 0) |
 | Timeout | 300 seconds (5 minutes) |
-| Max Retries | 2 |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
 
 ### Input Parameters
 
@@ -283,7 +283,7 @@ function calculateNextDeadline(
 
 | Parameter | Value |
 |-----------|-------|
-| Max Retries | 2 |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
 | Backoff Strategy | Exponential: 2^retry_count seconds |
 | First Retry Delay | 2 seconds |
 | Second Retry Delay | 4 seconds |
@@ -332,7 +332,7 @@ function calculateNextDeadline(
 | Priority | HIGH |
 | Trigger | Cron: `0 */6 * * *` (every 6 hours) OR triggered by monitoring schedule job |
 | Timeout | 120 seconds (2 minutes) |
-| Max Retries | 2 |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
 
 ### Input Parameters
 
@@ -434,7 +434,7 @@ Step 3: Update Deadline Status
 
 | Parameter | Value |
 |-----------|-------|
-| Max Retries | 2 |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
 | Backoff Strategy | Exponential: 2^retry_count seconds |
 
 ### DLQ Rules
@@ -471,7 +471,7 @@ Step 3: Update Deadline Status
 | Priority | HIGH |
 | Trigger | Cron: `0 9 * * *` (daily at 9 AM) |
 | Timeout | 120 seconds (2 minutes) |
-| Max Retries | 2 |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
 
 ### Input Parameters
 
@@ -579,7 +579,7 @@ function determineRecipient(obligation: Obligation): UUID {
 
 | Parameter | Value |
 |-----------|-------|
-| Max Retries | 2 |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
 | Backoff Strategy | Exponential: 2^retry_count seconds |
 
 ### DLQ Rules
@@ -618,7 +618,7 @@ function determineRecipient(obligation: Obligation): UUID {
 | Priority | NORMAL |
 | Trigger | API endpoint: `POST /api/v1/documents/{id}/extract` |
 | Timeout | 30 seconds (standard), 300 seconds (large documents ≥50 pages) |
-| Max Retries | 2 |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
 
 ### Input Parameters
 
@@ -823,7 +823,7 @@ Step 11: Create Extraction Log
 
 | Parameter | Value |
 |-----------|-------|
-| Max Retries | 2 |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
 | Backoff Strategy | Exponential: 2^retry_count seconds |
 | Retryable Errors | Network errors, LLM timeout, database connection |
 | Non-Retryable Errors | Validation errors, file not found, permanent failures |
@@ -858,8 +858,33 @@ Step 11: Create Extraction Log
 **Large Document Detection:**
 ```typescript
 function isLargeDocument(document: Document): boolean {
-  return document.page_count >= 50 || 
+  // Use AND logic: Both conditions must be met for large document classification
+  // This prevents edge cases:
+  // - 49 pages + 15MB → treated as standard (30s) but needs 5min → now correctly identified
+  // - 100 pages + 5MB → treated as large (5min) but might finish in 30s → now correctly identified
+  return document.page_count >= 50 && 
          document.file_size_bytes >= 10_000_000; // 10MB
+}
+
+// Medium Document Detection (new tier):
+function isMediumDocument(document: Document): boolean {
+  // Medium documents: Between standard and large
+  // Use 120s timeout (2 minutes) for medium documents
+  return (
+    (document.page_count >= 20 && document.page_count < 50) ||
+    (document.file_size_bytes >= 5_000_000 && document.file_size_bytes < 10_000_000) // 5MB-10MB
+  ) && !isLargeDocument(document);
+}
+
+// Timeout Selection:
+function getDocumentTimeout(document: Document): number {
+  if (isLargeDocument(document)) {
+    return 300_000; // 5 minutes
+  } else if (isMediumDocument(document)) {
+    return 120_000; // 2 minutes
+  } else {
+    return 30_000; // 30 seconds (standard)
+  }
 }
 ```
 
@@ -938,7 +963,7 @@ const failureNotification = {
 | Priority | NORMAL |
 | Trigger | API endpoint: `POST /api/v1/obligations/import/excel` |
 | Timeout | 60 seconds (validation), 300 seconds (bulk creation) |
-| Max Retries | 2 |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
 
 ### Input Parameters
 
@@ -1222,7 +1247,7 @@ Step 4: Send Completion Notification
 
 | Parameter | Value |
 |-----------|-------|
-| Max Retries | 2 |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
 | Backoff Strategy | Exponential: 2^retry_count seconds |
 | Retryable Errors | Network errors, database connection, storage access |
 | Non-Retryable Errors | File format errors, validation errors, file not found |
@@ -1807,7 +1832,7 @@ CREATE TABLE dead_letter_queue (
 | Priority | NORMAL |
 | Trigger | Cron: `0 6 * * *` (daily at 6:00 AM) |
 | Timeout | 300 seconds (5 minutes) |
-| Max Retries | 2 |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
 
 ### Input Parameters
 
@@ -1987,7 +2012,7 @@ function calculateNextSampleDate(
 | Priority | NORMAL |
 | Trigger | Cron: `0 7 * * *` (daily at 7:00 AM) |
 | Timeout | 300 seconds (5 minutes) |
-| Max Retries | 2 |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
 
 ### Input Parameters
 
@@ -2145,7 +2170,7 @@ function getRunHourAlertMessage(
 | Priority | NORMAL |
 | Trigger | API endpoint OR Cron: `0 8 15 1 *` (Jan 15 at 8:00 AM) |
 | Timeout | 600 seconds (10 minutes) |
-| Max Retries | 2 |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
 
 ### Input Parameters
 
@@ -2385,7 +2410,7 @@ interface AERData {
 | Priority | NORMAL |
 | Trigger | Cron: `0 8 * * *` (daily at 8:00 AM) |
 | Timeout | 300 seconds (5 minutes) |
-| Max Retries | 2 |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
 
 ### Input Parameters
 
@@ -2527,7 +2552,7 @@ Step 3: Create Renewal Reminder Notifications
 | Priority | LOW |
 | Trigger | Cron: `0 */6 * * *` (every 6 hours) |
 | Timeout | 300 seconds (5 minutes) |
-| Max Retries | 2 |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
 
 ### Input Parameters
 
@@ -2738,7 +2763,7 @@ function detectKeywords(
 | Priority | NORMAL |
 | Trigger | API endpoint: `POST /api/v1/audit-packs/generate` |
 | Timeout | 600 seconds (10 minutes) |
-| Max Retries | 2 |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
 
 ### Input Parameters
 
@@ -3104,7 +3129,7 @@ interface AuditPackContent {
 | Priority | NORMAL |
 | Trigger | API endpoint: `POST /api/v1/packs/{packId}/distribute` |
 | Timeout | 300 seconds (5 minutes) |
-| Max Retries | 2 |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
 
 ### Input Parameters
 

@@ -28,8 +28,9 @@
 8. [Notification Preferences](#7-notification-preferences)
 9. [Integration Points](#8-integration-points)
 10. [Delivery Provider Integration](#9-delivery-provider-integration)
-11. [Error Handling & Retry Logic](#10-error-handling--retry-logic)
-12. [Testing Requirements](#11-testing-requirements)
+11. [Template Versioning Strategy](#10-template-versioning-strategy)
+12. [Error Handling & Retry Logic](#11-error-handling--retry-logic)
+13. [Testing Requirements](#12-testing-requirements)
 
 ---
 
@@ -401,7 +402,9 @@ Similar structure to deadline warning, with:
 - `grace_period_days_remaining`: number - Days remaining in grace period (if applicable)
 - `unsubscribe_url`: string
 
-**Escalation:** Level 1 → Level 2 (after 7-day grace period) → Level 3 (after 14 days overdue)
+**Escalation:** 
+- Level 1 → Level 2: After 24 hours if no action (after 7-day grace period)
+- Level 2 → Level 3: After 48 hours if no action (after 14 days overdue)
 
 ---
 
@@ -456,7 +459,10 @@ Similar structure, with:
 - `action_url`: string - URL to parameter tracking page
 - `unsubscribe_url`: string
 
-**Escalation:** Level 1 (80%) → Level 2 (90%) → Level 3 (100%)
+**Escalation:** 
+- Level 1 (80%): Initial notification
+- Level 1 → Level 2 (90%): After 24 hours if no action
+- Level 2 → Level 3 (100%): After 48 hours if no action
 
 ---
 
@@ -1178,12 +1184,14 @@ enum EscalationState {
 
 **3-Day Warning:**
 - Level 1 (Site Manager): Immediate notification
-- Level 2 (Compliance Manager): If no action after 24 hours
+- Level 1 → Level 2 (Compliance Manager): If no action after 24 hours
+- Level 2 → Level 3 (MD): If no action after 48 hours (from Level 2 notification)
 - Escalation Check: Query `obligations` table for evidence linked after Level 1 notification
 
 **1-Day Warning:**
 - Level 1 (Site Manager): Immediate notification
-- Level 2 (Compliance Manager): If no action after 24 hours
+- Level 1 → Level 2 (Compliance Manager): If no action after 24 hours
+- Level 2 → Level 3 (MD): If no action after 48 hours (from Level 2 notification)
 - Level 3 (MD): If no action after 48 hours
 - Escalation Check: Query `obligations` table for evidence linked
 
@@ -1191,7 +1199,8 @@ enum EscalationState {
 
 **Escalation Timeline:**
 - Level 1 (Site Manager): Immediate on overdue detection
-- Level 2 (Compliance Manager): If no action after 24 hours
+- Level 1 → Level 2 (Compliance Manager): If no action after 24 hours
+- Level 2 → Level 3 (MD): If no action after 48 hours (from Level 2 notification)
 - Level 3 (MD): If no action after 48 hours
 
 **Escalation Check Logic:**
@@ -2216,6 +2225,26 @@ async function getUnreadCount(userId: string): Promise<number> {
 
 ## 9.1 Email Provider (SendGrid)
 
+### SendGrid Rate Limits
+
+**Provider-Specific Limits:**
+- **Free Tier:** 100 emails/day
+- **Essentials Plan:** 40,000 emails/day
+- **Pro Plan:** 100,000 emails/day
+- **Premier Plan:** Custom limits
+
+**Rate Limit Alignment:**
+- Internal API limit: 100 requests/minute per user
+- SendGrid free tier: 100 emails/day = ~0.07 emails/minute
+- **Implementation:** Queue notifications and batch send to respect provider limits
+- **Circuit Breaker:** If SendGrid quota exceeded, queue notifications and retry after quota reset
+
+**Quota Management:**
+- Monitor daily email count via SendGrid API
+- Alert when quota reaches 80% (before hitting limit)
+- Implement exponential backoff for rate limit errors (429)
+- Fallback to SMS channel if email quota exhausted
+
 ### SendGrid API Integration
 
 ```typescript
@@ -2317,6 +2346,27 @@ app.post('/api/v1/webhooks/sendgrid', async (req, res) => {
 
 ## 9.2 SMS Provider (Twilio)
 
+### Twilio Rate Limits
+
+**Provider-Specific Limits:**
+- **Trial Account:** 1 SMS/day (for testing)
+- **Paid Account:** Varies by region and account type
+  - **UK:** Typically 1,000 SMS/day (can be increased)
+  - **US:** Typically 1,000 SMS/day (can be increased)
+  - **International:** Varies by destination country
+
+**Rate Limit Alignment:**
+- Internal API limit: 100 requests/minute per user
+- Twilio paid account: ~0.7 SMS/minute (1,000/day)
+- **Implementation:** Queue SMS notifications and batch send to respect provider limits
+- **Circuit Breaker:** If Twilio quota exceeded, queue notifications and retry after quota reset
+
+**Quota Management:**
+- Monitor daily SMS count via Twilio API
+- Alert when quota reaches 80% (before hitting limit)
+- Implement exponential backoff for rate limit errors (429)
+- Fallback to email channel if SMS quota exhausted
+
 ### Twilio API Integration
 
 ```typescript
@@ -2403,7 +2453,83 @@ app.post('/api/v1/webhooks/twilio', async (req, res) => {
 
 ---
 
-# 10. Error Handling & Retry Logic
+# 10. Template Versioning Strategy
+
+## 10.1 Template Versioning System
+
+**Purpose:** Enable safe template updates, A/B testing, and rollback capabilities without affecting in-flight notifications.
+
+**Database Schema:**
+```sql
+CREATE TABLE notification_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_code TEXT NOT NULL, -- e.g., 'DEADLINE_WARNING_7D'
+  version INTEGER NOT NULL DEFAULT 1,
+  subject_template TEXT NOT NULL,
+  html_template TEXT NOT NULL,
+  text_template TEXT NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  effective_from TIMESTAMP NOT NULL DEFAULT NOW(),
+  deprecated_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  created_by UUID REFERENCES users(id),
+  UNIQUE(template_code, version)
+);
+
+CREATE INDEX idx_notification_templates_active 
+  ON notification_templates(template_code, is_active) 
+  WHERE is_active = true;
+```
+
+**Versioning Rules:**
+1. **New Version Creation:** When updating a template, create new version (increment version number)
+2. **Active Version:** Only one version per `template_code` can be `is_active = true`
+3. **In-Flight Notifications:** Store `template_version_id` in `notifications` table to preserve rendering
+4. **Rollback:** Set new version `is_active = false`, set previous version `is_active = true`
+5. **Deprecation:** Set `deprecated_at` timestamp when version is no longer used
+
+**Template Rendering:**
+```typescript
+async function renderNotification(notification: Notification): Promise<RenderedNotification> {
+  // Get active template version
+  const template = await db.query(`
+    SELECT * FROM notification_templates
+    WHERE template_code = $1
+    AND is_active = true
+    ORDER BY version DESC
+    LIMIT 1
+  `, [notification.notification_type]);
+  
+  // Render with template
+  const subject = renderTemplate(template.subject_template, notification.variables);
+  const html = renderTemplate(template.html_template, notification.variables);
+  const text = renderTemplate(template.text_template, notification.variables);
+  
+  // Store template version used
+  await db.query(`
+    UPDATE notifications
+    SET template_version_id = $1
+    WHERE id = $2
+  `, [template.id, notification.id]);
+  
+  return { subject, html, text };
+}
+```
+
+**A/B Testing Support:**
+- Create multiple active versions with different `template_code` suffixes (e.g., `DEADLINE_WARNING_7D_V2`)
+- Route percentage of notifications to test version
+- Track metrics (open rate, click rate) per version
+- Promote winning version to primary template
+
+**Template Preview/Testing:**
+- Admin interface to preview template with sample data
+- Test send to admin email before activation
+- Validate template syntax before saving
+
+---
+
+# 11. Error Handling & Retry Logic
 
 ## 10.1 Failed Delivery Retry
 
@@ -2566,7 +2692,7 @@ CREATE INDEX idx_notification_errors_created_at ON notification_errors(created_a
 
 ---
 
-# 11. Testing Requirements
+# 12. Testing Requirements
 
 ## 11.1 Template Rendering Tests
 
