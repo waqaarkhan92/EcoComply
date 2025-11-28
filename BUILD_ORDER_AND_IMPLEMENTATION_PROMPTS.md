@@ -5726,7 +5726,7 @@ Phase 8: Module 2 (Trade Effluent) and Module 3 (MCPD/Generators) functional
 - [x] 1.1 Supabase Setup ✅
 - [x] 1.2 Database Schema ✅ (37 tables created)
 - [x] 1.3 Indexes & Constraints ✅ (Full-text search, composite indexes, RLS performance indexes)
-- [ ] 1.4 RLS Policies
+- [x] 1.4 RLS Policies ✅ (4 helper functions, RLS enabled on 32 tables, ~111 policies created)
 - [ ] 1.5 Auth Integration
 - [ ] 1.6 Seed Data
 - [ ] ✅ Phase 1 Checkpoint Passed
