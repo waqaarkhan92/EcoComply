@@ -90,7 +90,7 @@ describe('Error Handling API', () => {
   });
 
   describe('404 Not Found', () => {
-    let authenticatedUser: { token: string };
+    let authenticatedUser: { token?: string };
 
     beforeEach(async () => {
       authenticatedUser = await client.signup(

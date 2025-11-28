@@ -4,7 +4,7 @@
  */
 
 // Set test environment variables
-process.env.NODE_ENV = 'test';
+// Note: NODE_ENV is read-only in some environments, so we set DISABLE_EMAIL_VERIFICATION instead
 process.env.DISABLE_EMAIL_VERIFICATION = 'true'; // Disable email verification for testing
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://test.supabase.co';
 process.env.SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'test-anon-key';

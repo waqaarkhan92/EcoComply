@@ -7,8 +7,8 @@ import { TestClient } from '../../helpers/test-client';
 
 describe('RLS Enforcement via API', () => {
   const client = new TestClient();
-  let userA: { email: string; token: string; company_id: string };
-  let userB: { email: string; token: string; company_id: string };
+  let userA: { email: string; token?: string; company_id: string };
+  let userB: { email: string; token?: string; company_id: string };
 
   beforeEach(async () => {
     // Create User A in Company A

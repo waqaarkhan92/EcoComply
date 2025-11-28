@@ -7,7 +7,7 @@ import { TestClient } from '../../helpers/test-client';
 
 describe('Pagination API', () => {
   const client = new TestClient();
-  let authenticatedUser: { token: string; company_id: string; site_id?: string };
+  let authenticatedUser: { token?: string; company_id: string; site_id?: string };
 
   beforeEach(async () => {
     authenticatedUser = await client.signup(
