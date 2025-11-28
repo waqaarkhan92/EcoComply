@@ -133,7 +133,8 @@ export class TestClient {
     }
 
     const data = await response.json();
-    return data.data.token?.access_token || '';
+    // Login returns: { data: { access_token, refresh_token, user } }
+    return data.data?.access_token || '';
   }
 }
 
