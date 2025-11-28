@@ -116,6 +116,13 @@ export async function requireAuth(
     );
   }
 
+  // Apply rate limiting
+  const { rateLimitMiddleware } = await import('./rate-limit');
+  const rateLimitResult = await rateLimitMiddleware(request, user.id);
+  if (rateLimitResult) {
+    return rateLimitResult;
+  }
+
   return { user };
 }
 
