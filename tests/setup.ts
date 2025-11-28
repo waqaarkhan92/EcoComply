@@ -3,6 +3,13 @@
  * Runs before all tests
  */
 
+// Load environment variables from .env.local for testing
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+// Load .env.local if it exists
+config({ path: resolve(process.cwd(), '.env.local') });
+
 // Set test environment variables
 // Note: NODE_ENV is read-only in some environments, so we set DISABLE_EMAIL_VERIFICATION instead
 process.env.DISABLE_EMAIL_VERIFICATION = 'true'; // Disable email verification for testing
