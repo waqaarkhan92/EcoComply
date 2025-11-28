@@ -572,25 +572,34 @@ BEFORE creating tables:
    - Verify: Backup created successfully
    - If fails: STOP and ask user for help
 
+4. **Verify Migration Order:**
+   - Check: Tables will be created in correct order (parent before child)
+   - Verify: Database Schema Section 1.6 table creation order is followed
+   - If wrong order: STOP and fix order
+
 DO NOT PROCEED until all validations pass.
 ```
 
 **Implementation Prompt:**
 ```
-Create core tables (companies, users, sites, modules):
+Create core tables (companies, users, sites, modules) in migration file:
 - Follow EXACT schema from EP_Compliance_Database_Schema.md
 - DO NOT simplify or skip any columns
 - DO NOT skip any constraints
 - DO NOT skip any indexes
 - Create tables in exact order specified in Database Schema Section 1.6
+- **CRITICAL:** Create parent tables BEFORE child tables (companies before sites/users)
 
 After creating each table:
 1. Verify table exists: SELECT * FROM information_schema.tables WHERE table_name = 'companies';
 2. Verify columns match schema: SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'companies';
 3. Verify constraints exist: SELECT constraint_name FROM information_schema.table_constraints WHERE table_name = 'companies';
-4. If ANY verification fails: STOP and report error to user
+4. **CRITICAL:** Verify foreign keys are created (if table has foreign keys):
+   SELECT constraint_name FROM information_schema.table_constraints 
+   WHERE table_name = 'companies' AND constraint_type = 'FOREIGN KEY';
+5. If ANY verification fails: STOP and report error to user
 
-DO NOT proceed to next table until current table is fully verified.
+DO NOT proceed to next table until current table is fully verified AND all foreign keys are created.
 ```
 
 **Implementation Prompt:**
@@ -616,16 +625,37 @@ Enable RLS on all tables (policies will be added in Phase 1.4).
 **Task 1.2.2: Create User Management Tables (Phase 2)**
 - Create user_roles, user_site_assignments
 
+**⚠️ CRITICAL - VERIFY FOREIGN KEYS:**
+```
+BEFORE creating these tables:
+
+1. **Verify Parent Tables Exist:**
+   - Check: users table exists (user_roles.user_id references it)
+   - Check: sites table exists (user_site_assignments.site_id references it)
+   - If missing: STOP and create parent tables first
+
+DO NOT PROCEED until parent tables exist.
+```
+
 **Implementation Prompt:**
 ```
-Create Phase 2 user management tables:
+Create Phase 2 user management tables in migration file:
 1. user_roles table (Database Schema Section 2.4)
    - Include: id, user_id, role (CHECK: OWNER, ADMIN, STAFF, CONSULTANT, VIEWER)
-   - Foreign key: user_id → users.id
+   - Foreign key: user_id → users.id (ON DELETE CASCADE)
+   - **CRITICAL:** Verify users table exists before creating this foreign key
+
 2. user_site_assignments table (Section 2.5)
    - Include: id, user_id, site_id
-   - Foreign keys: user_id → users.id, site_id → sites.id
+   - Foreign keys: user_id → users.id (ON DELETE CASCADE), site_id → sites.id (ON DELETE CASCADE)
    - Unique constraint: (user_id, site_id)
+   - **CRITICAL:** Verify users and sites tables exist before creating foreign keys
+
+After creating each table:
+1. Verify table exists
+2. Verify foreign keys are created
+3. Verify foreign keys are valid (no orphaned records)
+4. If ANY verification fails: STOP and report error to user
 
 Enable RLS on both tables.
 ```
@@ -633,36 +663,103 @@ Enable RLS on both tables.
 **Task 1.2.3: Create Import Support Tables (Phase 3)**
 - Create excel_imports table (MUST be before obligations)
 
+**⚠️ CRITICAL - VERIFY PARENT TABLES:**
+```
+BEFORE creating this table:
+
+1. **Verify Parent Tables Exist:**
+   - Check: companies table exists (excel_imports.company_id references it)
+   - Check: sites table exists (excel_imports.site_id references it)
+   - If missing: STOP and create parent tables first
+
+2. **Verify Migration Order:**
+   - This table MUST be created BEFORE obligations table
+   - Check: obligations table does NOT exist yet
+   - If obligations exists: STOP and fix migration order
+
+DO NOT PROCEED until parent tables exist and obligations table does NOT exist.
+```
+
 **Implementation Prompt:**
 ```
-Create excel_imports table (Database Schema Section 8.1):
+Create excel_imports table in migration file (Database Schema Section 8.1):
 - Include: id, company_id, site_id, file_path, status, imported_at
-- This table MUST exist before obligations table (obligations.excel_import_id references it)
-- Enable RLS
+- Foreign keys: company_id → companies.id, site_id → sites.id
+- **CRITICAL:** This table MUST exist before obligations table (obligations.excel_import_id references it)
+- **CRITICAL:** Verify companies and sites tables exist before creating foreign keys
+
+After creating table:
+1. Verify table exists
+2. Verify foreign keys are created
+3. Verify foreign keys are valid (no orphaned records)
+4. Verify obligations table does NOT exist yet (migration order check)
+5. If ANY verification fails: STOP and report error to user
+
+Enable RLS.
 ```
 
 **Task 1.2.4: Create Module 1 Tables (Phases 4-5)**
 - Create documents, document_site_assignments, obligations, schedules, deadlines, evidence_items, obligation_evidence_links, regulator_questions, audit_packs
 
+**⚠️ CRITICAL - VERIFY ALL PARENT TABLES:**
+```
+BEFORE creating these tables:
+
+1. **Verify Parent Tables Exist:**
+   - Check: companies, sites, modules exist (for documents)
+   - Check: excel_imports exists (for obligations.excel_import_id)
+   - Check: documents exists (for obligations.document_id)
+   - Check: obligations exists (for schedules.obligation_id)
+   - Check: schedules exists (for deadlines.schedule_id)
+   - Check: sites, companies exist (for evidence_items)
+   - Check: obligations, evidence_items exist (for obligation_evidence_links)
+   - If missing: STOP and create parent tables first
+
+2. **Verify Migration Order:**
+   - Follow exact order from Database Schema Section 1.6
+   - Parent tables MUST exist before child tables
+   - If wrong order: STOP and fix migration order
+
+DO NOT PROCEED until all parent tables exist.
+```
+
 **Implementation Prompt:**
 ```
-Create Module 1 tables following Database Schema Section 4:
+Create Module 1 tables in migration files following Database Schema Section 4:
 Phase 4:
 1. documents table (Section 4.1)
    - Include: id, company_id, site_id, module_id, document_type, file_path, extraction_status
    - Foreign keys: company_id → companies.id, site_id → sites.id, module_id → modules.id
+   - **CRITICAL:** Verify companies, sites, modules tables exist before creating foreign keys
 2. document_site_assignments table (Section 4.2)
+   - Foreign keys: document_id → documents.id, site_id → sites.id
+   - **CRITICAL:** Verify documents and sites tables exist
 
 Phase 5:
 3. obligations table (Section 4.3) - CRITICAL: Must be after excel_imports
    - Include: id, document_id, excel_import_id (nullable), obligation_text, category, status
    - Foreign keys: document_id → documents.id, excel_import_id → excel_imports.id
+   - **CRITICAL:** Verify documents and excel_imports tables exist before creating foreign keys
 4. schedules table (Section 4.4)
+   - Foreign key: obligation_id → obligations.id
+   - **CRITICAL:** Verify obligations table exists
 5. deadlines table (Section 4.5)
+   - Foreign key: schedule_id → schedules.id
+   - **CRITICAL:** Verify schedules table exists
 6. evidence_items table (Section 4.6)
+   - Foreign keys: site_id → sites.id, company_id → companies.id
+   - **CRITICAL:** Verify sites and companies tables exist
 7. obligation_evidence_links table (Section 4.7)
+   - Foreign keys: obligation_id → obligations.id, evidence_id → evidence_items.id
+   - **CRITICAL:** Verify obligations and evidence_items tables exist
 8. regulator_questions table (Section 4.8)
 9. audit_packs table (Section 4.9)
+
+After creating each table:
+1. Verify table exists
+2. Verify ALL foreign keys are created
+3. Verify ALL foreign keys are valid (no orphaned records)
+4. If ANY verification fails: STOP and report error to user
 
 Follow exact table creation order from Database Schema Section 1.6.
 Enable RLS on all tables.
@@ -726,13 +823,173 @@ Create all performance indexes from Database Schema Section 10:
 
 **Task 1.3.2: Add Constraints**
 
+**⚠️ CRITICAL - DO NOT SKIP ANY CONSTRAINTS:**
+```
+BEFORE adding constraints:
+
+1. **Verify All Tables Exist:**
+   - Check: All 36 tables from Database Schema Section 1.6 exist
+   - If missing: STOP and complete Phase 1.2 first
+
+2. **Verify Table Creation Order:**
+   - Check: Tables created in correct order (parent tables before child tables)
+   - Verify: excel_imports exists before obligations (obligations.excel_import_id references it)
+   - If wrong order: STOP and fix table creation order
+
+DO NOT PROCEED until all validations pass.
+```
+
 **Implementation Prompt:**
 ```
 Add all CHECK, UNIQUE, and FOREIGN KEY constraints from Database Schema Section 11:
 - CHECK constraints for enums (subscription_tier, role, obligation_status, etc.)
 - UNIQUE constraints (companies.stripe_customer_id, modules.module_code)
 - FOREIGN KEY constraints (verify all FKs are created)
+
+After adding each constraint:
+1. Verify constraint exists: SELECT constraint_name FROM information_schema.table_constraints WHERE table_name = 'companies' AND constraint_type = 'FOREIGN KEY';
+2. Verify constraint is valid: Check no foreign key violations exist
+3. If ANY verification fails: STOP and report error to user
+
+DO NOT proceed until ALL constraints are created and verified.
 - Reference: EP_Compliance_Database_Schema.md Section 11
+```
+
+**Task 1.3.3: Comprehensive Foreign Key Validation**
+
+**⚠️ CRITICAL - VALIDATE ALL RELATIONSHIPS:**
+```
+This step ensures ALL foreign keys are properly created and ALL relationships are linked.
+DO NOT skip this step - it catches unlinked/orphaned records.
+```
+
+**Implementation Prompt:**
+```
+Create comprehensive foreign key validation script:
+
+1. **Verify All Foreign Keys Exist:**
+   ```sql
+   -- Get all foreign keys that should exist (from Database Schema)
+   SELECT 
+     tc.table_name,
+     kcu.column_name,
+     ccu.table_name AS foreign_table_name,
+     ccu.column_name AS foreign_column_name,
+     tc.constraint_name
+   FROM information_schema.table_constraints AS tc
+   JOIN information_schema.key_column_usage AS kcu
+     ON tc.constraint_name = kcu.constraint_name
+   JOIN information_schema.constraint_column_usage AS ccu
+     ON ccu.constraint_name = tc.constraint_name
+   WHERE tc.constraint_type = 'FOREIGN KEY'
+     AND tc.table_schema = 'public'
+   ORDER BY tc.table_name, kcu.column_name;
+   ```
+   - Expected: All foreign keys from Database Schema Section 11.2 exist
+   - If missing: STOP and add missing foreign keys
+
+2. **Verify Foreign Key Validity (No Orphaned Records):**
+   ```sql
+   -- Check for orphaned records (foreign keys pointing to non-existent records)
+   -- Example for sites.company_id:
+   SELECT COUNT(*) as orphaned_sites
+   FROM sites s
+   LEFT JOIN companies c ON s.company_id = c.id
+   WHERE c.id IS NULL;
+   
+   -- Repeat for ALL foreign key relationships:
+   -- sites.company_id → companies.id
+   -- users.company_id → companies.id
+   -- documents.site_id → sites.id
+   -- documents.company_id → companies.id
+   -- documents.module_id → modules.id
+   -- obligations.document_id → documents.id
+   -- obligations.excel_import_id → excel_imports.id
+   -- obligations.site_id → sites.id
+   -- obligations.company_id → companies.id
+   -- schedules.obligation_id → obligations.id
+   -- deadlines.schedule_id → schedules.id
+   -- evidence_items.site_id → sites.id
+   -- evidence_items.company_id → companies.id
+   -- obligation_evidence_links.obligation_id → obligations.id
+   -- obligation_evidence_links.evidence_id → evidence_items.id
+   -- user_roles.user_id → users.id
+   -- user_site_assignments.user_id → users.id
+   -- user_site_assignments.site_id → sites.id
+   -- module_activations.company_id → companies.id
+   -- module_activations.module_id → modules.id
+   -- consultant_client_assignments.consultant_id → users.id
+   -- consultant_client_assignments.client_company_id → companies.id
+   -- pack_distributions.pack_id → audit_packs.id
+   -- (and ALL other foreign keys from Database Schema)
+   ```
+   - Expected: All queries return 0 orphaned records
+   - If ANY query returns >0: STOP and report orphaned records to user
+
+3. **Verify Cascade Rules:**
+   ```sql
+   -- Verify ON DELETE CASCADE rules are correct
+   SELECT 
+     tc.table_name,
+     kcu.column_name,
+     rc.delete_rule
+   FROM information_schema.table_constraints AS tc
+   JOIN information_schema.key_column_usage AS kcu
+     ON tc.constraint_name = kcu.constraint_name
+   JOIN information_schema.referential_constraints AS rc
+     ON tc.constraint_name = rc.constraint_name
+   WHERE tc.constraint_type = 'FOREIGN KEY'
+     AND tc.table_schema = 'public'
+   ORDER BY tc.table_name, kcu.column_name;
+   ```
+   - Expected: Cascade rules match Database Schema Section 11.2
+   - If wrong: STOP and fix cascade rules
+
+4. **Verify Migration Order:**
+   ```sql
+   -- Check that parent tables exist before child tables
+   -- This ensures migrations ran in correct order
+   SELECT 
+     'excel_imports' as parent_table,
+     'obligations' as child_table,
+     CASE WHEN EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'excel_imports')
+          AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'obligations')
+          THEN 'OK' ELSE 'ERROR: Parent table missing' END as status;
+   
+   -- Repeat for ALL parent-child relationships:
+   -- companies → sites, users, module_activations
+   -- sites → documents, obligations, evidence_items
+   -- documents → obligations
+   -- obligations → schedules, obligation_evidence_links
+   -- schedules → deadlines
+   -- (and ALL other relationships)
+   ```
+   - Expected: All parent tables exist before child tables
+   - If wrong: STOP and fix migration order
+
+5. **Verify No Unused Tables:**
+   ```sql
+   -- Check that all tables from Database Schema are created
+   SELECT table_name
+   FROM information_schema.tables
+   WHERE table_schema = 'public'
+     AND table_type = 'BASE TABLE'
+   ORDER BY table_name;
+   ```
+   - Expected: All 36 tables from Database Schema Section 1.6 exist
+   - If missing: STOP and create missing tables
+
+6. **Verify No Unused Foreign Keys:**
+   ```sql
+   -- Check that all foreign keys from Database Schema are created
+   -- Compare against Database Schema Section 11.2
+   -- If any foreign key is missing: STOP and add it
+   ```
+
+If ANY validation fails: STOP and report error to user.
+DO NOT proceed to Phase 1.4 until ALL foreign keys are validated.
+- Reference: EP_Compliance_Database_Schema.md Section 11.2 (Foreign Key Constraints)
+- Reference: Canonical_Dictionary.md Section O.7 (Foreign Key Validation)
 ```
 
 ## Phase 1.4: Row Level Security (RLS) Policies
@@ -1087,6 +1344,68 @@ npm run test:integration:database
    ```
    - Expected: 3 modules (MODULE_1, MODULE_2, MODULE_3)
    - Verify: MODULE_1 has is_default = true
+
+6. **Foreign Key Validation (CRITICAL - Catches Unlinked Records):**
+   ```sql
+   -- Verify ALL foreign keys exist
+   SELECT COUNT(*) as foreign_key_count
+   FROM information_schema.table_constraints
+   WHERE constraint_type = 'FOREIGN KEY'
+     AND table_schema = 'public';
+   ```
+   - Expected: All foreign keys from Database Schema Section 11.2 exist
+   - Verify: Count matches expected number of foreign keys
+
+7. **Orphaned Records Check (CRITICAL - Catches Unlinked Data):**
+   ```sql
+   -- Check for orphaned records (foreign keys pointing to non-existent records)
+   -- This catches ANY unlinked data
+   SELECT 
+     'sites.company_id' as relationship,
+     COUNT(*) as orphaned_count
+   FROM sites s
+   LEFT JOIN companies c ON s.company_id = c.id
+   WHERE c.id IS NULL
+   
+   UNION ALL
+   
+   SELECT 
+     'users.company_id' as relationship,
+     COUNT(*) as orphaned_count
+   FROM users u
+   LEFT JOIN companies c ON u.company_id = c.id
+   WHERE c.id IS NULL
+   
+   UNION ALL
+   
+   SELECT 
+     'documents.site_id' as relationship,
+     COUNT(*) as orphaned_count
+   FROM documents d
+   LEFT JOIN sites s ON d.site_id = s.id
+   WHERE s.id IS NULL AND d.site_id IS NOT NULL
+   
+   -- Add checks for ALL foreign key relationships
+   -- (See Task 1.3.3 for complete list)
+   ```
+   - Expected: ALL queries return 0 orphaned records
+   - If ANY query returns >0: STOP and fix orphaned records
+   - **CRITICAL:** This catches unlinked/unused data - DO NOT proceed if orphaned records exist
+
+8. **Migration Order Validation:**
+   ```sql
+   -- Verify parent tables exist before child tables
+   -- This ensures migrations ran in correct order
+   SELECT 
+     CASE 
+       WHEN EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'companies')
+       AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'sites')
+       THEN 'OK: companies exists before sites'
+       ELSE 'ERROR: Migration order wrong'
+     END as migration_order_check;
+   ```
+   - Expected: All parent tables exist before child tables
+   - Verify: No foreign key creation errors occurred
 
 **Checkpoint Status:** ⬜ Not Started | ⬜ In Progress | ⬜ Complete
 
