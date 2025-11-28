@@ -12,6 +12,7 @@ import { processMonitoringScheduleJob } from '../jobs/monitoring-schedule-job';
 import { processDeadlineAlertJob } from '../jobs/deadline-alert-job';
 import { processEvidenceReminderJob } from '../jobs/evidence-reminder-job';
 import { processExcelImportJob } from '../jobs/excel-import-job';
+import { processPackGenerationJob } from '../jobs/pack-generation-job';
 
 // Worker instances
 const workers: Map<string, Worker> = new Map();
@@ -148,6 +149,31 @@ export function startAllWorkers(): void {
   });
 
   workers.set(QUEUE_NAMES.EVIDENCE_REMINDERS, evidenceRemindersWorker);
+
+  // Audit Pack Generation Worker
+  const packGenerationWorker = createWorker(
+    QUEUE_NAMES.AUDIT_PACK_GENERATION,
+    async (job) => {
+      if (job.name === 'AUDIT_PACK_GENERATION') {
+        await processPackGenerationJob(job);
+      } else {
+        throw new Error(`Unknown job type: ${job.name}`);
+      }
+    },
+    {
+      concurrency: 2, // Lower concurrency for PDF generation (CPU intensive)
+    }
+  );
+
+  packGenerationWorker.on('completed', (job) => {
+    console.log(`Pack generation job ${job.id} completed`);
+  });
+
+  packGenerationWorker.on('failed', (job, error) => {
+    console.error(`Pack generation job ${job?.id} failed:`, error);
+  });
+
+  workers.set(QUEUE_NAMES.AUDIT_PACK_GENERATION, packGenerationWorker);
 
   console.log('All workers started successfully');
 }
