@@ -1606,6 +1606,101 @@ Implement rate limiting middleware:
 - Reference: EP_Compliance_Backend_API_Specification.md Section 7.3
 ```
 
+## Phase 2.9: Excel Import Endpoints
+
+**Task 2.9.1: Excel Import Upload**
+
+**⚠️ CRITICAL DECISION POINT - ASK USER:**
+```
+STOP: Before implementing Excel import, ask user:
+
+1. **File Size Limits:**
+   - Default: 10MB max file size, 10,000 rows max
+   - Question: "Do you want to allow larger Excel files, or keep 10MB/10k row limit?"
+   - Wait for user confirmation
+
+2. **Column Mapping:**
+   - Default: Auto-detect column mapping with fuzzy matching
+   - Question: "Do you want auto-detection, or require manual column mapping?"
+   - Wait for user confirmation
+
+DO NOT PROCEED until user confirms all decisions.
+```
+
+**⚠️ COMPREHENSIVE TESTING REQUIRED:**
+```
+After implementing Excel import, test:
+
+1. **Valid Excel Upload:**
+   - Test: POST with valid Excel file
+   - Verify: 201 Created
+   - Verify: excel_imports record created
+   - Verify: Background job triggered
+   - If fails: STOP and fix
+
+2. **Invalid File Type:**
+   - Test: POST with non-Excel file
+   - Verify: 400 Bad Request
+   - Verify: Error message clear
+   - If fails: STOP and fix
+
+3. **File Size Exceeded:**
+   - Test: POST with file >10MB
+   - Verify: 400 Bad Request
+   - Verify: Error message explains limit
+   - If fails: STOP and fix
+
+4. **Column Validation:**
+   - Test: Excel with missing required columns
+   - Verify: 400 Bad Request with column list
+   - If fails: STOP and fix
+
+DO NOT proceed until ALL tests pass.
+```
+
+**Implementation Prompt:**
+```
+Implement POST /api/v1/excel-import/upload endpoint:
+- Accept: multipart/form-data (file, site_id)
+- Validate file: .xlsx, .xls, .csv only, max 10MB
+- Validate row count: max 10,000 rows
+- Upload to Supabase Storage bucket 'documents'
+- Create excel_imports record (status = 'UPLOADED')
+- Trigger background job for processing (Phase 4)
+- Return: excel_import object with import_id
+- Error handling: invalid file type, size exceeded, row count exceeded
+- Reference: EP_Compliance_Backend_API_Specification.md Section 9
+- Reference: EP_Compliance_Product_Logic_Specification.md Section B.1.1.1
+```
+
+**Task 2.9.2: Excel Import Preview**
+
+**Implementation Prompt:**
+```
+Implement GET /api/v1/excel-import/{importId}/preview endpoint:
+- Return: preview object with:
+  - valid_rows: array of valid obligations
+  - error_rows: array of rows with errors (error messages)
+  - warning_rows: array of rows with warnings (duplicates, etc.)
+  - column_mapping: how Excel columns map to system fields
+- Status: 200 OK if preview ready, 202 ACCEPTED if still processing
+- Error handling: import not found, processing failed
+- Reference: EP_Compliance_Backend_API_Specification.md Section 9.2
+```
+
+**Task 2.9.3: Excel Import Confirmation**
+
+**Implementation Prompt:**
+```
+Implement POST /api/v1/excel-import/{importId}/confirm endpoint:
+- Accept: { skip_errors: boolean, create_missing_sites: boolean, create_missing_permits: boolean }
+- Trigger background job Phase 2 (bulk obligation creation)
+- Update excel_imports status to 'CONFIRMED'
+- Return: confirmation object with estimated_obligations_count
+- Error handling: import not found, preview not ready, no valid rows
+- Reference: EP_Compliance_Backend_API_Specification.md Section 9.3
+```
+
 ## Phase 2 Testing
 
 **Test Requirements:**
@@ -2555,6 +2650,34 @@ Implement Evidence Reminder Job (cron: daily):
 - Reference: EP_Compliance_Background_Jobs_Specification.md Section 2.3
 ```
 
+**Task 4.2.4: Permit Renewal Reminder Job**
+
+**⚠️ CRITICAL - DO NOT SKIP:**
+```
+BEFORE implementing permit renewal reminders:
+
+1. **Verify Permit Expiry Logic:**
+   - Read: EP_Compliance_Product_Logic_Specification.md (permit renewal logic)
+   - Verify: How permit expiry is calculated
+   - Verify: Alert thresholds (90 days, 30 days, 7 days)
+   - If missing: STOP and ask user to verify permit renewal logic
+
+DO NOT PROCEED until all validations pass.
+```
+
+**Implementation Prompt:**
+```
+Implement Permit Renewal Reminder Job (cron: daily):
+- Check all active permits (documents with document_type = 'ENVIRONMENTAL_PERMIT')
+- Calculate expiry date from permit issue date + validity period
+- Alert thresholds: 90 days, 30 days, 7 days before expiry
+- Create notifications for each warning level
+- Recipients: Admin + Site Manager
+- Notification type: PERMIT_RENEWAL_REMINDER
+- Reference: EP_Compliance_Background_Jobs_Specification.md Section 2.4
+- Reference: EP_Compliance_Product_Logic_Specification.md (permit renewal logic)
+```
+
 ## Phase 4.3: Document Processing Job
 
 **Task 4.3.1: Document Processing Pipeline**
@@ -2594,6 +2717,50 @@ Implement Audit Pack Generation Job:
 - Timeout: 60s (standard), 5min (large packs >500 items)
 - Reference: EP_Compliance_Background_Jobs_Specification.md Section 6.1
 - Reference: EP_Compliance_Product_Logic_Specification.md Section I.8 for pack types
+```
+
+**Task 4.4.2: Excel Import Processing Job**
+
+**⚠️ CRITICAL - DO NOT SKIP:**
+```
+BEFORE implementing Excel import processing:
+
+1. **Verify Excel Import Logic:**
+   - Read: EP_Compliance_Product_Logic_Specification.md Section B.1.1.1
+   - Verify: Required columns, validation rules, column mapping
+   - Verify: Preview generation logic
+   - If missing: STOP and ask user to verify Excel import logic
+
+DO NOT PROCEED until all validations pass.
+```
+
+**Implementation Prompt:**
+```
+Implement Excel Import Processing Job (2 phases):
+Phase 1 (Validation & Preview):
+- Trigger: Excel upload creates job
+- Steps:
+  1. Parse Excel file (xlsx, xls, csv)
+  2. Auto-detect column mapping (fuzzy matching)
+  3. Validate each row (required fields, date formats, frequencies)
+  4. Identify errors (missing fields, invalid dates, etc.)
+  5. Identify warnings (duplicates, etc.)
+  6. Generate preview (valid_rows, error_rows, warning_rows)
+  7. Update excel_imports status = 'PREVIEW_READY'
+  8. Notify user: "Excel import ready for review"
+
+Phase 2 (Bulk Creation):
+- Trigger: User confirms import (POST /api/v1/excel-import/{id}/confirm)
+- Steps:
+  1. Create obligations in bulk from valid_rows
+  2. Link obligations to permits/sites
+  3. Create schedules and deadlines
+  4. Update excel_imports status = 'COMPLETED'
+  5. Notify user: "X obligations imported successfully"
+
+Error handling: retry, DLQ, manual review flag
+Reference: EP_Compliance_Background_Jobs_Specification.md Section 4
+Reference: EP_Compliance_Product_Logic_Specification.md Section B.1.1.1
 ```
 
 ## Phase 4 Testing
@@ -3294,6 +3461,72 @@ Implement pack distribution:
 - Reference: EP_Compliance_Frontend_Routes_Component_Map.md Section 9.2
 ```
 
+**Task 6.2.3: Shared Link Distribution**
+
+**⚠️ CRITICAL DECISION POINT - ASK USER:**
+```
+STOP: Before implementing shared links, ask user:
+
+1. **Link Expiration:**
+   - Default: 30 days
+   - Question: "What default expiration should shared links have? (Recommended: 30 days)"
+   - Wait for user confirmation
+
+2. **Password Protection:**
+   - Default: Optional password
+   - Question: "Should shared links require password by default, or make it optional?"
+   - Wait for user confirmation
+
+3. **Access Control:**
+   - Question: "Should shared links be accessible without authentication, or require login?"
+   - Wait for user confirmation
+
+DO NOT PROCEED until user confirms all decisions.
+```
+
+**⚠️ COMPREHENSIVE TESTING REQUIRED:**
+```
+After implementing shared links, test:
+
+1. **Link Generation:**
+   - Test: Generate shared link
+   - Verify: Link created, expiration set
+   - If fails: STOP and fix
+
+2. **Link Access:**
+   - Test: Access shared link (public route)
+   - Verify: Pack PDF accessible
+   - If fails: STOP and fix
+
+3. **Link Expiration:**
+   - Test: Access expired link
+   - Verify: Error message shown
+   - If fails: STOP and fix
+
+4. **Password Protection:**
+   - Test: Access password-protected link
+   - Verify: Password prompt shown
+   - Verify: Access granted with correct password
+   - If fails: STOP and fix
+
+DO NOT proceed until ALL tests pass.
+```
+
+**Implementation Prompt:**
+```
+Implement Shared Link Distribution:
+- Generate shareable link: POST /api/v1/packs/{id}/share
+- Link format: https://app.oblicore.com/shared/packs/{shareToken}
+- Expiration: [USER CONFIRMED] days (default 30)
+- Password: [USER CONFIRMED] (optional or required)
+- Public route: /shared/packs/[shareToken]
+- Access control: Check expiration, password (if set)
+- Display pack PDF with download option
+- Plan restriction: Growth Plan or Consultant Edition only
+- Reference: EP_Compliance_Product_Logic_Specification.md Section I.8.7
+- Reference: EP_Compliance_Backend_API_Specification.md Section 19
+```
+
 ## Phase 6.3: Onboarding Flow
 
 **Task 6.3.1: Onboarding State Machine**
@@ -3335,6 +3568,234 @@ Implement notification center:
 - Notification types: deadline warnings, evidence reminders, pack ready
 - Real-time updates: Supabase Realtime subscription
 - Reference: EP_Compliance_Frontend_Routes_Component_Map.md Section 11.1
+```
+
+## Phase 6.5: Consultant Control Centre
+
+**Task 6.5.1: Consultant Dashboard**
+
+**⚠️ CRITICAL - DO NOT SKIP:**
+```
+BEFORE implementing consultant dashboard:
+
+1. **Verify Consultant Logic:**
+   - Read: EP_Compliance_Product_Logic_Specification.md Section C.5 (entire section)
+   - Verify: Multi-client aggregation logic
+   - Verify: Data isolation rules
+   - If missing: STOP and ask user to verify consultant logic
+
+DO NOT PROCEED until all validations pass.
+```
+
+**⚠️ COMPREHENSIVE TESTING REQUIRED:**
+```
+After implementing consultant dashboard, test:
+
+1. **Multi-Client Aggregation:**
+   - Test: Consultant with 2 assigned clients
+   - Verify: Dashboard shows aggregated data from both clients
+   - Verify: Can switch between clients
+   - If fails: STOP and fix
+
+2. **Data Isolation:**
+   - Test: Consultant can only see assigned clients
+   - Test: Consultant cannot see unassigned clients
+   - If fails: STOP and fix
+
+3. **Client Switching:**
+   - Test: Switch between clients
+   - Verify: Data updates correctly
+   - If fails: STOP and fix
+
+DO NOT proceed until ALL tests pass.
+```
+
+**Implementation Prompt:**
+```
+Implement Consultant Dashboard:
+- Route: /consultant/dashboard
+- Multi-client dashboard showing:
+  - Total clients count
+  - Active clients count
+  - Total sites (across all clients)
+  - Aggregated compliance scores
+  - Upcoming deadlines (across all clients)
+  - Recent activity (across all clients)
+- Client list: cards showing client name, site count, compliance score
+- Client switching: click client card → navigate to client view
+- Empty state: "No clients assigned yet" (if no assignments)
+- Data aggregation: Query consultant_client_assignments, aggregate across assigned clients
+- Reference: EP_Compliance_Frontend_Routes_Component_Map.md Section 3.8
+- Reference: EP_Compliance_Product_Logic_Specification.md Section C.5.3
+- Reference: EP_Compliance_UI_UX_Design_System.md Section 16.1
+```
+
+**Task 6.5.2: Client Assignment UI**
+
+**Implementation Prompt:**
+```
+Implement Client Assignment UI:
+- Route: /companies/[companyId]/settings/users (for client Owner/Admin)
+- "Assign Consultant" button
+- Consultant search/select interface:
+  - Search by email or consultant firm name
+  - Display consultant profile (name, firm, email)
+  - Select consultant and click "Assign"
+- Submit: POST /api/v1/companies/{companyId}/consultants/assign
+- On success: Notify consultant, update consultant dashboard
+- Reference: EP_Compliance_User_Workflow_Maps.md Section 2.7.2
+- Reference: EP_Compliance_Backend_API_Specification.md Section 26.1
+```
+
+**Task 6.5.3: Consultant Client View**
+
+**Implementation Prompt:**
+```
+Implement Consultant Client View:
+- Route: /consultant/clients/[clientId]
+- Client-specific view showing:
+  - Client company info
+  - Sites list (all sites in client company)
+  - Compliance overview
+  - Upcoming deadlines
+  - Recent activity
+- Actions: Generate Pack (for this client)
+- Pack generation: All pack types available (except Board Pack - requires Owner/Admin)
+- Reference: EP_Compliance_Frontend_Routes_Component_Map.md Section 3.8
+- Reference: EP_Compliance_Product_Logic_Specification.md Section C.5.4
+```
+
+**Task 6.5.4: Consultant Pack Generation**
+
+**Implementation Prompt:**
+```
+Implement Consultant Pack Generation:
+- Route: /consultant/clients/[clientId]/packs/generate
+- Pack type selector (all types except Board Pack)
+- Site selection (for client)
+- Date range filter
+- Generate button: POST /api/v1/consultant/clients/{clientId}/packs
+- Pack generation scoped to assigned client company
+- Validation: Check consultant_client_assignments.status = 'ACTIVE'
+- Reference: EP_Compliance_User_Workflow_Maps.md Section 2.7.3
+- Reference: EP_Compliance_Backend_API_Specification.md Section 26.3
+```
+
+**Task 6.5.5: Consultant Onboarding Flow**
+
+**Implementation Prompt:**
+```
+Implement Consultant Onboarding Flow:
+- Separate onboarding for consultants (different from regular users)
+- Steps:
+  1. Signup (role = 'CONSULTANT', plan = 'CONSULTANT')
+  2. Consultant profile setup (firm name, contact info)
+  3. Consultant Dashboard (empty state: "No clients assigned yet")
+- Reference: EP_Compliance_Onboarding_Flow_Specification.md Section 7
+- Reference: EP_Compliance_User_Workflow_Maps.md Section 2.7.1
+```
+
+## Phase 6.6: Review Queue UI & Workflow
+
+**Task 6.6.1: Review Queue Page**
+
+**⚠️ CRITICAL - DO NOT SKIP:**
+```
+BEFORE implementing review queue:
+
+1. **Verify Review Queue Logic:**
+   - Read: EP_Compliance_Product_Logic_Specification.md Section A.7 (entire section)
+   - Verify: Review types, review actions, blocking status
+   - Verify: Review workflow steps
+   - If missing: STOP and ask user to verify review queue logic
+
+DO NOT PROCEED until all validations pass.
+```
+
+**⚠️ COMPREHENSIVE TESTING REQUIRED:**
+```
+After implementing review queue, test:
+
+1. **Review Queue Display:**
+   - Test: Queue shows items sorted by priority
+   - Verify: Review type badges displayed
+   - Verify: Confidence scores shown
+   - If fails: STOP and fix
+
+2. **Review Actions:**
+   - Test: Confirm extraction
+   - Test: Edit extraction
+   - Test: Reject extraction
+   - Verify: All actions work correctly
+   - If fails: STOP and fix
+
+3. **Side-by-Side Review:**
+   - Test: Open review item
+   - Verify: Original document text shown (left panel)
+   - Verify: Extracted data shown (right panel)
+   - If fails: STOP and fix
+
+DO NOT proceed until ALL tests pass.
+```
+
+**Implementation Prompt:**
+```
+Implement Review Queue Page:
+- Route: /sites/[siteId]/review-queue
+- Queue list showing items sorted by:
+  - Priority DESC (highest first)
+  - Blocking status (blocking first)
+  - Document upload date
+- For each item display:
+  - Document name
+  - Obligation text snippet
+  - Review type badge (LOW_CONFIDENCE, SUBJECTIVE, NO_MATCH, etc.)
+  - Confidence score (color-coded: ≥85% green, 70-84% yellow, <70% red)
+  - Hallucination risk indicator (if applicable)
+- Filters: Review status, Review type
+- Reference: EP_Compliance_Frontend_Routes_Component_Map.md Section 3.10
+- Reference: EP_Compliance_User_Workflow_Maps.md Section 2.2
+```
+
+**Task 6.6.2: Review Workflow UI**
+
+**Implementation Prompt:**
+```
+Implement Review Workflow UI (side-by-side review):
+- Route: /sites/[siteId]/review-queue/[itemId]
+- Left panel: Original document text with page reference
+- Right panel: Extracted obligation data (text, summary, category, frequency, deadline)
+- Confidence score display (color-coded)
+- Hallucination warning banner (if hallucination_risk = true)
+- Review actions:
+  - Confirm button: PUT /api/v1/review-queue/{itemId}/confirm
+  - Edit button: Opens edit form, PUT /api/v1/review-queue/{itemId}/edit
+  - Reject button: Requires reason, PUT /api/v1/review-queue/{itemId}/reject
+- For subjective obligations: Interpretation notes field (required)
+- Reference: EP_Compliance_User_Workflow_Maps.md Section 2.2
+- Reference: EP_Compliance_Backend_API_Specification.md Section 14
+```
+
+**Task 6.6.3: Review Queue API Endpoints**
+
+**Implementation Prompt:**
+```
+Implement Review Queue API endpoints:
+1. GET /api/v1/review-queue
+   - List review queue items (filtered by site, status, type)
+   - Pagination: cursor-based
+   - Sorting: priority DESC, blocking status, upload date
+2. PUT /api/v1/review-queue/{itemId}/confirm
+   - Confirm extraction (mark as confirmed)
+   - Set review_status = 'CONFIRMED'
+3. PUT /api/v1/review-queue/{itemId}/reject
+   - Reject extraction (requires rejection_reason)
+   - Set review_status = 'REJECTED'
+4. PUT /api/v1/review-queue/{itemId}/edit
+   - Edit extraction (update obligation fields)
+   - Store original in original_extraction
+   - Set review_status = 'EDITED'
+- Reference: EP_Compliance_Backend_API_Specification.md Section 14
 ```
 
 ## Phase 6 Testing
