@@ -21,6 +21,7 @@
 # Table of Contents
 
 1. [Schema Overview](#1-schema-overview)
+   - [1.6 Table Creation Order](#16-table-creation-order)
 2. [Core Entity Tables](#2-core-entity-tables)
 3. [Module Registry Table](#3-module-registry-table)
 4. [Module 1 Tables (Environmental Permits)](#4-module-1-tables-environmental-permits)
@@ -140,6 +141,73 @@ deleted_at TIMESTAMP WITH TIME ZONE
 - `system_settings` (global settings)
 - `background_jobs` (system table, may be tenant-scoped in future)
 - `dead_letter_queue` (system table)
+
+## 1.6 Table Creation Order
+
+**IMPORTANT:** Database tables must be created in the correct order to resolve foreign key dependencies.
+
+**Phase 1: Core Tables (No Dependencies)**
+1. `companies`
+2. `users`
+3. `sites`
+4. `modules`
+
+**Phase 2: User Management Tables**
+5. `user_roles`
+6. `user_site_assignments`
+
+**Phase 3: Import Support Tables**
+7. `excel_imports` ← **MUST be created before obligations**
+
+**Phase 4: Module 1 Document Tables**
+8. `documents`
+9. `document_site_assignments`
+
+**Phase 5: Module 1 Core Tables**
+10. `obligations` (references excel_imports, documents)
+11. `schedules`
+12. `deadlines`
+13. `evidence_items`
+14. `obligation_evidence_links`
+15. `regulator_questions`
+16. `audit_packs`
+
+**Phase 6: Module 2 Tables**
+17. `parameters`
+18. `lab_results`
+19. `exceedances`
+20. `discharge_volumes`
+
+**Phase 7: Module 3 Tables**
+21. `generators`
+22. `run_hour_records`
+23. `stack_tests`
+24. `maintenance_records`
+25. `aer_documents`
+
+**Phase 8: System Tables**
+26. `notifications`
+27. `background_jobs`
+28. `dead_letter_queue`
+29. `audit_logs`
+30. `review_queue_items`
+31. `escalations`
+32. `system_settings`
+
+**Phase 9: Cross-Module Tables**
+33. `module_activations`
+34. `cross_sell_triggers`
+35. `extraction_logs`
+36. `consultant_client_assignments`
+
+**Critical Foreign Key Dependencies:**
+- `obligations.excel_import_id` → `excel_imports.id` (excel_imports MUST exist first)
+- `obligations.document_id` → `documents.id`
+- `deadlines.obligation_id` → `obligations.id`
+- `obligation_evidence_links.obligation_id` → `obligations.id`
+- `obligation_evidence_links.evidence_id` → `evidence_items.id`
+
+**Note:** The table definitions below are organized by functional area, not creation order. Use this section for actual database creation sequence.
 
 ---
 
@@ -1546,8 +1614,8 @@ CREATE TABLE review_queue_items (
     priority INTEGER NOT NULL DEFAULT 0,
     hallucination_risk BOOLEAN NOT NULL DEFAULT false,
     original_data JSONB NOT NULL DEFAULT '{}',
-    review_status TEXT NOT NULL DEFAULT 'PENDING' 
-        CHECK (review_status IN ('PENDING', 'CONFIRMED', 'EDITED', 'REJECTED')),
+    review_status TEXT NOT NULL DEFAULT 'PENDING'
+        CHECK (review_status IN ('PENDING', 'CONFIRMED', 'EDITED', 'REJECTED', 'PENDING_INTERPRETATION', 'INTERPRETED', 'NOT_APPLICABLE')),
     review_action TEXT 
         CHECK (review_action IN ('confirmed', 'edited', 'rejected')),
     reviewed_by UUID REFERENCES users(id) ON DELETE SET NULL,
