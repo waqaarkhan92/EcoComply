@@ -9,7 +9,6 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { createClient } from '@supabase/supabase-js';
 import { env } from '@/lib/env';
 import PDFDocument from 'pdfkit';
-import { Readable } from 'stream';
 
 export interface PackGenerationJobData {
   pack_id: string;
