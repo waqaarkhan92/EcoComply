@@ -1188,7 +1188,17 @@ Create automated test suite for Phase 1 (Database & RLS):
    - Verify all indexes exist
    - Verify modules table has 3 rows
 
-6. Test RLS policy count:
+6. Test foreign key relationships (CRITICAL - catches unlinked data):
+   - Query all foreign keys from information_schema
+   - Assert: All foreign keys from Database Schema Section 11.2 exist
+   - For EACH foreign key relationship:
+     - Check for orphaned records (foreign keys pointing to non-existent records)
+     - Assert: No orphaned records exist
+   - Assert: All parent tables exist before child tables
+   - If ANY assertion fails: STOP and fix
+   - **This automatically catches ALL unlinked/unused data**
+
+7. Test RLS policy count:
    - Query pg_policies → Should have ~111 policies
    - Verify each tenant table has SELECT, INSERT, UPDATE, DELETE policies
 
