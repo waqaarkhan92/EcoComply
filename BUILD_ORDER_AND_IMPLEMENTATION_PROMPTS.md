@@ -4,6 +4,13 @@
 **Created:** 2025-01-28  
 **Purpose:** Step-by-step build order with implementation prompts for each phase
 
+**⚠️ CRITICAL BUILD PRINCIPLES:**
+1. **NO ASSUMPTIONS:** Ask user for all critical decisions - never skip or assume
+2. **COMPREHENSIVE TESTING:** Test everything thoroughly - nothing should break
+3. **NO SIMPLIFICATIONS:** Implement fully - do not take shortcuts
+4. **USER CONFIRMATION:** Get explicit approval before proceeding to next phase
+5. **VALIDATION FIRST:** Verify everything works before moving on
+
 ---
 
 ## Overview
@@ -11,9 +18,11 @@
 This document provides a phased build order for implementing the Oblicore compliance platform. Each phase includes:
 - Dependencies (what must be completed first)
 - Specific tasks (numbered, actionable)
+- **Critical decision points (STOP and ask user)**
 - Implementation prompts (ready-to-use for AI assistants)
-- Testing requirements
+- **Comprehensive testing requirements (test everything)**
 - Acceptance criteria
+- **User confirmation checkpoints (do not proceed without approval)**
 
 **Total Phases:** 8 (Phase 0-7 required, Phase 8 required for v1.0)  
 **Estimated Timeline:** 16-22 weeks for full v1.0 launch (includes Module 2 & 3)
@@ -137,9 +146,42 @@ Run verification:
 
 **Task 0.2.1: Create Required Accounts**
 
+**⚠️ CRITICAL DECISION POINT - ASK USER:**
+```
+STOP: Before creating accounts, ask user:
+
+1. **Supabase Region:**
+   - Default: EU (London) for UK data residency
+   - Question: "Do you want EU (London) region, or do you have a different preference?"
+   - Wait for user confirmation before proceeding
+
+2. **OpenAI Usage Limits:**
+   - Default: $50/month limit for development
+   - Question: "What monthly spending limit do you want for OpenAI API? (Recommended: $50 for dev, $200+ for production)"
+   - Wait for user confirmation
+
+3. **Email Provider:**
+   - Options: SendGrid (recommended) or alternative
+   - Question: "Do you want to use SendGrid for email, or do you have a preferred email provider?"
+   - Wait for user confirmation
+
+4. **SMS Provider:**
+   - Options: Twilio (recommended) or alternative, or skip SMS for now
+   - Question: "Do you want SMS notifications? If yes, use Twilio or another provider?"
+   - Wait for user confirmation
+
+5. **Deployment Platform:**
+   - Frontend: Vercel (recommended) or alternative
+   - Workers: Railway/Render/Fly.io
+   - Question: "Which deployment platforms do you want to use? (Frontend: Vercel? Workers: Railway/Render/Fly.io?)"
+   - Wait for user confirmation
+
+DO NOT PROCEED until user confirms all decisions.
+```
+
 **Implementation Prompt:**
 ```
-Create accounts for all required services:
+Create accounts for all required services (using user's confirmed choices):
 
 1. Supabase Account:
    - Sign up: https://supabase.com
@@ -510,8 +552,46 @@ Reference: Supabase CLI Documentation → Migrations
 ```
 
 **Task 1.2.1: Create Core Tables (Phase 1)**
-- Create companies, users, sites, modules tables
-- Follow exact schema from EP_Compliance_Database_Schema.md
+
+**⚠️ CRITICAL VALIDATION - TEST EVERYTHING:**
+```
+BEFORE creating tables:
+
+1. **Verify Database Connection:**
+   - Test: Connect to Supabase database
+   - Verify: Can execute queries
+   - If fails: STOP and ask user for help
+
+2. **Verify Schema Document:**
+   - Read: EP_Compliance_Database_Schema.md Section 2.1-2.3
+   - Verify: Schema is complete and matches requirements
+   - If missing: STOP and ask user to verify schema document
+
+3. **Create Backup:**
+   - Create manual backup before any changes
+   - Verify: Backup created successfully
+   - If fails: STOP and ask user for help
+
+DO NOT PROCEED until all validations pass.
+```
+
+**Implementation Prompt:**
+```
+Create core tables (companies, users, sites, modules):
+- Follow EXACT schema from EP_Compliance_Database_Schema.md
+- DO NOT simplify or skip any columns
+- DO NOT skip any constraints
+- DO NOT skip any indexes
+- Create tables in exact order specified in Database Schema Section 1.6
+
+After creating each table:
+1. Verify table exists: SELECT * FROM information_schema.tables WHERE table_name = 'companies';
+2. Verify columns match schema: SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'companies';
+3. Verify constraints exist: SELECT constraint_name FROM information_schema.table_constraints WHERE table_name = 'companies';
+4. If ANY verification fails: STOP and report error to user
+
+DO NOT proceed to next table until current table is fully verified.
+```
 
 **Implementation Prompt:**
 ```
@@ -670,9 +750,40 @@ Enable RLS on all tenant-scoped tables:
 
 **Task 1.4.2: Create RLS Policies**
 
+**⚠️ CRITICAL - DO NOT SKIP ANY POLICIES:**
+```
+BEFORE creating policies:
+
+1. **Verify RLS Document:**
+   - Read: EP_Compliance_RLS_Permissions_Rules.md (entire document - use offset/limit)
+   - Count: How many policies are defined?
+   - Verify: All tables have SELECT, INSERT, UPDATE, DELETE policies
+   - If missing: STOP and ask user to verify RLS document
+
+2. **Verify Tables Exist:**
+   - Check: All tables from Database Schema exist
+   - If missing: STOP and complete Phase 1.2 first
+
+DO NOT PROCEED until all validations pass.
+```
+
 **Implementation Prompt:**
 ```
-Create all RLS policies from EP_Compliance_RLS_Permissions_Rules.md:
+Create ALL RLS policies from EP_Compliance_RLS_Permissions_Rules.md:
+- Read the document in sections using offset/limit (document is 3,881 lines)
+- DO NOT skip any policies
+- DO NOT simplify any policy logic
+- Create policies for EVERY table that requires RLS
+- For each table, create ALL 4 policies: SELECT, INSERT, UPDATE, DELETE
+
+After creating each policy:
+1. Verify policy exists: SELECT * FROM pg_policies WHERE tablename = 'companies' AND policyname = 'companies_select_user_access';
+2. Test policy: Try to query as different users, verify RLS works
+3. If ANY verification fails: STOP and report error to user
+
+Expected total policies: ~111 policies (4 per table)
+DO NOT proceed until ALL policies are created and verified.
+```
 - Read the document in sections using offset/limit (document is 3,881 lines)
 - For each table, create:
   1. SELECT policy (companies_select_user_access pattern)
@@ -774,6 +885,22 @@ Reference: EP_Compliance_Master_Plan.md Section 7 for pricing.
 ## Phase 1 Automated Tests
 
 **Task 1.7.1: Create Automated Test Suite**
+
+**⚠️ COMPREHENSIVE TESTING - TEST EVERYTHING:**
+```
+CRITICAL: Do not skip any tests. Test every component thoroughly.
+
+Test Requirements:
+1. Test ALL tables exist (36 tables)
+2. Test ALL RLS policies exist (~111 policies)
+3. Test ALL helper functions work
+4. Test RLS isolation (User 1 cannot see User 2's data)
+5. Test ALL constraints (CHECK, UNIQUE, FOREIGN KEY)
+6. Test ALL indexes exist
+7. Test seed data (modules table has 3 rows)
+
+If ANY test fails: STOP and fix before proceeding.
+```
 
 **Implementation Prompt:**
 ```
@@ -963,7 +1090,19 @@ npm run test:integration:database
 
 **Checkpoint Status:** ⬜ Not Started | ⬜ In Progress | ⬜ Complete
 
-**If checkpoint fails:** Review errors, fix issues, re-run validation. Do NOT proceed to Phase 2 until all checks pass.
+**⚠️ USER CONFIRMATION REQUIRED:**
+```
+STOP: Before proceeding to Phase 2, ask user:
+
+1. "Have you manually verified all Phase 1 checkpoints?"
+2. "Do all tests pass?"
+3. "Are you ready to proceed to Phase 2 (API Layer)?"
+4. "Have you reviewed all Phase 1 outputs?"
+
+DO NOT proceed to Phase 2 until user explicitly confirms "YES" to all questions.
+```
+
+**If checkpoint fails:** Review errors, fix issues, re-run validation. Do NOT proceed to Phase 2 until all checks pass AND user confirms.
 
 ## Phase 1 Error Recovery
 
@@ -1141,9 +1280,68 @@ Reference: EP_Compliance_Technical_Architecture_Stack.md Section 7
 
 **Task 2.2.1: Signup Endpoint**
 
+**⚠️ CRITICAL DECISION POINT - ASK USER:**
+```
+STOP: Before implementing signup, ask user:
+
+1. **Email Verification:**
+   - Question: "Do you want to require email verification before users can log in? (Recommended: Yes for production)"
+   - Wait for user confirmation
+
+2. **Password Requirements:**
+   - Default: Min 8 characters
+   - Question: "What password requirements do you want? (Min length, special chars, etc.)"
+   - Wait for user confirmation
+
+3. **Company Creation:**
+   - Question: "Should signup automatically create a company, or require separate company creation? (Default: Auto-create)"
+   - Wait for user confirmation
+
+DO NOT PROCEED until user confirms all decisions.
+```
+
+**⚠️ COMPREHENSIVE TESTING REQUIRED:**
+```
+After implementing signup endpoint, test:
+
+1. **Valid Signup:**
+   - Test: POST with valid data
+   - Verify: 201 Created
+   - Verify: User created in database
+   - Verify: Company created
+   - Verify: user_roles created (role = 'OWNER')
+   - Verify: module_activation created (Module 1)
+   - If ANY verification fails: STOP and fix
+
+2. **Invalid Email:**
+   - Test: POST with invalid email
+   - Verify: 400 Bad Request
+   - Verify: Error message clear
+   - If fails: STOP and fix
+
+3. **Duplicate Email:**
+   - Test: POST with existing email
+   - Verify: 409 Conflict or 400 Bad Request
+   - Verify: Error message clear
+   - If fails: STOP and fix
+
+4. **Weak Password:**
+   - Test: POST with weak password
+   - Verify: 400 Bad Request
+   - Verify: Error message explains requirements
+   - If fails: STOP and fix
+
+5. **Missing Fields:**
+   - Test: POST with missing required fields
+   - Verify: 400 Bad Request for each missing field
+   - If fails: STOP and fix
+
+DO NOT proceed until ALL tests pass.
+```
+
 **Implementation Prompt:**
 ```
-Implement POST /api/v1/auth/signup endpoint:
+Implement POST /api/v1/auth/signup endpoint (using user's confirmed choices):
 - Accept: company_name, email, password
 - Create Supabase Auth user
 - Create company record
@@ -1428,6 +1626,22 @@ Implement rate limiting middleware:
 
 **Task 2.8.1: Create API Integration Test Suite**
 
+**⚠️ COMPREHENSIVE TESTING - TEST EVERYTHING:**
+```
+CRITICAL: Do not skip any tests. Test every endpoint thoroughly.
+
+Test Requirements:
+1. Test ALL endpoints (signup, login, companies, sites, users, documents, obligations, evidence)
+2. Test ALL error cases (400, 401, 403, 404, 429, 500)
+3. Test ALL authentication scenarios (with token, without token, invalid token)
+4. Test ALL RLS enforcement scenarios (User A cannot see User B's data)
+5. Test ALL validation rules (email format, password strength, required fields)
+6. Test pagination for ALL list endpoints
+7. Test rate limiting for ALL endpoints
+
+If ANY test fails: STOP and fix before proceeding.
+```
+
 **Implementation Prompt:**
 ```
 Create automated API integration tests for Phase 2:
@@ -1633,7 +1847,20 @@ npm run test:integration:api
 
 **Checkpoint Status:** ⬜ Not Started | ⬜ In Progress | ⬜ Complete
 
-**If checkpoint fails:** Review API logs, fix authentication/RLS issues. Do NOT proceed to Phase 3 until all checks pass.
+**⚠️ USER CONFIRMATION REQUIRED:**
+```
+STOP: Before proceeding to Phase 3, ask user:
+
+1. "Have you manually tested all API endpoints?"
+2. "Do all automated tests pass?"
+3. "Have you verified RLS enforcement works?"
+4. "Are you ready to proceed to Phase 3 (AI Extraction)?"
+5. "Have you reviewed all Phase 2 outputs?"
+
+DO NOT proceed to Phase 3 until user explicitly confirms "YES" to all questions.
+```
+
+**If checkpoint fails:** Review API logs, fix authentication/RLS issues. Do NOT proceed to Phase 3 until all checks pass AND user confirms.
 
 ## Phase 2 Error Recovery
 
@@ -1702,9 +1929,52 @@ npm run test:integration:api
 
 **Task 3.1.1: API Key Management**
 
+**⚠️ CRITICAL DECISION POINT - ASK USER:**
+```
+STOP: Before implementing API key management, ask user:
+
+1. **OpenAI API Keys:**
+   - Question: "Do you have OpenAI API keys ready? (Primary + 2 fallbacks recommended)"
+   - Question: "What are your OpenAI API keys? (Store securely, never commit to Git)"
+   - Wait for user to provide keys
+
+2. **Key Rotation Strategy:**
+   - Default: 90-day rotation cycle
+   - Question: "Do you want 90-day key rotation, or different interval?"
+   - Wait for user confirmation
+
+3. **Fallback Keys:**
+   - Question: "Do you want to set up fallback API keys now, or add later?"
+   - Wait for user confirmation
+
+DO NOT PROCEED until user provides API keys and confirms strategy.
+```
+
+**⚠️ COMPREHENSIVE TESTING REQUIRED:**
+```
+After implementing API key management, test:
+
+1. **Key Validation:**
+   - Test: Validate primary key on startup
+   - Verify: Key is valid and has credits
+   - If invalid: STOP and ask user for valid key
+
+2. **Key Rotation:**
+   - Test: Simulate key rotation
+   - Verify: Old key disabled, new key active
+   - If fails: STOP and fix
+
+3. **Fallback Keys:**
+   - Test: Primary key fails, fallback used
+   - Verify: System switches to fallback automatically
+   - If fails: STOP and fix
+
+DO NOT proceed until ALL tests pass.
+```
+
 **Implementation Prompt:**
 ```
-Implement API key management system:
+Implement API key management system (using user's confirmed choices):
 - Create APIKeyManager class
 - Support primary key + 2 fallback keys
 - Key rotation logic (90-day cycle)
@@ -1784,9 +2054,69 @@ Implement text extraction:
 
 **Task 3.3.3: LLM Extraction**
 
+**⚠️ CRITICAL - DO NOT SIMPLIFY:**
+```
+BEFORE implementing LLM extraction:
+
+1. **Verify Prompt Document:**
+   - Read: AI_Microservice_Prompts_Complete.md (entire document)
+   - Verify: All prompt templates are present
+   - Verify: Prompt structure matches requirements
+   - If missing: STOP and ask user to verify prompt document
+
+2. **Verify OpenAI Integration:**
+   - Test: Can connect to OpenAI API
+   - Test: API key is valid
+   - Test: Can make test API call
+   - If fails: STOP and fix API integration
+
+DO NOT PROCEED until all validations pass.
+```
+
+**⚠️ COMPREHENSIVE TESTING REQUIRED:**
+```
+After implementing LLM extraction, test with REAL documents:
+
+1. **Small Document (5-10 pages):**
+   - Test: Upload real permit PDF
+   - Verify: Extraction completes
+   - Verify: Obligations extracted correctly
+   - Verify: Confidence scores calculated
+   - Manually compare: Extracted text vs. PDF text
+   - If extraction is wrong: STOP and fix
+
+2. **Large Document (50+ pages):**
+   - Test: Upload large permit PDF
+   - Verify: Uses 5-minute timeout
+   - Verify: Extraction completes
+   - Verify: All obligations extracted
+   - If fails: STOP and fix
+
+3. **Error Handling:**
+   - Test: Corrupted PDF
+   - Test: Invalid file type
+   - Test: Network timeout
+   - Test: OpenAI API error
+   - Verify: All errors handled gracefully
+   - If fails: STOP and fix
+
+4. **Retry Logic:**
+   - Test: Simulate timeout error
+   - Verify: Retries 2 times (3 total attempts)
+   - Verify: Exponential backoff (2s, 4s)
+   - If fails: STOP and fix
+
+DO NOT proceed until ALL tests pass AND user manually verifies extraction accuracy.
+```
+
 **Implementation Prompt:**
 ```
 Implement LLM extraction using prompts from AI_Microservice_Prompts_Complete.md:
+- Read the ENTIRE document (use offset/limit if needed)
+- DO NOT simplify prompts
+- DO NOT skip any prompt sections
+- Use EXACT prompt templates from document
+- DO NOT modify prompt structure
 - Use prompt template for obligation extraction
 - Parse JSON response
 - Validate extracted obligations
@@ -1890,6 +2220,22 @@ Implement confidence scoring:
 ## Phase 3 Automated Tests
 
 **Task 3.4.1: Create AI Extraction Test Suite**
+
+**⚠️ COMPREHENSIVE TESTING - TEST EVERYTHING:**
+```
+CRITICAL: Do not skip any tests. Test extraction thoroughly with REAL documents.
+
+Test Requirements:
+1. Test extraction with REAL permit PDFs (not just test files)
+2. Test ALL document sizes (small, medium, large)
+3. Test ALL error scenarios (corrupted PDF, timeout, invalid JSON)
+4. Test ALL retry scenarios (timeout retry, JSON error retry)
+5. Test ALL confidence score thresholds (<70%, 70-84%, >=85%)
+6. Test pattern matching (rule library hits)
+7. Test manual verification: Compare extracted text to PDF text
+
+If ANY test fails OR extraction accuracy is poor: STOP and fix before proceeding.
+```
 
 **Implementation Prompt:**
 ```
@@ -2018,7 +2364,20 @@ npm run test:integration:ai
 
 **Checkpoint Status:** ⬜ Not Started | ⬜ In Progress | ⬜ Complete
 
-**If checkpoint fails:** Review extraction logs, fix LLM integration. Do NOT proceed to Phase 4 until extraction works.
+**⚠️ USER CONFIRMATION REQUIRED:**
+```
+STOP: Before proceeding to Phase 4, ask user:
+
+1. "Have you manually verified extraction accuracy with REAL permit PDFs?"
+2. "Do extracted obligations match the source PDF text?"
+3. "Do all automated tests pass?"
+4. "Are you ready to proceed to Phase 4 (Background Jobs)?"
+5. "Have you reviewed all Phase 3 outputs?"
+
+DO NOT proceed to Phase 4 until user explicitly confirms "YES" to all questions AND manually verifies extraction is accurate.
+```
+
+**If checkpoint fails:** Review extraction logs, fix LLM integration. Do NOT proceed to Phase 4 until extraction works AND user confirms accuracy.
 
 ## Phase 3 Error Recovery
 
@@ -2083,9 +2442,52 @@ npm run test:integration:ai
 
 **Task 4.1.1: Redis Configuration**
 
+**⚠️ CRITICAL DECISION POINT - ASK USER:**
+```
+STOP: Before setting up Redis, ask user:
+
+1. **Redis Provider:**
+   - Options: Upstash (serverless, recommended), Redis Cloud, or self-hosted
+   - Question: "Which Redis provider do you want to use? (Recommended: Upstash for serverless)"
+   - Wait for user confirmation
+
+2. **Redis Region:**
+   - Question: "Which region should Redis be in? (Should match Supabase region for latency)"
+   - Wait for user confirmation
+
+3. **Redis Plan:**
+   - Question: "Which Redis plan do you want? (Free tier sufficient for development)"
+   - Wait for user confirmation
+
+DO NOT PROCEED until user confirms all decisions.
+```
+
+**⚠️ COMPREHENSIVE TESTING REQUIRED:**
+```
+After setting up Redis, test:
+
+1. **Connection:**
+   - Test: Connect to Redis
+   - Verify: Connection successful
+   - If fails: STOP and fix
+
+2. **Queue Creation:**
+   - Test: Create all required queues
+   - Verify: Queues exist
+   - If fails: STOP and fix
+
+3. **Job Enqueue/Dequeue:**
+   - Test: Enqueue test job
+   - Test: Dequeue and process job
+   - Verify: Job completes successfully
+   - If fails: STOP and fix
+
+DO NOT proceed until ALL tests pass.
+```
+
 **Implementation Prompt:**
 ```
-Set up Redis for BullMQ:
+Set up Redis for BullMQ (using user's confirmed choices):
 - Provider: Upstash Redis (serverless, Vercel-compatible)
 - Connection: REDIS_URL environment variable
 - Persistence: Enabled
@@ -2587,6 +2989,22 @@ Implement obligation detail (app/(dashboard)/obligations/[id]/page.tsx):
 
 **Task 5.6.1: Create E2E Test Suite**
 
+**⚠️ COMPREHENSIVE TESTING - TEST EVERYTHING:**
+```
+CRITICAL: Do not skip any tests. Test every page and feature thoroughly.
+
+Test Requirements:
+1. Test ALL pages (signup, login, dashboard, documents, obligations, evidence, packs, settings)
+2. Test ALL forms (validation, submission, error handling)
+3. Test ALL user interactions (clicks, inputs, navigation)
+4. Test ALL responsive breakpoints (mobile, tablet, desktop)
+5. Test ALL error states (network errors, validation errors, API errors)
+6. Test ALL authentication flows (signup, login, logout, protected routes)
+7. Test ALL data loading (API calls, React Query caching, pagination)
+
+If ANY test fails: STOP and fix before proceeding.
+```
+
 **Implementation Prompt:**
 ```
 Create E2E tests for frontend (Phase 5) using Playwright:
@@ -2742,7 +3160,20 @@ npm run test:e2e:ui
 
 **Checkpoint Status:** ⬜ Not Started | ⬜ In Progress | ⬜ Complete
 
-**If checkpoint fails:** Review browser console, fix React errors. Do NOT proceed to Phase 6 until core pages work.
+**⚠️ USER CONFIRMATION REQUIRED:**
+```
+STOP: Before proceeding to Phase 6, ask user:
+
+1. "Have you manually tested all pages in a browser?"
+2. "Do all pages render correctly?"
+3. "Have you tested on mobile/tablet/desktop?"
+4. "Do all automated E2E tests pass?"
+5. "Are you ready to proceed to Phase 6 (Frontend Features)?"
+
+DO NOT proceed to Phase 6 until user explicitly confirms "YES" to all questions.
+```
+
+**If checkpoint fails:** Review browser console, fix React errors. Do NOT proceed to Phase 6 until core pages work AND user confirms.
 
 ## Phase 5 Error Recovery
 
@@ -2977,6 +3408,21 @@ Implement notification center:
 
 **Task 6.4.1: Create Complete User Journey E2E Tests**
 
+**⚠️ COMPREHENSIVE TESTING - TEST EVERYTHING:**
+```
+CRITICAL: Do not skip any workflows. Test every complete user journey.
+
+Test Requirements:
+1. Test COMPLETE user journey: Signup → Onboarding → Upload → Extract → Link Evidence → Generate Pack → Download
+2. Test ALL pack types (Regulator, Audit, Tender, Board, Insurer)
+3. Test ALL notification types (deadline warnings, evidence reminders, pack ready)
+4. Test ALL multi-site scenarios (create sites, upload per site, aggregate data)
+5. Test ALL onboarding scenarios (complete flow, skip steps, go back)
+6. Test ALL error recovery scenarios (retry upload, retry extraction, retry pack generation)
+
+If ANY test fails: STOP and fix before proceeding.
+```
+
 **Implementation Prompt:**
 ```
 Create E2E tests for complete user workflows (Phase 6):
@@ -3118,7 +3564,20 @@ npm run test:e2e:journey
 
 **Checkpoint Status:** ⬜ Not Started | ⬜ In Progress | ⬜ Complete
 
-**If checkpoint fails:** Fix feature bugs, optimize performance. Do NOT proceed to Phase 7 until all features work.
+**⚠️ USER CONFIRMATION REQUIRED:**
+```
+STOP: Before proceeding to Phase 7, ask user:
+
+1. "Have you manually completed a FULL user journey (signup → upload → extract → pack)?"
+2. "Have you downloaded and verified pack PDFs are correct?"
+3. "Do all features work as expected?"
+4. "Do all automated tests pass?"
+5. "Are you ready to proceed to Phase 7 (Integration & Testing)?"
+
+DO NOT proceed to Phase 7 until user explicitly confirms "YES" to all questions AND has manually verified complete user journey.
+```
+
+**If checkpoint fails:** Fix feature bugs, optimize performance. Do NOT proceed to Phase 7 until all features work AND user confirms.
 
 ## Phase 6 Error Recovery
 
@@ -3467,9 +3926,80 @@ Security testing checklist:
 
 **Task 7.4.1: Production Deployment**
 
+**⚠️ CRITICAL DECISION POINT - ASK USER:**
+```
+STOP: Before deploying to production, ask user:
+
+1. **Deployment Readiness:**
+   - Question: "Have you tested everything in staging?"
+   - Question: "Are you confident the system is ready for production?"
+   - Wait for user confirmation
+
+2. **Production Environment Variables:**
+   - Question: "Do you have all production environment variables ready?"
+   - Question: "Are production API keys different from staging?"
+   - Wait for user confirmation
+
+3. **Domain Configuration:**
+   - Question: "What domain will the production site use?"
+   - Question: "Do you have SSL certificates ready?"
+   - Wait for user confirmation
+
+4. **Monitoring Setup:**
+   - Question: "Have you set up error tracking (Sentry)?"
+   - Question: "Have you set up monitoring/alerting?"
+   - Wait for user confirmation
+
+5. **Backup Strategy:**
+   - Question: "Have you verified database backups are working?"
+   - Question: "Do you have a disaster recovery plan?"
+   - Wait for user confirmation
+
+6. **Final Approval:**
+   - Question: "Are you ready to deploy to production NOW?"
+   - Wait for explicit "YES" confirmation
+
+DO NOT deploy until user explicitly confirms "YES" to ALL questions.
+```
+
+**⚠️ COMPREHENSIVE PRE-DEPLOYMENT TESTING:**
+```
+Before deploying, run FULL test suite:
+
+1. **All Automated Tests:**
+   - Run: npm run test (unit tests)
+   - Run: npm run test:integration (integration tests)
+   - Run: npm run test:e2e (E2E tests)
+   - Verify: ALL tests pass
+   - If ANY test fails: STOP and fix
+
+2. **Staging Environment Test:**
+   - Deploy to staging first
+   - Test: Complete user journey
+   - Test: All features
+   - Test: Performance benchmarks
+   - Verify: Everything works
+   - If fails: STOP and fix
+
+3. **Security Audit:**
+   - Test: RLS policies prevent cross-tenant access
+   - Test: Authentication required everywhere
+   - Test: No SQL injection vulnerabilities
+   - Test: No XSS vulnerabilities
+   - If fails: STOP and fix
+
+4. **Performance Test:**
+   - Test: API response times <200ms
+   - Test: Page load times <3s
+   - Test: Database queries <100ms
+   - If fails: STOP and optimize
+
+DO NOT deploy until ALL tests pass.
+```
+
 **Implementation Prompt:**
 ```
-Deploy to production:
+Deploy to production (ONLY after user confirms all decisions and all tests pass):
 1. Frontend: Vercel
    - Connect GitHub repo
    - Set environment variables
@@ -3542,6 +4072,21 @@ Generate API documentation:
 ## Phase 7 Automated Tests (Production Readiness)
 
 **Task 7.3.1: Create Production Readiness Test Suite**
+
+**⚠️ COMPREHENSIVE TESTING - TEST EVERYTHING:**
+```
+CRITICAL: Do not skip any tests. Test everything before production.
+
+Test Requirements:
+1. Test ALL features in staging environment
+2. Test ALL security scenarios (RLS, auth, no vulnerabilities)
+3. Test ALL performance benchmarks (API <200ms, pages <3s, queries <100ms)
+4. Test ALL error recovery scenarios (corrupted files, network errors, API failures)
+5. Test ALL data integrity scenarios (upload 10 docs, verify extraction, verify packs)
+6. Test ALL monitoring/health checks (all services healthy, error tracking works)
+
+If ANY test fails: STOP and fix before deploying to production.
+```
 
 **Implementation Prompt:**
 ```
@@ -3663,7 +4208,22 @@ STAGING_URL=https://staging.oblicore.com npm run test:e2e:production
 
 **Checkpoint Status:** ⬜ Not Started | ⬜ In Progress | ⬜ Complete
 
-**If checkpoint fails:** Fix critical issues before launch.
+**⚠️ FINAL USER CONFIRMATION REQUIRED:**
+```
+STOP: Before launching to production, ask user:
+
+1. "Have you completed ALL Phase 7 checkpoints?"
+2. "Have you tested in staging environment?"
+3. "Do ALL tests pass (unit, integration, E2E)?"
+4. "Have you verified security (RLS, auth, no vulnerabilities)?"
+5. "Have you verified performance (all benchmarks met)?"
+6. "Have you set up monitoring and error tracking?"
+7. "Are you 100% ready to launch to production?"
+
+DO NOT launch until user explicitly confirms "YES" to ALL questions.
+```
+
+**If checkpoint fails:** Fix critical issues before launch. DO NOT launch until all issues fixed AND user confirms.
 
 ---
 
@@ -4170,6 +4730,84 @@ Phase 8: Module 2 (Trade Effluent) and Module 3 (MCPD/Generators) functional
 **Parallel Work:** Phase 4 and Phase 6 can be developed in parallel
 
 **Next Steps:** Start with Phase 0.1 (Prerequisites & Setup), then proceed to Phase 1.1 (Supabase Project Setup)
+
+---
+
+# ⚠️ CRITICAL BUILD RULES
+
+## 1. NO ASSUMPTIONS - ASK USER FOR ALL DECISIONS
+
+**Before implementing anything, ask user:**
+- Configuration choices (regions, providers, plans)
+- Feature preferences (email verification, password requirements)
+- Business logic decisions (auto-create company, module activation)
+- Deployment choices (platforms, domains, monitoring)
+
+**DO NOT:**
+- Assume default values without asking
+- Skip decision points
+- Make choices without user confirmation
+
+## 2. COMPREHENSIVE TESTING - TEST EVERYTHING
+
+**For every component, test:**
+- Happy path (normal operation)
+- Error cases (all error scenarios)
+- Edge cases (boundary conditions)
+- Integration (works with other components)
+- Performance (meets benchmarks)
+- Security (RLS, auth, no vulnerabilities)
+
+**DO NOT:**
+- Skip tests
+- Simplify test scenarios
+- Assume things work without testing
+
+## 3. NO SIMPLIFICATIONS - IMPLEMENT FULLY
+
+**For every feature, implement:**
+- Complete functionality (all requirements)
+- All error handling (all error scenarios)
+- All validation (all validation rules)
+- All edge cases (all boundary conditions)
+
+**DO NOT:**
+- Take shortcuts
+- Skip error handling
+- Simplify logic
+- Leave TODOs for later
+
+## 4. USER CONFIRMATION - GET EXPLICIT APPROVAL
+
+**Before proceeding to next phase:**
+- Ask user to confirm all checkpoints passed
+- Ask user to confirm manual verification completed
+- Ask user to confirm ready to proceed
+- Wait for explicit "YES" confirmation
+
+**DO NOT:**
+- Proceed without user confirmation
+- Assume user is ready
+- Skip confirmation steps
+
+## 5. VALIDATION FIRST - VERIFY BEFORE PROCEEDING
+
+**Before implementing:**
+- Verify prerequisites are met
+- Verify documents are complete
+- Verify dependencies are ready
+- Verify environment is set up
+
+**After implementing:**
+- Verify component works correctly
+- Verify tests pass
+- Verify integration works
+- Verify user can use it
+
+**DO NOT:**
+- Skip validation steps
+- Assume things are correct
+- Proceed if validation fails
 
 ---
 
