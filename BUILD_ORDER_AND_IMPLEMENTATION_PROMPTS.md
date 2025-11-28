@@ -15,31 +15,343 @@ This document provides a phased build order for implementing the Oblicore compli
 - Testing requirements
 - Acceptance criteria
 
-**Total Phases:** 7  
-**Estimated Timeline:** 12-16 weeks for full v1.0 launch
+**Total Phases:** 8 (Phase 0-7, Phase 8 optional)  
+**Estimated Timeline:** 12-16 weeks for full v1.0 launch (Phase 0-7)  
+**Optional:** +2-3 weeks per module (Phase 8)
 
 ---
 
 ## Dependency Graph
 
 ```
+Phase 0: Prerequisites & Setup
+    ↓
 Phase 1: Foundation
     ↓
 Phase 2: Core API Layer
     ↓
 Phase 3: AI/Extraction Layer
     ↓
-Phase 4: Background Jobs
-    ↓
-Phase 5: Frontend Core
-    ↓
-Phase 6: Frontend Features
-    ↓
+Phase 4: Background Jobs ──┐
+    ↓                      │
+Phase 5: Frontend Core     │ (can parallel)
+    ↓                      │
+Phase 6: Frontend Features │
+    ↓                      │
 Phase 7: Integration & Testing
+    ↓
+Phase 8: Module Extensions (Optional)
 ```
 
 **Critical Path:** Phase 1 → Phase 2 → Phase 3 → Phase 5 (must be sequential)  
 **Parallel Work:** Phase 4 and Phase 6 can be developed in parallel after Phase 3
+
+---
+
+# PHASE 0: Prerequisites & Setup
+
+**Duration:** 1-2 days  
+**Complexity:** Low  
+**Dependencies:** None (must complete before Phase 1)
+
+## Phase 0.1: Required Tools & Versions
+
+**Task 0.1.1: Install Required Software**
+
+**Implementation Prompt:**
+```
+Install and verify required software for Oblicore development:
+
+1. Node.js (v18.0.0 or higher):
+   - Check version: node --version
+   - Install from: https://nodejs.org/
+   - Verify: npm --version (should be 8.0.0+)
+
+2. Git:
+   - Check version: git --version
+   - Install from: https://git-scm.com/
+   - Configure: git config --global user.name "Your Name"
+   - Configure: git config --global user.email "your.email@example.com"
+
+3. Supabase CLI (optional but recommended):
+   - Install: npm install -g supabase
+   - Verify: supabase --version
+   - Login: supabase login
+
+4. Code Editor:
+   - Recommended: VS Code with extensions:
+     - ESLint
+     - Prettier
+     - TypeScript
+     - Tailwind CSS IntelliSense
+     - PostgreSQL
+
+5. Database Client (optional):
+   - Recommended: DBeaver, pgAdmin, or TablePlus
+   - For Supabase: Use Supabase Dashboard SQL Editor
+
+6. API Testing Tool:
+   - Recommended: Postman or Insomnia
+   - Alternative: curl (built-in)
+
+7. Browser:
+   - Chrome/Edge (for DevTools)
+   - Firefox (for cross-browser testing)
+
+Reference: EP_Compliance_Technical_Architecture_Stack.md
+```
+
+**Task 0.1.2: Verify System Requirements**
+
+**Implementation Prompt:**
+```
+Verify your system meets requirements:
+
+1. Operating System:
+   - macOS 12+ (recommended)
+   - Linux (Ubuntu 20.04+)
+   - Windows 10+ (WSL2 recommended)
+
+2. RAM: Minimum 8GB (16GB recommended)
+
+3. Disk Space: Minimum 10GB free
+
+4. Internet: Stable connection for:
+   - Supabase (database)
+   - OpenAI API (AI extraction)
+   - npm packages
+   - Git operations
+
+5. Terminal:
+   - macOS: Terminal.app or iTerm2
+   - Linux: Default terminal
+   - Windows: PowerShell or WSL2 terminal
+
+Run verification:
+- node --version (should be 18.0.0+)
+- npm --version (should be 8.0.0+)
+- git --version (any recent version)
+```
+
+## Phase 0.2: Account Setup
+
+**Task 0.2.1: Create Required Accounts**
+
+**Implementation Prompt:**
+```
+Create accounts for all required services:
+
+1. Supabase Account:
+   - Sign up: https://supabase.com
+   - Verify email
+   - Note: Free tier sufficient for development
+   - Region: Select EU (London) for UK data residency
+
+2. OpenAI Account:
+   - Sign up: https://platform.openai.com
+   - Add payment method (required for API access)
+   - Generate API key: Settings → API Keys
+   - Set usage limits (recommended: $50/month for development)
+
+3. GitHub Account (if not already):
+   - Sign up: https://github.com
+   - Create repository for Oblicore project
+   - Set up SSH keys or personal access token
+
+4. SendGrid Account (for email notifications):
+   - Sign up: https://sendgrid.com
+   - Verify sender email
+   - Generate API key: Settings → API Keys
+   - Free tier: 100 emails/day
+
+5. Twilio Account (for SMS notifications - optional):
+   - Sign up: https://www.twilio.com
+   - Verify phone number
+   - Get Account SID and Auth Token
+   - Free trial: $15.50 credit
+
+6. Vercel Account (for frontend deployment):
+   - Sign up: https://vercel.com
+   - Connect GitHub account
+   - Free tier sufficient for development
+
+7. Railway/Render Account (for worker deployment - optional for now):
+   - Railway: https://railway.app
+   - Render: https://render.com
+   - Can set up later in Phase 4
+
+Save all API keys securely (use password manager).
+Do NOT commit API keys to Git.
+
+Reference: EP_Compliance_Technical_Architecture_Stack.md Section 6
+```
+
+**Task 0.2.2: Set Up Local Development Environment**
+
+**Implementation Prompt:**
+```
+Set up local development environment:
+
+1. Create project directory:
+   mkdir oblicore
+   cd oblicore
+
+2. Initialize Git repository:
+   git init
+   git remote add origin <your-github-repo-url>
+
+3. Initialize Node.js project:
+   npm init -y
+
+4. Create directory structure:
+   mkdir -p app/api/v1
+   mkdir -p lib
+   mkdir -p tests/integration
+   mkdir -p tests/e2e
+   mkdir -p scripts
+   mkdir -p .github/workflows
+
+5. Create .gitignore:
+   - node_modules/
+   - .env.local
+   - .env*.local
+   - .next/
+   - .vercel/
+   - *.log
+   - .DS_Store
+   - coverage/
+
+6. Install base dependencies (will add more per phase):
+   npm install next@14 react@18 react-dom@18 typescript @types/node @types/react
+
+7. Create README.md with project overview
+
+Reference: EP_Compliance_Technical_Architecture_Stack.md Section 4
+```
+
+## Phase 0.3: Environment Variables Template
+
+**Task 0.3.1: Create Environment Variable Template**
+
+**Implementation Prompt:**
+```
+Create .env.example file with all required environment variables:
+
+# Supabase
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+DATABASE_URL=
+
+# OpenAI
+OPENAI_API_KEY=
+OPENAI_API_KEY_FALLBACK_1=
+OPENAI_API_KEY_FALLBACK_2=
+
+# Email (SendGrid)
+SENDGRID_API_KEY=
+SENDGRID_FROM_EMAIL=
+
+# SMS (Twilio - optional)
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_PHONE_NUMBER=
+
+# Redis (for background jobs)
+REDIS_URL=
+
+# JWT
+JWT_SECRET=
+JWT_REFRESH_SECRET=
+
+# Application
+BASE_URL=http://localhost:3000
+NODE_ENV=development
+
+# Feature Flags (optional)
+ENABLE_MODULE_2=false
+ENABLE_MODULE_3=false
+
+Create .env.local (copy from .env.example):
+cp .env.example .env.local
+
+Fill in actual values (do NOT commit .env.local to Git).
+
+Reference: EP_Compliance_Technical_Architecture_Stack.md Section 7
+```
+
+**Task 0.3.2: Environment Variable Validation**
+
+**Implementation Prompt:**
+```
+Create environment variable validation script:
+
+1. Create lib/env.ts:
+   - Validate all required env vars on startup
+   - Throw error if missing critical vars
+   - Provide helpful error messages
+
+2. Create scripts/validate-env.sh:
+   - Check all required variables are set
+   - Validate format (URLs, keys, etc.)
+   - Exit with error if validation fails
+
+3. Add to package.json:
+   "scripts": {
+     "validate-env": "node scripts/validate-env.js"
+   }
+
+4. Run validation before starting dev server:
+   npm run validate-env && npm run dev
+
+This prevents runtime errors from missing environment variables.
+
+Reference: EP_Compliance_Technical_Architecture_Stack.md Section 7
+```
+
+## Phase 0 Testing
+
+**Test Requirements:**
+- [ ] All required software installed and verified
+- [ ] All accounts created and accessible
+- [ ] Environment variables template created
+- [ ] Local development environment set up
+- [ ] Git repository initialized
+
+**Acceptance Criteria:**
+- Node.js v18+ installed
+- All service accounts created
+- .env.example file created
+- Project directory structure created
+- Can run `npm install` successfully
+
+## Phase 0 Progress Checkpoint
+
+**Before moving to Phase 1, verify:**
+
+1. **Software Verification:**
+   ```bash
+   node --version  # Should be 18.0.0+
+   npm --version   # Should be 8.0.0+
+   git --version   # Any recent version
+   ```
+
+2. **Account Access:**
+   - [ ] Can log into Supabase Dashboard
+   - [ ] Can log into OpenAI Platform
+   - [ ] Can log into GitHub
+   - [ ] Can log into SendGrid
+   - [ ] Can log into Vercel
+
+3. **Environment Setup:**
+   - [ ] .env.example file created
+   - [ ] .env.local file created (with placeholder values)
+   - [ ] Project directory structure created
+   - [ ] Git repository initialized
+
+**Checkpoint Status:** ⬜ Not Started | ⬜ In Progress | ⬜ Complete
+
+**If checkpoint fails:** Install missing software, create missing accounts, fix environment setup. Do NOT proceed to Phase 1 until all prerequisites are met.
 
 ---
 
@@ -50,6 +362,49 @@ Phase 7: Integration & Testing
 **Dependencies:** None (starting point)
 
 ## Phase 1.1: Supabase Project Setup
+
+**Task 1.1.1: Create Supabase Project**
+- Create new Supabase project in EU (London) region
+- Configure project settings
+- Set up environment variables
+
+**Task 1.1.0: Database Backup Strategy**
+
+**Implementation Prompt:**
+```
+Set up database backup strategy before making any changes:
+
+1. Enable Supabase Automatic Backups:
+   - Go to Supabase Dashboard → Settings → Database
+   - Enable "Point-in-time Recovery" (PITR)
+   - Set retention: 7 days (free tier) or 30 days (paid)
+   - Note: Automatic backups run daily
+
+2. Create Manual Backup Before Major Changes:
+   - Supabase Dashboard → Database → Backups
+   - Click "Create Backup"
+   - Name: "pre-phase-1-backup" or "pre-migration-backup"
+   - Download backup file (optional, for local storage)
+
+3. Backup Schedule:
+   - Before Phase 1: Initial backup
+   - Before each major migration: Manual backup
+   - Before Phase 7 (production): Full backup
+   - Weekly: Verify backups are running
+
+4. Restore Procedure (if needed):
+   - Supabase Dashboard → Database → Backups
+   - Select backup → Restore
+   - WARNING: Restore overwrites current database
+   - Use restore point for point-in-time recovery
+
+5. Export Schema (for version control):
+   - Use Supabase CLI: supabase db dump --schema public > schema.sql
+   - Or use pg_dump: pg_dump -h <host> -U postgres -d postgres --schema-only > schema.sql
+   - Commit schema.sql to Git (without data)
+
+Reference: Supabase Documentation → Database → Backups
+```
 
 **Task 1.1.1: Create Supabase Project**
 - Create new Supabase project in EU (London) region
@@ -91,6 +446,68 @@ Enable PostgreSQL extensions in Supabase:
 ```
 
 ## Phase 1.2: Database Schema Creation
+
+**Task 1.2.0: Database Migration Strategy**
+
+**Implementation Prompt:**
+```
+Set up database migration strategy for version control:
+
+1. Create migrations directory:
+   mkdir -p supabase/migrations
+
+2. Migration File Naming Convention:
+   - Format: YYYYMMDDHHMMSS_description.sql
+   - Example: 20250128120000_create_companies_table.sql
+   - Example: 20250128120001_create_users_table.sql
+   - Use timestamps to ensure order
+
+3. Migration File Structure:
+   -- Migration: 20250128120000_create_companies_table.sql
+   -- Description: Create companies table
+   -- Author: Your Name
+   -- Date: 2025-01-28
+   
+   CREATE TABLE companies (
+     -- table definition
+   );
+   
+   -- Rollback (commented out):
+   -- DROP TABLE IF EXISTS companies CASCADE;
+
+4. Create Migration Template:
+   - Template file: supabase/migrations/_template.sql
+   - Copy template for each new migration
+   - Fill in description and SQL
+
+5. Migration Execution:
+   - Use Supabase CLI: supabase db push
+   - Or run manually in Supabase SQL Editor
+   - Always test migrations in development first
+
+6. Migration Rollback:
+   - Keep rollback SQL in comments
+   - Or create separate rollback files: *_rollback.sql
+   - Test rollback procedures before production
+
+7. Migration Tracking:
+   - Create migrations table (if not using Supabase migrations):
+     CREATE TABLE IF NOT EXISTS schema_migrations (
+       version VARCHAR(255) PRIMARY KEY,
+       applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+     );
+   - Track applied migrations
+   - Prevent duplicate application
+
+8. Production Migration Process:
+   - Test migration in staging first
+   - Create backup before migration
+   - Run migration during low-traffic window
+   - Verify migration success
+   - Monitor for issues after migration
+
+Reference: Supabase CLI Documentation → Migrations
+```
 
 **Task 1.2.1: Create Core Tables (Phase 1)**
 - Create companies, users, sites, modules tables
@@ -548,6 +965,47 @@ npm run test:integration:database
 
 **If checkpoint fails:** Review errors, fix issues, re-run validation. Do NOT proceed to Phase 2 until all checks pass.
 
+## Phase 1 Error Recovery
+
+**If something breaks mid-phase:**
+
+1. **Identify What's Broken:**
+   - Check Supabase Dashboard → Database → Logs
+   - Review error messages in SQL Editor
+   - Check migration status (if using migrations)
+   - Verify which tables/policies were created
+
+2. **Partial Completion Recovery:**
+   - If tables created but RLS policies failed:
+     - Keep tables, fix and re-run RLS policies
+   - If RLS policies created but functions failed:
+     - Keep policies, fix and re-run functions
+   - If seed data failed:
+     - Keep schema, re-run seed scripts
+
+3. **Continue vs. Restart Decision:**
+   - **Continue if:** Only last step failed, can fix and retry
+   - **Restart if:** Core tables broken, foreign key errors, or data corruption
+   - **Partial restart if:** Only specific section broken (e.g., just RLS policies)
+
+4. **Fix and Continue:**
+   - Fix the broken step
+   - Re-run validation queries
+   - Verify checkpoint passes
+   - Continue to next step
+
+5. **When to Restart Phase:**
+   - If database schema is corrupted
+   - If foreign key constraints broken
+   - If RLS policies are inconsistent
+   - If you're unsure what state database is in
+
+6. **Recovery Checklist:**
+   - [ ] Identify what broke
+   - [ ] Assess if can continue or must restart
+   - [ ] If continue: Fix issue, re-verify, proceed
+   - [ ] If restart: Use rollback steps, start Phase 1.1 again
+
 ## Phase 1 Rollback Steps
 
 **If Phase 1 breaks or needs to be reset:**
@@ -632,21 +1090,51 @@ Set up Next.js 14 App Router API structure:
 
 **Implementation Prompt:**
 ```
-Set up environment variables (.env.local):
-- SUPABASE_URL
-- SUPABASE_ANON_KEY
-- SUPABASE_SERVICE_ROLE_KEY
-- DATABASE_URL (connection pooler)
-- REDIS_URL (for background jobs)
-- OPENAI_API_KEY
-- OPENAI_API_KEY_FALLBACK_1 (optional)
-- OPENAI_API_KEY_FALLBACK_2 (optional)
-- SENDGRID_API_KEY
-- TWILIO_ACCOUNT_SID
-- TWILIO_AUTH_TOKEN
-- JWT_SECRET
-- BASE_URL
-- Reference: EP_Compliance_Technical_Architecture_Stack.md Section 7
+Set up environment variable management:
+
+1. Create .env.example (already done in Phase 0):
+   - Copy from Phase 0.3.1
+   - Ensure all variables documented
+
+2. Create .env.local (development):
+   - Copy from .env.example
+   - Fill in actual values from Phase 0 accounts
+   - NEVER commit .env.local to Git
+
+3. Create .env.staging (staging environment):
+   - Copy from .env.example
+   - Use staging Supabase project
+   - Use staging API keys
+   - Store in secure location (not Git)
+
+4. Create .env.production (production):
+   - Copy from .env.example
+   - Use production Supabase project
+   - Use production API keys
+   - Store in Vercel/Railway environment variables (not Git)
+
+5. Environment Variable Validation:
+   - Use lib/env.ts from Phase 0.3.2
+   - Validate on application startup
+   - Fail fast if critical variables missing
+
+6. Environment-Specific Configuration:
+   - Development: Use local Supabase, local Redis
+   - Staging: Use staging Supabase, staging Redis
+   - Production: Use production Supabase, production Redis
+
+7. Secrets Management:
+   - Never commit secrets to Git
+   - Use environment variables for all secrets
+   - Rotate API keys every 90 days (per AI Integration Layer)
+   - Use password manager for storing secrets
+
+8. Environment Variable Documentation:
+   - Document each variable in .env.example
+   - Include: purpose, required/optional, example value
+   - Reference: EP_Compliance_Technical_Architecture_Stack.md Section 7
+
+Reference: EP_Compliance_Technical_Architecture_Stack.md Section 7
 ```
 
 ## Phase 2.2: Authentication Endpoints
@@ -1147,6 +1635,35 @@ npm run test:integration:api
 
 **If checkpoint fails:** Review API logs, fix authentication/RLS issues. Do NOT proceed to Phase 3 until all checks pass.
 
+## Phase 2 Error Recovery
+
+**If something breaks mid-phase:**
+
+1. **Identify What's Broken:**
+   - Check API logs (console or log files)
+   - Test endpoints with Postman/curl
+   - Check database for bad data
+   - Review authentication middleware
+
+2. **Partial Completion Recovery:**
+   - If auth endpoints work but CRUD endpoints fail:
+     - Keep auth, fix CRUD endpoints
+   - If endpoints work but RLS enforcement fails:
+     - Keep endpoints, fix RLS policies
+   - If pagination broken but endpoints work:
+     - Keep endpoints, fix pagination logic
+
+3. **Continue vs. Restart Decision:**
+   - **Continue if:** Only last endpoint/task failed
+   - **Restart if:** Authentication completely broken or database corrupted
+   - **Partial restart if:** Only specific endpoint group broken
+
+4. **Fix and Continue:**
+   - Fix broken endpoint/feature
+   - Re-run API tests
+   - Verify checkpoint passes
+   - Continue to next task
+
 ## Phase 2 Rollback Steps
 
 **If Phase 2 breaks:**
@@ -1503,6 +2020,35 @@ npm run test:integration:ai
 
 **If checkpoint fails:** Review extraction logs, fix LLM integration. Do NOT proceed to Phase 4 until extraction works.
 
+## Phase 3 Error Recovery
+
+**If something breaks mid-phase:**
+
+1. **Identify What's Broken:**
+   - Check extraction logs (extraction_logs table)
+   - Review OpenAI API errors
+   - Check document processing status
+   - Verify pattern matching works
+
+2. **Partial Completion Recovery:**
+   - If pattern matching works but LLM extraction fails:
+     - Keep pattern matching, fix LLM integration
+   - If extraction works but confidence scoring fails:
+     - Keep extraction, fix confidence calculation
+   - If OCR fails but text extraction works:
+     - Keep text extraction, fix OCR integration
+
+3. **Continue vs. Restart Decision:**
+   - **Continue if:** Only last step failed (e.g., confidence scoring)
+   - **Restart if:** Core extraction completely broken
+   - **Partial restart if:** Only specific component broken
+
+4. **Fix and Continue:**
+   - Fix broken component
+   - Test with sample document
+   - Verify extraction works
+   - Continue to next task
+
 ## Phase 3 Rollback Steps
 
 **If Phase 3 breaks:**
@@ -1711,6 +2257,35 @@ Implement Audit Pack Generation Job:
 **Checkpoint Status:** ⬜ Not Started | ⬜ In Progress | ⬜ Complete
 
 **If checkpoint fails:** Review job logs, fix worker issues. Jobs can run in parallel with Phase 5.
+
+## Phase 4 Error Recovery
+
+**If something breaks mid-phase:**
+
+1. **Identify What's Broken:**
+   - Check worker logs
+   - Check Redis queue status
+   - Review background_jobs table
+   - Check job execution errors
+
+2. **Partial Completion Recovery:**
+   - If queue setup works but jobs fail:
+     - Keep queue, fix job logic
+   - If some jobs work but others fail:
+     - Keep working jobs, fix broken ones
+   - If cron scheduling broken but manual jobs work:
+     - Keep manual jobs, fix cron
+
+3. **Continue vs. Restart Decision:**
+   - **Continue if:** Only last job type failed
+   - **Restart if:** Queue system completely broken
+   - **Partial restart if:** Only specific job type broken
+
+4. **Fix and Continue:**
+   - Fix broken job
+   - Test job execution
+   - Verify checkpoint passes
+   - Continue to next task
 
 ## Phase 4 Rollback Steps
 
@@ -2169,6 +2744,35 @@ npm run test:e2e:ui
 
 **If checkpoint fails:** Review browser console, fix React errors. Do NOT proceed to Phase 6 until core pages work.
 
+## Phase 5 Error Recovery
+
+**If something breaks mid-phase:**
+
+1. **Identify What's Broken:**
+   - Check browser console for errors
+   - Check Next.js build errors
+   - Test pages in browser
+   - Review API integration
+
+2. **Partial Completion Recovery:**
+   - If auth pages work but dashboard broken:
+     - Keep auth, fix dashboard
+   - If pages render but data doesn't load:
+     - Keep pages, fix API integration
+   - If desktop works but mobile broken:
+     - Keep desktop, fix responsive design
+
+3. **Continue vs. Restart Decision:**
+   - **Continue if:** Only last page/feature failed
+   - **Restart if:** Build completely broken or routing broken
+   - **Partial restart if:** Only specific page broken
+
+4. **Fix and Continue:**
+   - Fix broken page/feature
+   - Re-test in browser
+   - Verify checkpoint passes
+   - Continue to next task
+
 ## Phase 5 Rollback Steps
 
 **If Phase 5 breaks:**
@@ -2516,6 +3120,35 @@ npm run test:e2e:journey
 
 **If checkpoint fails:** Fix feature bugs, optimize performance. Do NOT proceed to Phase 7 until all features work.
 
+## Phase 6 Error Recovery
+
+**If something breaks mid-phase:**
+
+1. **Identify What's Broken:**
+   - Check feature-specific errors
+   - Test feature in browser
+   - Review API endpoints for feature
+   - Check database for feature data
+
+2. **Partial Completion Recovery:**
+   - If evidence works but packs broken:
+     - Keep evidence, fix pack generation
+   - If onboarding works but notifications broken:
+     - Keep onboarding, fix notifications
+   - If one feature broken but others work:
+     - Keep working features, fix broken one
+
+3. **Continue vs. Restart Decision:**
+   - **Continue if:** Only last feature failed
+   - **Restart if:** Core features completely broken
+   - **Partial restart if:** Only specific feature broken
+
+4. **Fix and Continue:**
+   - Fix broken feature
+   - Re-test feature
+   - Verify checkpoint passes
+   - Continue to next task
+
 ## Phase 6 Rollback Steps
 
 **If Phase 6 breaks:**
@@ -2532,6 +3165,240 @@ npm run test:e2e:journey
    ```
 
 **After Rollback:** Fix feature bugs, re-test.
+
+---
+
+# PHASE 8: Module Extensions (Optional)
+
+**Duration:** 2-3 weeks per module  
+**Complexity:** Medium  
+**Dependencies:** Phase 6 complete (Module 1 must be working)
+
+## Phase 8.1: Module 2 - Trade Effluent
+
+**Task 8.1.1: Module 2 Prerequisites**
+
+**Implementation Prompt:**
+```
+Verify Module 2 prerequisites before starting:
+
+1. Check Module 1 is active:
+   - Query: SELECT * FROM module_activations WHERE module_id = (SELECT id FROM modules WHERE module_code = 'MODULE_1') AND status = 'ACTIVE';
+   - Must have at least one active Module 1 activation
+
+2. Verify Module 2 is in modules table:
+   - Query: SELECT * FROM modules WHERE module_code = 'MODULE_2';
+   - Should exist from Phase 1.6 seed data
+   - requires_module_id should point to Module 1
+
+3. Review Module 2 requirements:
+   - Read: EP_Compliance_Product_Logic_Specification.md Section D (Module 2)
+   - Read: Canonical_Dictionary.md Section C.4 (Module 2)
+   - Understand: Parameter tracking, exceedance alerts
+
+4. Enable Module 2 feature flag:
+   - Set ENABLE_MODULE_2=true in .env.local
+   - Or activate via UI (if module activation UI exists)
+
+Reference: EP_Compliance_Master_Plan.md Section 7.2 (Module 2 features)
+```
+
+**Task 8.1.2: Module 2 Database Schema**
+
+**Implementation Prompt:**
+```
+Create Module 2 database tables:
+
+1. Create trade_effluent_parameters table:
+   - Include: id, site_id, parameter_name, unit, limit_value, current_value
+   - Foreign key: site_id → sites.id
+   - Indexes: idx_trade_effluent_parameters_site_id
+
+2. Create parameter_readings table:
+   - Include: id, parameter_id, reading_value, reading_date, recorded_by
+   - Foreign key: parameter_id → trade_effluent_parameters.id
+   - Indexes: idx_parameter_readings_parameter_id_date
+
+3. Create exceedance_alerts table:
+   - Include: id, parameter_id, threshold_percentage, alert_level, triggered_at
+   - Foreign key: parameter_id → trade_effluent_parameters.id
+   - Indexes: idx_exceedance_alerts_parameter_id_triggered_at
+
+4. Enable RLS on all Module 2 tables:
+   - Use same patterns as Module 1 tables
+   - Site-based access control
+
+Reference: EP_Compliance_Database_Schema.md (Module 2 tables - if documented)
+```
+
+**Task 8.1.3: Module 2 API Endpoints**
+
+**Implementation Prompt:**
+```
+Implement Module 2 API endpoints:
+
+1. POST /api/v1/trade-effluent/parameters
+   - Create parameter for site
+   - Validate: Module 2 must be activated for site
+
+2. GET /api/v1/trade-effluent/parameters
+   - List parameters for user's sites
+   - Filter by site_id
+
+3. POST /api/v1/trade-effluent/readings
+   - Record parameter reading
+   - Calculate exceedance percentage
+   - Trigger alerts if threshold exceeded
+
+4. GET /api/v1/trade-effluent/exceedances
+   - List exceedance alerts
+   - Filter by site, date range, alert level
+
+Reference: EP_Compliance_Backend_API_Specification.md (Module 2 endpoints - if documented)
+```
+
+**Task 8.1.4: Module 2 Frontend**
+
+**Implementation Prompt:**
+```
+Implement Module 2 frontend:
+
+1. Trade Effluent Dashboard:
+   - List parameters per site
+   - Show current values vs. limits
+   - Display exceedance alerts
+
+2. Parameter Management:
+   - Create/edit parameters
+   - Set limit values
+   - Configure alert thresholds
+
+3. Reading Entry:
+   - Form to record readings
+   - Date picker, value input
+   - Visual indicator if exceedance
+
+4. Exceedance Alerts:
+   - Alert list/notifications
+   - Visual indicators (80%, 90%, 100%)
+   - Link to parameter details
+
+Reference: EP_Compliance_Frontend_Routes_Component_Map.md (Module 2 routes - if documented)
+```
+
+## Phase 8.2: Module 3 - MCPD/Generators
+
+**Task 8.2.1: Module 3 Prerequisites**
+
+**Implementation Prompt:**
+```
+Verify Module 3 prerequisites:
+
+1. Check Module 1 is active (same as Module 2)
+
+2. Verify Module 3 is in modules table:
+   - Query: SELECT * FROM modules WHERE module_code = 'MODULE_3';
+   - Should exist from Phase 1.6 seed data
+
+3. Review Module 3 requirements:
+   - Read: EP_Compliance_Product_Logic_Specification.md Section E (Module 3)
+   - Understand: Run-hour tracking, generator monitoring
+
+4. Enable Module 3 feature flag:
+   - Set ENABLE_MODULE_3=true in .env.local
+
+Reference: EP_Compliance_Master_Plan.md Section 7.3 (Module 3 features)
+```
+
+**Task 8.2.2: Module 3 Database Schema**
+
+**Implementation Prompt:**
+```
+Create Module 3 database tables:
+
+1. Create generators table:
+   - Include: id, site_id, generator_name, capacity_kw, fuel_type
+   - Foreign key: site_id → sites.id
+
+2. Create run_hours table:
+   - Include: id, generator_id, hours_run, reading_date, recorded_by
+   - Foreign key: generator_id → generators.id
+
+3. Create run_hour_breaches table:
+   - Include: id, generator_id, breach_type, breach_date, resolved_at
+   - Foreign key: generator_id → generators.id
+
+4. Enable RLS on all Module 3 tables
+
+Reference: EP_Compliance_Database_Schema.md (Module 3 tables - if documented)
+```
+
+**Task 8.2.3: Module 3 API Endpoints**
+
+**Implementation Prompt:**
+```
+Implement Module 3 API endpoints:
+
+1. POST /api/v1/generators
+   - Create generator for site
+   - Validate: Module 3 must be activated
+
+2. GET /api/v1/generators
+   - List generators for user's sites
+
+3. POST /api/v1/generators/{id}/run-hours
+   - Record run hours
+   - Check for breaches (80%, 90%, 100% thresholds)
+
+4. GET /api/v1/generators/{id}/breaches
+   - List breaches for generator
+
+Reference: EP_Compliance_Backend_API_Specification.md (Module 3 endpoints - if documented)
+```
+
+**Task 8.2.4: Module 3 Frontend**
+
+**Implementation Prompt:**
+```
+Implement Module 3 frontend:
+
+1. Generators Dashboard:
+   - List generators per site
+   - Show run hours vs. limits
+   - Display breach alerts
+
+2. Generator Management:
+   - Create/edit generators
+   - Set capacity, fuel type
+
+3. Run Hours Entry:
+   - Form to record run hours
+   - Visual indicator if breach
+
+4. Breach Alerts:
+   - Alert list/notifications
+   - Visual indicators (80%, 90%, 100%)
+   - Link to generator details
+
+Reference: EP_Compliance_Frontend_Routes_Component_Map.md (Module 3 routes - if documented)
+```
+
+## Phase 8 Testing
+
+**Test Requirements:**
+- [ ] Module 2 features work correctly
+- [ ] Module 3 features work correctly
+- [ ] Module activation required before use
+- [ ] RLS policies enforce module access
+- [ ] Alerts trigger correctly
+
+**Acceptance Criteria:**
+- Module 2: Parameters, readings, exceedance alerts work
+- Module 3: Generators, run hours, breaches work
+- Module activation enforced
+- All features tested
+
+**Note:** Modules 2 and 3 are optional for v1.0 launch. Can be implemented after Phase 7 if needed.
 
 ---
 
@@ -3297,7 +4164,7 @@ Phase 7: System ready for production, all tests pass
 **Critical Path:** Phase 1 → Phase 2 → Phase 3 → Phase 5 (must be sequential)  
 **Parallel Work:** Phase 4 and Phase 6 can be developed in parallel
 
-**Next Steps:** Start with Phase 1.1 (Supabase Project Setup)
+**Next Steps:** Start with Phase 0.1 (Prerequisites & Setup), then proceed to Phase 1.1 (Supabase Project Setup)
 
 ---
 
@@ -3360,6 +4227,11 @@ Phase 7: System ready for production, all tests pass
 - [ ] 7.4 Deployment
 - [ ] 7.5 Documentation
 - [ ] ✅ Phase 7 Checkpoint Passed
+
+**Phase 8: Module Extensions (Optional)**
+- [ ] 8.1 Module 2 - Trade Effluent
+- [ ] 8.2 Module 3 - MCPD/Generators
+- [ ] ✅ Phase 8 Checkpoint Passed
 
 **Overall Status:** ⬜ 0% | ⬜ 25% | ⬜ 50% | ⬜ 75% | ⬜ 100% Complete
 
