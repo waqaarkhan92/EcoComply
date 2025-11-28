@@ -3798,6 +3798,87 @@ Implement Review Queue API endpoints:
 - Reference: EP_Compliance_Backend_API_Specification.md Section 14
 ```
 
+## Phase 6.10: Module Activation UI
+
+**Task 6.10.1: Module Activation Wizard**
+
+**⚠️ CRITICAL DECISION POINT - ASK USER:**
+```
+STOP: Before implementing module activation, ask user:
+
+1. **Activation Flow:**
+   - Default: Wizard with prerequisites check, pricing display, confirmation
+   - Question: "Do you want a simple activation button, or a full wizard with prerequisites?"
+   - Wait for user confirmation
+
+2. **Pricing Display:**
+   - Question: "Should pricing be shown before activation, or after selection?"
+   - Wait for user confirmation
+
+DO NOT PROCEED until user confirms all decisions.
+```
+
+**⚠️ COMPREHENSIVE TESTING REQUIRED:**
+```
+After implementing module activation, test:
+
+1. **Module Activation:**
+   - Test: Activate Module 2 (requires Module 1)
+   - Verify: Prerequisites checked
+   - Verify: Module activated
+   - Verify: Billing started (prorated if mid-month)
+   - If fails: STOP and fix
+
+2. **Prerequisites Check:**
+   - Test: Try to activate Module 2 without Module 1
+   - Verify: Error message shown
+   - If fails: STOP and fix
+
+3. **Pricing Display:**
+   - Test: View module pricing
+   - Verify: Prices displayed correctly
+   - If fails: STOP and fix
+
+DO NOT proceed until ALL tests pass.
+```
+
+**Implementation Prompt:**
+```
+Implement Module Activation Wizard:
+- Route: /modules/activate
+- Module selection: Display available modules (Module 2, Module 3)
+- For each module:
+  - Module name and description
+  - Prerequisites check (e.g., Module 2 requires Module 1)
+  - Pricing display ([USER CONFIRMED] - before or after selection)
+  - Base price and pricing model (per_site, per_company)
+- Activation flow:
+  1. Select module
+  2. Check prerequisites (if not met, show error)
+  3. Display pricing and billing info (prorated if mid-month)
+  4. Confirm activation
+  5. Submit: POST /api/v1/modules/activate
+  6. On success: Module activated, billing started
+- Reference: EP_Compliance_Product_Logic_Specification.md Section E.4
+- Reference: EP_Compliance_Backend_API_Specification.md Section 22
+```
+
+**Task 6.10.2: Module Management Page**
+
+**Implementation Prompt:**
+```
+Implement Module Management Page:
+- Route: /modules
+- Display all modules (Module 1, 2, 3)
+- For each module:
+  - Status: Active, Inactive, Suspended
+  - Activation date
+  - Pricing info
+  - Deactivate button (if active)
+- Module activation: Link to activation wizard
+- Reference: EP_Compliance_Frontend_Routes_Component_Map.md (Module routes)
+```
+
 ## Phase 6 Testing
 
 **Test Requirements:**
