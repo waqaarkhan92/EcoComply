@@ -249,10 +249,10 @@ async function initializeAPIKeys(): Promise<void> {
 
 ### Model Selection
 
-- **Primary Model:** GPT-4.1 (for high-accuracy extractions)
-- **Fallback Model:** GPT-4.1 Mini (for cost optimization, fallback scenarios)
-- **Model Selection Logic:** Use GPT-4.1 for complex documents, GPT-4.1 Mini for simple documents
-- **Model Fallback:** Automatically fallback to GPT-4.1 Mini if GPT-4.1 fails
+- **Primary Model:** GPT-4o (for high-accuracy extractions)
+- **Fallback Model:** GPT-4o-mini (for cost optimization, fallback scenarios)
+- **Model Selection Logic:** Use GPT-4o for complex documents, GPT-4o-mini for simple documents
+- **Model Fallback:** Automatically fallback to GPT-4o-mini if GPT-4o fails
 
 ### Request Format
 
@@ -471,7 +471,7 @@ async function processBatch(
 
 - **Input Tokens:** Count tokens in system message + user message
 - **Output Tokens:** Count tokens in LLM response
-- **Token Limits:** Enforce 1M token context limit (GPT-4.1), 128K (GPT-4.1 Mini)
+- **Token Limits:** Enforce 1M token context limit (GPT-4o), 128K (GPT-4o-mini)
 - **Token Tracking:** Track token usage per request, per document, per module
 
 ### Token Counting Implementation
@@ -1961,8 +1961,8 @@ function sleep(ms: number): Promise<void> {
 
 ### Model Fallback
 
-- **Primary Model:** Use GPT-4.1 for all requests
-- **Fallback Model:** Use GPT-4.1 Mini if GPT-4.1 fails
+- **Primary Model:** Use GPT-4o for all requests
+- **Fallback Model:** Use GPT-4o-mini if GPT-4o fails
 - **Fallback Conditions:** Fallback on rate limit, quota exceeded, model unavailable
 - **Fallback Logging:** Log fallback usage for cost tracking
 
@@ -1977,7 +1977,7 @@ async function callOpenAIWithFallback(
     return await callOpenAI(request);
   } catch (error) {
     if (shouldFallback(error)) {
-      // Fallback to GPT-4.1 Mini
+      // Fallback to GPT-4o-mini
       const fallbackRequest = {
         ...request,
         model: 'gpt-4o-mini' as const
@@ -2355,8 +2355,8 @@ class TokenCounter {
 
 ### Pricing Model
 
-- **GPT-4.1 Pricing:** $0.03 per 1K input tokens, $0.06 per 1K output tokens
-- **GPT-4.1 Mini Pricing:** $0.001 per 1K input tokens, $0.002 per 1K output tokens
+- **GPT-4o Pricing:** $2.00 per 1M input tokens, $8.00 per 1M output tokens
+- **GPT-4o-mini Pricing:** $0.40 per 1M input tokens, $1.60 per 1M output tokens
 - **Cost Calculation:** `cost = (inputTokens / 1000 * inputPrice) + (outputTokens / 1000 * outputPrice)`
 - **Cost Rounding:** Round to 4 decimal places
 
@@ -3009,7 +3009,7 @@ describe('API Key Management', () => {
 ### Test Scenarios
 
 - **Retry Test:** Test exponential backoff retry logic
-- **Fallback Test:** Test model fallback (GPT-4.1 → GPT-4.1 Mini)
+- **Fallback Test:** Test model fallback (GPT-4o → GPT-4o-mini)
 - **Timeout Test:** Test request timeout handling
 - **Rate Limit Test:** Test rate limit detection and handling
 

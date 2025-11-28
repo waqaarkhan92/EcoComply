@@ -1304,7 +1304,7 @@ async function getEscalationRecipients(
       JOIN user_site_assignments usa ON usa.user_id = u.id
       WHERE usa.site_id = $1
         AND ur.role = ANY($2::text[])
-        AND ur.company_id = $3
+        AND u.company_id = $3
       ORDER BY ur.role DESC -- OWNER first, then ADMIN
       LIMIT 5
     `, [siteId, roles, companyId]);
@@ -1326,7 +1326,7 @@ async function getEscalationRecipients(
         ur.role
       FROM users u
       JOIN user_roles ur ON ur.user_id = u.id
-      WHERE ur.company_id = $1
+      WHERE u.company_id = $1
         AND ur.role = ANY($2::text[])
       ORDER BY ur.role DESC -- OWNER first, then ADMIN
       LIMIT 5
@@ -1349,7 +1349,7 @@ async function getEscalationRecipients(
         ur.role
       FROM users u
       JOIN user_roles ur ON ur.user_id = u.id
-      WHERE ur.company_id = $1
+      WHERE u.company_id = $1
         AND ur.role = 'OWNER'
       LIMIT 5
     `, [companyId]);

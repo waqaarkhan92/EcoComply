@@ -1,6 +1,6 @@
 # Oblicore Backend API Specification
 
-**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+**Oblicore v1.0 — Launch-Ready / Last updated: 2025-01-01**
 
 **Document Version:** 1.0  
 **Status:** Complete  
@@ -371,7 +371,7 @@ Get current authenticated user details.
 ### RLS Integration
 
 The API respects database Row Level Security (RLS) policies. All queries automatically filter results based on:
-- User's company access (`user_roles.company_id`)
+- User's company access (`users.company_id` or `consultant_client_assignments` for consultants)
 - User's site access (`user_site_assignments.site_id`)
 - User's role permissions
 
@@ -508,7 +508,7 @@ Viewer role has read-only access:
 
 **Rate Limit Exceeded (429):**
 ```
-Retry-After: 3600
+Retry-After: 60
 X-Rate-Limit-Limit: 100
 X-Rate-Limit-Remaining: 0
 X-Rate-Limit-Reset: 1234567890
@@ -675,11 +675,11 @@ X-Rate-Limit-Reset: 1234567890
 
 | Endpoint Category | Rate Limit |
 |-------------------|------------|
-| Document upload | 10/hour per user |
-| AI extraction | 5/hour per user |
-| Evidence upload | 20/hour per user |
-| Audit pack generation | 5/hour per user |
-| Default | 100 requests/hour per user |
+| Document upload | 10/minute per user |
+| AI extraction | 5/minute per user |
+| Evidence upload | 20/minute per user |
+| Audit pack generation | 5/minute per user |
+| Default | 100 requests/minute per user |
 
 ---
 
@@ -764,7 +764,7 @@ interface DocumentResponse {
 
 **Reference:** PLS Section B.1.1 (Document Upload Validation)
 
-**Rate Limiting:** 10 uploads/hour per user
+**Rate Limiting:** 10 uploads/minute per user
 
 **Example Request:**
 ```bash
@@ -830,7 +830,7 @@ curl -X POST https://api.epcompliance.com/api/v1/documents \
 **Error Codes:**
 - `400 BAD_REQUEST` - Invalid filter/sort
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -871,7 +871,7 @@ curl -X POST https://api.epcompliance.com/api/v1/documents \
 - `404 NOT_FOUND` - Document not found
 - `403 FORBIDDEN` - Insufficient permissions (RLS)
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -914,7 +914,7 @@ curl -X POST https://api.epcompliance.com/api/v1/documents \
 - `403 FORBIDDEN` - Insufficient permissions
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 
-**Rate Limiting:** 50 updates/hour per user
+**Rate Limiting:** 50 updates/minute per user
 
 ---
 
@@ -983,7 +983,7 @@ interface ExcelImportResponse {
 - Maximum rows: 10,000 rows
 - Supported formats: .xlsx, .xls, .csv
 
-**Rate Limiting:** 5 imports/hour per user
+**Rate Limiting:** 5 imports/minute per user
 
 **Integration:** Creates background job (Excel Import Processing Job - see Background Jobs 2.3)
 
@@ -1082,7 +1082,7 @@ interface ExcelImportPreviewResponse {
 - `404 NOT_FOUND` - Import not found
 - `422 UNPROCESSABLE_ENTITY` - Preview not ready (still processing)
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -1146,7 +1146,7 @@ interface ExcelImportConfirmResponse {
 
 **Integration:** Triggers background job (Excel Import Processing Job Phase 2 - bulk creation)
 
-**Rate Limiting:** 10 confirmations/hour per user
+**Rate Limiting:** 10 confirmations/minute per user
 
 ---
 
@@ -1198,7 +1198,7 @@ interface ExcelImportStatusResponse {
 **Error Codes:**
 - `404 NOT_FOUND` - Import not found
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -1219,7 +1219,7 @@ interface ExcelImportStatusResponse {
 - `404 NOT_FOUND` - Import not found
 - `422 UNPROCESSABLE_ENTITY` - Import already completed or cancelled
 
-**Rate Limiting:** 10 cancellations/hour per user
+**Rate Limiting:** 10 cancellations/minute per user
 
 ---
 
@@ -1248,7 +1248,7 @@ interface ExcelImportStatusResponse {
 - `403 FORBIDDEN` - Insufficient permissions
 - `409 CONFLICT` - Document has linked obligations
 
-**Rate Limiting:** 10 deletions/hour per user
+**Rate Limiting:** 10 deletions/minute per user
 
 ---
 
@@ -1292,7 +1292,7 @@ interface ExcelImportStatusResponse {
 - `404 NOT_FOUND` - Document not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -1321,7 +1321,7 @@ Content-Length: {file_size}
 - `404 NOT_FOUND` - Document not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 20 downloads/hour per user
+**Rate Limiting:** 20 downloads/minute per user
 
 ---
 
@@ -1347,7 +1347,7 @@ Content-Length: {file_size}
 - `403 FORBIDDEN` - Insufficient permissions
 - `415 UNSUPPORTED_MEDIA_TYPE` - Preview not available for this file type
 
-**Rate Limiting:** 50 previews/hour per user
+**Rate Limiting:** 50 previews/minute per user
 
 ---
 
@@ -1387,7 +1387,7 @@ Content-Length: {file_size}
 - `404 NOT_FOUND` - Document not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -1428,7 +1428,7 @@ Content-Length: {file_size}
 - `409 CONFLICT` - Already assigned
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 50 assignments/hour per user
+**Rate Limiting:** 50 assignments/minute per user
 
 ---
 
@@ -1456,7 +1456,7 @@ Content-Length: {file_size}
 **Error Codes:**
 - `404 NOT_FOUND` - Assignment not found
 
-**Rate Limiting:** 50 unassignments/hour per user
+**Rate Limiting:** 50 unassignments/minute per user
 
 ---
 
@@ -1513,7 +1513,7 @@ interface ExtractResponse {
 
 **Integration:** Creates background job (Document Processing Job - see Background Jobs 2.3)
 
-**Rate Limiting:** 5 extractions/hour per user
+**Rate Limiting:** 5 extractions/minute per user
 
 **Example Request:**
 ```bash
@@ -1586,7 +1586,7 @@ interface ExtractionResultsResponse {
 - `404 NOT_FOUND` - Document not found
 - `202 ACCEPTED` - Extraction in progress (returns current status)
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -1658,7 +1658,7 @@ interface ExtractionResultsResponse {
 **Error Codes:**
 - `400 BAD_REQUEST` - Invalid filter/sort
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -1705,7 +1705,7 @@ interface ExtractionResultsResponse {
 - `404 NOT_FOUND` - Obligation not found
 - `403 FORBIDDEN` - Insufficient permissions (RLS)
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -1767,7 +1767,7 @@ interface UpdateObligationRequest {
 - `403 FORBIDDEN` - Insufficient permissions
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 
-**Rate Limiting:** 100 updates/hour per user
+**Rate Limiting:** 100 updates/minute per user
 
 ---
 
@@ -1781,10 +1781,10 @@ interface UpdateObligationRequest {
 - **Method:** PUT
 - **Path Parameters:**
   - `obligationId` (UUID, required) - Obligation identifier
-- **Body (optional):**
+- **Body (required for audit trail):**
 ```json
 {
-  "reason": "string"
+  "reason": "string" // Required: Reason why obligation is not applicable (stored in review_notes for audit)
 }
 ```
 
@@ -1804,7 +1804,7 @@ interface UpdateObligationRequest {
 - `404 NOT_FOUND` - Obligation not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 50 marks/hour per user
+**Rate Limiting:** 50 marks/minute per user
 
 ---
 
@@ -1852,7 +1852,7 @@ interface UpdateReviewRequest {
 - `403 FORBIDDEN` - Insufficient permissions
 - `422 UNPROCESSABLE_ENTITY` - Invalid review_status
 
-**Rate Limiting:** 100 reviews/hour per user
+**Rate Limiting:** 100 reviews/minute per user
 
 ---
 
@@ -1892,7 +1892,7 @@ interface UpdateReviewRequest {
 - `404 NOT_FOUND` - Obligation not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -1933,7 +1933,7 @@ interface UpdateReviewRequest {
 - `404 NOT_FOUND` - Obligation not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -1994,7 +1994,7 @@ interface UpdateReviewRequest {
 **Error Codes:**
 - `400 BAD_REQUEST` - Invalid filter/sort
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -2034,7 +2034,7 @@ interface UpdateReviewRequest {
 - `404 NOT_FOUND` - Deadline not found
 - `403 FORBIDDEN` - Insufficient permissions (RLS)
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -2073,7 +2073,7 @@ interface UpdateReviewRequest {
 - `404 NOT_FOUND` - Deadline not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 completions/hour per user
+**Rate Limiting:** 100 completions/minute per user
 
 ---
 
@@ -2113,7 +2113,7 @@ interface UpdateReviewRequest {
 - `404 NOT_FOUND` - Schedule not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -2168,7 +2168,7 @@ interface EvidenceUploadRequest {
 - `404 NOT_FOUND` - Obligation not found
 - `413 PAYLOAD_TOO_LARGE` - File too large
 
-**Rate Limiting:** 20 uploads/hour per user
+**Rate Limiting:** 20 uploads/minute per user
 
 ---
 
@@ -2221,7 +2221,7 @@ interface EvidenceUploadRequest {
 **Error Codes:**
 - `400 BAD_REQUEST` - Invalid filter/sort
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -2263,7 +2263,7 @@ interface EvidenceUploadRequest {
 - `404 NOT_FOUND` - Evidence not found
 - `403 FORBIDDEN` - Insufficient permissions (RLS)
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -2301,7 +2301,7 @@ interface EvidenceUploadRequest {
 - `404 NOT_FOUND` - Obligation not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -2332,7 +2332,7 @@ interface EvidenceUploadRequest {
 - `404 NOT_FOUND` - Obligation or evidence not found
 - `409 CONFLICT` - Already linked
 
-**Rate Limiting:** 100 links/hour per user
+**Rate Limiting:** 100 links/minute per user
 
 ---
 
@@ -2360,7 +2360,7 @@ interface EvidenceUploadRequest {
 **Error Codes:**
 - `404 NOT_FOUND` - Link not found
 
-**Rate Limiting:** 100 unlinks/hour per user
+**Rate Limiting:** 100 unlinks/minute per user
 
 ---
 
@@ -2389,36 +2389,19 @@ Content-Length: {file_size}
 - `404 NOT_FOUND` - Evidence not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 20 downloads/hour per user
+**Rate Limiting:** 20 downloads/minute per user
 
 ---
 
-## 12.8 DELETE /api/v1/evidence/{evidenceId}
-
-**Purpose:** Delete evidence item
-
-**Authentication:** Required (Owner, Admin, Staff - own evidence only)
-
-**Request:**
-- **Method:** DELETE
-- **Path Parameters:**
-  - `evidenceId` (UUID, required) - Evidence identifier
-
-**Response:** 200 OK
-```json
-{
-  "data": {
-    "message": "Evidence deleted successfully"
-  }
-}
-```
-
-**Error Codes:**
-- `404 NOT_FOUND` - Evidence not found
-- `403 FORBIDDEN` - Insufficient permissions
-- `409 CONFLICT` - Evidence is linked to obligations
-
-**Rate Limiting:** 20 deletions/hour per user
+> [REMOVED - Evidence Immutability - 2025-01-01]
+> 
+> **Evidence Deletion Endpoint Removed:**
+> - Evidence items cannot be deleted by any role (compliance/audit requirement)
+> - Evidence is archived by system after retention period only
+> - Users can only unlink evidence from obligations (see Section 12.6)
+> - This ensures immutable audit trail for compliance purposes
+> 
+> **Reference:** Product Logic Specification Section B.8 (Evidence Immutability Rules)
 
 ---
 
@@ -2471,7 +2454,7 @@ Content-Length: {file_size}
 **Error Codes:**
 - `400 BAD_REQUEST` - Invalid filter/sort
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -2510,7 +2493,7 @@ Content-Length: {file_size}
 - `404 NOT_FOUND` - Schedule not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -2541,7 +2524,7 @@ Content-Length: {file_size}
 **Error Codes:**
 - `404 NOT_FOUND` - Obligation or schedule not found
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -2601,7 +2584,7 @@ interface CreateScheduleRequest {
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 - `404 NOT_FOUND` - Obligation not found
 
-**Rate Limiting:** 50 schedules/hour per user
+**Rate Limiting:** 50 schedules/minute per user
 
 ---
 
@@ -2655,7 +2638,7 @@ interface CreateScheduleRequest {
 - `404 NOT_FOUND` - Schedule not found
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 
-**Rate Limiting:** 50 updates/hour per user
+**Rate Limiting:** 50 updates/minute per user
 
 ---
 
@@ -2685,7 +2668,7 @@ interface CreateScheduleRequest {
 - `404 NOT_FOUND` - Schedule not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 20 deletions/hour per user
+**Rate Limiting:** 20 deletions/minute per user
 
 ---
 
@@ -2738,7 +2721,7 @@ interface CreateScheduleRequest {
 **Error Codes:**
 - `400 BAD_REQUEST` - Invalid filter/sort
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -2769,7 +2752,7 @@ interface CreateScheduleRequest {
 - `404 NOT_FOUND` - Item not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 confirms/hour per user
+**Rate Limiting:** 100 confirms/minute per user
 
 ---
 
@@ -2806,7 +2789,7 @@ interface CreateScheduleRequest {
 - `404 NOT_FOUND` - Item not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 rejects/hour per user
+**Rate Limiting:** 100 rejects/minute per user
 
 ---
 
@@ -2849,7 +2832,7 @@ interface CreateScheduleRequest {
 - `403 FORBIDDEN` - Insufficient permissions
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 
-**Rate Limiting:** 100 edits/hour per user
+**Rate Limiting:** 100 edits/minute per user
 
 ---
 
@@ -2887,7 +2870,7 @@ interface CreateScheduleRequest {
 - `404 NOT_FOUND` - User not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 **Reference:** Notification & Messaging (2.4) Section 7
 
@@ -2942,7 +2925,7 @@ interface UpdateNotificationPreferenceRequest {
 - `404 NOT_FOUND` - User not found
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 
-**Rate Limiting:** 10 updates/hour per user
+**Rate Limiting:** 10 updates/minute per user
 
 **Reference:** Notification & Messaging (2.4) Section 7
 
@@ -2990,7 +2973,7 @@ interface UpdateNotificationPreferenceRequest {
 **Error Codes:**
 - `400 BAD_REQUEST` - Invalid filter/sort
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 **Reference:** Notification & Messaging (2.4) Section 8.3
 
@@ -3019,7 +3002,7 @@ interface UpdateNotificationPreferenceRequest {
 }
 ```
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -3049,7 +3032,7 @@ interface UpdateNotificationPreferenceRequest {
 - `404 NOT_FOUND` - Notification not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 200 marks/hour per user
+**Rate Limiting:** 200 marks/minute per user
 
 ---
 
@@ -3079,7 +3062,7 @@ interface UpdateNotificationPreferenceRequest {
 - `404 NOT_FOUND` - Notification not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 200 marks/hour per user
+**Rate Limiting:** 200 marks/minute per user
 
 ---
 
@@ -3135,7 +3118,7 @@ interface UpdateNotificationPreferenceRequest {
 **Error Codes:**
 - `400 BAD_REQUEST` - Invalid filter/sort
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -3217,11 +3200,89 @@ interface CreateAuditPackRequest {
 ```json
 {
   "data": {
-    "job_id": "uuid",
+    "job_id": "770e8400-e29b-41d4-a716-446655440002",
     "status": "QUEUED",
-    "estimated_completion_time": "2025-01-01T12:10:00Z"
+    "estimated_completion_time": "2025-01-01T12:10:00Z",
+    "pack_type": "AUDIT_PACK",
+    "estimated_size_mb": 15.5,
+    "estimated_pages": 120
   }
 }
+```
+
+**Response Schema:**
+```typescript
+interface PackGenerationResponse {
+  job_id: string;
+  status: 'QUEUED' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+  estimated_completion_time: string; // ISO 8601
+  pack_type: 'REGULATOR_INSPECTION' | 'TENDER_CLIENT_ASSURANCE' | 'BOARD_MULTI_SITE_RISK' | 'INSURER_BROKER' | 'AUDIT_PACK';
+  estimated_size_mb?: number; // Estimated pack size in MB
+  estimated_pages?: number; // Estimated number of pages
+}
+```
+
+**Error Responses:**
+
+**403 Forbidden (Plan Not Available):**
+```json
+{
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Pack type not available for your plan",
+    "details": {
+      "pack_type": "TENDER_CLIENT_ASSURANCE",
+      "current_plan": "core",
+      "required_plan": "growth"
+    },
+    "request_id": "uuid",
+    "timestamp": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**422 Unprocessable Entity (Validation Error):**
+```json
+{
+  "error": {
+    "code": "UNPROCESSABLE_ENTITY",
+    "message": "Validation failed",
+    "details": {
+      "errors": [
+        {
+          "field": "company_id",
+          "message": "company_id is required for Board Pack"
+        },
+        {
+          "field": "site_id",
+          "message": "site_id must be null for Board Pack"
+        }
+      ]
+    },
+    "request_id": "uuid",
+    "timestamp": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Example cURL Request:**
+```bash
+curl -X POST https://api.epcompliance.com/api/v1/audit-packs \
+  -H "Authorization: Bearer {jwt_token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "site_id": "550e8400-e29b-41d4-a716-446655440000",
+    "pack_type": "AUDIT_PACK",
+    "date_range": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+    },
+    "obligation_ids": ["uuid1", "uuid2"],
+    "include_archived": false,
+    "recipient_type": "INTERNAL",
+    "recipient_name": "Internal Audit",
+    "purpose": "Annual compliance review"
+  }'
 ```
 
 **Integration:** Creates background job (Audit Pack Generation Job - see Background Jobs 2.3)
@@ -3229,10 +3290,11 @@ interface CreateAuditPackRequest {
 **Reference Integrity:** Validates evidence/obligation references (see PLS Section B.8.3)
 
 **Error Codes:**
-- `404 NOT_FOUND` - Site not found
+- `404 NOT_FOUND` - Site/Company not found
+- `403 FORBIDDEN` - Plan not available or insufficient role
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 
-**Rate Limiting:** 5 generations/hour per user
+**Rate Limiting:** 5 generations/minute per user
 
 ---
 
@@ -3268,7 +3330,7 @@ interface CreateAuditPackRequest {
 - `404 NOT_FOUND` - Audit pack not found
 - `202 ACCEPTED` - Generation in progress (returns current status)
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -3297,7 +3359,7 @@ Content-Length: {file_size}
 - `404 NOT_FOUND` - Audit pack not found
 - `202 ACCEPTED` - Generation in progress
 
-**Rate Limiting:** 10 downloads/hour per user
+**Rate Limiting:** 10 downloads/minute per user
 
 ---
 
@@ -3318,8 +3380,8 @@ Content-Length: {file_size}
 - **Body:**
 ```json
 {
-  "site_id": "uuid",
-  "document_id": "uuid",
+  "site_id": "550e8400-e29b-41d4-a716-446655440000",
+  "document_id": "660e8400-e29b-41d4-a716-446655440001",
   "date_range": {
     "start": "2025-01-01",
     "end": "2025-12-31"
@@ -3328,7 +3390,124 @@ Content-Length: {file_size}
 }
 ```
 
-**Response:** 202 Accepted (same as Section 16.2)
+**Request Schema:**
+```typescript
+interface CreateRegulatorPackRequest {
+  site_id: string; // UUID, required
+  document_id: string; // UUID, required
+  date_range: {
+    start: string; // ISO date (YYYY-MM-DD)
+    end: string; // ISO date (YYYY-MM-DD)
+  };
+  recipient_name: string; // Required
+}
+```
+
+**Validation Rules:**
+- `site_id` must be a valid UUID and user must have access to the site
+- `document_id` must be a valid UUID and belong to the specified site
+- `date_range.start` must be before or equal to `date_range.end`
+- `date_range` cannot span more than 5 years
+- `recipient_name` must be 1-255 characters
+
+**Response:** 202 Accepted
+```json
+{
+  "data": {
+    "job_id": "770e8400-e29b-41d4-a716-446655440002",
+    "status": "QUEUED",
+    "estimated_completion_time": "2025-01-01T12:10:00Z",
+    "pack_type": "REGULATOR_INSPECTION"
+  }
+}
+```
+
+**Response Schema:**
+```typescript
+interface PackGenerationResponse {
+  job_id: string;
+  status: 'QUEUED' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+  estimated_completion_time: string; // ISO 8601
+  pack_type: 'REGULATOR_INSPECTION' | 'TENDER_CLIENT_ASSURANCE' | 'BOARD_MULTI_SITE_RISK' | 'INSURER_BROKER' | 'AUDIT_PACK';
+}
+```
+
+**Error Responses:**
+
+**403 Forbidden (Plan Not Available):**
+```json
+{
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Regulator Pack requires Core Plan or higher",
+    "details": {
+      "current_plan": "core",
+      "required_plan": "core",
+      "pack_type": "REGULATOR_INSPECTION"
+    },
+    "request_id": "uuid",
+    "timestamp": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**422 Unprocessable Entity (Validation Error):**
+```json
+{
+  "error": {
+    "code": "UNPROCESSABLE_ENTITY",
+    "message": "Validation failed",
+    "details": {
+      "errors": [
+        {
+          "field": "date_range.end",
+          "message": "End date must be after start date"
+        },
+        {
+          "field": "recipient_name",
+          "message": "Recipient name is required"
+        }
+      ]
+    },
+    "request_id": "uuid",
+    "timestamp": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**404 Not Found (Site/Document Not Found):**
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Site not found or access denied",
+    "details": {
+      "resource": "site",
+      "id": "550e8400-e29b-41d4-a716-446655440000"
+    },
+    "request_id": "uuid",
+    "timestamp": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Example cURL Request:**
+```bash
+curl -X POST https://api.epcompliance.com/api/v1/packs/regulator \
+  -H "Authorization: Bearer {jwt_token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "site_id": "550e8400-e29b-41d4-a716-446655440000",
+    "document_id": "660e8400-e29b-41d4-a716-446655440001",
+    "date_range": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+    },
+    "recipient_name": "Environment Agency Inspector"
+  }'
+```
+
+**Rate Limiting:** 5 generations/minute per user
 
 **Reference:** Product Logic Specification Section I.8.2 (Regulator/Inspection Pack Logic)
 
@@ -3347,8 +3526,8 @@ Content-Length: {file_size}
 - **Body:**
 ```json
 {
-  "site_id": "uuid",
-  "document_id": "uuid",
+  "site_id": "550e8400-e29b-41d4-a716-446655440000",
+  "document_id": "660e8400-e29b-41d4-a716-446655440001",
   "date_range": {
     "start": "2025-01-01",
     "end": "2025-12-31"
@@ -3358,7 +3537,77 @@ Content-Length: {file_size}
 }
 ```
 
-**Response:** 202 Accepted (same as Section 16.2)
+**Request Schema:**
+```typescript
+interface CreateTenderPackRequest {
+  site_id: string; // UUID, required
+  document_id: string; // UUID, required
+  date_range: {
+    start: string; // ISO date (YYYY-MM-DD)
+    end: string; // ISO date (YYYY-MM-DD)
+  };
+  recipient_name: string; // Required
+  purpose?: string; // Optional, max 500 characters
+}
+```
+
+**Validation Rules:**
+- `site_id` must be a valid UUID and user must have access
+- `document_id` must be a valid UUID and belong to the specified site
+- `date_range.start` must be before or equal to `date_range.end`
+- `date_range` cannot span more than 5 years
+- `recipient_name` must be 1-255 characters
+- `purpose` is optional but if provided, must be max 500 characters
+
+**Response:** 202 Accepted
+```json
+{
+  "data": {
+    "job_id": "770e8400-e29b-41d4-a716-446655440002",
+    "status": "QUEUED",
+    "estimated_completion_time": "2025-01-01T12:10:00Z",
+    "pack_type": "TENDER_CLIENT_ASSURANCE"
+  }
+}
+```
+
+**Error Responses:**
+
+**403 Forbidden (Plan Not Available):**
+```json
+{
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Tender Pack requires Growth Plan or Consultant Edition",
+    "details": {
+      "current_plan": "core",
+      "required_plan": "growth",
+      "pack_type": "TENDER_CLIENT_ASSURANCE"
+    },
+    "request_id": "uuid",
+    "timestamp": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Example cURL Request:**
+```bash
+curl -X POST https://api.epcompliance.com/api/v1/packs/tender \
+  -H "Authorization: Bearer {jwt_token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "site_id": "550e8400-e29b-41d4-a716-446655440000",
+    "document_id": "660e8400-e29b-41d4-a716-446655440001",
+    "date_range": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+    },
+    "recipient_name": "Client Name",
+    "purpose": "Tender submission"
+  }'
+```
+
+**Rate Limiting:** 5 generations/minute per user
 
 **Reference:** Product Logic Specification Section I.8.3 (Tender/Client Assurance Pack Logic)
 
@@ -3377,18 +3626,123 @@ Content-Length: {file_size}
 - **Body:**
 ```json
 {
-  "company_id": "uuid",
+  "company_id": "440e8400-e29b-41d4-a716-446655440000",
   "date_range": {
     "start": "2025-01-01",
     "end": "2025-12-31"
   },
-  "include_all_sites": true
+  "include_all_sites": true,
+  "site_ids": null
 }
 ```
 
-**Note:** Board Pack requires `company_id` (not `site_id`) for multi-site aggregation.
+**Request Schema:**
+```typescript
+interface CreateBoardPackRequest {
+  company_id: string; // UUID, required (NOT site_id)
+  date_range: {
+    start: string; // ISO date (YYYY-MM-DD)
+    end: string; // ISO date (YYYY-MM-DD)
+  };
+  include_all_sites?: boolean; // Default: true
+  site_ids?: string[]; // Optional: specific sites to include (if include_all_sites is false)
+  recipient_name?: string; // Optional
+}
+```
 
-**Response:** 202 Accepted (same as Section 16.2)
+**Important Notes:**
+- Board Pack requires `company_id` (NOT `site_id`) for multi-site aggregation
+- `site_id` must be `null` or omitted
+- User MUST be Owner or Admin (Staff cannot generate Board Packs)
+- If `include_all_sites` is `true`, all active sites for the company are included
+- If `include_all_sites` is `false`, `site_ids` array must be provided
+
+**Validation Rules:**
+- `company_id` must be a valid UUID and user must be Owner/Admin of the company
+- `site_id` must be `null` or omitted (returns 422 if provided)
+- `date_range.start` must be before or equal to `date_range.end`
+- `date_range` cannot span more than 5 years
+- If `include_all_sites` is `false`, `site_ids` array must contain at least 1 site
+- All sites in `site_ids` must belong to the specified `company_id`
+
+**Response:** 202 Accepted
+```json
+{
+  "data": {
+    "job_id": "770e8400-e29b-41d4-a716-446655440002",
+    "status": "QUEUED",
+    "estimated_completion_time": "2025-01-01T12:15:00Z",
+    "pack_type": "BOARD_MULTI_SITE_RISK",
+    "sites_included": 5
+  }
+}
+```
+
+**Response Schema:**
+```typescript
+interface BoardPackGenerationResponse {
+  job_id: string;
+  status: 'QUEUED' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+  estimated_completion_time: string; // ISO 8601
+  pack_type: 'BOARD_MULTI_SITE_RISK';
+  sites_included: number; // Number of sites included in pack
+}
+```
+
+**Error Responses:**
+
+**403 Forbidden (Insufficient Role):**
+```json
+{
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Board Pack generation requires Owner or Admin role",
+    "details": {
+      "current_role": "staff",
+      "required_roles": ["owner", "admin"]
+    },
+    "request_id": "uuid",
+    "timestamp": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**422 Unprocessable Entity (site_id Provided):**
+```json
+{
+  "error": {
+    "code": "UNPROCESSABLE_ENTITY",
+    "message": "Board Pack requires company_id, not site_id",
+    "details": {
+      "errors": [
+        {
+          "field": "site_id",
+          "message": "site_id must be null for Board Pack. Use company_id instead."
+        }
+      ]
+    },
+    "request_id": "uuid",
+    "timestamp": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Example cURL Request:**
+```bash
+curl -X POST https://api.epcompliance.com/api/v1/packs/board \
+  -H "Authorization: Bearer {jwt_token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "company_id": "440e8400-e29b-41d4-a716-446655440000",
+    "date_range": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+    },
+    "include_all_sites": true
+  }'
+```
+
+**Rate Limiting:** 5 generations/minute per user
 
 **Reference:** Product Logic Specification Section I.8.4 (Board/Multi-Site Risk Pack Logic)
 
@@ -3481,31 +3835,154 @@ Content-Length: {file_size}
     {
       "email": "recipient@example.com",
       "name": "Recipient Name"
+    },
+    {
+      "email": "another@example.com",
+      "name": "Another Recipient"
     }
   ],
-  "message": "Please find attached compliance pack"
+  "message": "Please find attached compliance pack",
+  "subject": "Compliance Pack - Q1 2025"
+}
+```
+
+**Request Schema:**
+```typescript
+interface DistributePackRequest {
+  distribution_method: 'EMAIL' | 'SHARED_LINK';
+  recipients: Array<{
+    email: string; // Valid email address, required
+    name?: string; // Optional, max 255 characters
+  }>;
+  message?: string; // Optional email message, max 2000 characters
+  subject?: string; // Optional email subject, max 255 characters (default: "Compliance Pack")
+  expires_in_days?: number; // Optional, for SHARED_LINK only, default: 30, max: 365
 }
 ```
 
 **Distribution Methods:**
-- `EMAIL`: Send pack via email attachment
-- `SHARED_LINK`: Generate and send shareable link
+- `EMAIL`: Send pack via email attachment (PDF)
+- `SHARED_LINK`: Generate and send shareable link (recipients receive link via email)
+
+**Validation Rules:**
+- `distribution_method` must be either 'EMAIL' or 'SHARED_LINK'
+- `recipients` array must contain at least 1 recipient
+- Maximum 50 recipients per distribution
+- Each recipient email must be a valid email format
+- `message` is optional but if provided, max 2000 characters
+- `subject` is optional but if provided, max 255 characters
+- `expires_in_days` only applies to SHARED_LINK, must be between 1-365
 
 **Response:** 200 OK
 ```json
 {
   "data": {
-    "distribution_id": "uuid",
+    "distribution_id": "880e8400-e29b-41d4-a716-446655440003",
     "status": "SENT",
-    "sent_at": "2025-01-01T12:00:00Z"
+    "distribution_method": "EMAIL",
+    "recipients_count": 2,
+    "sent_at": "2025-01-01T12:00:00Z",
+    "pack_id": "770e8400-e29b-41d4-a716-446655440002"
   }
 }
 ```
 
-**Error Codes:**
-- `403 FORBIDDEN` - Pack type doesn't support distribution
-- `404 NOT_FOUND` - Pack not found
-- `422 UNPROCESSABLE_ENTITY` - Invalid recipients
+**Response Schema:**
+```typescript
+interface DistributePackResponse {
+  distribution_id: string;
+  status: 'SENT' | 'FAILED' | 'PARTIAL';
+  distribution_method: 'EMAIL' | 'SHARED_LINK';
+  recipients_count: number;
+  sent_at: string; // ISO 8601
+  pack_id: string;
+  failed_recipients?: Array<{
+    email: string;
+    reason: string;
+  }>;
+}
+```
+
+**Error Responses:**
+
+**403 Forbidden (Pack Type Not Supported):**
+```json
+{
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Pack distribution requires Growth Plan or Consultant Edition",
+    "details": {
+      "pack_type": "REGULATOR_INSPECTION",
+      "current_plan": "core",
+      "required_plan": "growth"
+    },
+    "request_id": "uuid",
+    "timestamp": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**422 Unprocessable Entity (Invalid Recipients):**
+```json
+{
+  "error": {
+    "code": "UNPROCESSABLE_ENTITY",
+    "message": "Validation failed",
+    "details": {
+      "errors": [
+        {
+          "field": "recipients[0].email",
+          "message": "Invalid email format"
+        },
+        {
+          "field": "recipients",
+          "message": "Maximum 50 recipients allowed"
+        }
+      ]
+    },
+    "request_id": "uuid",
+    "timestamp": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Example cURL Request (Email Distribution):**
+```bash
+curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-446655440002/distribute \
+  -H "Authorization: Bearer {jwt_token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "distribution_method": "EMAIL",
+    "recipients": [
+      {
+        "email": "recipient@example.com",
+        "name": "Recipient Name"
+      }
+    ],
+    "message": "Please find attached compliance pack",
+    "subject": "Compliance Pack - Q1 2025"
+  }'
+```
+
+**Example cURL Request (Shared Link Distribution):**
+```bash
+curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-446655440002/distribute \
+  -H "Authorization: Bearer {jwt_token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "distribution_method": "SHARED_LINK",
+    "recipients": [
+      {
+        "email": "recipient@example.com",
+        "name": "Recipient Name"
+      }
+    ],
+    "message": "Please find the compliance pack at the link below",
+    "expires_in_days": 30
+  }'
+```
+
+**Rate Limiting:** 20 distributions/minute per user
 
 **Reference:** Product Logic Specification Section I.8.7 (Pack Distribution Logic)
 
@@ -3546,7 +4023,7 @@ Content-Length: {file_size}
 **Error Codes:**
 - `403 FORBIDDEN` - Module 2 not active
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -3584,7 +4061,7 @@ Content-Length: {file_size}
 - `404 NOT_FOUND` - Consent not found
 - `403 FORBIDDEN` - Module 2 not active
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -3619,7 +4096,7 @@ Content-Length: {file_size}
 - `400 BAD_REQUEST` - Invalid file
 - `403 FORBIDDEN` - Module 2 not active
 
-**Rate Limiting:** 10 uploads/hour per user
+**Rate Limiting:** 10 uploads/minute per user
 
 ---
 
@@ -3653,7 +4130,7 @@ Content-Length: {file_size}
 - `404 NOT_FOUND` - Consent not found
 - `403 FORBIDDEN` - Module 2 not active
 
-**Rate Limiting:** 10 imports/hour per user
+**Rate Limiting:** 10 imports/minute per user
 
 ---
 
@@ -3691,7 +4168,7 @@ Content-Length: {file_size}
 - `404 NOT_FOUND` - Lab result not found
 - `403 FORBIDDEN` - Module 2 not active
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -3734,7 +4211,7 @@ Content-Length: {file_size}
 - `400 BAD_REQUEST` - Invalid filter/sort
 - `403 FORBIDDEN` - Module 2 not active
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -3775,7 +4252,7 @@ Content-Length: {file_size}
 - `400 BAD_REQUEST` - Invalid filter/sort
 - `403 FORBIDDEN` - Module 2 not active
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -3815,7 +4292,7 @@ Content-Length: {file_size}
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 - `403 FORBIDDEN` - Module 2 not active
 
-**Rate Limiting:** 5 reports/hour per user
+**Rate Limiting:** 5 reports/minute per user
 
 ---
 
@@ -3847,7 +4324,7 @@ Content-Length: {file_size}
 - `404 NOT_FOUND` - Report not found
 - `202 ACCEPTED` - Generation in progress
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -3886,7 +4363,7 @@ Content-Length: {file_size}
 **Error Codes:**
 - `403 FORBIDDEN` - Module 2 not active
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -3927,7 +4404,7 @@ Content-Length: {file_size}
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 - `403 FORBIDDEN` - Module 2 not active
 
-**Rate Limiting:** 100 entries/hour per user
+**Rate Limiting:** 100 entries/minute per user
 
 ---
 
@@ -3960,7 +4437,7 @@ Content-Length: {file_size}
 - `404 NOT_FOUND` - Record not found
 - `403 FORBIDDEN` - Module 2 not active
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -3998,7 +4475,7 @@ Content-Length: {file_size}
 **Error Codes:**
 - `403 FORBIDDEN` - Module 3 not active
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -4036,7 +4513,7 @@ Content-Length: {file_size}
 - `404 NOT_FOUND` - Registration not found
 - `403 FORBIDDEN` - Module 3 not active
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -4071,7 +4548,7 @@ Content-Length: {file_size}
 - `400 BAD_REQUEST` - Invalid file
 - `403 FORBIDDEN` - Module 3 not active
 
-**Rate Limiting:** 10 uploads/hour per user
+**Rate Limiting:** 10 uploads/minute per user
 
 ---
 
@@ -4110,7 +4587,7 @@ Content-Length: {file_size}
 **Error Codes:**
 - `403 FORBIDDEN` - Module 3 not active
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -4146,7 +4623,7 @@ Content-Length: {file_size}
 - `404 NOT_FOUND` - Generator not found
 - `403 FORBIDDEN` - Module 3 not active
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -4186,7 +4663,7 @@ Content-Length: {file_size}
 **Error Codes:**
 - `403 FORBIDDEN` - Module 3 not active
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -4220,7 +4697,7 @@ Content-Length: {file_size}
 - `404 NOT_FOUND` - Record not found
 - `403 FORBIDDEN` - Module 3 not active
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -4259,7 +4736,7 @@ Content-Length: {file_size}
 - `403 FORBIDDEN` - Module 3 not active
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 
-**Rate Limiting:** 100 updates/hour per user
+**Rate Limiting:** 100 updates/minute per user
 
 ---
 
@@ -4314,7 +4791,7 @@ interface CreateRunHourRequest {
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 - `403 FORBIDDEN` - Module 3 not active
 
-**Rate Limiting:** 100 entries/hour per user
+**Rate Limiting:** 100 entries/minute per user
 
 ---
 
@@ -4347,7 +4824,7 @@ interface CreateRunHourRequest {
 - `404 NOT_FOUND` - AER not found
 - `202 ACCEPTED` - Generation in progress
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -4386,7 +4863,7 @@ interface CreateRunHourRequest {
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 - `403 FORBIDDEN` - Module 3 not active
 
-**Rate Limiting:** 5 generations/hour per user
+**Rate Limiting:** 5 generations/minute per user
 
 ---
 
@@ -4424,7 +4901,7 @@ interface CreateRunHourRequest {
 **Error Codes:**
 - `403 FORBIDDEN` - Module 3 not active
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -4457,7 +4934,7 @@ interface CreateRunHourRequest {
 - `404 NOT_FOUND` - Stack test not found
 - `403 FORBIDDEN` - Module 3 not active
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -4496,7 +4973,7 @@ interface CreateRunHourRequest {
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 - `403 FORBIDDEN` - Module 3 not active
 
-**Rate Limiting:** 20 schedules/hour per user
+**Rate Limiting:** 20 schedules/minute per user
 
 ---
 
@@ -4534,7 +5011,7 @@ interface CreateRunHourRequest {
 **Error Codes:**
 - `403 FORBIDDEN` - Module 3 not active
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -4568,7 +5045,7 @@ interface CreateRunHourRequest {
 - `404 NOT_FOUND` - Record not found
 - `403 FORBIDDEN` - Module 3 not active
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -4608,7 +5085,7 @@ interface CreateRunHourRequest {
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 - `403 FORBIDDEN` - Module 3 not active
 
-**Rate Limiting:** 50 records/hour per user
+**Rate Limiting:** 50 records/minute per user
 
 ---
 
@@ -4644,7 +5121,7 @@ interface CreateRunHourRequest {
 - `404 NOT_FOUND` - User not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -4683,7 +5160,7 @@ interface CreateRunHourRequest {
 **Error Codes:**
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -4724,7 +5201,7 @@ interface CreateRunHourRequest {
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 10 creations/hour per user
+**Rate Limiting:** 10 creations/minute per user
 
 ---
 
@@ -4763,7 +5240,7 @@ interface CreateRunHourRequest {
 - `403 FORBIDDEN` - Insufficient permissions
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 
-**Rate Limiting:** 10 updates/hour per user
+**Rate Limiting:** 10 updates/minute per user
 
 ---
 
@@ -4792,7 +5269,7 @@ interface CreateRunHourRequest {
 - `403 FORBIDDEN` - Insufficient permissions
 - `409 CONFLICT` - Cannot delete own account
 
-**Rate Limiting:** 5 deletions/hour per user
+**Rate Limiting:** 5 deletions/minute per user
 
 ---
 
@@ -4825,7 +5302,7 @@ interface CreateRunHourRequest {
 - `404 NOT_FOUND` - User not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -4863,7 +5340,7 @@ interface CreateRunHourRequest {
 - `409 CONFLICT` - Already assigned
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 50 assignments/hour per user
+**Rate Limiting:** 50 assignments/minute per user
 
 ---
 
@@ -4892,7 +5369,7 @@ interface CreateRunHourRequest {
 - `404 NOT_FOUND` - Assignment not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 50 unassignments/hour per user
+**Rate Limiting:** 50 unassignments/minute per user
 
 ---
 
@@ -4924,7 +5401,7 @@ interface CreateRunHourRequest {
 - `404 NOT_FOUND` - User not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -4970,7 +5447,7 @@ interface AssignRoleRequest {
 - `403 FORBIDDEN` - Insufficient permissions
 - `422 UNPROCESSABLE_ENTITY` - Invalid role
 
-**Rate Limiting:** 20 assignments/hour per user
+**Rate Limiting:** 20 assignments/minute per user
 
 ---
 
@@ -5000,7 +5477,7 @@ interface AssignRoleRequest {
 - `403 FORBIDDEN` - Insufficient permissions
 - `409 CONFLICT` - Cannot remove last role
 
-**Rate Limiting:** 20 removals/hour per user
+**Rate Limiting:** 20 removals/minute per user
 
 ---
 
@@ -5028,7 +5505,7 @@ interface AssignRoleRequest {
     {
       "id": "uuid",
       "name": "string",
-      "subscription_tier": "professional",
+      "subscription_tier": "growth",
       "is_active": true,
       "created_at": "2025-01-01T12:00:00Z"
     }
@@ -5040,7 +5517,7 @@ interface AssignRoleRequest {
 **Error Codes:**
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -5062,7 +5539,7 @@ interface AssignRoleRequest {
     "id": "uuid",
     "name": "string",
     "billing_email": "string",
-    "subscription_tier": "professional",
+    "subscription_tier": "growth",
     "is_active": true,
     "created_at": "2025-01-01T12:00:00Z"
   }
@@ -5073,7 +5550,7 @@ interface AssignRoleRequest {
 - `404 NOT_FOUND` - Company not found
 - `403 FORBIDDEN` - Insufficient permissions (RLS)
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -5112,7 +5589,7 @@ interface AssignRoleRequest {
 - `403 FORBIDDEN` - Insufficient permissions
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 
-**Rate Limiting:** 10 updates/hour per user
+**Rate Limiting:** 10 updates/minute per user
 
 ---
 
@@ -5151,7 +5628,7 @@ interface AssignRoleRequest {
 - `404 NOT_FOUND` - Company not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -5190,7 +5667,7 @@ interface AssignRoleRequest {
 - `404 NOT_FOUND` - Company not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -5228,7 +5705,7 @@ interface AssignRoleRequest {
 - `404 NOT_FOUND` - Company not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -5272,7 +5749,7 @@ interface AssignRoleRequest {
 **Error Codes:**
 - `400 BAD_REQUEST` - Invalid filter/sort
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -5292,7 +5769,8 @@ interface AssignRoleRequest {
   "address_line_1": "string",
   "city": "string",
   "postcode": "string",
-  "regulator": "EA"
+  "regulator": "EA",
+  "water_company": "string"  // Optional: Water company for Trade Effluent sites
 }
 ```
 
@@ -5307,6 +5785,7 @@ interface CreateSiteRequest {
   postcode?: string;
   country?: string;
   regulator?: 'EA' | 'SEPA' | 'NRW' | 'NIEA';
+  water_company?: string;  // Optional: Water company for Trade Effluent sites
   grace_period_days?: number;
 }
 ```
@@ -5328,7 +5807,7 @@ interface CreateSiteRequest {
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 20 sites/hour per user
+**Rate Limiting:** 20 sites/minute per user
 
 ---
 
@@ -5365,7 +5844,7 @@ interface CreateSiteRequest {
 - `404 NOT_FOUND` - Site not found
 - `403 FORBIDDEN` - Insufficient permissions (RLS)
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -5404,7 +5883,7 @@ interface CreateSiteRequest {
 - `403 FORBIDDEN` - Insufficient permissions
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 
-**Rate Limiting:** 20 updates/hour per user
+**Rate Limiting:** 20 updates/minute per user
 
 ---
 
@@ -5432,7 +5911,7 @@ interface CreateSiteRequest {
 - `404 NOT_FOUND` - Site not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 5 deletions/hour per user
+**Rate Limiting:** 5 deletions/minute per user
 
 ---
 
@@ -5475,7 +5954,7 @@ interface CreateSiteRequest {
 - `404 NOT_FOUND` - Site not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -5517,7 +5996,7 @@ interface CreateSiteRequest {
 - `404 NOT_FOUND` - Site not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -5558,7 +6037,7 @@ interface CreateSiteRequest {
 - `404 NOT_FOUND` - Site not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -5606,7 +6085,7 @@ interface CreateSiteRequest {
 - `404 NOT_FOUND` - Site not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 50 requests/hour per user
+**Rate Limiting:** 50 requests/minute per user
 
 ---
 
@@ -5657,7 +6136,7 @@ interface ActivateModuleRequest {
 - `422 UNPROCESSABLE_ENTITY` - Prerequisites not met
 - `409 CONFLICT` - Module already active
 
-**Rate Limiting:** 5 activations/hour per user
+**Rate Limiting:** 5 activations/minute per user
 
 ---
 
@@ -5695,7 +6174,7 @@ interface ActivateModuleRequest {
 
 **Error Codes:** None
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -5735,7 +6214,7 @@ interface ActivateModuleRequest {
 **Error Codes:**
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -5771,7 +6250,7 @@ interface ActivateModuleRequest {
 - `404 NOT_FOUND` - Activation not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -5809,7 +6288,7 @@ interface ActivateModuleRequest {
 - `404 NOT_FOUND` - Activation not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 5 deactivations/hour per user
+**Rate Limiting:** 5 deactivations/minute per user
 
 ---
 
@@ -5850,7 +6329,7 @@ interface ActivateModuleRequest {
 **Error Codes:**
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 50 requests/hour per user
+**Rate Limiting:** 50 requests/minute per user
 
 **Reference:** Background Jobs (2.3) Section 7.2
 
@@ -5894,7 +6373,7 @@ interface ActivateModuleRequest {
 **Error Codes:**
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -5921,7 +6400,7 @@ interface ActivateModuleRequest {
 **Error Codes:**
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -5958,7 +6437,7 @@ interface ActivateModuleRequest {
 - `403 FORBIDDEN` - Insufficient permissions
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 
-**Rate Limiting:** 10 updates/hour per user
+**Rate Limiting:** 10 updates/minute per user
 
 ---
 
@@ -6000,7 +6479,7 @@ interface ActivateModuleRequest {
 **Error Codes:**
 - `400 BAD_REQUEST` - Invalid filter/sort
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -6038,7 +6517,7 @@ interface ActivateModuleRequest {
 - `404 NOT_FOUND` - Escalation not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -6076,7 +6555,7 @@ interface ActivateModuleRequest {
 - `404 NOT_FOUND` - Escalation not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 50 resolutions/hour per user
+**Rate Limiting:** 50 resolutions/minute per user
 
 ---
 
@@ -6117,7 +6596,7 @@ interface ActivateModuleRequest {
 **Error Codes:**
 - `400 BAD_REQUEST` - Invalid filter/sort
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -6155,7 +6634,7 @@ interface ActivateModuleRequest {
 - `404 NOT_FOUND` - Trigger not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -6213,7 +6692,7 @@ interface UpdateCrossSellTriggerRequest {
 - `403 FORBIDDEN` - Insufficient permissions
 - `422 UNPROCESSABLE_ENTITY` - Invalid status or missing required fields
 
-**Rate Limiting:** 20 updates/hour per user
+**Rate Limiting:** 20 updates/minute per user
 
 ---
 
@@ -6271,7 +6750,7 @@ interface UpdateCrossSellTriggerRequest {
 **Error Codes:**
 - `400 BAD_REQUEST` - Invalid filter/sort
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -6315,7 +6794,7 @@ interface UpdateCrossSellTriggerRequest {
 - `404 NOT_FOUND` - Question not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -6372,7 +6851,7 @@ interface CreateRegulatorQuestionRequest {
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 - `404 NOT_FOUND` - Site/obligation/document not found
 
-**Rate Limiting:** 20 questions/hour per user
+**Rate Limiting:** 20 questions/minute per user
 
 ---
 
@@ -6423,7 +6902,7 @@ interface UpdateRegulatorQuestionRequest {
 - `403 FORBIDDEN` - Insufficient permissions
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 
-**Rate Limiting:** 50 updates/hour per user
+**Rate Limiting:** 50 updates/minute per user
 
 ---
 
@@ -6454,7 +6933,7 @@ interface UpdateRegulatorQuestionRequest {
 - `404 NOT_FOUND` - Question not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 20 closes/hour per user
+**Rate Limiting:** 20 closes/minute per user
 
 ---
 
@@ -6506,7 +6985,7 @@ interface BackgroundJobResponse {
 - `404 NOT_FOUND` - Job not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 **Reference:** Background Jobs (2.3)
 
@@ -6553,7 +7032,7 @@ interface BackgroundJobResponse {
 **Error Codes:**
 - `403 FORBIDDEN` - User is not a consultant
 
-**Rate Limiting:** 100 requests/hour per consultant
+**Rate Limiting:** 100 requests/minute per consultant
 
 **Reference:** Product Logic Specification Section C.5.3 (Consultant Dashboard Logic)
 
@@ -6605,7 +7084,7 @@ interface BackgroundJobResponse {
 **Error Codes:**
 - `403 FORBIDDEN` - User is not a consultant
 
-**Rate Limiting:** 60 requests/hour per consultant
+**Rate Limiting:** 60 requests/minute per consultant
 
 **Reference:** Product Logic Specification Section C.5.3 (Consultant Dashboard Logic)
 
@@ -6650,7 +7129,7 @@ interface BackgroundJobResponse {
 - `403 FORBIDDEN` - Consultant not assigned to client
 - `404 NOT_FOUND` - Client company not found
 
-**Rate Limiting:** 10 generations/hour per consultant per client
+**Rate Limiting:** 10 generations/minute per consultant per client
 
 **Reference:** Product Logic Specification Section C.5.4 (Consultant Pack Generation)
 
@@ -6739,7 +7218,7 @@ interface BackgroundJobResponse {
 - `403 FORBIDDEN` - Consultant not assigned to client
 - `404 NOT_FOUND` - Client company not found
 
-**Rate Limiting:** 100 requests/hour per consultant
+**Rate Limiting:** 100 requests/minute per consultant
 
 ---
 
@@ -6826,7 +7305,7 @@ interface UploadProgressResponse {
 - `404 NOT_FOUND` - Upload not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -6911,7 +7390,7 @@ type WebhookEvent =
 **Error Codes:**
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -6945,7 +7424,7 @@ type WebhookEvent =
 - `404 NOT_FOUND` - Webhook not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 100 requests/hour per user
+**Rate Limiting:** 100 requests/minute per user
 
 ---
 
@@ -6986,7 +7465,7 @@ type WebhookEvent =
 - `403 FORBIDDEN` - Insufficient permissions
 - `422 UNPROCESSABLE_ENTITY` - Validation error
 
-**Rate Limiting:** 20 updates/hour per user
+**Rate Limiting:** 20 updates/minute per user
 
 ---
 
@@ -7014,7 +7493,7 @@ type WebhookEvent =
 - `404 NOT_FOUND` - Webhook not found
 - `403 FORBIDDEN` - Insufficient permissions
 
-**Rate Limiting:** 10 deletions/hour per user
+**Rate Limiting:** 10 deletions/minute per user
 
 ---
 

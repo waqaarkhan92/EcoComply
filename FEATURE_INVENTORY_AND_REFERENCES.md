@@ -456,7 +456,7 @@ This document ensures **true consistency** across all documentation by:
 
 ## 1.11 AI Model Selection & Routing
 
-**Feature Description:** Multi-model approach for extraction with automatic routing based on document characteristics. Primary model (GPT-4.1) for standard documents, secondary model (GPT-4.1-mini) for simple documents or retries.
+**Feature Description:** Multi-model approach for extraction with automatic routing based on document characteristics. Primary model (GPT-4o) for standard documents, secondary model (GPT-4o-mini) for simple documents or retries.
 
 **Referenced In:**
 - ✅ `EP_Compliance_Product_Logic_Specification.md` — Section B.1.4 (AI Model Selection and Routing)
@@ -466,8 +466,8 @@ This document ensures **true consistency** across all documentation by:
 - ✅ `Canonical_Dictionary.md` — Model identifiers
 
 **Consistency Check:**
-- ✅ Primary model: GPT-4.1 for documents <50 pages — Consistent
-- ✅ Secondary model: GPT-4.1-mini for documents <20 pages or retries — Consistent
+- ✅ Primary model: GPT-4o for documents <50 pages — Consistent
+- ✅ Secondary model: GPT-4o-mini for documents <20 pages or retries — Consistent
 - ✅ Fallback logic: Automatic retry with secondary model on failure — Consistent
 
 ---
@@ -1543,17 +1543,17 @@ This document ensures **true consistency** across all documentation by:
 
 ## 8.11 Subscription Upgrades & Downgrades
 
-**Feature Description:** Users can upgrade or downgrade subscription tiers (STARTER, PROFESSIONAL, ENTERPRISE). Upgrade/downgrade changes subscription tier immediately. Billing adjusted with proration. Changes logged for audit. Upgrade unlocks additional features. Downgrade may restrict access to premium features.
+**Feature Description:** Users can upgrade or downgrade subscription tiers (core, growth, consultant). Upgrade/downgrade changes subscription tier immediately. Billing adjusted with proration. Changes logged for audit. Upgrade unlocks additional features. Downgrade may restrict access to premium features.
 
 **Referenced In:**
-- ✅ `EP_Compliance_Database_Schema.md` — Field `companies.subscription_tier` (enum: STARTER, PROFESSIONAL, ENTERPRISE)
+- ✅ `EP_Compliance_Database_Schema.md` — Field `companies.subscription_tier` (enum: core, growth, consultant)
 - ✅ `Canonical_Dictionary.md` — Enum `subscription_tier`, State transitions mention "User can upgrade/downgrade"
 - ✅ `EP_Compliance_Product_Logic_Specification.md` — Subscription tier logic
 - ✅ `EP_Compliance_Backend_API_Specification.md` — Subscription management endpoints
 - ✅ `EP_Compliance_Testing_QA_Strategy.md` — Section 4.5 (Subscription Upgrade & Downgrade Tests)
 
 **Consistency Check:**
-- ✅ Subscription tiers: STARTER, PROFESSIONAL, ENTERPRISE — Consistent
+- ✅ Subscription tiers: core, growth, consultant — Consistent
 - ✅ Billing adjustment: Prorated on tier change — Consistent
 - ✅ Audit logging: Changes logged — Consistent
 - ✅ Feature access: Tier-based feature access — Consistent

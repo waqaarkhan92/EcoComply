@@ -2,7 +2,7 @@ CANONICAL DICTIONARY
 
 Oblicore Platform — Modules 1–3
 
-**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+**Oblicore v1.0 — Launch-Ready / Last updated: 2025-01-01**
 
 **Document Version:** 1.0  
 **Status:** Complete  
@@ -1264,7 +1264,7 @@ billing_address	JSONB	-	YES	NULL	Structured billing address
 
 phone	TEXT	-	YES	NULL	Primary contact phone
 
-subscription_tier	TEXT	CHECK (subscription_tier IN ('starter', 'professional', 'enterprise'))	NO	'starter'	Subscription level
+subscription_tier	TEXT	CHECK (subscription_tier IN ('core', 'growth', 'consultant'))	NO	'core'	Subscription level
 
 stripe_customer_id	TEXT	UNIQUE	YES	NULL	Stripe customer reference
 
@@ -3523,6 +3523,236 @@ RLS Enabled: No (system table)
 Soft Delete: No
 
 
+
+Table: dead_letter_queue
+
+Purpose: Stores permanently failed background jobs that exceeded maximum retries
+
+Entity: DeadLetterQueue
+
+PLS Reference: Background Jobs Specification Section 2.1 (Job Failure Handling)
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+job_id	UUID	FOREIGN KEY, NOT NULL	NO	-	Reference to failed background job
+
+company_id	UUID	FOREIGN KEY	YES	NULL	Company context (for filtering)
+
+error_message	TEXT	NOT NULL	NO	-	Error message from final failure
+
+error_stack	TEXT	-	YES	NULL	Error stack trace
+
+error_context	JSONB	NOT NULL	NO	'{}'	Additional error context
+
+retry_count	INTEGER	NOT NULL	NO	-	Number of retries attempted
+
+last_attempted_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	-	Timestamp of final attempt
+
+resolved_at	TIMESTAMP WITH TIME ZONE	-	YES	NULL	When issue was resolved
+
+resolved_by	UUID	FOREIGN KEY	YES	NULL	User who resolved the issue
+
+resolution_notes	TEXT	-	YES	NULL	Notes on resolution
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+Indexes:
+
+* idx_dead_letter_queue_job_id: job_id (for job lookups)
+
+* idx_dead_letter_queue_company_id: company_id (for company filtering)
+
+* idx_dead_letter_queue_resolved_at: resolved_at WHERE resolved_at IS NULL (for unresolved items)
+
+Foreign Keys:
+
+* job_id → background_jobs.id ON DELETE CASCADE
+
+* company_id → companies.id ON DELETE SET NULL
+
+* resolved_by → users.id ON DELETE SET NULL
+
+RLS Enabled: No (system table)
+
+Soft Delete: No
+
+Business Logic:
+
+- Jobs are moved to DLQ after exceeding max_retries
+
+- Admin users can review and resolve DLQ items
+
+- Resolved items remain in DLQ for audit trail
+
+- Used for monitoring and alerting on persistent failures
+
+
+
+Table: pack_distributions
+
+Purpose: Tracks pack distribution instances (email sends, shared links) for analytics and audit trail
+
+Entity: PackDistribution
+
+Used By: Pack Distribution System (v1.0)
+
+PLS Reference: Product Logic Specification Section I.8.7 (Pack Distribution Logic)
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+pack_id	UUID	FOREIGN KEY, NOT NULL	NO	-	Reference to distributed pack
+
+distributed_to	TEXT	NOT NULL	NO	-	Recipient identifier (email or name)
+
+distributed_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Distribution timestamp
+
+distribution_method	TEXT	NOT NULL, CHECK	NO	-	Distribution method: 'EMAIL' or 'SHARED_LINK' (see Enum: distribution_method - DOWNLOAD not used for pack_distributions table)
+
+email_address	TEXT	-	YES	NULL	Email address (if EMAIL method)
+
+shared_link_token	TEXT	-	YES	NULL	Shared link token (if SHARED_LINK method)
+
+viewed_at	TIMESTAMP WITH TIME ZONE	-	YES	NULL	First view timestamp (for shared links)
+
+view_count	INTEGER	NOT NULL	NO	0	Number of times shared link was accessed
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+Indexes:
+
+* idx_pack_distributions_pack_id: pack_id (for pack lookups)
+
+* idx_pack_distributions_distributed_at: distributed_at (for time-based queries)
+
+* idx_pack_distributions_shared_link_token: shared_link_token WHERE shared_link_token IS NOT NULL (for link lookups)
+
+Foreign Keys:
+
+* pack_id → audit_packs.id ON DELETE CASCADE
+
+RLS Enabled: Yes (via pack_id relationship)
+
+Soft Delete: No
+
+Business Logic:
+
+- Each distribution instance creates a new record
+
+- EMAIL method: email_address populated, shared_link_token is NULL
+
+- SHARED_LINK method: shared_link_token populated, email_address may be NULL
+
+- viewed_at and view_count track shared link usage
+
+- Used for analytics and compliance audit trail
+
+
+
+Table: excel_imports
+
+Purpose: Tracks Excel/CSV import operations for obligation creation
+
+Entity: ExcelImport
+
+Used By: Excel Import Feature (v1.0)
+
+PLS Reference: Product Logic Specification Section B.2 (Excel Import Logic)
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+user_id	UUID	FOREIGN KEY, NOT NULL	NO	-	User who initiated import
+
+company_id	UUID	FOREIGN KEY, NOT NULL	NO	-	Company context
+
+site_id	UUID	FOREIGN KEY, NOT NULL	NO	-	Site for imported obligations
+
+file_name	TEXT	NOT NULL	NO	-	Original filename
+
+file_size_bytes	BIGINT	NOT NULL	NO	-	File size in bytes
+
+storage_path	TEXT	NOT NULL	NO	-	Path in Supabase Storage
+
+file_format	TEXT	NOT NULL, CHECK	NO	-	File format: 'XLSX', 'XLS', or 'CSV'
+
+row_count	INTEGER	NOT NULL	NO	-	Total rows in file
+
+valid_count	INTEGER	-	NO	0	Number of valid rows
+
+error_count	INTEGER	-	NO	0	Number of rows with errors
+
+success_count	INTEGER	-	NO	0	Number of obligations created
+
+status	TEXT	NOT NULL, CHECK	NO	'PENDING'	Import status: 'PENDING', 'PROCESSING', 'PENDING_REVIEW', 'COMPLETED', 'FAILED', 'CANCELLED'
+
+valid_rows	JSONB	-	NO	'[]'	Valid row data (for preview)
+
+error_rows	JSONB	-	NO	'[]'	Error row data with messages
+
+warning_rows	JSONB	-	NO	'[]'	Warning row data
+
+errors	JSONB	-	NO	'[]'	Error details
+
+import_options	JSONB	NOT NULL	NO	'{}'	Import configuration
+
+column_mapping	JSONB	-	NO	'{}'	Excel column to system field mapping
+
+obligation_ids	UUID[]	-	NO	'{}'	Array of created obligation IDs
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+completed_at	TIMESTAMP WITH TIME ZONE	-	YES	NULL	Completion timestamp
+
+Indexes:
+
+* idx_excel_imports_user_id: user_id (for user lookups)
+
+* idx_excel_imports_company_id: company_id (for company filtering)
+
+* idx_excel_imports_site_id: site_id (for site filtering)
+
+* idx_excel_imports_status: status (for status filtering)
+
+* idx_excel_imports_created_at: created_at (for time-based queries)
+
+Foreign Keys:
+
+* user_id → users(id) ON DELETE CASCADE
+
+* company_id → companies(id) ON DELETE CASCADE
+
+* site_id → sites(id) ON DELETE CASCADE
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Tracks Excel/CSV import workflow from upload to completion
+
+- Supports preview before final import confirmation
+
+- Stores row-level validation results
+
+- Links created obligations via obligation_ids array
+
+- Used for import history and error recovery
+
+
 D. ENUMS AND STATUS VALUES
 
 D.1 Core System Enums
@@ -4217,19 +4447,21 @@ Used In: companies.subscription_tier
 
 Values:
 
-* `STARTER`: Starter tier (base features)
+* `core`: Core tier (base features, includes Regulator Pack and Audit Pack)
 
-* `PROFESSIONAL`: Professional tier (enhanced features)
+* `growth`: Growth tier (enhanced features, includes all pack types, pack distribution)
 
-* `ENTERPRISE`: Enterprise tier (full features, custom support)
+* `consultant`: Consultant Edition (all features, multi-client access for consultants)
 
 State Transitions:
 
-* Initial state: STARTER
+* Initial state: `core`
 
 * User can upgrade/downgrade (billing adjusted)
 
 * Changes logged for audit
+
+**Note:** Values are lowercase (not UPPER_SNAKE_CASE) to match database CHECK constraint implementation.
 
 PLS Reference: Section 7 (Commercial Model - MCP)
 
@@ -4293,19 +4525,25 @@ Values:
 
 * `INACTIVE`: Module is deactivated (data archived)
 
-* `PENDING_ACTIVATION`: Module activation requested but not yet processed
+* `SUSPENDED`: Module is temporarily suspended (billing paused, access restricted)
 
 State Transitions:
 
-* Initial state: PENDING_ACTIVATION
-
-* PENDING_ACTIVATION → ACTIVE (activation confirmed)
+* Initial state: ACTIVE (for default modules) or INACTIVE (for optional modules)
 
 * ACTIVE → INACTIVE (deactivation)
+
+* ACTIVE → SUSPENDED (temporary suspension, e.g., payment issue)
+
+* SUSPENDED → ACTIVE (suspension lifted)
+
+* SUSPENDED → INACTIVE (permanent deactivation from suspended state)
 
 * INACTIVE → ACTIVE (reactivation)
 
 * Modules cannot be deactivated if dependent modules (via requires_module_id) are active (queried dynamically from modules table)
+
+**Note:** `PENDING_ACTIVATION` is not a status value - activation is immediate upon user confirmation. The status is set directly to `ACTIVE` upon activation.
 
 PLS Reference: Section D.1 (Module Prerequisites)
 
@@ -4353,6 +4591,8 @@ Values:
 
 * `DEADLINE`: Deadline approaching or due
 
+* `DEADLINE_ALERT`: Deadline alert (alternative name for DEADLINE)
+
 * `THRESHOLD`: Limit threshold reached (80%, 90%)
 
 * `BREACH`: Limit breach detected (100%+)
@@ -4361,7 +4601,15 @@ Values:
 
 * `DOCUMENT_EXPIRY`: Document renewal reminder
 
+* `EVIDENCE_REMINDER`: Evidence upload reminder
+
 * `REVIEW_REQUIRED`: Item requires human review
+
+* `EXCEEDANCE`: Parameter exceedance detected (Module 2)
+
+* `SYSTEM`: System notification
+
+* `MODULE_ACTIVATION`: Module activation notification
 
 State Transitions:
 
@@ -4384,6 +4632,8 @@ Values:
 * `INFO`: Informational message (no action required)
 
 * `WARNING`: Warning requiring attention
+
+* `ERROR`: Error condition (system errors, processing failures)
 
 * `URGENT`: Urgent action required
 
@@ -4439,7 +4689,7 @@ Values:
 
 * `KEYWORD`: Keyword detected in Module 1 document
 
-* `EXTERNAL`: External trigger (enforcement notice, user request)
+* `EXTERNAL_EVENT`: External trigger (enforcement notice, regulatory change, external event)
 
 * `USER_REQUEST`: User manually requests module activation
 
@@ -4448,6 +4698,8 @@ State Transitions:
 * Set at trigger creation (cannot change)
 
 * Determines trigger source and handling
+
+**Note:** Value is `EXTERNAL_EVENT` (not `EXTERNAL`) to match database CHECK constraint.
 
 PLS Reference: Section D.2 (Cross-Sell Trigger Detection)
 
@@ -4752,6 +5004,34 @@ State Transitions:
 * Determines generation timing
 
 PLS Reference: Section I.7 (Pack Generation Triggers — Applies to All Pack Types), Section I.8 (v1.0 Pack Types — Generation Logic)
+
+
+
+Enum: distribution_method
+
+Type: TEXT with CHECK constraint
+
+Used In: audit_packs.distribution_method, pack_distributions.distribution_method
+
+Values:
+
+* `DOWNLOAD`: Pack downloaded directly by user (used in audit_packs table only, not tracked in pack_distributions)
+
+* `EMAIL`: Pack sent via email attachment
+
+* `SHARED_LINK`: Pack shared via shareable link (used in pack_distributions table)
+
+**Note:** 
+- `audit_packs.distribution_method` can be `DOWNLOAD`, `EMAIL`, or `SHARED_LINK`
+- `pack_distributions.distribution_method` can only be `EMAIL` or `SHARED_LINK` (downloads are not tracked as distributions)
+
+State Transitions:
+
+* Set at distribution (cannot change)
+
+* Determines how pack was delivered to recipient
+
+PLS Reference: Product Logic Specification Section I.8.7 (Pack Distribution Logic)
 
 
 E. LLM VOCABULARY
@@ -8339,7 +8619,7 @@ Used By: All modules (detects opportunities for Module 2 and Module 3)
 Module-Agnostic Fields:
 - id, company_id, document_id (nullable)
 - target_module_id (UUID → modules.id, references target module for cross-sell)
-- trigger_type (enum: KEYWORD, EXTERNAL, USER_REQUEST)
+- trigger_type (enum: KEYWORD, EXTERNAL_EVENT, USER_REQUEST)
 - trigger_source, detected_keywords
 - status (enum: PENDING, DISMISSED, CONVERTED)
 - responded_at, response_action, dismissed_reason

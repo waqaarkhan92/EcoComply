@@ -1,6 +1,15 @@
 # Oblicore RLS & Permissions Rules Specification
 
-**Oblicore v1.0 — Launch-Ready / Last updated: 2024-12-27**
+**Oblicore v1.0 — Launch-Ready / Last updated: 2025-01-01**
+
+> [CRITICAL FIX - Schema Alignment - 2025-01-01]
+> 
+> **All RLS policies have been rewritten to match the actual database schema:**
+> - Uses `users.company_id` for regular users (single company)
+> - Uses `consultant_client_assignments` for consultants (multi-company)
+> - All role checks use UPPERCASE ('OWNER', 'ADMIN', 'STAFF', 'CONSULTANT', 'VIEWER')
+> - Uses `module_activations.status = 'ACTIVE'` instead of `is_active = TRUE`
+> - Removed all references to non-existent `user_roles.company_id` and `user_site_assignments.role`
 
 **Document Version:** 1.0  
 **Status:** Complete  
@@ -167,16 +176,24 @@ CREATE POLICY companies_select_user_access ON companies
 FOR SELECT
 USING (
   deleted_at IS NULL
-  AND id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
+  AND (
+    -- Regular users: their own company
+    id = (SELECT company_id FROM users WHERE id = auth.uid())
+    OR
+    -- Consultants: assigned client companies
+    id IN (
+      SELECT client_company_id FROM consultant_client_assignments
+      WHERE consultant_id = auth.uid()
+      AND status = 'ACTIVE'
+    )
   )
 );
 ```
 
 **Access Logic:**
-- Users can only see companies they are assigned to (via `user_roles` table)
-- Soft-deleted companies are excluded (unless user has special access)
+- Regular users: Can see their own company (via `users.company_id`)
+- Consultants: Can see assigned client companies (via `consultant_client_assignments`)
+- Soft-deleted companies are excluded
 
 ### INSERT Policy
 
@@ -189,7 +206,7 @@ WITH CHECK (
   EXISTS (
     SELECT 1 FROM user_roles
     WHERE user_id = auth.uid()
-    AND role = 'owner'
+    AND role = 'OWNER'
   )
 );
 ```
@@ -207,17 +224,31 @@ CREATE POLICY companies_update_owner_admin_access ON companies
 FOR UPDATE
 USING (
   deleted_at IS NULL
-  AND id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin')
+  AND (
+    -- Regular users: Owner/Admin of their own company
+    (
+      id = (SELECT company_id FROM users WHERE id = auth.uid())
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role IN ('OWNER', 'ADMIN')
+      )
+    )
+    OR
+    -- Consultants: assigned client companies (read-only, cannot update)
+    FALSE
   )
 )
 WITH CHECK (
-  id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin')
+  -- Same condition as USING
+  deleted_at IS NULL
+  AND (
+    id = (SELECT company_id FROM users WHERE id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN')
+    )
   )
 );
 ```
@@ -234,11 +265,12 @@ WITH CHECK (
 CREATE POLICY companies_delete_owner_access ON companies
 FOR DELETE
 USING (
-  EXISTS (
+  -- Only Owner of their own company can delete
+  id = (SELECT company_id FROM users WHERE id = auth.uid())
+  AND EXISTS (
     SELECT 1 FROM user_roles
     WHERE user_id = auth.uid()
-    AND role = 'owner'
-    AND company_id = companies.id
+    AND role = 'OWNER'
   )
   AND NOT EXISTS (
     SELECT 1 FROM sites
@@ -268,13 +300,18 @@ FOR SELECT
 USING (
   deleted_at IS NULL
   AND (
-    company_id IN (
-      SELECT company_id FROM user_roles
-      WHERE user_id = auth.uid()
-    )
+    -- Regular users: sites in their company OR directly assigned sites
+    company_id = (SELECT company_id FROM users WHERE id = auth.uid())
     OR id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
+    )
+    OR
+    -- Consultants: sites in assigned client companies
+    company_id IN (
+      SELECT client_company_id FROM consultant_client_assignments
+      WHERE consultant_id = auth.uid()
+      AND status = 'ACTIVE'
     )
   )
 );
@@ -292,10 +329,28 @@ USING (
 CREATE POLICY sites_insert_owner_admin_access ON sites
 FOR INSERT
 WITH CHECK (
-  company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin')
+  (
+    -- Regular users: Owner/Admin of their own company
+    company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN')
+    )
+  )
+  OR
+  (
+    -- Consultants: assigned client companies
+    company_id IN (
+      SELECT client_company_id FROM consultant_client_assignments
+      WHERE consultant_id = auth.uid()
+      AND status = 'ACTIVE'
+    )
+    AND EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role = 'CONSULTANT'
+    )
   )
 );
 ```
@@ -312,17 +367,57 @@ CREATE POLICY sites_update_owner_admin_access ON sites
 FOR UPDATE
 USING (
   deleted_at IS NULL
-  AND company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin')
+  AND (
+    -- Regular users: Owner/Admin of their own company
+    (
+      company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role IN ('OWNER', 'ADMIN')
+      )
+    )
+    OR
+    -- Consultants: assigned client companies
+    (
+      company_id IN (
+        SELECT client_company_id FROM consultant_client_assignments
+        WHERE consultant_id = auth.uid()
+        AND status = 'ACTIVE'
+      )
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role = 'CONSULTANT'
+      )
+    )
   )
 )
 WITH CHECK (
-  company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin')
+  -- Same condition as USING
+  deleted_at IS NULL
+  AND (
+    (
+      company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role IN ('OWNER', 'ADMIN')
+      )
+    )
+    OR
+    (
+      company_id IN (
+        SELECT client_company_id FROM consultant_client_assignments
+        WHERE consultant_id = auth.uid()
+        AND status = 'ACTIVE'
+      )
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role = 'CONSULTANT'
+      )
+    )
   )
 );
 ```
@@ -338,11 +433,12 @@ WITH CHECK (
 CREATE POLICY sites_delete_owner_admin_access ON sites
 FOR DELETE
 USING (
-  EXISTS (
+  -- Only Owner/Admin of their own company can delete (consultants cannot delete)
+  company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+  AND EXISTS (
     SELECT 1 FROM user_roles
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin')
-    AND company_id = sites.company_id
+    AND role IN ('OWNER', 'ADMIN')
   )
   AND NOT EXISTS (
     SELECT 1 FROM documents
@@ -370,18 +466,24 @@ USING (
 CREATE POLICY users_select_company_access ON users
 FOR SELECT
 USING (
-  id IN (
-    SELECT user_id FROM user_roles
-    WHERE company_id IN (
-      SELECT company_id FROM user_roles
-      WHERE user_id = auth.uid()
+  deleted_at IS NULL
+  AND (
+    -- Regular users: users in their own company
+    company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    OR
+    -- Consultants: users in assigned client companies
+    company_id IN (
+      SELECT client_company_id FROM consultant_client_assignments
+      WHERE consultant_id = auth.uid()
+      AND status = 'ACTIVE'
     )
   )
 );
 ```
 
 **Access Logic:**
-- Users can see other users from the same companies they belong to
+- Regular users: Can see other users from their own company
+- Consultants: Can see users from assigned client companies
 
 ### INSERT Policy
 
@@ -391,10 +493,12 @@ USING (
 CREATE POLICY users_insert_owner_admin_access ON users
 FOR INSERT
 WITH CHECK (
-  EXISTS (
+  -- Only Owner/Admin of their own company can create users
+  company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+  AND EXISTS (
     SELECT 1 FROM user_roles
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin')
+    AND role IN ('OWNER', 'ADMIN')
   )
 );
 ```
@@ -410,24 +514,31 @@ WITH CHECK (
 CREATE POLICY users_update_owner_admin_access ON users
 FOR UPDATE
 USING (
-  id IN (
-    SELECT user_id FROM user_roles
-    WHERE company_id IN (
-      SELECT company_id FROM user_roles
+  (
+    -- Owner/Admin of their own company can update users in their company
+    company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM user_roles
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin')
+      AND role IN ('OWNER', 'ADMIN')
     )
   )
+  OR
+  -- Users can update their own profile
+  id = auth.uid()
 )
 WITH CHECK (
-  id IN (
-    SELECT user_id FROM user_roles
-    WHERE company_id IN (
-      SELECT company_id FROM user_roles
+  -- Same condition as USING
+  (
+    company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM user_roles
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin')
+      AND role IN ('OWNER', 'ADMIN')
     )
   )
+  OR
+  id = auth.uid()
 );
 ```
 
@@ -443,14 +554,12 @@ WITH CHECK (
 CREATE POLICY users_delete_owner_access ON users
 FOR DELETE
 USING (
-  EXISTS (
+  -- Only Owner of their own company can delete users
+  company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+  AND EXISTS (
     SELECT 1 FROM user_roles
     WHERE user_id = auth.uid()
-    AND role = 'owner'
-    AND company_id IN (
-      SELECT company_id FROM user_roles
-      WHERE user_id = users.id
-    )
+    AND role = 'OWNER'
   )
 );
 ```
@@ -472,15 +581,27 @@ USING (
 CREATE POLICY user_roles_select_company_access ON user_roles
 FOR SELECT
 USING (
-  company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
+  -- Regular users: role assignments for users in their own company
+  EXISTS (
+    SELECT 1 FROM users u
+    WHERE u.id = user_roles.user_id
+    AND u.company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+  )
+  OR
+  -- Consultants: role assignments for users in assigned client companies
+  EXISTS (
+    SELECT 1 FROM users u
+    INNER JOIN consultant_client_assignments cca ON u.company_id = cca.client_company_id
+    WHERE u.id = user_roles.user_id
+    AND cca.consultant_id = auth.uid()
+    AND cca.status = 'ACTIVE'
   )
 );
 ```
 
 **Access Logic:**
-- Users can see role assignments for their companies
+- Regular users: Can see role assignments for users in their own company
+- Consultants: Can see role assignments for users in assigned client companies
 
 ### INSERT Policy
 
@@ -490,10 +611,16 @@ USING (
 CREATE POLICY user_roles_insert_owner_admin_access ON user_roles
 FOR INSERT
 WITH CHECK (
-  company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin')
+  -- Owner/Admin of their own company can assign roles to users in their company
+  EXISTS (
+    SELECT 1 FROM users u
+    WHERE u.id = user_roles.user_id
+    AND u.company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+      AND ur.role IN ('OWNER', 'ADMIN')
+    )
   )
 );
 ```
@@ -509,17 +636,29 @@ WITH CHECK (
 CREATE POLICY user_roles_update_owner_admin_access ON user_roles
 FOR UPDATE
 USING (
-  company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin')
+  -- Owner/Admin of their own company can update role assignments in their company
+  EXISTS (
+    SELECT 1 FROM users u
+    WHERE u.id = user_roles.user_id
+    AND u.company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+      AND ur.role IN ('OWNER', 'ADMIN')
+    )
   )
 )
 WITH CHECK (
-  company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin')
+  -- Same condition as USING
+  EXISTS (
+    SELECT 1 FROM users u
+    WHERE u.id = user_roles.user_id
+    AND u.company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+      AND ur.role IN ('OWNER', 'ADMIN')
+    )
   )
 );
 ```
@@ -535,11 +674,16 @@ WITH CHECK (
 CREATE POLICY user_roles_delete_owner_access ON user_roles
 FOR DELETE
 USING (
+  -- Only Owner of their own company can delete role assignments
   EXISTS (
-    SELECT 1 FROM user_roles
-    WHERE user_id = auth.uid()
-    AND role = 'owner'
-    AND company_id = user_roles.company_id
+    SELECT 1 FROM users u
+    WHERE u.id = user_roles.user_id
+    AND u.company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+      AND ur.role = 'OWNER'
+    )
   )
 );
 ```
@@ -563,9 +707,16 @@ FOR SELECT
 USING (
   site_id IN (
     SELECT id FROM sites
-    WHERE company_id IN (
-      SELECT company_id FROM user_roles
-      WHERE user_id = auth.uid()
+    WHERE (
+      -- Regular users: sites in their own company
+      company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+      OR
+      -- Consultants: sites in assigned client companies
+      company_id IN (
+        SELECT client_company_id FROM consultant_client_assignments
+        WHERE consultant_id = auth.uid()
+        AND status = 'ACTIVE'
+      )
     )
   )
 );
@@ -584,10 +735,14 @@ FOR INSERT
 WITH CHECK (
   site_id IN (
     SELECT id FROM sites
-    WHERE company_id IN (
-      SELECT company_id FROM user_roles
-      WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin')
+    WHERE (
+      -- Owner/Admin of their own company can assign users to sites in their company
+      company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role IN ('OWNER', 'ADMIN')
+      )
     )
   )
 );
@@ -606,20 +761,28 @@ FOR UPDATE
 USING (
   site_id IN (
     SELECT id FROM sites
-    WHERE company_id IN (
-      SELECT company_id FROM user_roles
-      WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin')
+    WHERE (
+      -- Owner/Admin of their own company can manage site assignments
+      company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role IN ('OWNER', 'ADMIN')
+      )
     )
   )
 )
 WITH CHECK (
   site_id IN (
     SELECT id FROM sites
-    WHERE company_id IN (
-      SELECT company_id FROM user_roles
-      WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin')
+    WHERE (
+      -- Owner/Admin of their own company can manage site assignments
+      company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role IN ('OWNER', 'ADMIN')
+      )
     )
   )
 );
@@ -638,10 +801,14 @@ FOR DELETE
 USING (
   site_id IN (
     SELECT id FROM sites
-    WHERE company_id IN (
-      SELECT company_id FROM user_roles
-      WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin')
+    WHERE (
+      -- Owner/Admin of their own company can manage site assignments
+      company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role IN ('OWNER', 'ADMIN')
+      )
     )
   )
 );
@@ -728,7 +895,7 @@ WITH CHECK (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff', 'consultant')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF', 'CONSULTANT')
   )
 );
 ```
@@ -748,14 +915,14 @@ USING (
   AND site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
   )
 )
 WITH CHECK (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
   )
 );
 ```
@@ -775,7 +942,7 @@ USING (
     SELECT 1 FROM user_site_assignments
     WHERE user_id = auth.uid()
     AND site_id = documents.site_id
-    AND role IN ('owner', 'admin')
+    AND role IN ('OWNER', 'ADMIN')
   )
 );
 ```
@@ -797,9 +964,13 @@ USING (
 CREATE POLICY document_site_assignments_select_site_access ON document_site_assignments
 FOR SELECT
 USING (
-  site_id IN (
-    SELECT site_id FROM user_site_assignments
-    WHERE user_id = auth.uid()
+  document_id IN (
+    SELECT id FROM documents
+    WHERE deleted_at IS NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+    )
   )
 );
 ```
@@ -818,7 +989,7 @@ WITH CHECK (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
   )
 );
 ```
@@ -837,14 +1008,14 @@ USING (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
   )
 )
 WITH CHECK (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
   )
 );
 ```
@@ -863,7 +1034,7 @@ USING (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin')
+    AND role IN ('OWNER', 'ADMIN')
   )
 );
 ```
@@ -885,7 +1056,8 @@ USING (
 CREATE POLICY obligations_select_site_access ON obligations
 FOR SELECT
 USING (
-  site_id IN (
+  deleted_at IS NULL
+  AND site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
   )
@@ -906,7 +1078,7 @@ WITH CHECK (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff', 'consultant')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF', 'CONSULTANT')
   )
 );
 ```
@@ -925,14 +1097,14 @@ USING (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
   )
 )
 WITH CHECK (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
   )
 );
 ```
@@ -952,7 +1124,7 @@ USING (
     SELECT 1 FROM user_site_assignments
     WHERE user_id = auth.uid()
     AND site_id = obligations.site_id
-    AND role IN ('owner', 'admin')
+    AND role IN ('OWNER', 'ADMIN')
   )
 );
 ```
@@ -983,7 +1155,8 @@ FOR SELECT
 USING (
   obligation_id IN (
     SELECT id FROM obligations
-    WHERE site_id IN (
+    WHERE deleted_at IS NULL
+    AND site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
     )
@@ -1007,7 +1180,7 @@ WITH CHECK (
     WHERE site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin', 'staff', 'consultant')
+      AND role IN ('OWNER', 'ADMIN', 'STAFF', 'CONSULTANT')
     )
   )
 );
@@ -1029,7 +1202,7 @@ USING (
     WHERE site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin', 'staff')
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
     )
   )
 )
@@ -1039,7 +1212,7 @@ WITH CHECK (
     WHERE site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin', 'staff')
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
     )
   )
 );
@@ -1061,7 +1234,7 @@ USING (
     WHERE site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin')
+      AND role IN ('OWNER', 'ADMIN')
     )
   )
 );
@@ -1086,7 +1259,8 @@ FOR SELECT
 USING (
   obligation_id IN (
     SELECT id FROM obligations
-    WHERE site_id IN (
+    WHERE deleted_at IS NULL
+    AND site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
     )
@@ -1123,7 +1297,7 @@ USING (
     WHERE site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin', 'staff')
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
     )
   )
 )
@@ -1133,7 +1307,7 @@ WITH CHECK (
     WHERE site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin', 'staff')
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
     )
   )
 );
@@ -1155,7 +1329,7 @@ USING (
     WHERE site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin')
+      AND role IN ('OWNER', 'ADMIN')
     )
   )
 );
@@ -1199,7 +1373,7 @@ WITH CHECK (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff', 'consultant')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF', 'CONSULTANT')
   )
 );
 ```
@@ -1218,14 +1392,14 @@ USING (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
   )
 )
 WITH CHECK (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
   )
 );
 ```
@@ -1261,7 +1435,8 @@ FOR SELECT
 USING (
   obligation_id IN (
     SELECT id FROM obligations
-    WHERE site_id IN (
+    WHERE deleted_at IS NULL
+    AND site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
     )
@@ -1285,7 +1460,7 @@ WITH CHECK (
     WHERE site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin', 'staff', 'consultant')
+      AND role IN ('OWNER', 'ADMIN', 'STAFF', 'CONSULTANT')
     )
   )
 );
@@ -1307,7 +1482,7 @@ USING (
     WHERE site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin', 'staff')
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
     )
   )
 )
@@ -1317,7 +1492,7 @@ WITH CHECK (
     WHERE site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin', 'staff')
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
     )
   )
 );
@@ -1339,7 +1514,7 @@ USING (
     WHERE site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin', 'staff')
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
     )
   )
 );
@@ -1368,10 +1543,26 @@ USING (
   (
     pack_type = 'BOARD_MULTI_SITE_RISK'
     AND site_id IS NULL
-    AND company_id IN (
-      SELECT company_id FROM user_roles
-      WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin')
+    AND (
+      -- Regular users: Owner/Admin of their own company
+      company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role IN ('OWNER', 'ADMIN')
+      )
+      OR
+      -- Consultants: assigned client companies
+      company_id IN (
+        SELECT client_company_id FROM consultant_client_assignments
+        WHERE consultant_id = auth.uid()
+        AND status = 'ACTIVE'
+      )
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role = 'CONSULTANT'
+      )
     )
   )
   OR
@@ -1418,10 +1609,26 @@ WITH CHECK (
   (
     pack_type = 'BOARD_MULTI_SITE_RISK'
     AND site_id IS NULL
-    AND company_id IN (
-      SELECT company_id FROM user_roles
-      WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin')
+    AND (
+      -- Regular users: Owner/Admin of their own company
+      company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role IN ('OWNER', 'ADMIN')
+      )
+      OR
+      -- Consultants: assigned client companies
+      company_id IN (
+        SELECT client_company_id FROM consultant_client_assignments
+        WHERE consultant_id = auth.uid()
+        AND status = 'ACTIVE'
+      )
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role = 'CONSULTANT'
+      )
     )
   )
   OR
@@ -1432,7 +1639,7 @@ WITH CHECK (
     AND site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin', 'staff')
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
     )
   )
   OR
@@ -1470,10 +1677,26 @@ USING (
   (
     pack_type = 'BOARD_MULTI_SITE_RISK'
     AND site_id IS NULL
-    AND company_id IN (
-      SELECT company_id FROM user_roles
-      WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin')
+    AND (
+      -- Regular users: Owner/Admin of their own company
+      company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role IN ('OWNER', 'ADMIN')
+      )
+      OR
+      -- Consultants: assigned client companies
+      company_id IN (
+        SELECT client_company_id FROM consultant_client_assignments
+        WHERE consultant_id = auth.uid()
+        AND status = 'ACTIVE'
+      )
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role = 'CONSULTANT'
+      )
     )
   )
   OR
@@ -1484,7 +1707,7 @@ USING (
     AND site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin', 'staff')
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
     )
   )
 )
@@ -1493,10 +1716,26 @@ WITH CHECK (
   (
     pack_type = 'BOARD_MULTI_SITE_RISK'
     AND site_id IS NULL
-    AND company_id IN (
-      SELECT company_id FROM user_roles
-      WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin')
+    AND (
+      -- Regular users: Owner/Admin of their own company
+      company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role IN ('OWNER', 'ADMIN')
+      )
+      OR
+      -- Consultants: assigned client companies
+      company_id IN (
+        SELECT client_company_id FROM consultant_client_assignments
+        WHERE consultant_id = auth.uid()
+        AND status = 'ACTIVE'
+      )
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role = 'CONSULTANT'
+      )
     )
   )
   OR
@@ -1506,7 +1745,7 @@ WITH CHECK (
     AND site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin', 'staff')
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
     )
   )
 );
@@ -1530,10 +1769,26 @@ USING (
   (
     pack_type = 'BOARD_MULTI_SITE_RISK'
     AND site_id IS NULL
-    AND company_id IN (
-      SELECT company_id FROM user_roles
-      WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin')
+    AND (
+      -- Regular users: Owner/Admin of their own company
+      company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role IN ('OWNER', 'ADMIN')
+      )
+      OR
+      -- Consultants: assigned client companies
+      company_id IN (
+        SELECT client_company_id FROM consultant_client_assignments
+        WHERE consultant_id = auth.uid()
+        AND status = 'ACTIVE'
+      )
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role = 'CONSULTANT'
+      )
     )
   )
   OR
@@ -1545,7 +1800,7 @@ USING (
       SELECT 1 FROM user_site_assignments
       WHERE user_id = auth.uid()
       AND site_id = audit_packs.site_id
-      AND role IN ('owner', 'admin')
+      AND role IN ('OWNER', 'ADMIN')
     )
   )
 );
@@ -1586,7 +1841,7 @@ USING (
     SELECT 1 FROM module_activations
     WHERE company_id = parameters.company_id
     AND module_id = parameters.module_id
-    AND is_active = TRUE
+    AND status = 'ACTIVE'
   )
 );
 ```
@@ -1753,9 +2008,14 @@ USING (user_id = auth.uid());
 CREATE POLICY audit_logs_select_company_access ON audit_logs
 FOR SELECT
 USING (
+  -- Regular users: their own company
+  company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+  OR
+  -- Consultants: assigned client companies
   company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
+    SELECT client_company_id FROM consultant_client_assignments
+    WHERE consultant_id = auth.uid()
+    AND status = 'ACTIVE'
   )
 );
 ```
@@ -1806,9 +2066,16 @@ USING (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
   )
-  OR company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
+  OR (
+    -- Regular users: their own company
+    company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    OR
+    -- Consultants: assigned client companies
+    company_id IN (
+      SELECT client_company_id FROM consultant_client_assignments
+      WHERE consultant_id = auth.uid()
+      AND status = 'ACTIVE'
+    )
   )
 );
 ```
@@ -1827,12 +2094,28 @@ WITH CHECK (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
   )
-  OR company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+  OR (
+    -- Regular users: Owner/Admin/Staff of their own company
+    company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
+    )
+    OR
+    -- Consultants: assigned client companies
+    company_id IN (
+      SELECT client_company_id FROM consultant_client_assignments
+      WHERE consultant_id = auth.uid()
+      AND status = 'ACTIVE'
+    )
+    AND EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role = 'CONSULTANT'
+    )
   )
 );
 ```
@@ -1851,24 +2134,56 @@ USING (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
   )
-  OR company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+  OR (
+    -- Regular users: Owner/Admin/Staff of their own company
+    company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
+    )
+    OR
+    -- Consultants: assigned client companies
+    company_id IN (
+      SELECT client_company_id FROM consultant_client_assignments
+      WHERE consultant_id = auth.uid()
+      AND status = 'ACTIVE'
+    )
+    AND EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role = 'CONSULTANT'
+    )
   )
 )
 WITH CHECK (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
   )
-  OR company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+  OR (
+    -- Regular users: Owner/Admin/Staff of their own company
+    company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
+    )
+    OR
+    -- Consultants: assigned client companies
+    company_id IN (
+      SELECT client_company_id FROM consultant_client_assignments
+      WHERE consultant_id = auth.uid()
+      AND status = 'ACTIVE'
+    )
+    AND EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role = 'CONSULTANT'
+    )
   )
 );
 ```
@@ -1894,7 +2209,7 @@ USING (
         WHERE id = regulator_questions.site_id
       )
     )
-    AND role IN ('owner', 'admin')
+    AND role IN ('OWNER', 'ADMIN')
   )
 );
 ```
@@ -1950,14 +2265,14 @@ USING (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
   )
 )
 WITH CHECK (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
   )
 );
 ```
@@ -2027,7 +2342,7 @@ USING (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
   )
   OR escalated_to = auth.uid()
 )
@@ -2035,7 +2350,7 @@ WITH CHECK (
   site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
   )
   OR escalated_to = auth.uid()
 );
@@ -2057,7 +2372,7 @@ USING (
     SELECT 1 FROM user_site_assignments
     WHERE user_id = auth.uid()
     AND site_id = escalations.site_id
-    AND role IN ('owner', 'admin')
+    AND role IN ('OWNER', 'ADMIN')
   )
 );
 ```
@@ -2096,7 +2411,7 @@ WITH CHECK (
   AND site_id IN (
     SELECT site_id FROM user_site_assignments
     WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin', 'staff', 'consultant')
+    AND role IN ('OWNER', 'ADMIN', 'STAFF', 'CONSULTANT')
   )
 );
 ```
@@ -2145,9 +2460,16 @@ USING (user_id = auth.uid());
 CREATE POLICY module_activations_select_company_access ON module_activations
 FOR SELECT
 USING (
-  company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
+  (
+    -- Regular users: their own company
+    company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    OR
+    -- Consultants: assigned client companies
+    company_id IN (
+      SELECT client_company_id FROM consultant_client_assignments
+      WHERE consultant_id = auth.uid()
+      AND status = 'ACTIVE'
+    )
   )
 );
 ```
@@ -2163,10 +2485,14 @@ USING (
 CREATE POLICY module_activations_insert_owner_admin_access ON module_activations
 FOR INSERT
 WITH CHECK (
-  company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin')
+  (
+    -- Regular users: Owner/Admin of their own company
+    company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN')
+    )
   )
 );
 ```
@@ -2182,17 +2508,25 @@ WITH CHECK (
 CREATE POLICY module_activations_update_owner_admin_access ON module_activations
 FOR UPDATE
 USING (
-  company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin')
+  (
+    -- Regular users: Owner/Admin of their own company
+    company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN')
+    )
   )
 )
 WITH CHECK (
-  company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin')
+  (
+    -- Regular users: Owner/Admin of their own company
+    company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN')
+    )
   )
 );
 ```
@@ -2208,11 +2542,12 @@ WITH CHECK (
 CREATE POLICY module_activations_delete_owner_access ON module_activations
 FOR DELETE
 USING (
-  EXISTS (
+  -- Only Owner of their own company can deactivate modules (consultants cannot)
+  company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+  AND EXISTS (
     SELECT 1 FROM user_roles
     WHERE user_id = auth.uid()
-    AND company_id = module_activations.company_id
-    AND role = 'owner'
+    AND role = 'OWNER'
   )
 );
 ```
@@ -2234,9 +2569,16 @@ USING (
 CREATE POLICY cross_sell_triggers_select_company_access ON cross_sell_triggers
 FOR SELECT
 USING (
-  company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
+  (
+    -- Regular users: their own company
+    company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    OR
+    -- Consultants: assigned client companies
+    company_id IN (
+      SELECT client_company_id FROM consultant_client_assignments
+      WHERE consultant_id = auth.uid()
+      AND status = 'ACTIVE'
+    )
   )
 );
 ```
@@ -2265,17 +2607,25 @@ WITH CHECK (auth.role() = 'service_role');
 CREATE POLICY cross_sell_triggers_update_owner_admin_access ON cross_sell_triggers
 FOR UPDATE
 USING (
-  company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin')
+  (
+    -- Regular users: Owner/Admin of their own company
+    company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN')
+    )
   )
 )
 WITH CHECK (
-  company_id IN (
-    SELECT company_id FROM user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('owner', 'admin')
+  (
+    -- Regular users: Owner/Admin of their own company
+    company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN')
+    )
   )
 );
 ```
@@ -2295,7 +2645,7 @@ USING (
     SELECT 1 FROM user_roles
     WHERE user_id = auth.uid()
     AND company_id = cross_sell_triggers.company_id
-    AND role IN ('owner', 'admin')
+    AND role IN ('OWNER', 'ADMIN')
   )
 );
 ```
@@ -2319,7 +2669,8 @@ FOR SELECT
 USING (
   document_id IN (
     SELECT id FROM documents
-    WHERE site_id IN (
+    WHERE deleted_at IS NULL
+    AND site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
     )
@@ -2370,7 +2721,7 @@ USING (
     WHERE site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin')
+      AND role IN ('OWNER', 'ADMIN')
     )
   )
 );
@@ -2476,16 +2827,25 @@ USING (
 CREATE OR REPLACE FUNCTION has_company_access(user_id UUID, company_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM user_roles
-    WHERE user_roles.user_id = has_company_access.user_id
-    AND user_roles.company_id = has_company_access.company_id
+  RETURN (
+    -- Regular users: their own company
+    company_id = (SELECT company_id FROM users WHERE id = has_company_access.user_id)
+    OR
+    -- Consultants: assigned client companies
+    EXISTS (
+      SELECT 1 FROM consultant_client_assignments
+      WHERE consultant_id = has_company_access.user_id
+      AND client_company_id = has_company_access.company_id
+      AND status = 'ACTIVE'
+    )
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
 **Purpose:** Check if user has access to a company
+- Regular users: Access to their own company (via `users.company_id`)
+- Consultants: Access to assigned client companies (via `consultant_client_assignments`)
 
 ### Function: has_site_access
 
@@ -2493,22 +2853,39 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION has_site_access(user_id UUID, site_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM user_site_assignments
-    WHERE user_site_assignments.user_id = has_site_access.user_id
-    AND user_site_assignments.site_id = has_site_access.site_id
-  )
-  OR EXISTS (
-    SELECT 1 FROM sites s
-    INNER JOIN user_roles ur ON s.company_id = ur.company_id
-    WHERE s.id = has_site_access.site_id
-    AND ur.user_id = has_site_access.user_id
+  RETURN (
+    -- Direct site assignment
+    EXISTS (
+      SELECT 1 FROM user_site_assignments
+      WHERE user_site_assignments.user_id = has_site_access.user_id
+      AND user_site_assignments.site_id = has_site_access.site_id
+    )
+    OR
+    -- Regular users: sites in their own company
+    EXISTS (
+      SELECT 1 FROM sites s
+      INNER JOIN users u ON s.company_id = u.company_id
+      WHERE s.id = has_site_access.site_id
+      AND u.id = has_site_access.user_id
+    )
+    OR
+    -- Consultants: sites in assigned client companies
+    EXISTS (
+      SELECT 1 FROM sites s
+      INNER JOIN consultant_client_assignments cca ON s.company_id = cca.client_company_id
+      WHERE s.id = has_site_access.site_id
+      AND cca.consultant_id = has_site_access.user_id
+      AND cca.status = 'ACTIVE'
+    )
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
 **Purpose:** Check if user has access to a site
+- Direct assignment via `user_site_assignments`
+- Regular users: Sites in their own company
+- Consultants: Sites in assigned client companies
 
 ### Function: role_has_permission
 
@@ -2522,23 +2899,31 @@ RETURNS BOOLEAN AS $$
 DECLARE
   user_role TEXT;
 BEGIN
-  -- Get user's role for the entity's company
+  -- Get user's role (users can have multiple roles, get first one)
   SELECT role INTO user_role
   FROM user_roles
   WHERE user_roles.user_id = role_has_permission.user_id
+  ORDER BY CASE role
+    WHEN 'OWNER' THEN 1
+    WHEN 'ADMIN' THEN 2
+    WHEN 'STAFF' THEN 3
+    WHEN 'CONSULTANT' THEN 4
+    WHEN 'VIEWER' THEN 5
+    ELSE 6
+  END
   LIMIT 1;
   
-  -- Check permission based on role and operation
+  -- Check permission based on role and operation (UPPERCASE roles)
   CASE user_role
-    WHEN 'owner' THEN
+    WHEN 'OWNER' THEN
       RETURN TRUE; -- Owner has all permissions
-    WHEN 'admin' THEN
+    WHEN 'ADMIN' THEN
       RETURN operation != 'DELETE' OR entity_type IN ('companies', 'users'); -- Admin can delete most, but not companies/users
-    WHEN 'staff' THEN
+    WHEN 'STAFF' THEN
       RETURN operation IN ('CREATE', 'READ', 'UPDATE') AND entity_type NOT IN ('users', 'user_roles', 'module_activations');
-    WHEN 'viewer' THEN
+    WHEN 'VIEWER' THEN
       RETURN operation = 'READ'; -- Viewer is read-only
-    WHEN 'consultant' THEN
+    WHEN 'CONSULTANT' THEN
       RETURN operation IN ('CREATE', 'READ', 'UPDATE') AND entity_type IN ('documents', 'obligations', 'evidence_items', 'audit_packs');
     ELSE
       RETURN FALSE;
@@ -2562,7 +2947,7 @@ BEGIN
     SELECT 1 FROM module_activations
     WHERE module_activations.company_id = is_module_activated.company_id
     AND module_activations.module_id = is_module_activated.module_id
-    AND module_activations.is_active = TRUE
+    AND module_activations.status = 'ACTIVE'
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -2605,31 +2990,52 @@ function checkPermission(userId, resource, operation):
   return false
 
 function hasCompanyAccess(userId, companyId):
-  return exists(
-    SELECT 1 FROM user_roles
-    WHERE user_id = userId
-    AND company_id = companyId
+  return (
+    -- Regular users: their own company
+    companyId == (SELECT company_id FROM users WHERE id = userId)
+    OR
+    -- Consultants: assigned client companies
+    exists(
+      SELECT 1 FROM consultant_client_assignments
+      WHERE consultant_id = userId
+      AND client_company_id = companyId
+      AND status = 'ACTIVE'
+    )
   )
 
 function hasSiteAccess(userId, siteId):
-  return exists(
-    SELECT 1 FROM user_site_assignments
-    WHERE user_id = userId
-    AND site_id = siteId
-  )
-  OR exists(
-    SELECT 1 FROM sites s
-    INNER JOIN user_roles ur ON s.company_id = ur.company_id
-    WHERE s.id = siteId
-    AND ur.user_id = userId
+  return (
+    -- Direct site assignment
+    exists(
+      SELECT 1 FROM user_site_assignments
+      WHERE user_id = userId
+      AND site_id = siteId
+    )
+    OR
+    -- Regular users: sites in their own company
+    exists(
+      SELECT 1 FROM sites s
+      INNER JOIN users u ON s.company_id = u.company_id
+      WHERE s.id = siteId
+      AND u.id = userId
+    )
+    OR
+    -- Consultants: sites in assigned client companies
+    exists(
+      SELECT 1 FROM sites s
+      INNER JOIN consultant_client_assignments cca ON s.company_id = cca.client_company_id
+      WHERE s.id = siteId
+      AND cca.consultant_id = userId
+      AND cca.status = 'ACTIVE'
+    )
   )
 
 function isConsultantAssignedToCompany(consultantId, companyId):
   return exists(
-    SELECT 1 FROM user_roles
-    WHERE user_id = consultantId
-    AND company_id = companyId
-    AND role = 'consultant'
+    SELECT 1 FROM consultant_client_assignments
+    WHERE consultant_id = consultantId
+    AND client_company_id = companyId
+    AND status = 'ACTIVE'
   )
 
 function isModuleActivated(companyId, moduleId):
@@ -2637,7 +3043,7 @@ function isModuleActivated(companyId, moduleId):
     SELECT 1 FROM module_activations
     WHERE company_id = companyId
     AND module_id = moduleId
-    AND is_active = TRUE
+    AND status = 'ACTIVE'
   )
 ```
 
@@ -2698,10 +3104,12 @@ Consultants have multi-company access but must be isolated to only their assigne
 
 ## 10.2 Consultant Assignment
 
-Consultants are assigned to client companies via the `user_roles` table:
-- `user_id` = consultant user ID
-- `company_id` = client company ID
-- `role` = 'consultant'
+Consultants are assigned to client companies via the `consultant_client_assignments` table:
+- `consultant_id` = consultant user ID (must have `role = 'CONSULTANT'` in `user_roles`)
+- `client_company_id` = client company ID
+- `status` = 'ACTIVE' (active assignment) or 'INACTIVE' (access revoked)
+
+**Note:** Consultants have a primary company via `users.company_id` (their own company), but can access multiple client companies via `consultant_client_assignments`.
 
 ## 10.3 Consultant Isolation Policy Pattern
 
@@ -2716,13 +3124,13 @@ USING (
     WHEN EXISTS (
       SELECT 1 FROM user_roles
       WHERE user_id = auth.uid()
-      AND role = 'consultant'
+      AND role = 'CONSULTANT'
     )
     THEN
       id IN (
-        SELECT company_id FROM user_roles
-        WHERE user_id = auth.uid()
-        AND role = 'consultant'
+        SELECT client_company_id FROM consultant_client_assignments
+        WHERE consultant_id = auth.uid()
+        AND status = 'ACTIVE'
       )
     ELSE TRUE
   END
@@ -2741,10 +3149,10 @@ CREATE OR REPLACE FUNCTION is_consultant_assigned_to_company(
 RETURNS BOOLEAN AS $$
 BEGIN
   RETURN EXISTS (
-    SELECT 1 FROM user_roles
-    WHERE user_id = consultant_id
-    AND company_id = is_consultant_assigned_to_company.company_id
-    AND role = 'consultant'
+    SELECT 1 FROM consultant_client_assignments
+    WHERE consultant_id = is_consultant_assigned_to_company.consultant_id
+    AND client_company_id = is_consultant_assigned_to_company.company_id
+    AND status = 'ACTIVE'
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -2784,7 +3192,7 @@ USING (
     SELECT 1 FROM user_roles
     WHERE user_id = auth.uid()
     AND company_id = consultant_client_assignments.client_company_id
-    AND role IN ('owner', 'admin')
+    AND role IN ('OWNER', 'ADMIN')
   )
 );
 ```
@@ -2802,15 +3210,19 @@ CREATE POLICY consultant_client_assignments_insert_owner_admin_access ON consult
 FOR INSERT
 WITH CHECK (
   EXISTS (
-    SELECT 1 FROM user_roles
-    WHERE user_id = auth.uid()
-    AND company_id = consultant_client_assignments.client_company_id
-    AND role IN ('owner', 'admin')
+    SELECT 1 FROM users u
+    WHERE u.id = auth.uid()
+    AND u.company_id = consultant_client_assignments.client_company_id
+    AND EXISTS (
+      SELECT 1 FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+      AND ur.role IN ('OWNER', 'ADMIN')
+    )
   )
   AND EXISTS (
-    SELECT 1 FROM user_roles
-    WHERE user_id = consultant_client_assignments.consultant_id
-    AND role = 'consultant'
+    SELECT 1 FROM user_roles ur2
+    WHERE ur2.user_id = consultant_client_assignments.consultant_id
+    AND ur2.role = 'CONSULTANT'
   )
 );
 ```
@@ -2831,15 +3243,20 @@ USING (
     SELECT 1 FROM user_roles
     WHERE user_id = auth.uid()
     AND company_id = consultant_client_assignments.client_company_id
-    AND role IN ('owner', 'admin')
+    AND role IN ('OWNER', 'ADMIN')
   )
 )
 WITH CHECK (
+  -- Only Owner/Admin of the client company can update assignments
   EXISTS (
-    SELECT 1 FROM user_roles
-    WHERE user_id = auth.uid()
-    AND company_id = consultant_client_assignments.client_company_id
-    AND role IN ('owner', 'admin')
+    SELECT 1 FROM users u
+    WHERE u.id = auth.uid()
+    AND u.company_id = consultant_client_assignments.client_company_id
+    AND EXISTS (
+      SELECT 1 FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
+      AND ur.role IN ('OWNER', 'ADMIN')
+    )
   )
 );
 ```
@@ -2859,7 +3276,7 @@ USING (
     SELECT 1 FROM user_roles
     WHERE user_id = auth.uid()
     AND company_id = consultant_client_assignments.client_company_id
-    AND role IN ('owner', 'admin')
+    AND role IN ('OWNER', 'ADMIN')
   )
 );
 ```
@@ -2916,10 +3333,26 @@ FOR SELECT
 USING (
   (
     pack_type = 'BOARD_MULTI_SITE_RISK'
-    AND company_id IN (
-      SELECT company_id FROM user_roles
-      WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin')
+    AND (
+      -- Regular users: Owner/Admin of their own company
+      company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role IN ('OWNER', 'ADMIN')
+      )
+      OR
+      -- Consultants: assigned client companies
+      company_id IN (
+        SELECT client_company_id FROM consultant_client_assignments
+        WHERE consultant_id = auth.uid()
+        AND status = 'ACTIVE'
+      )
+      AND EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role = 'CONSULTANT'
+      )
     )
   )
   OR (
@@ -2960,14 +3393,29 @@ FOR SELECT
 USING (
   pack_id IN (
     SELECT id FROM audit_packs
-    WHERE site_id IN (
-      SELECT site_id FROM user_site_assignments
-      WHERE user_id = auth.uid()
-    )
-    OR company_id IN (
-      SELECT company_id FROM user_roles
-      WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin')
+    WHERE (
+      -- Site-level access
+      site_id IN (
+        SELECT site_id FROM user_site_assignments
+        WHERE user_id = auth.uid()
+      )
+      OR
+      -- Regular users: Owner/Admin of their own company (for Board Pack)
+      (
+        company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+        AND EXISTS (
+          SELECT 1 FROM user_roles
+          WHERE user_id = auth.uid()
+          AND role IN ('OWNER', 'ADMIN')
+        )
+      )
+      OR
+      -- Consultants: assigned client companies
+      company_id IN (
+        SELECT client_company_id FROM consultant_client_assignments
+        WHERE consultant_id = auth.uid()
+        AND status = 'ACTIVE'
+      )
     )
   )
 );
@@ -2989,7 +3437,7 @@ WITH CHECK (
     WHERE site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
-      AND role IN ('owner', 'admin', 'staff', 'consultant')
+      AND role IN ('OWNER', 'ADMIN', 'STAFF', 'CONSULTANT')
     )
   )
   -- Distribution method access validated at application level (Growth Plan required)
@@ -3121,9 +3569,11 @@ USING (
 CREATE POLICY obligations_select_via_document ON obligations
 FOR SELECT
 USING (
-  document_id IN (
+  deleted_at IS NULL
+  AND document_id IN (
     SELECT id FROM documents
-    WHERE site_id IN (
+    WHERE deleted_at IS NULL
+    AND site_id IN (
       SELECT site_id FROM user_site_assignments
       WHERE user_id = auth.uid()
     )
@@ -3152,7 +3602,7 @@ USING (
     SELECT 1 FROM module_activations
     WHERE company_id = parameters.company_id
     AND module_id = parameters.module_id
-    AND is_active = TRUE
+    AND status = 'ACTIVE'
   )
 );
 ```
@@ -3197,15 +3647,18 @@ USING (
 
 ```sql
 -- Indexes for user_roles lookups
-CREATE INDEX idx_user_roles_user_id_company_id ON user_roles(user_id, company_id);
+-- Indexes for user_roles lookups
 CREATE INDEX idx_user_roles_user_id_role ON user_roles(user_id, role);
 
 -- Indexes for user_site_assignments lookups
 CREATE INDEX idx_user_site_assignments_user_id_site_id ON user_site_assignments(user_id, site_id);
-CREATE INDEX idx_user_site_assignments_user_id_role ON user_site_assignments(user_id, role);
+
+-- Indexes for consultant_client_assignments lookups
+CREATE INDEX idx_consultant_client_assignments_consultant_id ON consultant_client_assignments(consultant_id) WHERE status = 'ACTIVE';
+CREATE INDEX idx_consultant_client_assignments_client_company_id ON consultant_client_assignments(client_company_id) WHERE status = 'ACTIVE';
 
 -- Indexes for module_activations lookups
-CREATE INDEX idx_module_activations_company_id_module_id ON module_activations(company_id, module_id) WHERE is_active = TRUE;
+CREATE INDEX idx_module_activations_company_id_module_id ON module_activations(company_id, module_id) WHERE status = 'ACTIVE';
 
 -- Indexes for company_id and site_id on all tables
 CREATE INDEX idx_{table}_company_id ON {table}(company_id);

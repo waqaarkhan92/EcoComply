@@ -14,7 +14,7 @@
 
 # 1. Model Selection & Strategy
 
-## 1.1 Primary Model: GPT-4.1
+## 1.1 Primary Model: GPT-4o
 
 **Model Identifier:** `gpt-4o`
 
@@ -32,7 +32,7 @@
 - Subjective language detection
 - Confidence scoring
 
-**Why GPT-4.1:**
+**Why GPT-4o:**
 - 1M token context processes entire documents without segmentation
 - Best instruction following for structured output
 - Enhanced coding capabilities for JSON parsing
@@ -41,7 +41,7 @@
 
 **Cost per Document:** ~$0.14 (typical 50k input, 5k output tokens)
 
-## 1.2 Secondary Model: GPT-4.1 Mini
+## 1.2 Secondary Model: GPT-4o Mini
 
 **Model Identifier:** `gpt-4o-mini`
 
@@ -57,8 +57,8 @@
 - Pre-filtering and validation tasks
 - Non-critical classifications
 
-**Why GPT-4.1 Mini:**
-- 80% cheaper than GPT-4.1
+**Why GPT-4o Mini:**
+- 80% cheaper than GPT-4o
 - Same 1M token context window
 - Matches or exceeds GPT-4o performance
 - 50% latency reduction vs GPT-4o
@@ -95,7 +95,7 @@
                               │                           │
                               ▼                           ▼
                     ┌─────────────────┐         ┌─────────────────┐
-                    │    GPT-4.1      │         │  GPT-4.1 Mini   │
+                    │    GPT-4o      │         │  GPT-4o Mini   │
                     │   (Primary)     │         │  (Secondary)    │
                     └─────────────────┘         └─────────────────┘
 ```
@@ -148,7 +148,7 @@ export const AI_CONFIG = {
 
 ## 2.1 Full Document Processing (Primary Strategy)
 
-GPT-4.1's 1M token context eliminates the need for document segmentation in most cases. This provides superior accuracy as the model sees complete document context.
+GPT-4o's 1M token context eliminates the need for document segmentation in most cases. This provides superior accuracy as the model sees complete document context.
 
 **Document Size Thresholds:**
 
@@ -456,7 +456,7 @@ async function getCachedOrCompute<T>(
 
 ## 3.5 Rate Limit Management
 
-**OpenAI Rate Limits (GPT-4.1):**
+**OpenAI Rate Limits (GPT-4o):**
 - Requests per minute: Varies by tier
 - Tokens per minute: Varies by tier
 
@@ -1231,7 +1231,7 @@ function buildSimplifiedPrompt(document: Document): ExtractionPrompt {
                     │                               │
                     ▼                               ▼
 ┌─────────────────────────┐         ┌─────────────────────────────────────────┐
-│ USE LIBRARY TEMPLATE    │         │ STEP 7: LLM EXTRACTION (GPT-4.1)         │
+│ USE LIBRARY TEMPLATE    │         │ STEP 7: LLM EXTRACTION (GPT-4o)         │
 │ - Apply template        │         │ - Build prompt with document text        │
 │ - Set confidence 0.95   │         │ - Call OpenAI API                        │
 │ - Log as library hit    │         │ - Timeout: 30 seconds                    │
@@ -2191,21 +2191,21 @@ async function calculateQualityMetrics(
 
 | Model | Input Cost | Output Cost | Total | Notes |
 |-------|-----------|------------|-------|-------|
-| GPT-4.1 | $0.10 | $0.04 | **$0.14** | Primary model |
-| GPT-4.1 Mini | $0.02 | $0.008 | **$0.028** | Simple tasks |
+| GPT-4o | $0.10 | $0.04 | **$0.14** | Primary model |
+| GPT-4o Mini | $0.02 | $0.008 | **$0.028** | Simple tasks |
 
 **Large Document (200k input, 10k output):**
 
 | Model | Input Cost | Output Cost | Total | Notes |
 |-------|-----------|------------|-------|-------|
-| GPT-4.1 | $0.40 | $0.08 | **$0.48** | Still single call |
+| GPT-4o | $0.40 | $0.08 | **$0.48** | Still single call |
 
 ## 8.2 Monthly Projections with Rule Library
 
 **Assumptions:**
 - Rule library hit rate: 60%
 - Average document: 50k input, 5k output
-- Cost per API extraction: $0.14 (GPT-4.1)
+- Cost per API extraction: $0.14 (GPT-4o)
 
 | Customers | Permits/Month | API Extractions (40%) | Monthly Cost |
 |-----------|---------------|----------------------|--------------|
@@ -2223,14 +2223,14 @@ async function calculateQualityMetrics(
 | 200 | 4,800 | 1,920 | **$268.80** |
 | 500 | 12,000 | 4,800 | **$672.00** |
 
-## 8.3 Cost Savings from GPT-4.1's 1M Context
+## 8.3 Cost Savings from GPT-4o's 1M Context
 
 **Without 1M Context (Segmented Approach):**
 - Typical 100-page permit: 150k tokens
 - Would require 2-3 API calls with GPT-4o (128k limit)
 - Additional overhead: ~20% more tokens for context overlap
 
-**With GPT-4.1 (1M Context):**
+**With GPT-4o (1M Context):**
 - Single API call for documents up to ~500 pages
 - No segmentation overhead
 - Better accuracy (full context visibility)
@@ -2245,7 +2245,7 @@ async function calculateQualityMetrics(
 |--------|--------|----------------------|
 | Rule Library Hit Rate | >60% | Pattern expansion, monthly rule updates |
 | Avg Tokens per Extraction | <60,000 | Prompt compression, efficient schemas |
-| Cost per Permit | <$1.00 | Library-first strategy (actual: ~$0.14 with GPT-4.1) |
+| Cost per Permit | <$1.00 | Library-first strategy (actual: ~$0.14 with GPT-4o) |
 | Retry Rate | <5% | Robust validation, error handling |
 | Manual Mode Rate | <2% | Continuous rule library improvement |
 
@@ -2260,7 +2260,7 @@ async function calculateQualityMetrics(
 # Appendix A: Implementation Checklist
 
 ## Phase 1: Core Infrastructure
-- [ ] Configure OpenAI API client with GPT-4.1
+- [ ] Configure OpenAI API client with GPT-4o
 - [ ] Implement rate limiting and queue system
 - [ ] Set up extraction_logs table extensions
 - [ ] Create cost calculation functions

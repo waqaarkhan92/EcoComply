@@ -108,6 +108,22 @@ Module activation rules are defined in the `modules` table (see Canonical Dictio
 6. System creates `module_activations` record with `module_id` (not `module_type`)
 7. Billing logic queries `modules` table to calculate charges based on `base_price` and `pricing_model`
 
+**Deactivation Logic:**
+- If Module 1 is deactivated:
+  - System queries `modules` table to find all modules where `requires_module_id = Module 1's ID`
+  - Module 2 and Module 3 are automatically deactivated (cascade)
+  - User notified: "Module 1 is required for Module 2/3. Reactivating Module 1 will restore Module 2/3 access."
+  - Module 2/3 data is preserved (not deleted)
+  - User can reactivate Module 1 to restore Module 2/3 access
+- If Module 2 or Module 3 is deactivated:
+  - Can be deactivated independently
+  - Data archived (not deleted)
+  - Can reactivate to restore access
+- Legacy Activations:
+  - If user had Module 2 before prerequisite was added:
+    - Grandfathered: Module 2 remains active
+    - But cannot reactivate if deactivated later (will require Module 1)
+
 **Benefits:**
 - New modules can be added without code changes (just insert into `modules` table)
 - Prerequisites are enforced via foreign keys (no hardcoded logic)
@@ -403,6 +419,58 @@ When document is superseded:
 - Workflow retry logic: "Retry processing (up to 2 additional attempts)" = references this policy
 - PLS error handling table: "LLM timeout (>30s) | Retry once" = references this policy (retry once = 1 retry after initial attempt = 2 total attempts)
 
+### A.9.1.1 Error Recovery Scenarios
+
+**OpenAI API Down:**
+- After 3 failed retries (initial + 2 retries), flag document for manual review
+- Set `extraction_status = 'EXTRACTION_FAILED'`
+- Notify user: "Extraction temporarily unavailable. Please try again in 1 hour or enter Manual Mode."
+- Queue document for automatic retry after 1 hour
+- Log error to `extraction_logs` with full context
+
+**Corrupted Document:**
+- If PDF cannot be parsed (invalid format, corrupted file), set `extraction_status = 'OCR_FAILED'`
+- Notify user: "Document appears corrupted. Please upload a new copy."
+- Allow user to upload replacement document
+- Original document record preserved (for audit trail) but marked as failed
+
+**Zero Obligations Extracted:**
+- If document type is NOT in valid zero-obligation list (Section B.1.1) AND extraction returns 0 obligations:
+  - Set `extraction_status = 'ZERO_OBLIGATIONS'`
+  - Require user to either:
+    - Retry extraction with alternative prompt
+    - Enter Manual Mode and create at least one obligation manually
+    - Confirm document has no obligations (with reason required)
+  - Document cannot be activated until obligations exist OR user confirms zero obligations
+- If document type IS in valid zero-obligation list AND extraction returns 0 obligations:
+  - Document can be marked as complete with 0 obligations
+  - System logs: "Zero obligations validated - document type: [type]"
+  - Document status set to `ACTIVE` with `obligation_count = 0`
+
+**Invalid JSON Response:**
+- After all retries, if LLM returns invalid JSON:
+  - Set `extraction_status = 'EXTRACTION_FAILED'`
+  - Log raw response to `extraction_logs.errors` JSONB field
+  - Notify user: "Extraction failed due to invalid response. Please try Manual Mode."
+  - Allow user to retry extraction or enter Manual Mode
+  - Raw response preserved for debugging
+
+**Network Timeout:**
+- If network timeout occurs (before LLM timeout):
+  - Retry with exponential backoff (same as LLM timeout retry)
+  - After max retries, set `extraction_status = 'EXTRACTION_FAILED'`
+  - Notify user: "Network timeout. Please check your connection and try again."
+  - Allow immediate retry (no 1-hour delay)
+
+**Rate Limit Exceeded:**
+- If OpenAI API returns 429 (rate limit):
+  - Wait for Retry-After header (if provided)
+  - Otherwise, wait 60 seconds before retry
+  - Retry up to max retries
+  - After max retries, set `extraction_status = 'EXTRACTION_FAILED'`
+  - Notify user: "Rate limit exceeded. Please try again in a few minutes."
+  - Queue for retry after 5 minutes
+
 ### A.9.2 What the AI IS Allowed to Do
 
 1. **Extract text** from PDF documents (OCR + native text)
@@ -496,7 +564,7 @@ Some document types may legitimately have zero obligations. These are exceptions
 - `permit_number` (or `permit_id`) - Required: Permit reference number
 - `obligation_title` - Required: Title/name of obligation
 - `obligation_description` - Required: Description of obligation
-- `frequency` - Required: Frequency value (daily, weekly, monthly, quarterly, annually, one-time)
+- `frequency` - Required: Frequency value (DAILY, WEEKLY, MONTHLY, QUARTERLY, ANNUAL, ONE_TIME)
 - `deadline_date` (or `next_deadline`) - Required: Next deadline date
 - `site_id` (or `site_name`) - Required: Site identifier or name
 
@@ -516,7 +584,7 @@ Some document types may legitimately have zero obligations. These are exceptions
 
 **Validation Rules:**
 - Date format: Accepts multiple formats (DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD)
-- Frequency validation: Must be one of: daily, weekly, monthly, quarterly, annually, one-time
+- Frequency validation: Must be one of: DAILY, WEEKLY, MONTHLY, QUARTERLY, ANNUAL, ONE_TIME
 - Site reference: If `deadline_date` is in the past, still valid (historical data)
 - Site validation: `site_id` must exist OR `site_name` will be matched/created (if import option enabled)
 - Permit validation: `permit_number` must be unique per site, or will create new permit (if import option enabled)
@@ -643,23 +711,23 @@ Module routing is determined by querying the `modules` table based on `document_
 **Model Selection Logic:**
 The system uses a multi-model approach for extraction, with automatic routing based on document characteristics.
 
-**Primary Model (GPT-4.1):**
+**Primary Model (GPT-4o):**
 - **Use Cases:** All standard document extraction tasks
 - **Trigger:** Document size < 50 pages, standard document types
 - **Model Identifier:** `gpt-4o`
 - **Timeout:** 30 seconds (standard), 5 minutes (large documents)
 
-**Secondary Model (GPT-4.1-mini):**
+**Secondary Model (GPT-4o-mini):**
 - **Use Cases:** Simple documents, low-priority extractions, retry attempts
 - **Trigger:** Document size < 20 pages, simple document structure, cost optimization needed
 - **Model Identifier:** `gpt-4o-mini`
 - **Timeout:** 30 seconds
 
 **Model Selection Decision Tree:**
-1. **If** document size ≥ 50 pages, **then** use GPT-4.1 (primary)
-2. **If** document size < 20 pages AND simple structure, **then** use GPT-4.1-mini (secondary)
-3. **If** document size 20-49 pages, **then** use GPT-4.1 (primary)
-4. **If** primary model fails (timeout/error), **then** retry with GPT-4.1-mini
+1. **If** document size ≥ 50 pages, **then** use GPT-4o (primary)
+2. **If** document size < 20 pages AND simple structure, **then** use GPT-4o-mini (secondary)
+3. **If** document size 20-49 pages, **then** use GPT-4o (primary)
+4. **If** primary model fails (timeout/error), **then** retry with GPT-4o-mini
 5. **If** both models fail, **then** flag for manual review
 
 **Model Metadata Persistence:**
@@ -775,6 +843,34 @@ After LLM extraction, apply validation:
 ---
 
 ## B.3 Deadline Calculation Rules
+
+### B.3.0 Deadline Calculation Edge Cases
+
+**Past Base Date:**
+- If `base_date` is in the past:
+  - Calculate `next_due_date` from today (not base_date)
+  - Log warning: "Base date is in the past. Calculating from today."
+  - Update `base_date` to today (preserve original in metadata)
+
+**Event-Triggered Frequency:**
+- If frequency is "EVENT_TRIGGERED":
+  - `next_due_date` = NULL until event occurs
+  - User must manually trigger deadline creation
+  - System does not auto-generate deadlines
+  - Event trigger stored in `obligations.metadata.event_trigger`
+
+**Year Boundary:**
+- If business days calculation crosses year boundary:
+  - Use business days library that handles holidays across years
+  - Account for UK bank holidays in both years
+  - Calculate correctly across year boundary
+
+**Grace Period:**
+- If grace period pushes deadline into next compliance period:
+  - Deadline remains in original compliance period
+  - But `due_date` is adjusted by `grace_period_days`
+  - Compliance period does not change
+  - Example: Deadline due 2024-12-31, grace period 5 days → due_date = 2025-01-05, but compliance_period = "2024"
 
 ### B.3.1 Deadline Types
 
@@ -2385,7 +2481,7 @@ Deactivation logic queries the `modules` table to find all modules that have `re
   "trigger_id": "uuid",
   "company_id": "uuid",
   "target_module_id": "uuid (from modules table, queried dynamically based on keywords)",
-  "trigger_type": "keyword|external|user_request",
+  "trigger_type": "KEYWORD|EXTERNAL_EVENT|USER_REQUEST",
   "trigger_source": "document_id or external",
   "detected_keywords": ["trade effluent", "sewer"],
   "status": "pending|dismissed|converted",
@@ -3142,11 +3238,37 @@ The following file types are explicitly blocked and will be rejected with an err
 
 | Evidence Type | Minimum Retention |
 |---------------|-------------------|
-| All evidence | 6 years from upload |
-| Evidence linked to incidents | 10 years |
-| Evidence for improvement conditions | Until condition closed + 2 years |
+| All evidence (STANDARD) | 7 years from upload |
+| Evidence linked to incidents (INCIDENT) | 10 years |
+| Evidence for improvement conditions (IMPROVEMENT_CONDITION) | Until condition closed + 2 years |
 
 ### H.7.2 Deletion Rules
+
+**Evidence Immutability Rules:**
+
+1. **Evidence Cannot Be Deleted:**
+   - Once uploaded, evidence cannot be deleted by users
+   - Only system can archive after retention period (7 years for STANDARD, 10 years for INCIDENT, condition closed + 2 years for IMPROVEMENT_CONDITION)
+   - This ensures complete audit trail and regulatory compliance
+
+2. **Evidence Can Be Unlinked:**
+   - Users can unlink evidence from obligations
+   - Unlinking is logged in audit_logs
+   - Evidence remains in system (not deleted)
+
+3. **Evidence Replacement:**
+   - If user uploads wrong file:
+     - Upload new evidence file
+     - Link new evidence to obligation
+     - Unlink old evidence (if needed)
+     - Old evidence remains (for audit trail)
+
+4. **Evidence Correction:**
+   - If evidence is linked to wrong obligation:
+     - Unlink from wrong obligation
+     - Link to correct obligation
+     - Both actions logged
+     - Evidence file itself unchanged
 
 - Evidence cannot be deleted by users
 - System marks evidence as "Archived" after retention period
@@ -3274,6 +3396,48 @@ For each gap, system suggests:
 - Target: <60 seconds for typical pack
 - Large packs (>100 evidence items): Background processing, email when ready
 - Maximum evidence items: 500 per pack
+
+### I.5.3 Pack Generation Failure Scenarios
+
+**Mid-Process Failure:**
+- If generation fails after partial completion:
+  - Mark pack as `status = 'FAILED'` in audit_packs table (if pack record exists)
+  - Log error details to `audit_logs` table
+  - Notify user: "Pack generation failed. Please try again."
+  - Allow user to retry (will regenerate from scratch)
+  - Partial data not saved (transaction rollback)
+
+**PDF Generation Library Failure:**
+- If PDF library throws error:
+  - Retry once with different PDF library (if available)
+  - If still fails:
+    - Mark pack as `status = 'FAILED'`
+    - Return error: "PDF generation unavailable. Please contact support."
+    - Log error for debugging
+    - Alert admins
+
+**Storage Quota Exceeded:**
+- If Supabase storage quota reached:
+  - Return error: "Storage quota exceeded. Please contact support to increase quota."
+  - Do not generate pack
+  - Alert admins immediately
+  - Log quota status
+
+**Timeout (>5 minutes):**
+- If generation takes >5 minutes:
+  - Cancel generation
+  - Mark as failed
+  - Notify user: "Pack generation timed out. Please try with smaller date range or fewer obligations."
+  - Suggest: Reduce date range, filter obligations, or contact support
+  - Log timeout for performance analysis
+
+**Missing Evidence Files:**
+- If evidence files are missing from storage:
+  - Continue generation (don't fail)
+  - Include note in pack: "Evidence file [filename] not found in storage"
+  - Mark obligation as "Evidence Missing" in pack
+  - Log missing files to audit_logs
+  - Notify user: "Some evidence files were missing. Pack generated with gaps noted."
 
 ## I.6 Pack Content Filters (Applies to All Pack Types)
 
