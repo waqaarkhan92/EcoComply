@@ -15,7 +15,7 @@ interface EnvConfig {
   OPENAI_API_KEY_FALLBACK_1?: string;
   OPENAI_API_KEY_FALLBACK_2?: string;
 
-  // Email
+  // Email (optional for Phase 2, required for Phase 4+)
   SENDGRID_API_KEY: string;
   SENDGRID_FROM_EMAIL: string;
 
@@ -24,7 +24,7 @@ interface EnvConfig {
   TWILIO_AUTH_TOKEN?: string;
   TWILIO_PHONE_NUMBER?: string;
 
-  // Redis
+  // Redis (optional for Phase 2, required for Phase 4+)
   REDIS_URL: string;
 
   // JWT
@@ -45,19 +45,23 @@ function validateEnv(): EnvConfig {
   const missing: string[] = [];
   const errors: string[] = [];
 
-  // Required variables
+  // Required variables (Phase 2 - Auth endpoints don't need all services yet)
   const required = [
     'SUPABASE_URL',
     'SUPABASE_ANON_KEY',
     'SUPABASE_SERVICE_ROLE_KEY',
     'DATABASE_URL',
     'OPENAI_API_KEY',
-    'SENDGRID_API_KEY',
-    'SENDGRID_FROM_EMAIL',
-    'REDIS_URL',
     'JWT_SECRET',
     'JWT_REFRESH_SECRET',
     'BASE_URL',
+  ];
+
+  // Optional variables (will be required in later phases)
+  const optional = [
+    'SENDGRID_API_KEY',
+    'SENDGRID_FROM_EMAIL',
+    'REDIS_URL',
   ];
 
   // Check required variables
@@ -76,6 +80,7 @@ function validateEnv(): EnvConfig {
     errors.push('DATABASE_URL must be a valid PostgreSQL connection string');
   }
 
+  // Validate Redis URL only if provided (optional for Phase 2)
   if (process.env.REDIS_URL && !process.env.REDIS_URL.startsWith('redis://')) {
     errors.push('REDIS_URL must be a valid Redis connection string');
   }
@@ -118,12 +123,12 @@ function validateEnv(): EnvConfig {
     OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
     OPENAI_API_KEY_FALLBACK_1: process.env.OPENAI_API_KEY_FALLBACK_1,
     OPENAI_API_KEY_FALLBACK_2: process.env.OPENAI_API_KEY_FALLBACK_2,
-    SENDGRID_API_KEY: process.env.SENDGRID_API_KEY!,
-    SENDGRID_FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL!,
+    SENDGRID_API_KEY: process.env.SENDGRID_API_KEY || '',
+    SENDGRID_FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL || '',
     TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
     TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
-    REDIS_URL: process.env.REDIS_URL!,
+    REDIS_URL: process.env.REDIS_URL || '',
     JWT_SECRET: process.env.JWT_SECRET!,
     JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET!,
     BASE_URL: process.env.BASE_URL || 'http://localhost:3000',

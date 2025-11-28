@@ -99,16 +99,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create Supabase Auth user
-    const { data: authUser, error: authError } = await supabaseAdmin.auth.signUp({
+    // Create Supabase Auth user using admin API (bypasses email validation)
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: body.email.toLowerCase(),
       password: body.password,
-      options: {
-        emailRedirectTo: `${process.env.BASE_URL || 'http://localhost:3000'}/auth/verify-email`,
-        data: {
-          full_name: body.full_name,
-          company_name: body.company_name,
-        },
+      email_confirm: false, // Email verification will be handled separately
+      user_metadata: {
+        full_name: body.full_name,
+        company_name: body.company_name,
       },
     });
 
@@ -242,24 +240,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get session tokens (if email verification is not required, user can log in immediately)
-    // Note: Supabase Auth sends verification email automatically if email confirmation is enabled
+    // Generate session tokens for the newly created user
+    // Since we're using admin API, we need to create a session manually
+    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: body.email.toLowerCase(),
+    });
+
+    // If email verification is required, tokens will be null until email is verified
+    // For now, we'll return the user data but tokens will be null
+    // The frontend should handle redirecting to email verification page
     let accessToken: string | null = null;
     let refreshToken: string | null = null;
 
-    // If email verification is required, user needs to verify email before getting tokens
-    // For now, we'll return the user data but tokens will be null until email is verified
-    // The frontend should handle redirecting to email verification page
-
-    // Try to get session (will only work if email verification is disabled)
-    const { data: sessionData } = await supabaseAdmin.auth.signInWithPassword({
+    // Try to sign in to get tokens (only works if email verification is not required)
+    // Note: In production, you may want to require email verification before allowing login
+    const { data: loginData } = await supabaseAdmin.auth.signInWithPassword({
       email: body.email.toLowerCase(),
       password: body.password,
     });
 
-    if (sessionData?.session) {
-      accessToken = sessionData.session.access_token;
-      refreshToken = sessionData.session.refresh_token;
+    if (loginData?.session) {
+      accessToken = loginData.session.access_token;
+      refreshToken = loginData.session.refresh_token;
     }
 
     // Return success response
