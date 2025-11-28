@@ -76,10 +76,11 @@ export class TestClient {
     return this.request('DELETE', path, options);
   }
 
-  async signup(email: string, password: string, companyName?: string): Promise<TestUser> {
+  async signup(email: string, password: string, companyName?: string, fullName?: string): Promise<TestUser> {
     const response = await this.post('/api/v1/auth/signup', {
       email,
       password,
+      full_name: fullName || `Test User ${Date.now()}`,
       company_name: companyName || `Test Company ${Date.now()}`,
     });
 
@@ -89,12 +90,26 @@ export class TestClient {
     }
 
     const data = await response.json();
+    const userId = data.data.user.id;
+    const companyId = data.data.user.company_id;
+
+    // Signup doesn't return tokens - need to login to get token
+    // For test purposes, we'll login immediately after signup
+    let token: string | undefined;
+    try {
+      token = await this.login(email, password);
+    } catch (error) {
+      // If login fails (e.g., email not verified), that's okay for tests
+      // We'll just proceed without token
+      console.warn('Login after signup failed (may need email verification):', error);
+    }
+
     return {
-      id: data.data.user.id,
+      id: userId,
       email,
       password,
-      token: data.data.token?.access_token,
-      company_id: data.data.user.company_id,
+      token,
+      company_id: companyId,
     };
   }
 
