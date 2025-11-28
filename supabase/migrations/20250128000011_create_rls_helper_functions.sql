@@ -17,14 +17,14 @@ RETURNS BOOLEAN AS $$
 BEGIN
   RETURN (
     -- Regular users: their own company
-    company_id = (SELECT company_id FROM users WHERE id = has_company_access.user_id)
+    has_company_access.company_id = (SELECT u.company_id FROM users u WHERE u.id = has_company_access.user_id)
     OR
     -- Consultants: assigned client companies
     EXISTS (
-      SELECT 1 FROM consultant_client_assignments
-      WHERE consultant_id = has_company_access.user_id
-      AND client_company_id = has_company_access.company_id
-      AND status = 'ACTIVE'
+      SELECT 1 FROM consultant_client_assignments cca
+      WHERE cca.consultant_id = has_company_access.user_id
+      AND cca.client_company_id = has_company_access.company_id
+      AND cca.status = 'ACTIVE'
     )
   );
 END;
