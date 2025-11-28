@@ -15,9 +15,10 @@ describe('Health Check API', () => {
     expect(response.status).toBe(200);
 
     const data = await response.json();
-    // Health endpoint returns { status: "healthy", ... }
-    expect(data).toHaveProperty('status');
-    expect(['healthy', 'degraded', 'unhealthy']).toContain(data.status);
+    // Health endpoint returns { data: { status: "healthy", ... }, meta: {...} }
+    expect(data).toHaveProperty('data');
+    expect(data.data).toHaveProperty('status');
+    expect(['healthy', 'degraded', 'unhealthy']).toContain(data.data.status);
   });
 });
 
