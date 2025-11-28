@@ -265,6 +265,25 @@ aer-documents/
   │   │   │   └── aer-{year}.pdf
 ```
 
+**Bucket Setup Instructions:**
+1. Create buckets in Supabase Dashboard:
+   - `documents` (private bucket)
+   - `evidence` (private bucket)
+   - `audit-packs` (private bucket)
+   - `aer-documents` (private bucket)
+2. Configure RLS policies (see Document 2.8 - RLS & Permissions Rules):
+   - Users can only access files for their assigned companies/sites
+   - Service role can access all files (for background jobs)
+3. Set CORS configuration:
+   - Allowed origin: `NEXT_PUBLIC_APP_URL`
+   - Allowed methods: GET, POST, PUT, DELETE
+   - Allowed headers: Authorization, Content-Type
+4. Set file size limits:
+   - Documents: 50MB max
+   - Evidence: 25MB max
+   - Generated PDFs: 100MB max
+5. Enable public access: No (all buckets are private)
+
 **File Naming Conventions:**
 - **Storage Filename:** UUID-based (e.g., `a1b2c3d4-e5f6-7890-abcd-ef1234567890.pdf`)
 - **Original Filename:** Stored in database `file_name` or `original_filename` field
@@ -297,6 +316,25 @@ aer-documents/
 - RLS policies on storage buckets enforce company/site isolation
 - Users can only access files for their assigned companies/sites
 - Role-based access (Viewer: read-only, others: read/write within scope)
+
+**Bucket Setup Instructions:**
+1. Create buckets in Supabase Dashboard:
+   - `documents` (private bucket)
+   - `evidence` (private bucket)
+   - `audit-packs` (private bucket)
+   - `aer-documents` (private bucket)
+2. Configure RLS policies (see Document 2.8 - RLS & Permissions Rules):
+   - Users can only access files for their assigned companies/sites
+   - Service role can access all files (for background jobs)
+3. Set CORS configuration:
+   - Allowed origin: `NEXT_PUBLIC_APP_URL`
+   - Allowed methods: GET, POST, PUT, DELETE
+   - Allowed headers: Authorization, Content-Type
+4. Set file size limits:
+   - Documents: 50MB max
+   - Evidence: 25MB max
+   - Generated PDFs: 100MB max
+5. Enable public access: No (all buckets are private)
 
 ---
 
@@ -354,6 +392,12 @@ aer-documents/
 - **Rate Limiting:** Supabase enforces rate limits on real-time messages
 - **Fallback:** Polling fallback if real-time connection fails
 
+**Connection Management:**
+- Monitor connection count per company
+- Implement connection pooling at application level
+- If limit reached: Fall back to polling (every 5 seconds)
+- Alert admins when >80% of limit reached
+
 **Integration with Frontend:**
 - React hooks for real-time subscriptions (see Frontend Framework section)
 - Automatic UI updates when database changes occur
@@ -391,7 +435,12 @@ aer-documents/
 - **Provider:** Upstash Redis (serverless, compatible with Vercel)
 - **Alternative:** Redis Cloud or self-hosted Redis
 - **Connection:** Use Redis URL from environment variables
+  - Environment Variable: `REDIS_URL` (required)
+  - Format: `redis://[password]@[host]:[port]` or `rediss://` for TLS
+  - Upstash Format: `rediss://default:[password]@[host]:[port]`
+  - Fallback: If Redis unavailable, jobs queue in database (degraded mode)
 - **Persistence:** Redis persistence enabled for job durability
+- **Connection Pooling:** Upstash Redis handles connection pooling automatically
 
 **Job Queue Architecture:**
 - **Priority Queues:**
@@ -413,7 +462,20 @@ aer-documents/
 - **Worker Processes:** Separate worker processes for each queue type
 - **Concurrency:** Configurable concurrency per worker (default: 5 jobs concurrently)
 - **Scaling:** Horizontal scaling by adding more worker instances
-- **Deployment:** Workers deployed as separate Vercel serverless functions or dedicated worker processes
+- **Deployment Strategy:**
+  - **Option 1 (Recommended):** Separate worker service (not Vercel)
+    - Deploy workers on Railway, Render, or Fly.io
+    - Workers run continuously, not serverless
+    - No timeout limits (can handle 5-minute document processing)
+    - Recommended for production
+  - **Option 2 (Alternative):** Vercel Edge Functions with streaming
+    - Use streaming responses for long jobs
+    - Or split jobs into smaller chunks (<60s each)
+    - Suitable for short jobs only
+  - **Option 3 (Fallback):** Database-backed queue
+    - If Redis unavailable, use database table as queue
+    - Polling workers check database every 5 seconds
+    - Degraded performance but functional
 
 ---
 
@@ -632,8 +694,10 @@ Development: http://localhost:3000/api/v1
 
 **Session Management:**
 - Sessions managed by Supabase Auth
-- Session storage: HTTP-only cookies (for web) or localStorage (for mobile)
+- **Web (Browser):** HTTP-only cookies (secure, prevents XSS attacks)
+- **Mobile (React Native/Expo):** Secure storage (Keychain/Keystore) - NOT localStorage
 - Session timeout: 24 hours of inactivity
+- **Security Note:** localStorage is NOT used for auth tokens on web - only HTTP-only cookies for security compliance
 
 **Role-Based Access Control (RBAC):**
 - **Roles:** Owner, Admin, Staff, Consultant, Viewer (see PLS Section B.10)
@@ -657,7 +721,7 @@ Development: http://localhost:3000/api/v1
 - **GET:** Retrieve resources (list, detail)
 - **POST:** Create resources
 - **PUT:** Full update (replace entire resource)
-- **PATCH:** Partial update (update specific fields)
+- **PUT:** Full update (replace entire resource) - Standard for all update operations
 - **DELETE:** Delete resources (soft delete via `deleted_at`)
 
 **Request/Response Formats:**
@@ -680,7 +744,7 @@ Development: http://localhost:3000/api/v1
 ```
 
 **HTTP Status Codes:**
-- `200 OK`: Successful GET, PUT, PATCH
+- `200 OK`: Successful GET, PUT
 - `201 Created`: Successful POST
 - `204 No Content`: Successful DELETE
 - `400 Bad Request`: Invalid request data
@@ -788,13 +852,13 @@ X-RateLimit-Reset: 1640995200
 **Obligation Management Endpoints:**
 - `GET /api/v1/obligations` - List obligations (with filters)
 - `GET /api/v1/obligations/{id}` - Get obligation details
-- `PATCH /api/v1/obligations/{id}` - Update obligation
+- `PUT /api/v1/obligations/{id}` - Update obligation
 - `POST /api/v1/obligations/{id}/evidence` - Link evidence to obligation
 
 **Evidence Management Endpoints:**
 - `POST /api/v1/evidence` - Upload evidence file
 - `GET /api/v1/evidence/{id}` - Get evidence details
-- `DELETE /api/v1/evidence/{id}` - Delete evidence (soft delete)
+- Evidence cannot be deleted (immutability for compliance) - only archived by system after retention period
 
 **Module Activation Endpoints:**
 - `POST /api/v1/modules/{module_id}/activate` - Activate module
@@ -1131,7 +1195,7 @@ lib/
 ## 6.2 Third-Party Services
 
 **OCR Service:**
-- **Current:** OpenAI GPT-4.1 Vision API (if needed for image-based PDFs)
+- **Current:** OpenAI GPT-4o Vision API (if needed for image-based PDFs)
 - **Alternative:** Tesseract OCR (if OpenAI doesn't support image PDFs)
 - **Integration:** Called during document processing pipeline
 
@@ -1174,6 +1238,8 @@ SUPABASE_SERVICE_ROLE_KEY=xxx
 
 # OpenAI
 OPENAI_API_KEY=sk-xxx
+OPENAI_API_KEY_FALLBACK_1=sk-xxx (optional)
+OPENAI_API_KEY_FALLBACK_2=sk-xxx (optional)
 
 # Redis (for BullMQ)
 REDIS_URL=redis://xxx
@@ -1534,8 +1600,8 @@ GitHub → Vercel → Automatic Deployment
 │  Supabase    │   │  BullMQ      │   │  OpenAI      │
 │  (Database)  │   │  (Jobs)      │   │  (AI)        │
 │              │   │              │   │              │
-│  - PostgreSQL│   │  - Redis     │   │  - GPT-4.1   │
-│  - Storage   │   │  - Workers   │   │  - GPT-4.1   │
+│  - PostgreSQL│   │  - Redis     │   │  - GPT-4o    │
+│  - Storage   │   │  - Workers   │   │  - GPT-4o    │
 │  - Auth      │   │              │   │  Mini        │
 │  - Realtime  │   │              │   │              │
 └──────────────┘   └──────────────┘   └──────────────┘
@@ -1579,7 +1645,7 @@ User Uploads PDF
          │   └─→ If match ≥90%, skip AI
          │
          ├─→ Call OpenAI API
-         │   └─→ GPT-4.1 Extraction
+         │   └─→ GPT-4o Extraction
          │
          └─→ Store Results in DB
              └─→ Update Document Status
@@ -1668,7 +1734,7 @@ This Technical Architecture & Stack document defines the complete technical infr
 - **Background Jobs:** BullMQ with Redis for reliable job processing
 - **API:** REST API with Next.js API routes
 - **Frontend:** Next.js 14 App Router with React Query and Zustand
-- **AI Service:** OpenAI GPT-4.1 and GPT-4.1 Mini integration
+- **AI Service:** OpenAI GPT-4o and GPT-4o-mini integration
 - **Hosting:** Vercel (frontend) + Supabase (database/backend)
 
 All technical decisions align with the Product Logic Specification (PLS) and Canonical Dictionary, ensuring consistency across the platform. The architecture supports modular expansion (Modules 1, 2, 3, and future modules) via the data-driven `modules` table.

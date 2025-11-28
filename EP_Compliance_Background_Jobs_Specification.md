@@ -88,7 +88,7 @@ Jobs are organized into dedicated queues based on function and priority:
 | Concurrency per worker | 5 | Default, configurable |
 | Concurrent jobs per queue | 10 | Maximum |
 | Global concurrent jobs | 50 | Across all queues |
-| Worker deployment | Vercel serverless functions | Or dedicated worker processes |
+| Worker deployment | Separate worker service (Railway/Render/Fly.io) | See Technical Architecture Section 1.4 for deployment strategy |
 
 ---
 
@@ -507,19 +507,21 @@ Step 3: Create Reminder Notifications
 ┌─────────────────────────────────────────────────────────────┐
 │  INSERT INTO notifications (                               │
 │    user_id, company_id, site_id,                           │
-│    alert_type, severity, channel,                          │
-│    title, message, entity_type, entity_id,                 │
-│    action_url, metadata                                    │
+│    recipient_email, notification_type, channel,            │
+│    priority, subject, body_text,                           │
+│    entity_type, entity_id, action_url, metadata            │
 │  ) VALUES (                                                │
 │    COALESCE(:assigned_user_id, :site_manager_id),          │
 │    :company_id, :site_id,                                  │
-│    'EVIDENCE_REMINDER', 'WARNING', 'EMAIL',                │
+│    (SELECT email FROM users WHERE id = COALESCE(:assigned_user_id, :site_manager_id)), │
+│    'EVIDENCE_REMINDER', 'EMAIL',                           │
+│    'HIGH',                                                 │
 │    'Evidence Required: ' || :obligation_summary,           │
 │    'Evidence is required for obligation due on ' ||        │
 │      :deadline_date,                                       │
 │    'obligation', :obligation_id,                           │
 │    '/obligations/' || :obligation_id,                      │
-│    '{"days_until_due": ' || :days_remaining || '}'         │
+│    '{"days_until_due": ' || :days_remaining || '}'::JSONB │
 │  )                                                         │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -1031,7 +1033,7 @@ Step 5: Validate Each Row
 │                                                             │
 │    5c. Validate frequency:                                 │
 │        valid_frequencies = ['daily', 'weekly', 'monthly',  │
-│                            'quarterly', 'annually',        │
+│                            'quarterly', 'ANNUAL',        │
 │                            'one-time']                     │
 │        IF row.frequency NOT IN valid_frequencies THEN     │
 │          row_errors.push("Invalid frequency value")        │
@@ -1139,7 +1141,7 @@ Step 2: Create Obligations in Bulk
 │          obligation_title: row.obligation_title,           │
 │          obligation_description: row.obligation_description,│
 │          frequency: row.frequency,                         │
-│          import_source: 'excel_import',                    │
+│          import_source: 'EXCEL_IMPORT',                    │
 │          excel_import_id: import_id,                       │
 │          created_by: user_id                               │
 │        )                                                   │
@@ -2412,19 +2414,20 @@ Step 3: Create Renewal Reminder Notifications
 ┌─────────────────────────────────────────────────────────────┐
 │  INSERT INTO notifications (                                │
 │    user_id, company_id, site_id,                           │
-│    alert_type, severity, channel,                          │
-│    title, message, entity_type, entity_id,                 │
-│    action_url, metadata                                     │
+│    recipient_email, notification_type, channel,            │
+│    priority, subject, body_text,                           │
+│    entity_type, entity_id, action_url, metadata            │
 │  )                                                          │
 │  SELECT                                                     │
 │    u.id,                                                    │
 │    d.company_id,                                            │
 │    d.site_id,                                               │
-│    'DEADLINE_ALERT',                                        │
-│    CASE WHEN :days_until <= 7 THEN 'CRITICAL'              │
-│         WHEN :days_until <= 30 THEN 'WARNING'              │
-│         ELSE 'INFO' END,                                    │
+│    u.email,                                                 │
+│    'PERMIT_RENEWAL_REMINDER',                              │
 │    'EMAIL',                                                 │
+│    CASE WHEN :days_until <= 7 THEN 'URGENT'                │
+│         WHEN :days_until <= 30 THEN 'HIGH'                │
+│         ELSE 'NORMAL' END,                                  │
 │    :days_until || ' Days: ' || d.title || ' Renewal',      │
 │    'Your ' || d.document_type || ' (' || d.permit_number   │
 │      || ') expires on ' || d.expiry_date || '. Please '    │
@@ -2438,9 +2441,9 @@ Step 3: Create Renewal Reminder Notifications
 │      'expiry_date', d.expiry_date                          │
 │    )                                                        │
 │  FROM documents d                                           │
-│  JOIN user_roles ur ON ur.company_id = d.company_id        │
+│  JOIN users u ON u.company_id = d.company_id               │
+│  JOIN user_roles ur ON ur.user_id = u.id                    │
 │    AND ur.role IN ('OWNER', 'ADMIN')                        │
-│  JOIN users u ON u.id = ur.user_id                         │
 │  WHERE d.id = :document_id                                  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -2548,7 +2551,7 @@ Step 2: Query Documents to Scan
 │  AND NOT EXISTS (                                           │
 │    SELECT 1 FROM cross_sell_triggers cst                   │
 │    WHERE cst.trigger_source = d.id::TEXT                   │
-│      AND cst.trigger_type = 'keyword'                       │
+│      AND cst.trigger_type = 'KEYWORD'                       │
 │  )                                                          │
 └─────────────────────────────────────────────────────────────┘
 
@@ -2590,8 +2593,8 @@ Step 5: Create Cross-Sell Trigger Records
 │  )                                                          │
 │  VALUES (                                                   │
 │    :company_id, :target_module_id,                          │
-│    'keyword', :document_id,                                 │
-│    :detected_keywords, 'pending'                            │
+│    'KEYWORD', :document_id,                                 │
+│    :detected_keywords, 'PENDING'                            │
 │  )                                                          │
 │  ON CONFLICT (company_id, target_module_id, trigger_source) │
 │  DO NOTHING                                                 │
@@ -2620,9 +2623,9 @@ Step 6: Create User Notification (Optional)
 │    :trigger_id,                                             │
 │    '/modules/activate/' || m.id                            │
 │  FROM modules m                                             │
-│  JOIN user_roles ur ON ur.company_id = :company_id         │
+│  JOIN users u ON u.company_id = :company_id                │
+│  JOIN user_roles ur ON ur.user_id = u.id                    │
 │    AND ur.role = 'OWNER'                                    │
-│  JOIN users u ON u.id = ur.user_id                         │
 │  WHERE m.id = :target_module_id                             │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -3261,36 +3264,85 @@ Background Job
 
 ### Notification Record Structure
 
+> [UPDATED - Rich Notification Schema - 2025-01-01]
+> 
+> **All notification inserts now use the rich schema from Database Schema (Section 7.1) and Notification Messaging Specification.**
+
 ```sql
 INSERT INTO notifications (
   user_id,
   company_id,
   site_id,
-  alert_type,
-  severity,
-  channel,
-  title,
-  message,
-  entity_type,
+  recipient_email,
+  recipient_phone,
+  notification_type,      -- 'DEADLINE_WARNING_7D', 'EVIDENCE_REMINDER', etc. (see Database Schema for full enum)
+  channel,                -- 'EMAIL', 'SMS', 'IN_APP', 'PUSH'
+  priority,                -- 'LOW', 'NORMAL', 'HIGH', 'CRITICAL', 'URGENT'
+  subject,                -- Email subject or SMS preview
+  body_text,              -- Plain text email body or SMS content
+  body_html,              -- HTML email body (optional, for EMAIL channel)
+  variables,              -- Template variables used (JSONB)
+  status,                 -- 'PENDING', 'QUEUED', 'SENDING', 'SENT', 'DELIVERED', 'FAILED', 'RETRYING', 'CANCELLED'
+  delivery_status,        -- 'PENDING', 'SENT', 'DELIVERED', 'FAILED', 'BOUNCED', 'COMPLAINED'
+  delivery_provider,      -- 'SENDGRID', 'TWILIO', 'SUPABASE_REALTIME'
+  delivery_provider_id,   -- Provider's message ID for tracking
+  delivery_error,         -- Error message if delivery failed
+  is_escalation,          -- BOOLEAN
+  escalation_level,       -- INTEGER (1-3)
+  escalation_state,       -- 'PENDING', 'ESCALATED_LEVEL_1', 'ESCALATED_LEVEL_2', 'ESCALATED_LEVEL_3', 'RESOLVED'
+  entity_type,            -- 'obligation', 'deadline', 'evidence', 'audit_pack', etc.
   entity_id,
-  action_url,
+  action_url,             -- URL to relevant page
+  scheduled_for,          -- TIMESTAMP (default: NOW())
   metadata
 )
 VALUES (
   :user_id,
   :company_id,
   :site_id,
-  :alert_type,        -- 'DEADLINE_ALERT', 'EVIDENCE_REMINDER', 'BREACH', etc.
-  :severity,          -- 'INFO', 'WARNING', 'ERROR', 'CRITICAL'
-  :channel,           -- 'EMAIL', 'SMS', 'IN_APP', 'PUSH'
-  :title,
-  :message,
-  :entity_type,       -- 'OBLIGATION', 'DOCUMENT', 'GENERATOR', etc.
+  :recipient_email,       -- From users.email
+  :recipient_phone,       -- From users.phone (optional, for SMS)
+  :notification_type,     -- Mapped from old alert_type (see mapping below)
+  :channel,               -- 'EMAIL', 'SMS', 'IN_APP', 'PUSH'
+  :priority,              -- Mapped from old severity (see mapping below)
+  :subject,               -- Mapped from old title
+  :body_text,             -- Mapped from old message
+  :body_html,             -- NULL or generated from body_text
+  :variables::JSONB,      -- Template variables (default: '{}')
+  'PENDING',              -- Default status
+  NULL,                   -- delivery_status starts as NULL
+  NULL,                   -- delivery_provider set by notification service
+  NULL,                   -- delivery_provider_id set after sending
+  NULL,                   -- delivery_error set on failure
+  :is_escalation,         -- BOOLEAN (default: false)
+  :escalation_level,      -- INTEGER (optional)
+  :escalation_state,      -- Default: 'PENDING'
+  :entity_type,
   :entity_id,
   :action_url,
+  :scheduled_for,         -- Default: NOW()
   :metadata::JSONB
 );
 ```
+
+**Field Mapping (Old → New):**
+- `alert_type` → `notification_type` (with enum value mapping, see below)
+- `severity` → `priority` (INFO/WARNING → NORMAL/HIGH, ERROR/CRITICAL → CRITICAL/URGENT)
+- `title` → `subject`
+- `message` → `body_text` (and optionally `body_html`)
+
+**Notification Type Mapping:**
+- `'DEADLINE_ALERT'` → `'DEADLINE_WARNING_7D'` or `'DEADLINE_WARNING_3D'` or `'DEADLINE_WARNING_1D'` (based on days remaining)
+- `'EVIDENCE_REMINDER'` → `'EVIDENCE_REMINDER'` (unchanged)
+- `'BREACH'` → `'BREACH'` (unchanged)
+- `'SYSTEM'` → `'SYSTEM_ALERT'` (unchanged)
+- Other types map directly or use closest match
+
+**Priority Mapping (from old severity):**
+- `'INFO'` → `'NORMAL'`
+- `'WARNING'` → `'HIGH'`
+- `'ERROR'` → `'CRITICAL'`
+- `'CRITICAL'` → `'URGENT'`
 
 ## 8.3 AI Service Integration
 
@@ -3646,7 +3698,7 @@ async function alertJobFailure(
     SELECT u.id, u.email
     FROM users u
     JOIN user_roles ur ON ur.user_id = u.id
-    WHERE ur.company_id = $1
+    WHERE u.company_id = $1
       AND ur.role IN ('OWNER', 'ADMIN')
   `, [job.payload.company_id]);
   

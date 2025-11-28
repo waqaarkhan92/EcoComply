@@ -18,7 +18,7 @@ This document contains production-ready prompt templates for all AI operations w
 1. Enable confidence scoring for human review routing
 1. Support rule library integration for cost optimization
 1. Handle errors gracefully with defined fallback strategies
-All prompts are designed to work with GPT-4.1 (primary) and GPT-4.1 Mini (secondary) models, leveraging the 1M token context window for full-document processing.
+All prompts are designed to work with GPT-4o (primary) and GPT-4o-mini (secondary) models, leveraging the 1M token context window for full-document processing.
 ## Prompt Design Principles
 ### Token Efficiency
 ### System Message Guidelines:
@@ -54,7 +54,7 @@ This ensures:
 - Reduced output tokens
 
 # 1.3 Model Selection Per Prompt
-### 1.3.1 GPT-4.1 (Primary Model)
+### 1.3.1 GPT-4o (Primary Model)
 Use For:
 - All document extraction tasks (permits, consents, registrations)
 - Obligation parsing and categorisation
@@ -66,7 +66,7 @@ Use For:
 - Lab result PDF extraction
 Pricing: $2.00/1M input, $8.00/1M output
 Typical Cost per Document: ~$0.14 (50k input, 5k output)
-### 1.3.2 GPT-4.1 Mini (Secondary Model)
+### 1.3.2 GPT-4o-mini (Secondary Model)
 Use For:
 - Document type classification
 - Evidence type suggestions
@@ -105,7 +105,7 @@ Typical Cost per Task: ~$0.028
                               │                           │
                               ▼                           ▼
                     ┌─────────────────┐         ┌─────────────────┐
-                    │    GPT-4.1      │         │  GPT-4.1 Mini   │
+                    │    GPT-4o      │         │  GPT-4o Mini   │
                     │   (Primary)     │         │  (Secondary)    │
                     └─────────────────┘         └─────────────────┘
 ```
@@ -134,7 +134,7 @@ All prompts use these standard placeholders:
 ## 2.1 Document Type Classification
 Prompt ID: PROMPT_DOC_TYPE_001
 Purpose: Classify document type when keyword detection is ambiguous or multiple module keywords are detected.
-Model: GPT-4.1 Mini
+Model: GPT-4o Mini
 Estimated Tokens:
 - Input: ~2,000-5,000 (system + first 2-3 pages of document)
 - Output: ~100
@@ -232,7 +232,7 @@ Error Handling
 - If LLM returns invalid JSON: Retry once with simplified prompt; if fails, default to user selection
 - If confidence < 80%: Present user with classification options, pre-selecting highest confidence option
 - If document_type is null: Display "Unable to classify document type. Please select manually."
-- If timeout: Use GPT-4.1 Mini for retry (faster response)
+- If timeout: Use GPT-4o Mini for retry (faster response)
 
 Integration Notes
 Called from: DocumentIngestionService.classifyDocument()
@@ -253,7 +253,7 @@ Rule Library Integration:
 ## 3.1 Environmental Permit Extraction (Module 1)
 Prompt ID: PROMPT_M1_EXTRACT_001
 Purpose: Extract all compliance obligations from EA/SEPA/NRW/NIEA environmental permits, including conditions, ELVs, improvement conditions, and monitoring requirements.
-Model: GPT-4.1
+Model: GPT-4o
 Estimated Tokens:
 - Input: ~50,000-80,000 (system + full document)
 - Output: ~5,000-15,000
@@ -555,7 +555,7 @@ Rule Library Integration:
 ## 3.2 Trade Effluent Consent Extraction (Module 2)
 Prompt ID: PROMPT_M2_EXTRACT_001
 Purpose: Extract parameters, limits, monitoring requirements, and obligations from water company trade effluent consent documents.
-Model: GPT-4.1
+Model: GPT-4o
 Estimated Tokens:
 - Input: ~20,000-40,000 (system + full document)
 - Output: ~3,000-8,000
@@ -844,7 +844,7 @@ Rule Library Integration:
 ## 3.3 MCPD Registration Extraction (Module 3)
 Prompt ID: PROMPT_M3_EXTRACT_001
 Purpose: Extract generator details, run-hour limits, emission limits, and compliance obligations from MCPD registration documents.
-Model: GPT-4.1
+Model: GPT-4o
 Estimated Tokens:
 - Input: ~15,000-30,000 (system + full document)
 - Output: ~2,000-6,000
@@ -1131,7 +1131,7 @@ Rule Library Integration:
 ## 4.1 Obligation Registration
 Prompt ID: PROMPT_OBL_REG_001
 Purpose: Structure raw extracted obligations into validated database format with all required fields.
-Model: GPT-4.1 Mini
+Model: GPT-4o Mini
 Estimated Tokens:
 - Input: ~1,000-2,000
 - Output: ~500-1,000
@@ -1286,7 +1286,7 @@ Post-processing:
 ## 4.2 Evidence Type Suggestion
 Prompt ID: PROMPT_EVID_SUGGEST_001
 Purpose: Recommend appropriate evidence types for an obligation based on its category, text, and context.
-Model: GPT-4.1 Mini
+Model: GPT-4o Mini
 Estimated Tokens:
 - Input: ~500-1,000
 - Output: ~200-400
@@ -1414,7 +1414,7 @@ Post-processing:
 ## 4.3 Subjective Condition Detection
 Prompt ID: PROMPT_SUBJ_DETECT_001
 Purpose: Identify subjective phrases in obligation text that require human interpretation.
-Model: GPT-4.1 Mini
+Model: GPT-4o Mini
 Estimated Tokens:
 - Input: ~400-800
 - Output: ~150-300
@@ -1543,7 +1543,7 @@ Post-processing:
 ## 5.1 Extraction Validation
 Prompt ID: PROMPT_VALIDATE_001
 Purpose: Validate extraction results for consistency, completeness, and accuracy.
-Model: GPT-4.1 Mini
+Model: GPT-4o Mini
 Estimated Tokens:
 - Input: ~2,000-5,000
 - Output: ~500-1,000
@@ -1679,7 +1679,7 @@ Post-processing:
 ## 5.2 Obligation Deduplication
 Prompt ID: PROMPT_DEDUP_001
 Purpose: Detect duplicate obligations within a document extraction.
-Model: GPT-4.1 Mini
+Model: GPT-4o Mini
 Estimated Tokens:
 - Input: ~2,000-4,000
 - Output: ~500-1,000
@@ -1780,7 +1780,7 @@ Post-processing:
 ## 6.1 Module 2: Parameter Extraction
 Prompt ID: PROMPT_M2_PARAM_001
 Purpose: Extract detailed parameter limits and monitoring requirements from consent documents.
-Model: GPT-4.1
+Model: GPT-4o
 Estimated Tokens:
 - Input: ~5,000-15,000
 - Output: ~1,000-3,000
@@ -1962,7 +1962,7 @@ Rule Library Integration:
 ## 6.2 Module 2: Lab Result Extraction
 Prompt ID: PROMPT_M2_LAB_001
 Purpose: Extract parameter values from lab report PDFs.
-Model: GPT-4.1
+Model: GPT-4o
 Estimated Tokens:
 - Input: ~10,000-30,000
 - Output: ~1,000-3,000
@@ -2107,7 +2107,7 @@ Post-processing:
 ## 6.3 Module 1: Improvement Condition Extraction
 Prompt ID: PROMPT_M1_IMPROVE_001
 Purpose: Extract improvement conditions with specific deadlines from permits.
-Model: GPT-4.1
+Model: GPT-4o
 Estimated Tokens:
 - Input: ~3,000-10,000
 - Output: ~500-1,500
@@ -2233,7 +2233,7 @@ Post-processing:
 
 **Prompt ID:** PROMPT_M1_M3_ELV_001
 **Purpose:** Extract emission limit values with units, averaging periods, and reference conditions from permit/registration documents.
-**Model:** GPT-4.1
+**Model:** GPT-4o
 **Estimated Tokens:**
 - Input: ~5,000-20,000
 - Output: ~500-2,000
@@ -2435,7 +2435,7 @@ Include all numeric limits with their units, averaging periods, and reference co
 
 **Prompt ID:** PROMPT_M3_RUNHOUR_001
 **Purpose:** Extract run-hour limits and calculation periods from MCPD registration documents.
-**Model:** GPT-4.1
+**Model:** GPT-4o
 **Estimated Tokens:**
 - Input: ~3,000-10,000
 - Output: ~300-800
@@ -2624,7 +2624,7 @@ Include annual limits, any monthly limits, and the calculation period start date
 
 **Prompt ID:** PROMPT_M3_STACKTEST_001
 **Purpose:** Extract emission test results from stack test PDF reports.
-**Model:** GPT-4.1
+**Model:** GPT-4o
 **Estimated Tokens:**
 - Input: ~10,000-40,000
 - Output: ~1,000-3,000
@@ -2839,7 +2839,7 @@ Flag any values that cannot be confidently extracted.
 
 **Prompt ID:** PROMPT_M3_AER_001
 **Purpose:** Auto-populate Annual Emissions Report fields from tracked compliance data.
-**Model:** GPT-4.1 Mini (data aggregation task)
+**Model:** GPT-4o Mini (data aggregation task)
 **Estimated Tokens:**
 - Input: ~2,000-8,000
 - Output: ~500-1,500
@@ -3109,7 +3109,7 @@ Validate completeness and flag any missing data.
 
 **Prompt ID:** PROMPT_RETRY_EXTRACT_001
 **Purpose:** Simplified extraction when primary prompt fails.
-**Model:** GPT-4.1 Mini
+**Model:** GPT-4o Mini
 **Estimated Tokens:**
 - Input: ~2,000-10,000
 - Output: ~500-2,000
@@ -3193,7 +3193,7 @@ Extract obligations from:
 
 **Prompt ID:** PROMPT_RETRY_PARAM_001
 **Purpose:** Simplified parameter extraction for Module 2 retries.
-**Model:** GPT-4.1 Mini
+**Model:** GPT-4o Mini
 **Estimated Tokens:**
 - Input: ~1,000-5,000
 - Output: ~200-500
@@ -3262,7 +3262,7 @@ Extract numeric limits only. Skip text-only requirements.
 
 **Prompt ID:** PROMPT_RETRY_ELV_001
 **Purpose:** Simplified ELV extraction for retry scenarios.
-**Model:** GPT-4.1 Mini
+**Model:** GPT-4o Mini
 **Estimated Tokens:**
 - Input: ~1,000-5,000
 - Output: ~200-500
@@ -3376,7 +3376,7 @@ Extract numeric limits only.
 
 **Prompt ID:** PROMPT_ERROR_OCR_001
 **Purpose:** Extract from low-quality/OCR-degraded documents.
-**Model:** GPT-4.1
+**Model:** GPT-4o
 **When to Use:** OCR confidence <80% or >10% unrecognized characters
 
 #### System Message
@@ -3418,7 +3418,7 @@ Do not guess. Mark unclear content for human review.
 
 **Prompt ID:** PROMPT_ERROR_JSON_001
 **Purpose:** Recover from malformed JSON responses.
-**Model:** GPT-4.1 Mini
+**Model:** GPT-4o Mini
 **When to Use:** JSON parsing fails on LLM response
 
 #### System Message
@@ -3449,7 +3449,7 @@ Previous response (fix this):
 
 **Prompt ID:** PROMPT_ERROR_TIMEOUT_001
 **Purpose:** Handle extraction timeout by segmenting document.
-**Model:** GPT-4.1 Mini
+**Model:** GPT-4o Mini
 **When to Use:** Primary extraction times out (>30s standard, >5min large)
 
 #### Strategy
@@ -3476,7 +3476,7 @@ Instead of a specific prompt, timeout recovery uses document segmentation:
 
 **Prompt ID:** PROMPT_ERROR_LOWCONF_001
 **Purpose:** Improve extraction confidence through focused re-extraction.
-**Model:** GPT-4.1
+**Model:** GPT-4o
 **When to Use:** >50% of extractions below 70% confidence
 
 #### System Message
@@ -3573,7 +3573,7 @@ def estimate_prompt_cost(
     # Token counts
     input_tokens = count_tokens(system_message + user_message)
     
-    # Pricing (GPT-4.1)
+    # Pricing (GPT-4o)
     pricing = {
         "gpt-4o": {"input": 2.00, "output": 8.00},  # per 1M tokens
         "gpt-4o-mini": {"input": 0.40, "output": 1.60}
@@ -3612,13 +3612,13 @@ Document Cost = (Input Tokens × Input Rate) + (Output Tokens × Output Rate)
 Where:
 - Input Tokens = System Message + Document Text + Placeholders
 - Output Tokens = Estimated Response Size
-- Input Rate (GPT-4.1) = $2.00 / 1M tokens
-- Output Rate (GPT-4.1) = $8.00 / 1M tokens
+- Input Rate (GPT-4o) = $2.00 / 1M tokens
+- Output Rate (GPT-4o) = $8.00 / 1M tokens
 ```
 
 **Example Calculations:**
 
-| Document Type | Pages | Est. Input | Est. Output | GPT-4.1 Cost | GPT-4.1 Mini Cost |
+| Document Type | Pages | Est. Input | Est. Output | GPT-4o Cost | GPT-4o Mini Cost |
 |---------------|-------|------------|-------------|--------------|-------------------|
 | Small Permit | 20 | 12,000 | 2,000 | $0.04 | $0.008 |
 | Medium Permit | 50 | 30,000 | 5,000 | $0.10 | $0.020 |
@@ -3631,7 +3631,7 @@ Where:
 ### 8.1.4 Token Budget Management
 
 ```python
-MAX_TOKENS_PER_CALL = 128_000  # GPT-4.1 context window limit
+MAX_TOKENS_PER_CALL = 128_000  # GPT-4o context window limit
 SAFETY_BUFFER = 10_000  # Reserved for response
 
 def check_token_budget(document_tokens: int) -> dict:
@@ -3947,42 +3947,42 @@ If promoted variant causes issues:
 
 | Prompt ID | Section | Purpose | Model |
 |-----------|---------|---------|-------|
-| PROMPT_DOC_TYPE_001 | 2.1 | Document classification | GPT-4.1 Mini |
-| PROMPT_M1_EXTRACT_001 | 3.1 | Environmental permit extraction | GPT-4.1 |
-| PROMPT_M2_EXTRACT_001 | 3.2 | Trade effluent consent extraction | GPT-4.1 |
-| PROMPT_M3_EXTRACT_001 | 3.3 | MCPD registration extraction | GPT-4.1 |
-| PROMPT_OBL_REG_001 | 4.1 | Obligation registration | GPT-4.1 Mini |
-| PROMPT_EVID_SUGGEST_001 | 4.2 | Evidence type suggestion | GPT-4.1 Mini |
-| PROMPT_SUBJ_DETECT_001 | 4.3 | Subjective language detection | GPT-4.1 Mini |
-| PROMPT_VALIDATE_001 | 5.1 | Extraction validation | GPT-4.1 Mini |
-| PROMPT_DEDUP_001 | 5.2 | Obligation deduplication | GPT-4.1 Mini |
-| PROMPT_M2_PARAM_001 | 6.1 | Parameter extraction (Module 2) | GPT-4.1 |
-| PROMPT_M2_LAB_001 | 6.2 | Lab result extraction | GPT-4.1 |
-| PROMPT_M1_IMPROVE_001 | 6.3 | Improvement condition extraction | GPT-4.1 |
-| PROMPT_M1_M3_ELV_001 | 6.4 | ELV extraction | GPT-4.1 |
-| PROMPT_M3_RUNHOUR_001 | 6.5 | Run-hour extraction | GPT-4.1 |
-| PROMPT_M3_STACKTEST_001 | 6.6 | Stack test extraction | GPT-4.1 |
-| PROMPT_M3_AER_001 | 6.7 | AER data generation | GPT-4.1 Mini |
-| PROMPT_RETRY_EXTRACT_001 | 7.1.1 | Generic extraction retry | GPT-4.1 Mini |
-| PROMPT_RETRY_PARAM_001 | 7.1.2 | Parameter extraction retry | GPT-4.1 Mini |
-| PROMPT_RETRY_ELV_001 | 7.1.3 | ELV extraction retry | GPT-4.1 Mini |
-| PROMPT_ERROR_OCR_001 | 7.2.1 | OCR failure recovery | GPT-4.1 |
-| PROMPT_ERROR_JSON_001 | 7.2.2 | Invalid JSON recovery | GPT-4.1 Mini |
-| PROMPT_ERROR_LOWCONF_001 | 7.2.4 | Low confidence recovery | GPT-4.1 |
+| PROMPT_DOC_TYPE_001 | 2.1 | Document classification | GPT-4o Mini |
+| PROMPT_M1_EXTRACT_001 | 3.1 | Environmental permit extraction | GPT-4o |
+| PROMPT_M2_EXTRACT_001 | 3.2 | Trade effluent consent extraction | GPT-4o |
+| PROMPT_M3_EXTRACT_001 | 3.3 | MCPD registration extraction | GPT-4o |
+| PROMPT_OBL_REG_001 | 4.1 | Obligation registration | GPT-4o Mini |
+| PROMPT_EVID_SUGGEST_001 | 4.2 | Evidence type suggestion | GPT-4o Mini |
+| PROMPT_SUBJ_DETECT_001 | 4.3 | Subjective language detection | GPT-4o Mini |
+| PROMPT_VALIDATE_001 | 5.1 | Extraction validation | GPT-4o Mini |
+| PROMPT_DEDUP_001 | 5.2 | Obligation deduplication | GPT-4o Mini |
+| PROMPT_M2_PARAM_001 | 6.1 | Parameter extraction (Module 2) | GPT-4o |
+| PROMPT_M2_LAB_001 | 6.2 | Lab result extraction | GPT-4o |
+| PROMPT_M1_IMPROVE_001 | 6.3 | Improvement condition extraction | GPT-4o |
+| PROMPT_M1_M3_ELV_001 | 6.4 | ELV extraction | GPT-4o |
+| PROMPT_M3_RUNHOUR_001 | 6.5 | Run-hour extraction | GPT-4o |
+| PROMPT_M3_STACKTEST_001 | 6.6 | Stack test extraction | GPT-4o |
+| PROMPT_M3_AER_001 | 6.7 | AER data generation | GPT-4o Mini |
+| PROMPT_RETRY_EXTRACT_001 | 7.1.1 | Generic extraction retry | GPT-4o Mini |
+| PROMPT_RETRY_PARAM_001 | 7.1.2 | Parameter extraction retry | GPT-4o Mini |
+| PROMPT_RETRY_ELV_001 | 7.1.3 | ELV extraction retry | GPT-4o Mini |
+| PROMPT_ERROR_OCR_001 | 7.2.1 | OCR failure recovery | GPT-4o |
+| PROMPT_ERROR_JSON_001 | 7.2.2 | Invalid JSON recovery | GPT-4o Mini |
+| PROMPT_ERROR_LOWCONF_001 | 7.2.4 | Low confidence recovery | GPT-4o |
 
 ## 9.2 Cost Summary by Task
 
 | Task | Model | Typical Cost | Notes |
 |------|-------|--------------|-------|
-| Document Classification | GPT-4.1 Mini | $0.003 | First 3 pages only |
-| Full Permit Extraction | GPT-4.1 | $0.14 | 50-page average |
-| Consent Extraction | GPT-4.1 | $0.08 | Shorter documents |
-| MCPD Extraction | GPT-4.1 | $0.06 | Shortest type |
-| Lab Result Extraction | GPT-4.1 | $0.08 | Varies by report size |
-| Stack Test Extraction | GPT-4.1 | $0.10 | Complex tables |
-| AER Generation | GPT-4.1 Mini | $0.01 | Data aggregation |
-| Validation | GPT-4.1 Mini | $0.004 | Post-extraction |
-| Retry (any) | GPT-4.1 Mini | $0.01 | Simplified prompts |
+| Document Classification | GPT-4o Mini | $0.003 | First 3 pages only |
+| Full Permit Extraction | GPT-4o | $0.14 | 50-page average |
+| Consent Extraction | GPT-4o | $0.08 | Shorter documents |
+| MCPD Extraction | GPT-4o | $0.06 | Shortest type |
+| Lab Result Extraction | GPT-4o | $0.08 | Varies by report size |
+| Stack Test Extraction | GPT-4o | $0.10 | Complex tables |
+| AER Generation | GPT-4o Mini | $0.01 | Data aggregation |
+| Validation | GPT-4o Mini | $0.004 | Post-extraction |
+| Retry (any) | GPT-4o Mini | $0.01 | Simplified prompts |
 
 ---
 

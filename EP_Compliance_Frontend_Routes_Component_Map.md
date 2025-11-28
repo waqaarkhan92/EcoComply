@@ -3609,7 +3609,7 @@ function DocumentUploadForm({ siteId, onSubmit }: { siteId: string; onSubmit: (d
 const obligationSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   category: z.enum(['MONITORING', 'REPORTING', 'RECORD_KEEPING', 'OPERATIONAL', 'MAINTENANCE']),
-  frequency: z.enum(['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'ANNUALLY', 'ONE_TIME']),
+  frequency: z.enum(['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'ANNUAL', 'ONE_TIME']),  // Fixed: ANNUAL (not ANNUALLY) to match Database Schema
   customSchedule: z.object({
     enabled: z.boolean(),
     days: z.array(z.number()).optional(),

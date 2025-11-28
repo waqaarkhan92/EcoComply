@@ -162,8 +162,8 @@ CREATE TABLE companies (
     billing_email TEXT NOT NULL,
     billing_address JSONB,
     phone TEXT,
-    subscription_tier TEXT NOT NULL DEFAULT 'starter' 
-        CHECK (subscription_tier IN ('starter', 'professional', 'enterprise')),
+    subscription_tier TEXT NOT NULL DEFAULT 'core' 
+        CHECK (subscription_tier IN ('core', 'growth', 'consultant')),
     stripe_customer_id TEXT UNIQUE,
     is_active BOOLEAN NOT NULL DEFAULT true,
     settings JSONB NOT NULL DEFAULT '{}',
@@ -201,6 +201,7 @@ CREATE TABLE sites (
     longitude DECIMAL(11, 8),
     site_reference TEXT,
     regulator TEXT CHECK (regulator IN ('EA', 'SEPA', 'NRW', 'NIEA')),
+    water_company TEXT,  -- Optional: Water company for Trade Effluent sites (e.g., 'Thames Water', 'Severn Trent')
     adjust_for_business_days BOOLEAN NOT NULL DEFAULT false,
     grace_period_days INTEGER NOT NULL DEFAULT 0 CHECK (grace_period_days >= 0),
     settings JSONB NOT NULL DEFAULT '{}',
@@ -389,7 +390,7 @@ CREATE TABLE documents (
     extracted_text TEXT,
     import_source TEXT CHECK (import_source IN ('PDF_EXTRACTION', 'EXCEL_IMPORT', 'MANUAL')),
     metadata JSONB NOT NULL DEFAULT '{}',
-    uploaded_by UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    uploaded_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMP WITH TIME ZONE
@@ -477,7 +478,7 @@ CREATE TABLE obligations (
     version_number INTEGER NOT NULL DEFAULT 1,
     version_history JSONB NOT NULL DEFAULT '[]',
     status TEXT NOT NULL DEFAULT 'PENDING' 
-        CHECK (status IN ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'OVERDUE', 'INCOMPLETE', 'LATE_COMPLETE', 'NOT_APPLICABLE', 'REJECTED')),
+        CHECK (status IN ('PENDING', 'IN_PROGRESS', 'DUE_SOON', 'COMPLETED', 'OVERDUE', 'INCOMPLETE', 'LATE_COMPLETE', 'NOT_APPLICABLE', 'REJECTED')),
     is_high_priority BOOLEAN NOT NULL DEFAULT false,
     page_reference INTEGER,
     evidence_suggestions TEXT[] NOT NULL DEFAULT '{}',
@@ -503,6 +504,17 @@ CREATE INDEX idx_obligations_is_subjective ON obligations(is_subjective);
 CREATE INDEX idx_obligations_deadline_date ON obligations(deadline_date);
 CREATE INDEX idx_obligations_assigned_to ON obligations(assigned_to);
 CREATE INDEX idx_obligations_confidence_score ON obligations(confidence_score);
+CREATE INDEX idx_obligations_document_status ON obligations(document_id, status) WHERE deleted_at IS NULL;
+
+-- Business Logic Constraints
+-- NOTE: Site/Document matching is enforced at application layer via triggers or validation
+-- PostgreSQL CHECK constraints cannot contain subqueries, so this constraint is removed
+-- Application must ensure obligation.site_id matches document.site_id before insert/update
+
+-- Prevent duplicate obligations from same condition
+CREATE UNIQUE INDEX uq_obligations_document_condition 
+  ON obligations(document_id, condition_reference) 
+  WHERE deleted_at IS NULL AND condition_reference IS NOT NULL;
 ```
 
 ## 4.4 schedules
@@ -539,6 +551,11 @@ CREATE TABLE schedules (
 CREATE INDEX idx_schedules_obligation_id ON schedules(obligation_id);
 CREATE INDEX idx_schedules_next_due_date ON schedules(next_due_date);
 CREATE INDEX idx_schedules_status ON schedules(status);
+
+-- Business Logic Constraints
+-- Ensure schedules next_due_date is after base_date
+ALTER TABLE schedules ADD CONSTRAINT chk_schedules_next_due_after_base
+  CHECK (next_due_date IS NULL OR next_due_date >= base_date);
 ```
 
 ## 4.5 deadlines
@@ -577,6 +594,18 @@ CREATE INDEX idx_deadlines_site_id ON deadlines(site_id);
 CREATE INDEX idx_deadlines_due_date ON deadlines(due_date);
 CREATE INDEX idx_deadlines_status ON deadlines(status);
 CREATE INDEX idx_deadlines_compliance_period ON deadlines(compliance_period);
+CREATE INDEX idx_deadlines_company_status_due ON deadlines(company_id, status, due_date) 
+  WHERE status IN ('PENDING', 'DUE_SOON', 'OVERDUE');
+
+-- Business Logic Constraints
+-- Ensure deadlines due_date is after created_at
+ALTER TABLE deadlines ADD CONSTRAINT chk_deadlines_due_after_created
+  CHECK (due_date >= created_at::date);
+
+-- Ensure deadline company/site matches obligation
+-- NOTE: Company/Site matching is enforced at application layer via triggers or validation
+-- PostgreSQL CHECK constraints cannot contain subqueries, so this constraint is removed
+-- Application must ensure deadline.company_id and deadline.site_id match obligation before insert/update
 ```
 
 ## 4.6 evidence_items
@@ -615,7 +644,11 @@ CREATE TABLE evidence_items (
     immutable_locked_by UUID REFERENCES users(id) ON DELETE SET NULL,
     is_archived BOOLEAN NOT NULL DEFAULT false,
     archived_at TIMESTAMP WITH TIME ZONE,
-    uploaded_by UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    retention_policy TEXT DEFAULT 'STANDARD' 
+        CHECK (retention_policy IN ('STANDARD', 'INCIDENT', 'IMPROVEMENT_CONDITION')),
+    retention_period_years INTEGER NOT NULL DEFAULT 7 
+        CHECK (retention_period_years >= 0),
+    uploaded_by UUID REFERENCES users(id) ON DELETE SET NULL,
     metadata JSONB NOT NULL DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
@@ -628,6 +661,8 @@ CREATE INDEX idx_evidence_items_uploaded_by ON evidence_items(uploaded_by);
 CREATE INDEX idx_evidence_items_created_at ON evidence_items(created_at);
 CREATE INDEX idx_evidence_items_compliance_period ON evidence_items(compliance_period);
 CREATE INDEX idx_evidence_items_file_hash ON evidence_items(file_hash);
+CREATE INDEX idx_evidence_items_site_period ON evidence_items(site_id, compliance_period) 
+  WHERE is_archived = false;
 ```
 
 ## 4.7 obligation_evidence_links
@@ -647,7 +682,7 @@ CREATE TABLE obligation_evidence_links (
     evidence_id UUID NOT NULL REFERENCES evidence_items(id) ON DELETE CASCADE,
     compliance_period TEXT NOT NULL,
     notes TEXT,
-    linked_by UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    linked_by UUID REFERENCES users(id) ON DELETE SET NULL,
     linked_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     unlinked_at TIMESTAMP WITH TIME ZONE,
     unlinked_by UUID REFERENCES users(id) ON DELETE SET NULL,
@@ -708,7 +743,7 @@ CREATE TABLE audit_packs (
     storage_path TEXT NOT NULL,
     file_size_bytes BIGINT NOT NULL,
     generation_time_ms INTEGER,
-    generated_by UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    generated_by UUID REFERENCES users(id) ON DELETE SET NULL,
     generation_trigger TEXT NOT NULL DEFAULT 'MANUAL' 
         CHECK (generation_trigger IN ('MANUAL', 'SCHEDULED', 'PRE_INSPECTION', 'DEADLINE_BASED')),
     -- v1.0 Pack-specific fields
@@ -900,7 +935,7 @@ CREATE TABLE lab_results (
         CHECK (entry_method IN ('MANUAL', 'CSV', 'PDF_EXTRACTION')),
     source_file_path TEXT,
     is_exceedance BOOLEAN NOT NULL DEFAULT false,
-    entered_by UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    entered_by UUID REFERENCES users(id) ON DELETE SET NULL,
     verified_by UUID REFERENCES users(id) ON DELETE SET NULL,
     verified_at TIMESTAMP WITH TIME ZONE,
     notes TEXT,
@@ -977,7 +1012,7 @@ CREATE TABLE discharge_volumes (
     volume_m3 DECIMAL(12, 4) NOT NULL,
     measurement_method TEXT,
     notes TEXT,
-    entered_by UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    entered_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -1064,7 +1099,7 @@ CREATE TABLE run_hour_records (
         CHECK (entry_method IN ('MANUAL', 'CSV', 'MAINTENANCE_RECORD')),
     source_maintenance_record_id UUID REFERENCES maintenance_records(id) ON DELETE SET NULL,
     notes TEXT,
-    entered_by UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    entered_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -1104,7 +1139,7 @@ CREATE TABLE stack_tests (
     next_test_due DATE,
     evidence_id UUID REFERENCES evidence_items(id) ON DELETE SET NULL,
     notes TEXT,
-    entered_by UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    entered_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -1140,7 +1175,7 @@ CREATE TABLE maintenance_records (
     next_service_due DATE,
     evidence_id UUID REFERENCES evidence_items(id) ON DELETE SET NULL,
     notes TEXT,
-    entered_by UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    entered_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -1184,7 +1219,7 @@ CREATE TABLE aer_documents (
     submission_reference TEXT,
     submitted_by UUID REFERENCES users(id) ON DELETE SET NULL,
     notes TEXT,
-    created_by UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -1210,40 +1245,119 @@ CREATE INDEX idx_aer_documents_submission_deadline ON aer_documents(submission_d
 
 **Soft Delete:** No
 
+> [UPDATED - Rich Notification Schema - 2025-01-01]
+> 
+> **Schema aligned with Notification Messaging Specification for world-class delivery tracking, templates, and escalation support.**
+
 ```sql
 CREATE TABLE notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Recipient Information
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     site_id UUID REFERENCES sites(id) ON DELETE SET NULL,
-    alert_type TEXT NOT NULL 
-        CHECK (alert_type IN ('DEADLINE_ALERT', 'EVIDENCE_REMINDER', 'EXCEEDANCE', 'BREACH', 'ESCALATION', 'SYSTEM', 'MODULE_ACTIVATION')),
-    severity TEXT NOT NULL DEFAULT 'INFO' 
-        CHECK (severity IN ('INFO', 'WARNING', 'ERROR', 'CRITICAL')),
+    recipient_email TEXT NOT NULL,
+    recipient_phone TEXT, -- For SMS notifications
+    
+    -- Notification Details
+    notification_type TEXT NOT NULL 
+        CHECK (notification_type IN (
+            'DEADLINE_WARNING_7D',
+            'DEADLINE_WARNING_3D',
+            'DEADLINE_WARNING_1D',
+            'OVERDUE_OBLIGATION',
+            'EVIDENCE_REMINDER',
+            'PERMIT_RENEWAL_REMINDER',
+            'PARAMETER_EXCEEDANCE_80',
+            'PARAMETER_EXCEEDANCE_90',
+            'PARAMETER_EXCEEDANCE_100',
+            'RUN_HOUR_BREACH_80',
+            'RUN_HOUR_BREACH_90',
+            'RUN_HOUR_BREACH_100',
+            'AUDIT_PACK_READY',
+            'REGULATOR_PACK_READY',
+            'TENDER_PACK_READY',
+            'BOARD_PACK_READY',
+            'INSURER_PACK_READY',
+            'PACK_DISTRIBUTED',
+            'CONSULTANT_CLIENT_ASSIGNED',
+            'CONSULTANT_CLIENT_PACK_GENERATED',
+            'CONSULTANT_CLIENT_ACTIVITY',
+            'SYSTEM_ALERT',
+            'ESCALATION',
+            'DEADLINE_ALERT',
+            'EXCEEDANCE',
+            'BREACH',
+            'MODULE_ACTIVATION'
+        )),
     channel TEXT NOT NULL 
         CHECK (channel IN ('EMAIL', 'SMS', 'IN_APP', 'PUSH')),
-    title TEXT NOT NULL,
-    message TEXT NOT NULL,
-    entity_type TEXT,
+    priority TEXT NOT NULL DEFAULT 'NORMAL'
+        CHECK (priority IN ('LOW', 'NORMAL', 'HIGH', 'CRITICAL', 'URGENT')),
+    
+    -- Content
+    subject TEXT NOT NULL, -- Email subject or SMS preview
+    body_html TEXT, -- HTML email body
+    body_text TEXT NOT NULL, -- Plain text email body or SMS content
+    variables JSONB NOT NULL DEFAULT '{}', -- Template variables used
+    
+    -- Delivery Tracking
+    status TEXT NOT NULL DEFAULT 'PENDING'
+        CHECK (status IN ('PENDING', 'QUEUED', 'SENDING', 'SENT', 'DELIVERED', 'FAILED', 'RETRYING', 'CANCELLED')),
+    delivery_status TEXT
+        CHECK (delivery_status IN ('PENDING', 'SENT', 'DELIVERED', 'FAILED', 'BOUNCED', 'COMPLAINED')),
+    delivery_provider TEXT, -- 'SENDGRID', 'TWILIO', 'SUPABASE_REALTIME'
+    delivery_provider_id TEXT, -- Provider's message ID for tracking
+    delivery_error TEXT, -- Error message if delivery failed
+    
+    -- Escalation
+    is_escalation BOOLEAN NOT NULL DEFAULT false,
+    escalation_level INTEGER CHECK (escalation_level >= 1 AND escalation_level <= 3),
+    escalation_state TEXT DEFAULT 'PENDING'
+        CHECK (escalation_state IN ('PENDING', 'ESCALATED_LEVEL_1', 'ESCALATED_LEVEL_2', 'ESCALATED_LEVEL_3', 'RESOLVED')),
+    escalation_delay_minutes INTEGER DEFAULT 60 
+        CHECK (escalation_delay_minutes >= 0),
+    max_retries INTEGER DEFAULT 3 
+        CHECK (max_retries >= 0),
+    
+    -- Entity Reference
+    entity_type TEXT, -- 'obligation', 'deadline', 'evidence', 'audit_pack', etc.
     entity_id UUID,
-    action_url TEXT,
+    action_url TEXT, -- URL to relevant page
+    
+    -- Scheduling
+    scheduled_for TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    -- Timestamps
     sent_at TIMESTAMP WITH TIME ZONE,
     delivered_at TIMESTAMP WITH TIME ZONE,
     read_at TIMESTAMP WITH TIME ZONE,
     actioned_at TIMESTAMP WITH TIME ZONE,
-    is_escalation BOOLEAN NOT NULL DEFAULT false,
-    escalation_level INTEGER CHECK (escalation_level >= 1 AND escalation_level <= 4),
+    
+    -- Metadata
     metadata JSONB NOT NULL DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    
+    -- Audit
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
+-- Indexes
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_notifications_company_id ON notifications(company_id);
 CREATE INDEX idx_notifications_site_id ON notifications(site_id);
-CREATE INDEX idx_notifications_alert_type ON notifications(alert_type);
-CREATE INDEX idx_notifications_severity ON notifications(severity);
+CREATE INDEX idx_notifications_notification_type ON notifications(notification_type);
+CREATE INDEX idx_notifications_status ON notifications(status);
+CREATE INDEX idx_notifications_delivery_status ON notifications(delivery_status);
+CREATE INDEX idx_notifications_escalation_state ON notifications(escalation_state);
+CREATE INDEX idx_notifications_scheduled_for ON notifications(scheduled_for);
 CREATE INDEX idx_notifications_read_at ON notifications(read_at);
 CREATE INDEX idx_notifications_created_at ON notifications(created_at);
+CREATE INDEX idx_notifications_entity ON notifications(entity_type, entity_id);
+
+-- Composite index for escalation checks
+CREATE INDEX idx_notifications_escalation_check ON notifications(entity_type, entity_id, escalation_state, created_at);
 ```
 
 ## 7.2 background_jobs
@@ -1397,7 +1511,7 @@ CREATE TABLE regulator_questions (
     follow_up_required BOOLEAN NOT NULL DEFAULT false,
     closed_date DATE,
     assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
-    created_by UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -1694,6 +1808,13 @@ CREATE TABLE extraction_logs (
 CREATE INDEX idx_extraction_logs_document_id ON extraction_logs(document_id);
 CREATE INDEX idx_extraction_logs_extraction_timestamp ON extraction_logs(extraction_timestamp);
 CREATE INDEX idx_extraction_logs_model_identifier ON extraction_logs(model_identifier);
+
+-- RLS Performance Indexes (required for RLS policy performance)
+CREATE INDEX idx_user_roles_user_id_role ON user_roles(user_id, role);
+CREATE INDEX idx_user_site_assignments_user_id_site_id ON user_site_assignments(user_id, site_id);
+CREATE INDEX idx_consultant_client_assignments_consultant_id ON consultant_client_assignments(consultant_id) WHERE status = 'ACTIVE';
+CREATE INDEX idx_consultant_client_assignments_client_company_id ON consultant_client_assignments(client_company_id) WHERE status = 'ACTIVE';
+CREATE INDEX idx_module_activations_company_id_module_id ON module_activations(company_id, module_id) WHERE status = 'ACTIVE';
 ```
 
 ---
@@ -1895,7 +2016,7 @@ The schema uses CHECK constraints instead of PostgreSQL ENUM types for flexibili
 ## 12.2 Core System Enums
 
 ### obligation_status
-- Values: `PENDING`, `IN_PROGRESS`, `COMPLETED`, `OVERDUE`, `INCOMPLETE`, `LATE_COMPLETE`, `NOT_APPLICABLE`, `REJECTED`
+- Values: `PENDING`, `IN_PROGRESS`, `DUE_SOON`, `COMPLETED`, `OVERDUE`, `INCOMPLETE`, `LATE_COMPLETE`, `NOT_APPLICABLE`, `REJECTED`
 - Used in: `obligations.status`
 
 ### obligation_category
@@ -2014,13 +2135,16 @@ The schema uses CHECK constraints instead of PostgreSQL ENUM types for flexibili
 - Values: `OWNER`, `ADMIN`, `STAFF`, `CONSULTANT`, `VIEWER`
 - Used in: `user_roles.role`
 
-### alert_type
-- Values: `DEADLINE_ALERT`, `EVIDENCE_REMINDER`, `EXCEEDANCE`, `BREACH`, `ESCALATION`, `SYSTEM`, `MODULE_ACTIVATION`
-- Used in: `notifications.alert_type`
+### notification_type
+- Values: See `notifications.notification_type` CHECK constraint for complete list
+- Includes: `DEADLINE_WARNING_7D`, `DEADLINE_WARNING_3D`, `DEADLINE_WARNING_1D`, `OVERDUE_OBLIGATION`, `EVIDENCE_REMINDER`, `PERMIT_RENEWAL_REMINDER`, `PARAMETER_EXCEEDANCE_80/90/100`, `RUN_HOUR_BREACH_80/90/100`, `AUDIT_PACK_READY`, `REGULATOR_PACK_READY`, `TENDER_PACK_READY`, `BOARD_PACK_READY`, `INSURER_PACK_READY`, `PACK_DISTRIBUTED`, `CONSULTANT_CLIENT_ASSIGNED`, `CONSULTANT_CLIENT_PACK_GENERATED`, `CONSULTANT_CLIENT_ACTIVITY`, `SYSTEM_ALERT`, `ESCALATION`, `DEADLINE_ALERT`, `EXCEEDANCE`, `BREACH`, `MODULE_ACTIVATION`
+- Used in: `notifications.notification_type`
+- **Note:** Replaces `alert_type` field. See Notification Messaging Specification for complete notification type definitions.
 
-### severity
-- Values: `INFO`, `WARNING`, `ERROR`, `CRITICAL`
-- Used in: `notifications.severity`
+### priority
+- Values: `LOW`, `NORMAL`, `HIGH`, `CRITICAL`, `URGENT`
+- Used in: `notifications.priority`
+- **Note:** Replaces `severity` field. Maps to severity levels: LOW/NORMAL=INFO, HIGH=WARNING, CRITICAL/URGENT=CRITICAL
 
 ### channel
 - Values: `EMAIL`, `SMS`, `IN_APP`, `PUSH`
