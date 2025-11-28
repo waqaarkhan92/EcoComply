@@ -15,9 +15,8 @@ This document provides a phased build order for implementing the Oblicore compli
 - Testing requirements
 - Acceptance criteria
 
-**Total Phases:** 8 (Phase 0-7, Phase 8 optional)  
-**Estimated Timeline:** 12-16 weeks for full v1.0 launch (Phase 0-7)  
-**Optional:** +2-3 weeks per module (Phase 8)
+**Total Phases:** 8 (Phase 0-7 required, Phase 8 required for v1.0)  
+**Estimated Timeline:** 16-22 weeks for full v1.0 launch (includes Module 2 & 3)
 
 ---
 
@@ -40,11 +39,12 @@ Phase 6: Frontend Features │
     ↓                      │
 Phase 7: Integration & Testing
     ↓
-Phase 8: Module Extensions (Optional)
+Phase 8: Module Extensions (Module 2 & 3 - Required for v1.0)
 ```
 
-**Critical Path:** Phase 1 → Phase 2 → Phase 3 → Phase 5 (must be sequential)  
-**Parallel Work:** Phase 4 and Phase 6 can be developed in parallel after Phase 3
+**Critical Path:** Phase 1 → Phase 2 → Phase 3 → Phase 5 → Phase 8 (must be sequential)  
+**Parallel Work:** Phase 4 and Phase 6 can be developed in parallel after Phase 3  
+**Note:** Phase 8 (Module 2 & 3) is required for v1.0 launch
 
 ---
 
@@ -3168,9 +3168,9 @@ npm run test:e2e:journey
 
 ---
 
-# PHASE 8: Module Extensions (Optional)
+# PHASE 8: Module Extensions (Module 2 & 3 - Required for v1.0)
 
-**Duration:** 2-3 weeks per module  
+**Duration:** 4-6 weeks (2-3 weeks per module)  
 **Complexity:** Medium  
 **Dependencies:** Phase 6 complete (Module 1 must be working)
 
@@ -3196,9 +3196,10 @@ Verify Module 2 prerequisites before starting:
    - Read: Canonical_Dictionary.md Section C.4 (Module 2)
    - Understand: Parameter tracking, exceedance alerts
 
-4. Enable Module 2 feature flag:
-   - Set ENABLE_MODULE_2=true in .env.local
-   - Or activate via UI (if module activation UI exists)
+4. Enable Module 2 (required for v1.0):
+   - Module 2 is part of core v1.0 functionality
+   - No feature flag needed - always enabled
+   - Can activate via UI or database (module_activations table)
 
 Reference: EP_Compliance_Master_Plan.md Section 7.2 (Module 2 features)
 ```
@@ -3304,8 +3305,10 @@ Verify Module 3 prerequisites:
    - Read: EP_Compliance_Product_Logic_Specification.md Section E (Module 3)
    - Understand: Run-hour tracking, generator monitoring
 
-4. Enable Module 3 feature flag:
-   - Set ENABLE_MODULE_3=true in .env.local
+4. Enable Module 3 (required for v1.0):
+   - Module 3 is part of core v1.0 functionality
+   - No feature flag needed - always enabled
+   - Can activate via UI or database (module_activations table)
 
 Reference: EP_Compliance_Master_Plan.md Section 7.3 (Module 3 features)
 ```
@@ -3397,8 +3400,9 @@ Reference: EP_Compliance_Frontend_Routes_Component_Map.md (Module 3 routes - if 
 - Module 3: Generators, run hours, breaches work
 - Module activation enforced
 - All features tested
+- All modules (1, 2, 3) functional for v1.0 launch
 
-**Note:** Modules 2 and 3 are optional for v1.0 launch. Can be implemented after Phase 7 if needed.
+**Note:** Modules 2 and 3 are **required** for v1.0 launch. Must complete Phase 8 before production deployment.
 
 ---
 
@@ -4156,7 +4160,8 @@ Phase 3: Document extraction works, confidence scores accurate
 Phase 4: Background jobs run on schedule, retry logic works  
 Phase 5: Frontend renders correctly, data loads from API  
 Phase 6: All features functional, onboarding completes  
-Phase 7: System ready for production, all tests pass
+Phase 7: System ready for production, all tests pass  
+Phase 8: Module 2 (Trade Effluent) and Module 3 (MCPD/Generators) functional
 
 ---
 
@@ -4228,7 +4233,7 @@ Phase 7: System ready for production, all tests pass
 - [ ] 7.5 Documentation
 - [ ] ✅ Phase 7 Checkpoint Passed
 
-**Phase 8: Module Extensions (Optional)**
+**Phase 8: Module Extensions (Required for v1.0)**
 - [ ] 8.1 Module 2 - Trade Effluent
 - [ ] 8.2 Module 3 - MCPD/Generators
 - [ ] ✅ Phase 8 Checkpoint Passed
