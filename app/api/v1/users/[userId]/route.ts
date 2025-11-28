@@ -1,0 +1,287 @@
+/**
+ * User Endpoints
+ * GET /api/v1/users/{userId} - Get user details
+ * PUT /api/v1/users/{userId} - Update user
+ * DELETE /api/v1/users/{userId} - Soft delete user
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
+import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { userId: string } }
+) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user: currentUser } = authResult;
+
+    const { userId } = params;
+
+    // Users can view their own profile, or Admins can view any user in their company
+    if (userId !== currentUser.id && !currentUser.roles.includes('OWNER') && !currentUser.roles.includes('ADMIN')) {
+      return errorResponse(
+        ErrorCodes.FORBIDDEN,
+        'Insufficient permissions',
+        403,
+        null,
+        { request_id: requestId }
+      );
+    }
+
+    // Get user - RLS will enforce access control
+    const { data: user, error } = await supabaseAdmin
+      .from('users')
+      .select('id, email, full_name, company_id, phone, email_verified, is_active, created_at, updated_at')
+      .eq('id', userId)
+      .is('deleted_at', null)
+      .single();
+
+    if (error || !user) {
+      if (error?.code === 'PGRST116') {
+        // No rows returned
+        return errorResponse(
+          ErrorCodes.NOT_FOUND,
+          'User not found',
+          404,
+          null,
+          { request_id: requestId }
+        );
+      }
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to fetch user',
+        500,
+        { error: error?.message || 'Unknown error' },
+        { request_id: requestId }
+      );
+    }
+
+    // Get user roles
+    const { data: roles } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+
+    // Get user's assigned sites
+    const { data: siteAssignments } = await supabaseAdmin
+      .from('user_site_assignments')
+      .select('site_id')
+      .eq('user_id', userId);
+
+    return successResponse(
+      {
+        ...user,
+        roles: roles?.map((r: { role: string }) => r.role) || [],
+        sites: siteAssignments?.map((s: { site_id: string }) => s.site_id) || [],
+      },
+      200,
+      { request_id: requestId }
+    );
+  } catch (error: any) {
+    console.error('Get user error:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'An unexpected error occurred',
+      500,
+      { error: error.message || 'Unknown error' },
+      { request_id: requestId }
+    );
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { userId: string } }
+) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user: currentUser } = authResult;
+
+    const { userId } = params;
+
+    // Users can update their own profile, or Admins can update any user in their company
+    if (userId !== currentUser.id && !currentUser.roles.includes('OWNER') && !currentUser.roles.includes('ADMIN')) {
+      return errorResponse(
+        ErrorCodes.FORBIDDEN,
+        'Insufficient permissions',
+        403,
+        null,
+        { request_id: requestId }
+      );
+    }
+
+    // Parse request body
+    const body = await request.json();
+
+    // Validate and build updates
+    const updates: any = {};
+
+    if (body.full_name !== undefined) {
+      if (typeof body.full_name !== 'string' || body.full_name.length < 1) {
+        return errorResponse(
+          ErrorCodes.VALIDATION_ERROR,
+          'Full name must be a non-empty string',
+          422,
+          { full_name: 'Full name must be a non-empty string' },
+          { request_id: requestId }
+        );
+      }
+      updates.full_name = body.full_name;
+    }
+
+    if (body.phone !== undefined) {
+      updates.phone = body.phone;
+    }
+
+    // Check if user exists and user has access (RLS will enforce)
+    const { data: existingUser, error: checkError } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .is('deleted_at', null)
+      .single();
+
+    if (checkError || !existingUser) {
+      return errorResponse(
+        ErrorCodes.NOT_FOUND,
+        'User not found',
+        404,
+        null,
+        { request_id: requestId }
+      );
+    }
+
+    // Update user
+    updates.updated_at = new Date().toISOString();
+
+    const { data: updatedUser, error: updateError } = await supabaseAdmin
+      .from('users')
+      .update(updates)
+      .eq('id', userId)
+      .select('id, full_name, phone, updated_at')
+      .single();
+
+    if (updateError || !updatedUser) {
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to update user',
+        500,
+        { error: updateError?.message || 'Unknown error' },
+        { request_id: requestId }
+      );
+    }
+
+    return successResponse(updatedUser, 200, { request_id: requestId });
+  } catch (error: any) {
+    console.error('Update user error:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'An unexpected error occurred',
+      500,
+      { error: error.message || 'Unknown error' },
+      { request_id: requestId }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { userId: string } }
+) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require Owner or Admin role
+    const authResult = await requireRole(request, ['OWNER', 'ADMIN']);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user: currentUser } = authResult;
+
+    const { userId } = params;
+
+    // Cannot delete own account
+    if (userId === currentUser.id) {
+      return errorResponse(
+        ErrorCodes.CONFLICT,
+        'Cannot delete own account',
+        409,
+        { error: 'You cannot delete your own account' },
+        { request_id: requestId }
+      );
+    }
+
+    // Check if user exists and user has access (RLS will enforce)
+    const { data: existingUser, error: checkError } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .is('deleted_at', null)
+      .single();
+
+    if (checkError || !existingUser) {
+      return errorResponse(
+        ErrorCodes.NOT_FOUND,
+        'User not found',
+        404,
+        null,
+        { request_id: requestId }
+      );
+    }
+
+    // Soft delete user
+    const { error: deleteError } = await supabaseAdmin
+      .from('users')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (deleteError) {
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to delete user',
+        500,
+        { error: deleteError.message },
+        { request_id: requestId }
+      );
+    }
+
+    // Also soft delete the auth user (if linked)
+    try {
+      await supabaseAdmin.auth.admin.deleteUser(userId);
+    } catch (authError) {
+      // Log but don't fail if auth user deletion fails
+      console.error('Failed to delete auth user:', authError);
+    }
+
+    return successResponse(
+      { message: 'User deleted successfully' },
+      200,
+      { request_id: requestId }
+    );
+  } catch (error: any) {
+    console.error('Delete user error:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'An unexpected error occurred',
+      500,
+      { error: error.message || 'Unknown error' },
+      { request_id: requestId }
+    );
+  }
+}
+

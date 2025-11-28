@@ -5734,6 +5734,7 @@ Phase 8: Module 2 (Trade Effluent) and Module 3 (MCPD/Generators) functional
 **Phase 2: Core API**
 - [x] 2.1 API Setup ✅ (Next.js API routes, middleware, health endpoint)
 - [x] 2.2 Authentication ✅ (Signup, Login, Logout, Refresh, Me endpoints)
+- [x] 2.3 Core Entity Endpoints ✅ (Companies, Sites, Users endpoints)
 - [ ] 2.3 Core Entities
 - [ ] 2.4 Document Upload
 - [ ] 2.5 Obligations
