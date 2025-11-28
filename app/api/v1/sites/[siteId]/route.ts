@@ -1,0 +1,276 @@
+/**
+ * Site Endpoints
+ * GET /api/v1/sites/{siteId} - Get site details
+ * PUT /api/v1/sites/{siteId} - Update site
+ * DELETE /api/v1/sites/{siteId} - Soft delete site
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
+import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { siteId: string } }
+) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    const { siteId } = params;
+
+    // Get site - RLS will enforce access control
+    const { data: site, error } = await supabaseAdmin
+      .from('sites')
+      .select('id, company_id, name, address_line_1, address_line_2, city, postcode, country, regulator, water_company, grace_period_days, is_active, created_at, updated_at')
+      .eq('id', siteId)
+      .is('deleted_at', null)
+      .single();
+
+    if (error || !site) {
+      if (error?.code === 'PGRST116') {
+        // No rows returned
+        return errorResponse(
+          ErrorCodes.NOT_FOUND,
+          'Site not found',
+          404,
+          null,
+          { request_id: requestId }
+        );
+      }
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to fetch site',
+        500,
+        { error: error?.message || 'Unknown error' },
+        { request_id: requestId }
+      );
+    }
+
+    return successResponse(site, 200, { request_id: requestId });
+  } catch (error: any) {
+    console.error('Get site error:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'An unexpected error occurred',
+      500,
+      { error: error.message || 'Unknown error' },
+      { request_id: requestId }
+    );
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { siteId: string } }
+) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require Owner or Admin role
+    const authResult = await requireRole(request, ['OWNER', 'ADMIN']);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    const { siteId } = params;
+
+    // Parse request body
+    const body = await request.json();
+
+    // Validate and build updates
+    const updates: any = {};
+
+    if (body.name !== undefined) {
+      if (typeof body.name !== 'string' || body.name.length < 2 || body.name.length > 100) {
+        return errorResponse(
+          ErrorCodes.VALIDATION_ERROR,
+          'Site name must be between 2 and 100 characters',
+          422,
+          { name: 'Site name must be between 2 and 100 characters' },
+          { request_id: requestId }
+        );
+      }
+      updates.name = body.name;
+    }
+
+    if (body.address_line_1 !== undefined) {
+      updates.address_line_1 = body.address_line_1;
+    }
+
+    if (body.address_line_2 !== undefined) {
+      updates.address_line_2 = body.address_line_2;
+    }
+
+    if (body.city !== undefined) {
+      updates.city = body.city;
+    }
+
+    if (body.postcode !== undefined) {
+      updates.postcode = body.postcode;
+    }
+
+    if (body.country !== undefined) {
+      updates.country = body.country;
+    }
+
+    if (body.regulator !== undefined) {
+      const validRegulators = ['EA', 'SEPA', 'NRW', 'NIEA'];
+      if (!validRegulators.includes(body.regulator)) {
+        return errorResponse(
+          ErrorCodes.VALIDATION_ERROR,
+          'Invalid regulator',
+          422,
+          { regulator: `Must be one of: ${validRegulators.join(', ')}` },
+          { request_id: requestId }
+        );
+      }
+      updates.regulator = body.regulator;
+    }
+
+    if (body.water_company !== undefined) {
+      updates.water_company = body.water_company;
+    }
+
+    if (body.grace_period_days !== undefined) {
+      if (typeof body.grace_period_days !== 'number' || body.grace_period_days < 0) {
+        return errorResponse(
+          ErrorCodes.VALIDATION_ERROR,
+          'Grace period days must be a non-negative number',
+          422,
+          { grace_period_days: 'Grace period days must be a non-negative number' },
+          { request_id: requestId }
+        );
+      }
+      updates.grace_period_days = body.grace_period_days;
+    }
+
+    if (body.is_active !== undefined) {
+      updates.is_active = body.is_active === true;
+    }
+
+    // Check if site exists and user has access (RLS will enforce)
+    const { data: existingSite, error: checkError } = await supabaseAdmin
+      .from('sites')
+      .select('id')
+      .eq('id', siteId)
+      .is('deleted_at', null)
+      .single();
+
+    if (checkError || !existingSite) {
+      return errorResponse(
+        ErrorCodes.NOT_FOUND,
+        'Site not found',
+        404,
+        null,
+        { request_id: requestId }
+      );
+    }
+
+    // Update site
+    updates.updated_at = new Date().toISOString();
+
+    const { data: updatedSite, error: updateError } = await supabaseAdmin
+      .from('sites')
+      .update(updates)
+      .eq('id', siteId)
+      .select('id, name, regulator, updated_at')
+      .single();
+
+    if (updateError || !updatedSite) {
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to update site',
+        500,
+        { error: updateError?.message || 'Unknown error' },
+        { request_id: requestId }
+      );
+    }
+
+    return successResponse(updatedSite, 200, { request_id: requestId });
+  } catch (error: any) {
+    console.error('Update site error:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'An unexpected error occurred',
+      500,
+      { error: error.message || 'Unknown error' },
+      { request_id: requestId }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { siteId: string } }
+) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require Owner or Admin role
+    const authResult = await requireRole(request, ['OWNER', 'ADMIN']);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    const { siteId } = params;
+
+    // Check if site exists and user has access (RLS will enforce)
+    const { data: existingSite, error: checkError } = await supabaseAdmin
+      .from('sites')
+      .select('id')
+      .eq('id', siteId)
+      .is('deleted_at', null)
+      .single();
+
+    if (checkError || !existingSite) {
+      return errorResponse(
+        ErrorCodes.NOT_FOUND,
+        'Site not found',
+        404,
+        null,
+        { request_id: requestId }
+      );
+    }
+
+    // Soft delete site
+    const { error: deleteError } = await supabaseAdmin
+      .from('sites')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', siteId);
+
+    if (deleteError) {
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to delete site',
+        500,
+        { error: deleteError.message },
+        { request_id: requestId }
+      );
+    }
+
+    return successResponse(
+      { message: 'Site deleted successfully' },
+      200,
+      { request_id: requestId }
+    );
+  } catch (error: any) {
+    console.error('Delete site error:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'An unexpected error occurred',
+      500,
+      { error: error.message || 'Unknown error' },
+      { request_id: requestId }
+    );
+  }
+}
