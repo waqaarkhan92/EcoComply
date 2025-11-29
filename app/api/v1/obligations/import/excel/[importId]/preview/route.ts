@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
   request: NextRequest,
@@ -52,44 +53,42 @@ export async function GET(
 
     // Check if preview is ready
     if (excelImport.status === 'PROCESSING' || excelImport.status === 'PENDING') {
-      return successResponse(
-        {
-          import_id: excelImport.id,
-          status: excelImport.status,
-          message: 'Import is still being processed. Please check again later.',
-        },
-        202,
-        { request_id: requestId }
-      );
-    }
-
-    if (excelImport.status === 'FAILED') {
       return errorResponse(
-        ErrorCodes.INTERNAL_ERROR,
-        'Import processing failed',
-        500,
-        { errors: excelImport.errors || [] },
+        ErrorCodes.UNPROCESSABLE_ENTITY,
+        'Preview not ready. Import is still processing.',
+        422,
+        { status: excelImport.status },
         { request_id: requestId }
       );
     }
 
-    // Preview is ready
-    return successResponse(
-      {
-        import_id: excelImport.id,
-        status: excelImport.status,
-        file_name: excelImport.file_name,
-        row_count: excelImport.row_count,
-        valid_count: excelImport.valid_count,
-        error_count: excelImport.error_count,
-        valid_rows: excelImport.valid_rows || [],
-        errors: excelImport.error_rows || [],
-        warnings: excelImport.warning_rows || [],
-        column_mapping: excelImport.column_mapping || {},
-      },
-      200,
-      { request_id: requestId }
-    );
+    // Build response
+    const response = {
+      import_id: excelImport.id,
+      status: excelImport.status,
+      file_name: excelImport.file_name,
+      row_count: excelImport.row_count,
+      valid_count: excelImport.valid_count || 0,
+      error_count: excelImport.error_count || 0,
+      valid_rows: (excelImport.valid_rows || []).map((row: any) => ({
+        row_number: row.row_number,
+        data: row.row_data || row.data || {},
+        warnings: row.warnings || [],
+      })),
+      errors: (excelImport.error_rows || []).map((row: any) => ({
+        row_number: row.row_number,
+        errors: row.errors || [],
+        data: row.row_data || row.data || {},
+      })),
+      warnings: (excelImport.warning_rows || []).map((row: any) => ({
+        row_number: row.row_number,
+        warnings: row.warnings || [],
+        data: row.row_data || row.data || {},
+      })),
+    };
+
+    const response = successResponse(response, 200, { request_id: requestId });
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Get excel import preview error:', error);
     return errorResponse(
@@ -101,4 +100,3 @@ export async function GET(
     );
   }
 }
-

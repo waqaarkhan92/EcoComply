@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function PUT(
   request: NextRequest,
@@ -110,7 +111,8 @@ export async function PUT(
       console.error('Failed to log to audit_logs:', auditError);
     }
 
-    return successResponse(updatedObligation, 200, { request_id: requestId });
+    const response = successResponse(updatedObligation, 200, { request_id: requestId });
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Mark obligation as not applicable error:', error);
     return errorResponse(

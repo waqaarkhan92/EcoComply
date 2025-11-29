@@ -1,0 +1,332 @@
+/**
+ * Pack Distribution Endpoint
+ * POST /api/v1/packs/{packId}/distribute - Distribute pack via email or shared link
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
+import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
+import { sendEmail } from '@/lib/services/email-service';
+import { packDistributionEmail } from '@/lib/templates/email-templates';
+import { canDistributePack, type SubscriptionTier } from '@/lib/services/subscription-service';
+import { env } from '@/lib/env';
+import crypto from 'crypto';
+
+// Maximum recipients per distribution
+const MAX_RECIPIENTS = 50;
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { packId: string } }
+) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require Owner, Admin, or Staff role
+    const authResult = await requireRole(request, ['OWNER', 'ADMIN', 'STAFF']);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    const { packId } = params;
+
+    // Parse request body
+    const body = await request.json();
+
+    // Validate required fields
+    if (!body.distribution_method) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'distribution_method is required',
+        422,
+        { distribution_method: 'distribution_method is required' },
+        { request_id: requestId }
+      );
+    }
+
+    if (!['EMAIL', 'SHARED_LINK'].includes(body.distribution_method)) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Invalid distribution_method. Must be EMAIL or SHARED_LINK',
+        422,
+        { distribution_method: 'Must be EMAIL or SHARED_LINK' },
+        { request_id: requestId }
+      );
+    }
+
+    if (!body.recipients || !Array.isArray(body.recipients) || body.recipients.length === 0) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'recipients array is required and must contain at least one recipient',
+        422,
+        { recipients: 'recipients array is required' },
+        { request_id: requestId }
+      );
+    }
+
+    if (body.recipients.length > MAX_RECIPIENTS) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        `Maximum ${MAX_RECIPIENTS} recipients allowed`,
+        422,
+        { recipients: `Maximum ${MAX_RECIPIENTS} recipients allowed` },
+        { request_id: requestId }
+      );
+    }
+
+    // Validate recipient emails
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const invalidRecipients: any[] = [];
+    body.recipients.forEach((recipient: any, index: number) => {
+      if (!recipient.email || !emailRegex.test(recipient.email)) {
+        invalidRecipients.push({
+          field: `recipients[${index}].email`,
+          message: 'Invalid email format',
+        });
+      }
+      if (recipient.name && recipient.name.length > 255) {
+        invalidRecipients.push({
+          field: `recipients[${index}].name`,
+          message: 'Name must be 255 characters or less',
+        });
+      }
+    });
+
+    if (invalidRecipients.length > 0) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Validation failed',
+        422,
+        { errors: invalidRecipients },
+        { request_id: requestId }
+      );
+    }
+
+    // Validate optional fields
+    if (body.message && body.message.length > 2000) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Message must be 2000 characters or less',
+        422,
+        { message: 'Message must be 2000 characters or less' },
+        { request_id: requestId }
+      );
+    }
+
+    if (body.subject && body.subject.length > 255) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Subject must be 255 characters or less',
+        422,
+        { subject: 'Subject must be 255 characters or less' },
+        { request_id: requestId }
+      );
+    }
+
+    if (body.distribution_method === 'SHARED_LINK') {
+      if (body.expires_in_days !== undefined) {
+        if (typeof body.expires_in_days !== 'number' || body.expires_in_days < 1 || body.expires_in_days > 365) {
+          return errorResponse(
+            ErrorCodes.VALIDATION_ERROR,
+            'expires_in_days must be between 1 and 365',
+            422,
+            { expires_in_days: 'Must be between 1 and 365' },
+            { request_id: requestId }
+          );
+        }
+      }
+    }
+
+    // Get pack with title and company info - RLS will enforce access control
+    const { data: pack, error: packError } = await supabaseAdmin
+      .from('audit_packs')
+      .select('id, company_id, site_id, pack_type, status, storage_path, title')
+      .eq('id', packId)
+      .single();
+
+    if (packError || !pack) {
+      return errorResponse(
+        ErrorCodes.NOT_FOUND,
+        'Pack not found',
+        404,
+        null,
+        { request_id: requestId }
+      );
+    }
+
+    // Check pack status
+    if (pack.status !== 'COMPLETED') {
+      return errorResponse(
+        ErrorCodes.UNPROCESSABLE_ENTITY,
+        'Pack must be completed before distribution',
+        422,
+        { status: pack.status },
+        { request_id: requestId }
+      );
+    }
+
+    // Get company subscription tier for validation
+    const { data: company, error: companyError } = await supabaseAdmin
+      .from('companies')
+      .select('id, name, subscription_tier')
+      .eq('id', pack.company_id)
+      .single();
+
+    if (companyError || !company) {
+      return errorResponse(
+        ErrorCodes.NOT_FOUND,
+        'Company not found',
+        404,
+        null,
+        { request_id: requestId }
+      );
+    }
+
+    // Validate subscription plan access for pack distribution
+    const subscriptionTier = (company.subscription_tier || 'core').toLowerCase() as SubscriptionTier;
+    const distributionAccess = canDistributePack(
+      subscriptionTier,
+      pack.pack_type,
+      body.distribution_method
+    );
+
+    if (!distributionAccess.allowed) {
+      return errorResponse(
+        ErrorCodes.FORBIDDEN,
+        distributionAccess.reason || 'Distribution not available for your subscription plan',
+        403,
+        {
+          subscription_tier: subscriptionTier,
+          pack_type: pack.pack_type,
+          distribution_method: body.distribution_method,
+          upgrade_required: distributionAccess.upgradeRequired,
+        },
+        { request_id: requestId }
+      );
+    }
+
+
+    const baseUrl = env.BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://app.oblicore.com';
+
+    // Create distribution records
+    const distributions: any[] = [];
+    const failedRecipients: any[] = [];
+    const expiresAt = body.distribution_method === 'SHARED_LINK' && body.expires_in_days
+      ? new Date(Date.now() + body.expires_in_days * 24 * 60 * 60 * 1000).toISOString()
+      : null;
+
+    for (const recipient of body.recipients) {
+      try {
+        let sharedLinkToken: string | null = null;
+        if (body.distribution_method === 'SHARED_LINK') {
+          // Generate secure token
+          sharedLinkToken = crypto.randomBytes(32).toString('hex');
+        }
+
+        const { data: distribution, error: distError } = await supabaseAdmin
+          .from('pack_distributions')
+          .insert({
+            pack_id: packId,
+            distributed_to: recipient.name || recipient.email,
+            distribution_method: body.distribution_method,
+            email_address: recipient.email,
+            shared_link_token: sharedLinkToken,
+            created_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
+
+        if (distError || !distribution) {
+          failedRecipients.push({
+            email: recipient.email,
+            reason: distError?.message || 'Failed to create distribution record',
+          });
+          continue;
+        }
+
+        distributions.push(distribution);
+
+        // Send email notification
+        try {
+          let packDownloadUrl: string | undefined;
+          let sharedLink: string | undefined;
+
+          if (body.distribution_method === 'EMAIL') {
+            // For EMAIL: Generate download URL
+            packDownloadUrl = `${baseUrl}/api/v1/packs/${packId}/download?distribution_id=${distribution.id}`;
+          } else if (body.distribution_method === 'SHARED_LINK' && sharedLinkToken) {
+            // For SHARED_LINK: Generate shareable link
+            sharedLink = `${baseUrl}/share/packs/${sharedLinkToken}`;
+          }
+
+          const emailTemplate = packDistributionEmail({
+            pack_name: pack.title || `Pack ${packId.substring(0, 8)}`,
+            distribution_method: body.distribution_method,
+            recipient_name: recipient.name,
+            pack_download_url: packDownloadUrl,
+            shared_link: sharedLink,
+            expires_at: expiresAt ? new Date(expiresAt).toLocaleDateString() : undefined,
+            company_name: company?.name,
+          });
+
+          const emailResult = await sendEmail({
+            to: recipient.email,
+            subject: emailTemplate.subject,
+            html: emailTemplate.html,
+            text: emailTemplate.text,
+          });
+
+          if (!emailResult.success) {
+            console.error(`Failed to send email to ${recipient.email}:`, emailResult.error);
+            // Don't fail the distribution, just log the error
+          }
+        } catch (emailError: any) {
+          console.error(`Error sending email to ${recipient.email}:`, emailError);
+          // Don't fail the distribution, just log the error
+        }
+
+      } catch (error: any) {
+        failedRecipients.push({
+          email: recipient.email,
+          reason: error.message || 'Unknown error',
+        });
+      }
+    }
+
+    // Determine overall status
+    let status: 'SENT' | 'FAILED' | 'PARTIAL' = 'SENT';
+    if (distributions.length === 0) {
+      status = 'FAILED';
+    } else if (failedRecipients.length > 0) {
+      status = 'PARTIAL';
+    }
+
+    const response = successResponse(
+      {
+        distribution_id: distributions[0]?.id || null,
+        status,
+        distribution_method: body.distribution_method,
+        recipients_count: distributions.length,
+        sent_at: new Date().toISOString(),
+        pack_id: packId,
+        ...(failedRecipients.length > 0 && { failed_recipients: failedRecipients }),
+      },
+      200,
+      { request_id: requestId }
+    );
+    return await addRateLimitHeaders(request, user.id, response);
+  } catch (error: any) {
+    console.error('Distribute pack error:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'An unexpected error occurred',
+      500,
+      { error: error.message || 'Unknown error' },
+      { request_id: requestId }
+    );
+  }
+}
+

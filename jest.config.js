@@ -1,20 +1,39 @@
-/** @type {import('jest').Config} */
-const config = {
-  preset: 'ts-jest',
+const nextJest = require('next/jest');
+
+const createJestConfig = nextJest({
+  // Provide the path to your Next.js app to load next.config.js and .env files in your test environment
+  dir: './',
+});
+
+// Add any custom config to be passed to Jest
+const customJestConfig = {
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  // Use node environment for integration tests (API tests), jsdom for frontend tests
   testEnvironment: 'node',
-  roots: ['<rootDir>/tests'],
-  testMatch: ['**/*.test.ts'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
+  testMatch: [
+    '**/__tests__/**/*.[jt]s?(x)',
+    '**/?(*.)+(spec|test).[jt]s?(x)',
+  ],
+  // Override test environment for frontend tests
+  testEnvironmentOptions: {
+    customExportConditions: [''],
+  },
   collectCoverageFrom: [
-    'app/**/*.ts',
-    'lib/**/*.ts',
+    'app/**/*.{js,jsx,ts,tsx}',
+    'components/**/*.{js,jsx,ts,tsx}',
+    'lib/**/*.{js,jsx,ts,tsx}',
     '!**/*.d.ts',
     '!**/node_modules/**',
+    '!**/.next/**',
   ],
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  // Transform ignore patterns
+  transformIgnorePatterns: [
+    'node_modules/(?!(undici)/)',
+  ],
 };
 
-module.exports = config;
-
+// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
+module.exports = createJestConfig(customJestConfig);

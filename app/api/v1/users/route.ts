@@ -9,6 +9,9 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, paginatedResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { parsePaginationParams, parseFilterParams, parseSortParams, createCursor } from '@/lib/api/pagination';
+import { sendEmail } from '@/lib/services/email-service';
+import { userInvitationEmail } from '@/lib/templates/email-templates';
+import { env } from '@/lib/env';
 
 export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
@@ -141,6 +144,13 @@ export async function POST(request: NextRequest) {
     // Use user's company_id if not provided
     const companyId = body.company_id || user.company_id;
 
+    // Get company name and inviter name for email
+    const { data: company } = await supabaseAdmin
+      .from('companies')
+      .select('name')
+      .eq('id', companyId)
+      .single();
+
     // Verify user has access to this company
     if (body.company_id && body.company_id !== user.company_id && !user.is_consultant) {
       return errorResponse(
@@ -225,10 +235,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Send invitation email (when email service is set up)
-    // For now, user creation succeeds without email
+    // Send invitation email (if no password provided = invitation)
+    if (!body.password) {
+      try {
+        const baseUrl = env.BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://app.oblicore.com';
+        const invitationUrl = `${baseUrl}/signup?email=${encodeURIComponent(newUser.email)}&company_id=${companyId}`;
+        
+        const emailTemplate = userInvitationEmail({
+          recipient_email: newUser.email,
+          inviter_name: user.full_name || undefined,
+          company_name: company?.name || 'Your Company',
+          invitation_url: invitationUrl,
+          expires_in_days: 7,
+        });
 
-    return successResponse(newUser, 201, { request_id: requestId });
+        const emailResult = await sendEmail({
+          to: newUser.email,
+          subject: emailTemplate.subject,
+          html: emailTemplate.html,
+          text: emailTemplate.text,
+        });
+
+        if (!emailResult.success) {
+          console.error(`Failed to send invitation email to ${newUser.email}:`, emailResult.error);
+          // Don't fail user creation, just log the error
+        }
+      } catch (emailError: any) {
+        console.error(`Error sending invitation email to ${newUser.email}:`, emailError);
+        // Don't fail user creation, just log the error
+      }
+    }
+
+    const response = successResponse(newUser, 201, { request_id: requestId });
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Create user error:', error);
     return errorResponse(

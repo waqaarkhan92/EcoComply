@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, paginatedResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 import { parsePaginationParams, parseFilterParams, parseSortParams, createCursor } from '@/lib/api/pagination';
 
 export async function GET(request: NextRequest) {
@@ -110,13 +111,14 @@ export async function GET(request: NextRequest) {
       nextCursor = createCursor(lastItem.id, lastItem.created_at);
     }
 
-    return paginatedResponse(
+    const response = paginatedResponse(
       results,
       nextCursor,
       limit,
       hasMore,
       { request_id: requestId }
     );
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Get obligations error:', error);
     return errorResponse(

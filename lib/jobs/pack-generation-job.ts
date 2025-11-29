@@ -129,8 +129,9 @@ async function collectPackData(
     .from('obligations')
     .select(`
       id,
-      obligation_text,
-      summary,
+      original_text,
+      obligation_title,
+      obligation_description,
       category,
       status,
       frequency,
@@ -243,7 +244,7 @@ async function generatePackPDF(packType: string, packData: any, pack: any): Prom
     doc.moveDown();
 
     for (const obligation of packData.obligations) {
-      doc.fontSize(14).text(obligation.summary || obligation.obligation_text.substring(0, 100), { underline: true });
+      doc.fontSize(14).text(obligation.obligation_title || obligation.obligation_description || obligation.original_text?.substring(0, 100) || 'Obligation', { underline: true });
       doc.moveDown(0.5);
       doc.fontSize(10).text(`Status: ${obligation.status}`);
       doc.text(`Category: ${obligation.category}`);

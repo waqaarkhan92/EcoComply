@@ -45,7 +45,7 @@ The Oblicore platform follows a **Procore-inspired design philosophy** that emph
 - **Dark Surfaces with Light Content Blocks:** High contrast for premium feel
 - **Table-Heavy Dashboards:** Dense data visibility for compliance workflows
 - **Large, Prominent Headers:** Status and location prominence
-- **Industrial Deep Teal:** Primary accent color (#026A67) replacing Procore's orange with regulatory/environmental signal
+- **EcoComply Palette:** Primary brand color (#104B3A Deep Forest Green) for authority, Royal Blue (#0056A6) for CTAs and trust
 
 ## 1.2 Framework & Technology Stack
 
@@ -70,13 +70,20 @@ The Oblicore platform follows a **Procore-inspired design philosophy** that emph
 
 ## 2.1 Color Palette
 
-### Primary Accent Color
+### Primary Brand + Authority
 
-**Industrial Deep Teal:** `#026A67`
-- **Usage:** CTAs, buttons, active states, hero highlights, charts accents
-- **Rationale:** Regulatory + environmental signal, replaces Procore's orange
-- **Primary Dark:** `#014D4A` (darker teal variant for hover states, active states)
-- **Primary Light:** `#039A96` (lighter teal variant for backgrounds, highlights)
+**Deep Forest Green:** `#104B3A`
+- **Usage:** Brand identity, authority elements, active states, hero highlights, charts accents
+- **Rationale:** EcoComply brand color - environmental compliance authority and trust
+- **Primary Dark:** `#0B372A` (darker forest green variant for hover states, active states)
+- **Primary Light:** `#94B49F` (Sage Green - lighter variant for backgrounds, highlights, info states)
+
+### Primary CTA + Trust
+
+**Royal Blue:** `#0056A6`
+- **Usage:** Primary call-to-action buttons, trust-building elements, important interactions
+- **Rationale:** Royal blue conveys trust, reliability, and professional action
+- **CTA Primary Hover:** `#004D95` (darkened ~10% for hover states on CTA buttons)
 
 ### Enterprise Neutrals
 
@@ -89,19 +96,19 @@ The Oblicore platform follows a **Procore-inspired design philosophy** that emph
 - **Black:** `#000000`
   - **Usage:** Text, icons
 
-### Status / Semantic Colors
+### Compliance Semantic Colors
 
-- **Success:** `#1E7A50`
+- **Success:** `#2E7D32` (Compliant)
   - **Usage:** Compliant status, success actions, positive indicators
-  - **Rationale:** Industrial green, serious not playful
-- **Warning:** `#CB7C00`
-  - **Usage:** At risk, warnings, caution indicators
-  - **Rationale:** Amber/gold, regulatory urgency like HSE notices
-- **Danger:** `#B13434`
-  - **Usage:** Non-compliant, errors, critical alerts
-  - **Rationale:** Deep red, legal danger clarity
-- **Info:** `#026A67`
-  - **Usage:** Information - uses primary teal
+  - **Rationale:** Compliance-focused green indicating successful compliance status
+- **Warning:** `#D4A017` (Expiring / Caution)
+  - **Usage:** At risk, warnings, caution indicators, expiring deadlines
+  - **Rationale:** Golden amber signaling caution and regulatory attention needed
+- **Danger:** `#C44536` (Overdue / Enforcement Risk)
+  - **Usage:** Non-compliant, errors, critical alerts, overdue obligations
+  - **Rationale:** Deep red-orange indicating enforcement risk and urgent action required
+- **Info:** `#94B49F` (Sage Green)
+  - **Usage:** Information messages - uses primary-light color
 
 ### Text Colors
 
@@ -218,10 +225,10 @@ font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helv
 ### Button Variants
 
 **Primary Button:**
-- **Background:** Primary Teal (#026A67)
+- **Background:** Primary Deep Forest Green (#104B3A)
 - **Text:** White, font-semibold
-- **Hover:** Darker teal (#014D4A)
-- **Usage:** Primary actions, CTAs
+- **Hover:** Darker forest green (#0B372A)
+- **Usage:** Primary actions, brand authority elements
 
 **Secondary Button (Outline Style):**
 - **Background:** Transparent
@@ -231,10 +238,10 @@ font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helv
 - **Usage:** Secondary actions, cancel buttons
 
 **Danger Button:**
-- **Background:** Danger Red (#B13434)
+- **Background:** Danger/Overdue Red-Orange (#C44536)
 - **Text:** White
-- **Hover:** Darker red (#8B2828)
-- **Usage:** Destructive actions
+- **Hover:** Darker red-orange (#A03A2E)
+- **Usage:** Destructive actions, overdue indicators
 
 **Ghost Button:**
 - **Background:** Transparent
@@ -244,8 +251,8 @@ font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helv
 
 **Link Button:**
 - **Background:** Transparent
-- **Text:** Primary Teal (#026A67)
-- **Hover:** Darker teal (#014D4A), underline
+- **Text:** Primary Deep Forest Green (#104B3A)
+- **Hover:** Darker forest green (#0B372A), underline
 - **Usage:** Text links styled as buttons
 
 ### Button Sizes
@@ -320,13 +327,13 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 - **Default:** Normal appearance, border color #E2E6E7
 - **Focus:** Border color Primary Teal (#026A67), ring outline
-- **Error:** Border color Danger Red (#B13434), error message below
+- **Error:** Border color Danger/Overdue Red-Orange (#C44536), error message below
 - **Disabled:** Opacity 50%, cursor not-allowed
 - **Read-only:** Gray background, no border
 
 ### Input Validation
 
-- **Error Message Display:** Red text (#B13434) below input, 12px font size
+- **Error Message Display:** Danger/Overdue Red-Orange text (#C44536) below input, 12px font size
 - **Success Indicator:** Green checkmark icon on right side (optional)
 - **Real-time Validation:** Validate on blur, show errors immediately
 
@@ -425,17 +432,17 @@ interface ImportRow {
 
 ### Traffic Light Status Indicators
 
-**Green (Compliant):** `#1E7A50`
+**Green (Compliant):** `#2E7D32`
 - **Condition:** All obligations met, no overdue items
 - **Design:** Large circle (64px diameter), green background, white checkmark icon
 - **Text:** "All Compliant" in white, bold font
 
-**Yellow (At Risk):** `#CB7C00`
+**Yellow (At Risk / Expiring):** `#D4A017`
 - **Condition:** Upcoming deadlines (7-3 days), missing evidence
 - **Design:** Large circle (64px diameter), yellow background, white warning icon
 - **Text:** "At Risk" in white, bold font
 
-**Red (Non-Compliant):** `#B13434`
+**Red (Non-Compliant / Overdue):** `#C44536`
 - **Condition:** Overdue obligations, missing evidence past grace period
 - **Design:** Large circle (64px diameter), red background, white alert icon
 - **Text:** "Non-Compliant" in white, bold font
@@ -970,9 +977,9 @@ interface BreadcrumbProps {
 
 **Size:** Large card (full width or 6 columns)  
 **Design:** Three large circles (Green/Yellow/Red) with status text  
-**Green (Compliant):** #1E7A50, "All Compliant" text, white checkmark icon  
-**Yellow (At Risk):** #CB7C00, "At Risk" text, white warning icon  
-**Red (Non-Compliant):** #B13434, "Non-Compliant" text, white alert icon  
+**Green (Compliant):** #2E7D32, "All Compliant" text, white checkmark icon  
+**Yellow (At Risk / Expiring):** #D4A017, "At Risk" text, white warning icon  
+**Red (Non-Compliant / Overdue):** #C44536, "Non-Compliant" text, white alert icon  
 **Circle Size:** 64px diameter  
 **Click Action:** Filter obligations by status  
 **Mobile:** Stacked vertically, smaller circles (48px)
@@ -1540,10 +1547,17 @@ interface TableProps<T> {
 
 ### Primary Button
 
-**Background:** Primary Teal (#026A67)  
+**Background:** Primary Deep Forest Green (#104B3A)  
 **Text:** White, font-semibold  
-**Hover:** Darker teal (#014D4A)  
+**Hover:** Darker forest green (#0B372A)  
 **Size:** Medium (40px height) default, Large (48px) for CTAs
+
+### Primary CTA Button
+
+**Background:** Royal Blue (#0056A6)  
+**Text:** White, font-semibold  
+**Hover:** Darker royal blue (#004D95)  
+**Usage:** Trust-building call-to-action buttons, important interactions
 
 ### Secondary Button (Outline Style)
 
@@ -1899,9 +1913,13 @@ interface ImportRow {
 ```typescript
 interface ColorTokens {
   primary: {
-    main: '#026A67';
-    dark: '#014D4A';
-    light: '#039A96';
+    main: '#104B3A'; // Deep Forest Green
+    dark: '#0B372A';
+    light: '#94B49F'; // Sage Green
+  };
+  cta: {
+    primary: '#0056A6'; // Royal Blue
+    primaryHover: '#004D95';
   };
   neutral: {
     darkCharcoal: '#101314';
@@ -1910,10 +1928,10 @@ interface ColorTokens {
     black: '#000000';
   };
   status: {
-    success: '#1E7A50';
-    warning: '#CB7C00';
-    danger: '#B13434';
-    info: '#026A67';
+    success: '#2E7D32'; // Compliant
+    warning: '#D4A017'; // Expiring / Caution
+    danger: '#C44536'; // Overdue / Enforcement Risk
+    info: '#94B49F'; // Sage Green (same as primary-light)
   };
   text: {
     primary: '#101314';

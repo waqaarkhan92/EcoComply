@@ -77,6 +77,9 @@ export class TestClient {
   }
 
   async signup(email: string, password: string, companyName?: string, fullName?: string): Promise<TestUser> {
+    // Add delay to avoid Supabase rate limiting
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
     const response = await this.post('/api/v1/auth/signup', {
       email,
       password,
@@ -93,22 +96,24 @@ export class TestClient {
     const userId = data.data.user.id;
     const companyId = data.data.user.company_id;
 
-    // Signup doesn't return tokens - need to login to get token
-    // For test purposes, we'll login immediately after signup
-    // Wait a bit for the user to be fully created
-    let token: string | undefined;
-    try {
-      // Small delay to ensure user is fully created
-      await new Promise(resolve => setTimeout(resolve, 500));
-      token = await this.login(email, password);
-    } catch (error) {
-      // If login fails, try one more time after a longer delay
+    // Signup may return tokens if email verification is disabled
+    // Otherwise, login to get token
+    let token: string | undefined = data.data.access_token;
+    
+    if (!token) {
+      // Wait a bit for the user to be fully created, then login
       try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 500));
         token = await this.login(email, password);
-      } catch (retryError) {
-        // If still fails, log but continue - some tests might work without token
-        console.warn('Login after signup failed:', retryError);
+      } catch (error) {
+        // If login fails, try one more time after a longer delay
+        try {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          token = await this.login(email, password);
+        } catch (retryError) {
+          // If still fails, log but continue - some tests might work without token
+          console.warn('Login after signup failed:', retryError);
+        }
       }
     }
 
@@ -134,7 +139,7 @@ export class TestClient {
 
     const data = await response.json();
     // Login returns: { data: { access_token, refresh_token, user } }
-    return data.data?.access_token || '';
+    return data.data?.access_token || data.data?.token?.access_token || '';
   }
 }
 

@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
   request: NextRequest,
@@ -54,7 +55,8 @@ export async function GET(
       );
     }
 
-    return successResponse(site, 200, { request_id: requestId });
+    const response = successResponse(site, 200, { request_id: requestId });
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Get site error:', error);
     return errorResponse(
@@ -195,7 +197,8 @@ export async function PUT(
       );
     }
 
-    return successResponse(updatedSite, 200, { request_id: requestId });
+    const response = successResponse(updatedSite, 200, { request_id: requestId });
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Update site error:', error);
     return errorResponse(
@@ -258,11 +261,12 @@ export async function DELETE(
       );
     }
 
-    return successResponse(
+    const response = successResponse(
       { message: 'Site deleted successfully' },
       200,
       { request_id: requestId }
     );
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Delete site error:', error);
     return errorResponse(

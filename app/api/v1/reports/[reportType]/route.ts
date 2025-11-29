@@ -1,0 +1,331 @@
+/**
+ * Report Generation Endpoints
+ * GET /api/v1/reports/{reportType} - Get report (if cached)
+ * POST /api/v1/reports/{reportType}/generate - Generate report
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
+import { requireAuth, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
+import { getQueue, QUEUE_NAMES } from '@/lib/queue/queue-manager';
+
+const VALID_REPORT_TYPES = ['compliance_summary', 'deadline_report', 'obligation_report', 'evidence_report'];
+const VALID_FORMATS = ['PDF', 'CSV', 'JSON'];
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { reportType: string } }
+) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    const { reportType } = params;
+    const searchParams = request.nextUrl.searchParams;
+    const reportId = searchParams.get('report_id');
+
+    if (!VALID_REPORT_TYPES.includes(reportType)) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Invalid report type',
+        422,
+        { report_type: `Must be one of: ${VALID_REPORT_TYPES.join(', ')}` },
+        { request_id: requestId }
+      );
+    }
+
+    // If report_id provided, get specific report
+    if (reportId) {
+      const { data: report, error: reportError } = await supabaseAdmin
+        .from('reports')
+        .select('*')
+        .eq('id', reportId)
+        .eq('company_id', user.company_id)
+        .single();
+
+      if (reportError || !report) {
+        return errorResponse(
+          ErrorCodes.NOT_FOUND,
+          'Report not found',
+          404,
+          null,
+          { request_id: requestId }
+        );
+      }
+
+      // If report is completed, return download URL
+      if (report.status === 'COMPLETED' && report.file_path) {
+        const completedResponse = successResponse(
+          {
+            id: report.id,
+            report_type: report.report_type,
+            status: report.status,
+            format: report.format,
+            file_path: report.file_path,
+            file_size_bytes: report.file_size_bytes,
+            generated_at: report.generated_at,
+            download_url: `/api/v1/reports/download/${report.id}`,
+          },
+          200,
+          { request_id: requestId }
+        );
+        return await addRateLimitHeaders(request, user.id, completedResponse);
+      }
+
+      // Return report status
+      const statusResponse = successResponse(
+        {
+          id: report.id,
+          report_type: report.report_type,
+          status: report.status,
+          background_job_id: report.background_job_id,
+          error_message: report.error_message,
+          created_at: report.created_at,
+        },
+        200,
+        { request_id: requestId }
+      );
+      return await addRateLimitHeaders(request, user.id, statusResponse);
+    }
+
+    // List recent reports for this report type
+    const { data: reports, error: reportsError } = await supabaseAdmin
+      .from('reports')
+      .select('id, status, format, generated_at, file_size_bytes')
+      .eq('company_id', user.company_id)
+      .eq('report_type', reportType)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (reportsError) {
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to fetch reports',
+        500,
+        { error: reportsError.message },
+        { request_id: requestId }
+      );
+    }
+
+    return successResponse(
+      {
+        report_type: reportType,
+        reports: reports || [],
+      },
+      200,
+      { request_id: requestId }
+    );
+  } catch (error: any) {
+    console.error('Get report error:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'An unexpected error occurred',
+      500,
+      { error: error.message || 'Unknown error' },
+      { request_id: requestId }
+    );
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { reportType: string } }
+) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    const { reportType } = params;
+
+    if (!VALID_REPORT_TYPES.includes(reportType)) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Invalid report type',
+        422,
+        { report_type: `Must be one of: ${VALID_REPORT_TYPES.join(', ')}` },
+        { request_id: requestId }
+      );
+    }
+
+    // Parse request body for filters
+    const body = await request.json().catch(() => ({}));
+    const { site_id, date_range_start, date_range_end, status, category, format = 'PDF' } = body;
+
+    // Validate format
+    if (!VALID_FORMATS.includes(format)) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Invalid format',
+        422,
+        { format: `Must be one of: ${VALID_FORMATS.join(', ')}` },
+        { request_id: requestId }
+      );
+    }
+
+    // Validate site_id belongs to user's company if provided
+    if (site_id) {
+      const { data: site, error: siteError } = await supabaseAdmin
+        .from('sites')
+        .select('id, company_id')
+        .eq('id', site_id)
+        .eq('company_id', user.company_id)
+        .single();
+
+      if (siteError || !site) {
+        return errorResponse(
+          ErrorCodes.NOT_FOUND,
+          'Site not found or access denied',
+          404,
+          null,
+          { request_id: requestId }
+        );
+      }
+    }
+
+    // Create report record
+    const { data: report, error: createError } = await supabaseAdmin
+      .from('reports')
+      .insert({
+        company_id: user.company_id,
+        site_id: site_id || null,
+        report_type: reportType,
+        status: 'PENDING',
+        format: format,
+        filters: {
+          date_range_start: date_range_start || null,
+          date_range_end: date_range_end || null,
+          status: status || null,
+          category: category || null,
+        },
+        generated_by: user.id,
+      })
+      .select('id')
+      .single();
+
+    if (createError || !report) {
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to create report',
+        500,
+        { error: createError?.message || 'Unknown error' },
+        { request_id: requestId }
+      );
+    }
+
+    // Create background job record
+    const { data: jobRecord, error: jobError } = await supabaseAdmin
+      .from('background_jobs')
+      .insert({
+        job_type: 'REPORT_GENERATION',
+        status: 'PENDING',
+        priority: 'NORMAL',
+        entity_type: 'report',
+        entity_id: report.id,
+        company_id: user.company_id,
+        payload: JSON.stringify({
+          report_id: report.id,
+          report_type: reportType,
+          company_id: user.company_id,
+          site_id: site_id || null,
+          filters: {
+            date_range_start: date_range_start || null,
+            date_range_end: date_range_end || null,
+            status: status || null,
+            category: category || null,
+          },
+          format: format,
+        }),
+      })
+      .select('id')
+      .single();
+
+    if (jobError || !jobRecord) {
+      // Update report status to failed
+      await supabaseAdmin
+        .from('reports')
+        .update({ status: 'FAILED', error_message: 'Failed to create background job' })
+        .eq('id', report.id);
+
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to queue report generation',
+        500,
+        { error: jobError?.message || 'Unknown error' },
+        { request_id: requestId }
+      );
+    }
+
+    // Update report with job ID
+    await supabaseAdmin
+      .from('reports')
+      .update({ background_job_id: jobRecord.id })
+      .eq('id', report.id);
+
+    // Enqueue job in BullMQ
+    try {
+      const reportQueue = getQueue(QUEUE_NAMES.REPORT_GENERATION);
+      await reportQueue.add(
+        'REPORT_GENERATION',
+        {
+          report_id: report.id,
+          report_type: reportType,
+          company_id: user.company_id,
+          site_id: site_id || null,
+          filters: {
+            date_range_start: date_range_start || null,
+            date_range_end: date_range_end || null,
+            status: status || null,
+            category: category || null,
+          },
+          format: format,
+          background_job_id: jobRecord.id,
+        },
+        {
+          jobId: jobRecord.id,
+          priority: 5,
+        }
+      );
+    } catch (queueError: any) {
+      console.error('Failed to enqueue report generation job:', queueError);
+      // Report record and job record already created, job will be picked up by worker
+    }
+
+    const response = successResponse(
+      {
+        id: report.id,
+        report_type: reportType,
+        status: 'QUEUED',
+        format: format,
+        background_job_id: jobRecord.id,
+        message: 'Report generation queued successfully',
+      },
+      202,
+      { request_id: requestId }
+    );
+    return await addRateLimitHeaders(request, user.id, response);
+  } catch (error: any) {
+    console.error('Generate report error:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'An unexpected error occurred',
+      500,
+      { error: error.message || 'Unknown error' },
+      { request_id: requestId }
+    );
+  }
+}
+

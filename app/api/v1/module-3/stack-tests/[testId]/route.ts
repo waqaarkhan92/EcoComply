@@ -1,0 +1,238 @@
+/**
+ * Module 3: Stack Test Detail Endpoints
+ * GET /api/v1/module-3/stack-tests/[testId] - Get stack test details
+ * PUT /api/v1/module-3/stack-tests/[testId] - Update stack test
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
+import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+import { requireModule } from '@/lib/api/module-check';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { testId: string } }
+) {
+  const requestId = getRequestId(request);
+  const { testId } = params;
+
+  try {
+    // Require authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    // Check Module 3 is activated
+    const moduleCheck = await requireModule(user.company_id, 'MODULE_3');
+    if (moduleCheck) {
+      return moduleCheck;
+    }
+
+    // Fetch stack test
+    const { data: test, error } = await supabaseAdmin
+      .from('stack_tests')
+      .select(`
+        id,
+        generator_id,
+        company_id,
+        test_date,
+        test_company,
+        test_reference,
+        nox_result,
+        so2_result,
+        co_result,
+        particulates_result,
+        compliance_status,
+        exceedances_found,
+        exceedance_details,
+        next_test_due,
+        evidence_id,
+        notes,
+        entered_by,
+        created_at,
+        updated_at,
+        generators!inner(
+          id,
+          generator_identifier,
+          generator_type
+        )
+      `)
+      .eq('id', testId)
+      .single();
+
+    if (error || !test) {
+      return errorResponse(
+        ErrorCodes.NOT_FOUND,
+        'Stack test not found',
+        404,
+        {},
+        { request_id: requestId }
+      );
+    }
+
+    // Check access via RLS (company_id must match)
+    if (test.company_id !== user.company_id) {
+      return errorResponse(
+        ErrorCodes.FORBIDDEN,
+        'Access denied to this stack test',
+        403,
+        {},
+        { request_id: requestId }
+      );
+    }
+
+    const response = successResponse(
+      test,
+      200,
+      { request_id: requestId }
+    );
+    return await addRateLimitHeaders(request, user.id, response);
+  } catch (error: any) {
+    console.error('Error in GET /api/v1/module-3/stack-tests/[testId]:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'Internal server error',
+      500,
+      { error: error.message },
+      { request_id: requestId }
+    );
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { testId: string } }
+) {
+  const requestId = getRequestId(request);
+  const { testId } = params;
+
+  try {
+    // Require authentication and appropriate role
+    const authResult = await requireRole(request, ['OWNER', 'ADMIN', 'STAFF']);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    // Check Module 3 is activated
+    const moduleCheck = await requireModule(user.company_id, 'MODULE_3');
+    if (moduleCheck) {
+      return moduleCheck;
+    }
+
+    // Verify test exists and user has access
+    const { data: existingTest, error: fetchError } = await supabaseAdmin
+      .from('stack_tests')
+      .select('id, company_id, generator_id')
+      .eq('id', testId)
+      .single();
+
+    if (fetchError || !existingTest) {
+      return errorResponse(
+        ErrorCodes.NOT_FOUND,
+        'Stack test not found',
+        404,
+        {},
+        { request_id: requestId }
+      );
+    }
+
+    if (existingTest.company_id !== user.company_id) {
+      return errorResponse(
+        ErrorCodes.FORBIDDEN,
+        'Access denied to this stack test',
+        403,
+        {},
+        { request_id: requestId }
+      );
+    }
+
+    // Parse request body
+    const body = await request.json();
+    const updateData: any = {};
+
+    // Allow updating these fields
+    if (body.test_date !== undefined) updateData.test_date = body.test_date;
+    if (body.test_company !== undefined) updateData.test_company = body.test_company;
+    if (body.test_reference !== undefined) updateData.test_reference = body.test_reference;
+    if (body.nox_result !== undefined) updateData.nox_result = body.nox_result ? Number(body.nox_result) : null;
+    if (body.so2_result !== undefined) updateData.so2_result = body.so2_result ? Number(body.so2_result) : null;
+    if (body.co_result !== undefined) updateData.co_result = body.co_result ? Number(body.co_result) : null;
+    if (body.particulates_result !== undefined) updateData.particulates_result = body.particulates_result ? Number(body.particulates_result) : null;
+    if (body.compliance_status !== undefined) {
+      const validStatuses = ['PENDING', 'PASS', 'FAIL', 'NON_COMPLIANT'];
+      if (!validStatuses.includes(body.compliance_status)) {
+        return errorResponse(
+          ErrorCodes.BAD_REQUEST,
+          `Invalid compliance_status. Must be one of: ${validStatuses.join(', ')}`,
+          400,
+          {},
+          { request_id: requestId }
+        );
+      }
+      updateData.compliance_status = body.compliance_status;
+    }
+    if (body.exceedances_found !== undefined) updateData.exceedances_found = body.exceedances_found;
+    if (body.exceedance_details !== undefined) updateData.exceedance_details = body.exceedance_details;
+    if (body.next_test_due !== undefined) updateData.next_test_due = body.next_test_due || null;
+    if (body.evidence_id !== undefined) updateData.evidence_id = body.evidence_id || null;
+    if (body.notes !== undefined) updateData.notes = body.notes;
+
+    if (Object.keys(updateData).length === 0) {
+      return errorResponse(
+        ErrorCodes.BAD_REQUEST,
+        'No valid fields to update',
+        400,
+        {},
+        { request_id: requestId }
+      );
+    }
+
+    // Update stack test
+    const { data: updatedTest, error: updateError } = await supabaseAdmin
+      .from('stack_tests')
+      .update(updateData)
+      .eq('id', testId)
+      .select()
+      .single();
+
+    if (updateError || !updatedTest) {
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to update stack test',
+        500,
+        { error: updateError?.message },
+        { request_id: requestId }
+      );
+    }
+
+    // Update generator's next_stack_test_due if next_test_due was updated
+    if (updateData.next_test_due !== undefined) {
+      await supabaseAdmin
+        .from('generators')
+        .update({ next_stack_test_due: updateData.next_test_due })
+        .eq('id', existingTest.generator_id);
+    }
+
+    const response = successResponse(
+      updatedTest,
+      200,
+      { request_id: requestId }
+    );
+    return await addRateLimitHeaders(request, user.id, response);
+  } catch (error: any) {
+    console.error('Error in PUT /api/v1/module-3/stack-tests/[testId]:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'Internal server error',
+      500,
+      { error: error.message },
+      { request_id: requestId }
+    );
+  }
+}
+

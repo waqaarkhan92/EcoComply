@@ -1,0 +1,336 @@
+/**
+ * Module 2: Consents Endpoints
+ * GET /api/v1/module-2/consents - List consents (documents with TRADE_EFFLUENT_CONSENT type)
+ * POST /api/v1/module-2/consents - Upload consent document
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { successResponse, errorResponse, paginatedResponse, ErrorCodes } from '@/lib/api/response';
+import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+import { requireModule } from '@/lib/api/module-check';
+import { parsePaginationParams, parseFilterParams, parseSortParams, createCursor } from '@/lib/api/pagination';
+import { getQueue, QUEUE_NAMES } from '@/lib/queue/queue-manager';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
+
+export async function GET(request: NextRequest) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    // Check Module 2 is activated
+    const moduleCheck = await requireModule(user.company_id, 'MODULE_2');
+    if (moduleCheck) {
+      return moduleCheck;
+    }
+
+    // Get Module 2 ID
+    const { data: module2 } = await supabaseAdmin
+      .from('modules')
+      .select('id')
+      .eq('module_code', 'MODULE_2')
+      .single();
+
+    if (!module2) {
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Module 2 not found in system',
+        500,
+        {},
+        { request_id: requestId }
+      );
+    }
+
+    // Parse pagination and filter params
+    const { limit, cursor } = parsePaginationParams(request);
+    const filters = parseFilterParams(request);
+    const sort = parseSortParams(request);
+
+    // Build query - consents are documents with document_type = 'TRADE_EFFLUENT_CONSENT'
+    let query = supabaseAdmin
+      .from('documents')
+      .select(`
+        id,
+        site_id,
+        document_type,
+        title,
+        reference_number,
+        regulator,
+        water_company,
+        status,
+        extraction_status,
+        created_at,
+        updated_at
+      `)
+      .eq('document_type', 'TRADE_EFFLUENT_CONSENT')
+      .eq('module_id', module2.id)
+      .is('deleted_at', null);
+
+    // Apply filters
+    if (filters.site_id) {
+      query = query.eq('site_id', filters.site_id);
+    }
+    if (filters.status) {
+      query = query.eq('status', filters.status);
+    }
+    if (filters.water_company) {
+      query = query.eq('water_company', filters.water_company);
+    }
+
+    // Apply sorting
+    if (sort.length === 0) {
+      query = query.order('created_at', { ascending: false });
+    } else {
+      for (const sortItem of sort) {
+        query = query.order(sortItem.field, { ascending: sortItem.direction === 'asc' });
+      }
+    }
+
+    // Add limit and fetch one extra to check if there are more
+    query = query.limit(limit + 1);
+
+    const { data: consents, error } = await query;
+
+    if (error) {
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to fetch consents',
+        500,
+        { error: error.message },
+        { request_id: requestId }
+      );
+    }
+
+    // Check if there are more results
+    const hasMore = (consents || []).length > limit;
+    const data = hasMore ? (consents || []).slice(0, limit) : (consents || []);
+    const nextCursor = hasMore && data.length > 0 ? createCursor(data[data.length - 1].created_at) : null;
+
+    const response = paginatedResponse(data, nextCursor, { request_id: requestId });
+    return await addRateLimitHeaders(request, user.id, response);
+  } catch (error: any) {
+    console.error('Error in GET /api/v1/module-2/consents:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'Internal server error',
+      500,
+      { error: error.message },
+      { request_id: requestId }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require authentication and appropriate role
+    const authResult = await requireRole(request, ['OWNER', 'ADMIN', 'STAFF']);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    // Check Module 2 is activated
+    const moduleCheck = await requireModule(user.company_id, 'MODULE_2');
+    if (moduleCheck) {
+      return moduleCheck;
+    }
+
+    // Get Module 2 ID
+    const { data: module2 } = await supabaseAdmin
+      .from('modules')
+      .select('id')
+      .eq('module_code', 'MODULE_2')
+      .single();
+
+    if (!module2) {
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Module 2 not found in system',
+        500,
+        {},
+        { request_id: requestId }
+      );
+    }
+
+    // Parse multipart form data
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    const siteId = formData.get('site_id') as string;
+    const metadataStr = formData.get('metadata') as string | null;
+
+    if (!file || !siteId) {
+      return errorResponse(
+        ErrorCodes.BAD_REQUEST,
+        'Missing required fields: file, site_id',
+        400,
+        {},
+        { request_id: requestId }
+      );
+    }
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      return errorResponse(
+        ErrorCodes.BAD_REQUEST,
+        'Invalid file type. Only PDF files are accepted.',
+        400,
+        {},
+        { request_id: requestId }
+      );
+    }
+
+    // Validate file size (50MB limit)
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+      return errorResponse(
+        ErrorCodes.BAD_REQUEST,
+        'File size exceeds 50MB limit',
+        400,
+        {},
+        { request_id: requestId }
+      );
+    }
+
+    // Verify site exists and user has access
+    const { data: site, error: siteError } = await supabaseAdmin
+      .from('sites')
+      .select('id, company_id')
+      .eq('id', siteId)
+      .single();
+
+    if (siteError || !site) {
+      return errorResponse(
+        ErrorCodes.NOT_FOUND,
+        'Site not found',
+        404,
+        {},
+        { request_id: requestId }
+      );
+    }
+
+    if (site.company_id !== user.company_id) {
+      return errorResponse(
+        ErrorCodes.FORBIDDEN,
+        'Access denied to this site',
+        403,
+        {},
+        { request_id: requestId }
+      );
+    }
+
+    // Parse metadata if provided
+    let metadata: any = {};
+    if (metadataStr) {
+      try {
+        metadata = JSON.parse(metadataStr);
+      } catch (e) {
+        // Ignore invalid JSON
+      }
+    }
+
+    // Upload file to Supabase Storage
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = `module-2/consents/${siteId}/${fileName}`;
+
+    const fileBuffer = await file.arrayBuffer();
+    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+      .from('documents')
+      .upload(filePath, fileBuffer, {
+        contentType: file.type,
+        upsert: false,
+      });
+
+    if (uploadError || !uploadData) {
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to upload file',
+        500,
+        { error: uploadError?.message },
+        { request_id: requestId }
+      );
+    }
+
+    // Get public URL
+    const { data: urlData } = supabaseAdmin.storage.from('documents').getPublicUrl(filePath);
+
+    // Create document record
+    const { data: document, error: docError } = await supabaseAdmin
+      .from('documents')
+      .insert({
+        site_id: siteId,
+        company_id: user.company_id,
+        module_id: module2.id,
+        document_type: 'TRADE_EFFLUENT_CONSENT',
+        title: metadata.title || file.name,
+        reference_number: metadata.reference_number || null,
+        regulator: 'WATER_COMPANY',
+        water_company: metadata.water_company || null,
+        file_path: filePath,
+        file_url: urlData.publicUrl,
+        file_size_bytes: file.size,
+        status: 'UPLOADED',
+        extraction_status: 'PENDING',
+        uploaded_by: user.id,
+      })
+      .select()
+      .single();
+
+    if (docError || !document) {
+      // Clean up uploaded file if document creation fails
+      await supabaseAdmin.storage.from('documents').remove([filePath]);
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to create document record',
+        500,
+        { error: docError?.message },
+        { request_id: requestId }
+      );
+    }
+
+    // Queue document processing job
+    try {
+      const queue = getQueue(QUEUE_NAMES.DOCUMENT_PROCESSING);
+      await queue.add('process-document', {
+        document_id: document.id,
+        user_id: user.id,
+        site_id: siteId,
+        priority: 'NORMAL',
+      });
+    } catch (queueError) {
+      console.error('Failed to queue document processing:', queueError);
+      // Don't fail the request, document is created and can be processed later
+    }
+
+    const response = successResponse(
+      {
+        id: document.id,
+        site_id: siteId,
+        status: 'UPLOADED',
+        extraction_status: 'PENDING',
+        created_at: document.created_at,
+      },
+      201,
+      { request_id: requestId }
+    );
+    return await addRateLimitHeaders(request, user.id, response);
+  } catch (error: any) {
+    console.error('Error in POST /api/v1/module-2/consents:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'Internal server error',
+      500,
+      { error: error.message },
+      { request_id: requestId }
+    );
+  }
+}
+

@@ -64,7 +64,7 @@ export async function GET(
       .from('evidence')
       .getPublicUrl(evidence.storage_path);
 
-    return successResponse(
+    const response = successResponse(
       {
         ...evidence,
         file_url: urlData?.publicUrl || '',
@@ -78,6 +78,7 @@ export async function GET(
       200,
       { request_id: requestId }
     );
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Get evidence error:', error);
     return errorResponse(

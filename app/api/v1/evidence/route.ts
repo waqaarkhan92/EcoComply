@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, paginatedResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 import { parsePaginationParams, parseFilterParams, parseSortParams, createCursor } from '@/lib/api/pagination';
 import crypto from 'crypto';
 
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
     // Build query - RLS will automatically filter by user's site access
     let query = supabaseAdmin
       .from('evidence_items')
-      .select('id, site_id, company_id, file_name, file_type, evidence_type, file_size_bytes, created_at, updated_at')
+      .select('id, site_id, company_id, file_name, file_type, evidence_type, file_size_bytes, mime_type, storage_path, description, created_at, updated_at')
       .eq('is_archived', false); // Only non-archived evidence
 
     // Apply filters
@@ -56,7 +57,8 @@ export async function GET(request: NextRequest) {
         query = query.in('id', evidenceIds);
       } else {
         // No evidence linked, return empty result
-        return paginatedResponse([], undefined, limit, false, { request_id: requestId });
+        const emptyResponse = paginatedResponse([], undefined, limit, false, { request_id: requestId });
+        return await addRateLimitHeaders(request, user.id, emptyResponse);
       }
     }
 
@@ -84,20 +86,33 @@ export async function GET(request: NextRequest) {
     const hasMore = evidenceItems && evidenceItems.length > limit;
     const results = hasMore ? evidenceItems.slice(0, limit) : evidenceItems || [];
 
+    // Get file URLs for each evidence item
+    const resultsWithUrls = results.map((item: any) => {
+      const { data: urlData } = supabaseAdmin.storage
+        .from('evidence')
+        .getPublicUrl(item.storage_path);
+      
+      return {
+        ...item,
+        file_url: urlData?.publicUrl || '',
+      };
+    });
+
     // Create cursor for next page (if there are more results)
     let nextCursor: string | undefined;
-    if (hasMore && results.length > 0) {
-      const lastItem = results[results.length - 1];
+    if (hasMore && resultsWithUrls.length > 0) {
+      const lastItem = resultsWithUrls[resultsWithUrls.length - 1];
       nextCursor = createCursor(lastItem.id, lastItem.created_at);
     }
 
-    return paginatedResponse(
-      results,
+    const response = paginatedResponse(
+      resultsWithUrls,
       nextCursor,
       limit,
       hasMore,
       { request_id: requestId }
     );
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Get evidence error:', error);
     return errorResponse(
@@ -374,7 +389,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Return response with linked obligations
-    return successResponse(
+    const response = successResponse(
       {
         ...evidence,
         file_url: urlData?.publicUrl || '',
@@ -386,6 +401,7 @@ export async function POST(request: NextRequest) {
       201,
       { request_id: requestId }
     );
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Upload evidence error:', error);
     return errorResponse(

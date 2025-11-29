@@ -24,6 +24,24 @@ export async function scheduleRecurringJobs(): Promise<void> {
   // Evidence Reminder Job (daily at 9 AM)
   await scheduleJob('EVIDENCE_REMINDER', QUEUE_NAMES.EVIDENCE_REMINDERS, '0 9 * * *', {});
 
+  // Permit Renewal Reminder Job (daily at 8 AM)
+  await scheduleJob('PERMIT_RENEWAL_REMINDER', QUEUE_NAMES.DEADLINE_ALERTS, '0 8 * * *', {});
+
+  // Module 2 Sampling Job (daily at 8 AM)
+  await scheduleJob('MODULE_2_SAMPLING', QUEUE_NAMES.MODULE_2_SAMPLING, '0 8 * * *', {});
+
+  // Module 3 Run Hours Job (daily at 7 AM)
+  await scheduleJob('MODULE_3_RUN_HOURS', QUEUE_NAMES.MODULE_3_RUN_HOURS, '0 7 * * *', {});
+
+  // Cross-Sell Triggers Job (every 6 hours)
+  await scheduleJob('CROSS_SELL_TRIGGERS', QUEUE_NAMES.CROSS_SELL_TRIGGERS, '0 */6 * * *', {});
+
+  // Consultant Sync Job (daily at 6 AM)
+  await scheduleJob('CONSULTANT_SYNC', QUEUE_NAMES.CONSULTANT_SYNC, '0 6 * * *', {});
+
+  // Evidence Retention Job (daily at 2 AM)
+  await scheduleJob('EVIDENCE_RETENTION', QUEUE_NAMES.MONITORING_SCHEDULE, '0 2 * * *', {});
+
   console.log('All recurring jobs scheduled');
 }
 

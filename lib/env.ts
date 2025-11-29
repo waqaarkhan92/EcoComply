@@ -16,8 +16,8 @@ interface EnvConfig {
   OPENAI_API_KEY_FALLBACK_2?: string;
 
   // Email (optional for Phase 2, required for Phase 4+)
-  SENDGRID_API_KEY: string;
-  SENDGRID_FROM_EMAIL: string;
+  RESEND_API_KEY: string;
+  RESEND_FROM_EMAIL: string;
 
   // SMS (optional)
   TWILIO_ACCOUNT_SID?: string;
@@ -44,6 +44,7 @@ interface EnvConfig {
 function validateEnv(): EnvConfig {
   const missing: string[] = [];
   const errors: string[] = [];
+  const isDevelopment = process.env.NODE_ENV === 'development';
 
   // Required variables (Phase 2 - Auth endpoints don't need all services yet)
   const required = [
@@ -59,8 +60,8 @@ function validateEnv(): EnvConfig {
 
   // Optional variables (will be required in later phases)
   const optional = [
-    'SENDGRID_API_KEY',
-    'SENDGRID_FROM_EMAIL',
+    'RESEND_API_KEY',
+    'RESEND_FROM_EMAIL',
     'REDIS_URL',
   ];
 
@@ -69,6 +70,13 @@ function validateEnv(): EnvConfig {
     if (!process.env[key]) {
       missing.push(key);
     }
+  }
+
+  // In development, allow missing variables and just log warnings instead of throwing
+  if (isDevelopment && missing.length > 0) {
+    console.warn(`⚠️  Missing environment variables in development: ${missing.join(', ')}`);
+    console.warn('⚠️  Some features may not work. UI should still load for testing.');
+    // Don't throw in development - allow UI to load for testing
   }
 
   // Validate URL formats
@@ -81,17 +89,28 @@ function validateEnv(): EnvConfig {
   }
 
   // Validate Redis URL only if provided (optional for Phase 2)
-  if (process.env.REDIS_URL && !process.env.REDIS_URL.startsWith('redis://')) {
-    errors.push('REDIS_URL must be a valid Redis connection string');
+  // Accept both redis:// and rediss:// (SSL) formats
+  if (process.env.REDIS_URL && !process.env.REDIS_URL.match(/^rediss?:\/\//)) {
+    errors.push('REDIS_URL must be a valid Redis connection string (redis:// or rediss://)');
   }
 
-  // Validate JWT secret length
-  if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
+  // Validate JWT secret length (only in production)
+  if (!isDevelopment && process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
     errors.push('JWT_SECRET must be at least 32 characters long');
   }
 
-  if (process.env.JWT_REFRESH_SECRET && process.env.JWT_REFRESH_SECRET.length < 32) {
+  if (!isDevelopment && process.env.JWT_REFRESH_SECRET && process.env.JWT_REFRESH_SECRET.length < 32) {
     errors.push('JWT_REFRESH_SECRET must be at least 32 characters long');
+  }
+  
+  // In development, just warn about JWT secret length
+  if (isDevelopment) {
+    if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
+      console.warn('⚠️  JWT_SECRET should be at least 32 characters long for production');
+    }
+    if (process.env.JWT_REFRESH_SECRET && process.env.JWT_REFRESH_SECRET.length < 32) {
+      console.warn('⚠️  JWT_REFRESH_SECRET should be at least 32 characters long for production');
+    }
   }
 
   // Validate numeric values
@@ -100,37 +119,42 @@ function validateEnv(): EnvConfig {
     errors.push('DEFAULT_RATE_LIMIT_PER_MINUTE must be a positive number');
   }
 
-  // Report errors
-  if (missing.length > 0) {
+  // Report errors (strict in production, lenient in development)
+  if (missing.length > 0 && !isDevelopment) {
     throw new Error(
       `Missing required environment variables:\n${missing.map((v) => `  - ${v}`).join('\n')}\n\n` +
       'Please check your .env.local file and ensure all required variables are set.'
     );
   }
 
-  if (errors.length > 0) {
+  if (errors.length > 0 && !isDevelopment) {
     throw new Error(
       `Environment variable validation errors:\n${errors.map((e) => `  - ${e}`).join('\n')}`
     );
   }
+  
+  // In development, log errors but don't throw
+  if (isDevelopment && errors.length > 0) {
+    console.warn(`⚠️  Environment variable validation warnings:\n${errors.map((e) => `  - ${e}`).join('\n')}`);
+  }
 
-  // Return validated config
+  // Return validated config (use fallbacks in development for missing values)
   return {
-    SUPABASE_URL: process.env.SUPABASE_URL!,
-    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY!,
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    DATABASE_URL: process.env.DATABASE_URL!,
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
+    SUPABASE_URL: process.env.SUPABASE_URL || (isDevelopment ? 'https://placeholder.supabase.co' : ''),
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || (isDevelopment ? 'placeholder-anon-key' : ''),
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || (isDevelopment ? 'placeholder-service-key' : ''),
+    DATABASE_URL: process.env.DATABASE_URL || (isDevelopment ? 'postgresql://placeholder' : ''),
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY || (isDevelopment ? 'sk-placeholder' : ''),
     OPENAI_API_KEY_FALLBACK_1: process.env.OPENAI_API_KEY_FALLBACK_1,
     OPENAI_API_KEY_FALLBACK_2: process.env.OPENAI_API_KEY_FALLBACK_2,
-    SENDGRID_API_KEY: process.env.SENDGRID_API_KEY || '',
-    SENDGRID_FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL || '',
+    RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+    RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || '',
     TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
     TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
     REDIS_URL: process.env.REDIS_URL || '',
-    JWT_SECRET: process.env.JWT_SECRET!,
-    JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET!,
+    JWT_SECRET: process.env.JWT_SECRET || (isDevelopment ? 'dev-jwt-secret-placeholder-min-32-chars' : ''),
+    JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || (isDevelopment ? 'dev-refresh-secret-placeholder-min-32-chars' : ''),
     BASE_URL: process.env.BASE_URL || 'http://localhost:3000',
     NODE_ENV: (process.env.NODE_ENV as 'development' | 'production' | 'test') || 'development',
     DEFAULT_RATE_LIMIT_PER_MINUTE: rateLimit,

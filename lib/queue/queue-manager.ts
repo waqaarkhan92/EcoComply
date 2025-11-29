@@ -22,6 +22,8 @@ export const QUEUE_NAMES = {
   AER_GENERATION: 'aer-generation',
   CROSS_SELL_TRIGGERS: 'cross-sell-triggers',
   CONSULTANT_SYNC: 'consultant-sync',
+  REPORT_GENERATION: 'report-generation',
+  EVIDENCE_RETENTION: 'monitoring-schedule', // Same queue as monitoring schedule
 } as const;
 
 // Redis connection
@@ -37,7 +39,7 @@ export function getRedisConnection(): Redis {
     }
 
     redisConnection = new Redis(env.REDIS_URL, {
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: null, // Required by BullMQ
       retryStrategy: (times) => {
         const delay = Math.min(times * 50, 2000);
         return delay;

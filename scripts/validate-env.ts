@@ -13,7 +13,7 @@ try {
   console.log(`Base URL: ${config.BASE_URL}`);
   console.log(`Supabase URL: ${config.SUPABASE_URL ? '✅ Set' : '❌ Missing'}`);
   console.log(`OpenAI API Key: ${config.OPENAI_API_KEY ? '✅ Set' : '❌ Missing'}`);
-  console.log(`SendGrid API Key: ${config.SENDGRID_API_KEY ? '✅ Set' : '❌ Missing'}`);
+  console.log(`Resend API Key: ${config.RESEND_API_KEY ? '✅ Set' : '❌ Missing'}`);
   console.log(`Redis URL: ${config.REDIS_URL ? '✅ Set' : '❌ Missing'}`);
   process.exit(0);
 } catch (error) {

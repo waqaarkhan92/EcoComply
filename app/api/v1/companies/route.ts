@@ -8,6 +8,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, paginatedResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { parsePaginationParams, parseFilterParams, parseSortParams, createCursor } from '@/lib/api/pagination';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
@@ -39,20 +40,27 @@ export async function GET(request: NextRequest) {
       query = query.eq('subscription_tier', filters.subscription_tier);
     }
 
-    // Apply cursor-based pagination
-    if (cursor) {
-      // For cursor pagination, we need to decode the cursor and use it
-      // For now, we'll use offset-based as fallback (simpler for initial implementation)
-      // TODO: Implement proper cursor-based pagination
-    }
-
-    // Apply sorting
+    // Apply sorting first (required for cursor pagination to work correctly)
     for (const sortItem of sort) {
       query = query.order(sortItem.field, { ascending: sortItem.direction === 'asc' });
     }
 
+    // Apply cursor-based pagination
+    let cursorData: { id: string; created_at: string } | null = null;
+    if (cursor) {
+      const { parseCursor } = await import('@/lib/api/pagination');
+      cursorData = parseCursor(cursor);
+      if (cursorData) {
+        // Filter by created_at >= cursor.created_at
+        // We'll filter by id in JavaScript after fetching
+        query = query.gte('created_at', cursorData.created_at);
+      }
+    }
+
     // Add limit and fetch one extra to check if there are more
-    query = query.limit(limit + 1);
+    // Increase limit slightly to account for cursor filtering
+    const fetchLimit = cursorData ? limit + 10 : limit + 1;
+    query = query.limit(fetchLimit);
 
     const { data: companies, error } = await query;
 
@@ -66,9 +74,28 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Apply cursor filtering in JavaScript (for composite comparison)
+    let filteredCompanies = companies || [];
+    if (cursorData && filteredCompanies.length > 0) {
+      filteredCompanies = filteredCompanies.filter((company) => {
+        const companyDate = new Date(company.created_at).getTime();
+        const cursorDate = new Date(cursorData!.created_at).getTime();
+        
+        // Include if created_at > cursor.created_at
+        if (companyDate > cursorDate) return true;
+        
+        // If created_at == cursor.created_at, include only if id > cursor.id
+        if (companyDate === cursorDate) {
+          return company.id > cursorData!.id;
+        }
+        
+        return false;
+      });
+    }
+
     // Check if there are more results
-    const hasMore = companies && companies.length > limit;
-    const results = hasMore ? companies.slice(0, limit) : companies || [];
+    const hasMore = filteredCompanies.length > limit;
+    const results = hasMore ? filteredCompanies.slice(0, limit) : filteredCompanies;
 
     // Create cursor for next page (if there are more results)
     let nextCursor: string | undefined;
@@ -77,13 +104,16 @@ export async function GET(request: NextRequest) {
       nextCursor = createCursor(lastItem.id, lastItem.created_at);
     }
 
-    return paginatedResponse(
+    const response = paginatedResponse(
       results,
       nextCursor,
       limit,
       hasMore,
       { request_id: requestId }
     );
+    
+    // Add rate limit headers to response
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Get companies error:', error);
     return errorResponse(

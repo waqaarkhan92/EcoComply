@@ -1,0 +1,171 @@
+/**
+ * Regulator Question Detail Endpoints
+ * GET /api/v1/regulator-questions/{questionId} - Get question details
+ * PUT /api/v1/regulator-questions/{questionId} - Update question (submit response)
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
+import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { questionId: string } }
+) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    const { questionId } = params;
+
+    // Get question - RLS will enforce access control
+    const { data: question, error } = await supabaseAdmin
+      .from('regulator_questions')
+      .select('*')
+      .eq('id', questionId)
+      .single();
+
+    if (error || !question) {
+      if (error?.code === 'PGRST116') {
+        return errorResponse(
+          ErrorCodes.NOT_FOUND,
+          'Regulator question not found',
+          404,
+          null,
+          { request_id: requestId }
+        );
+      }
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to fetch regulator question',
+        500,
+        { error: error?.message || 'Unknown error' },
+        { request_id: requestId }
+      );
+    }
+
+    const response = successResponse(question, 200, { request_id: requestId });
+    return await addRateLimitHeaders(request, user.id, response);
+  } catch (error: any) {
+    console.error('Get regulator question error:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'An unexpected error occurred',
+      500,
+      { error: error.message || 'Unknown error' },
+      { request_id: requestId }
+    );
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { questionId: string } }
+) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require Owner, Admin, or Staff role
+    const authResult = await requireRole(request, ['OWNER', 'ADMIN', 'STAFF']);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    const { questionId } = params;
+
+    // Parse request body
+    const body = await request.json();
+
+    // Get existing question
+    const { data: existingQuestion, error: getError } = await supabaseAdmin
+      .from('regulator_questions')
+      .select('*')
+      .eq('id', questionId)
+      .single();
+
+    if (getError || !existingQuestion) {
+      return errorResponse(
+        ErrorCodes.NOT_FOUND,
+        'Regulator question not found',
+        404,
+        null,
+        { request_id: requestId }
+      );
+    }
+
+    // Build updates
+    const updates: any = {};
+
+    if (body.response_text !== undefined) {
+      updates.response_text = body.response_text;
+    }
+
+    if (body.response_evidence_ids !== undefined) {
+      updates.response_evidence_ids = body.response_evidence_ids;
+    }
+
+    if (body.status !== undefined) {
+      const validStatuses = ['RESPONSE_SUBMITTED', 'CLOSED'];
+      if (!validStatuses.includes(body.status)) {
+        return errorResponse(
+          ErrorCodes.VALIDATION_ERROR,
+          'Invalid status',
+          422,
+          { status: `Must be one of: ${validStatuses.join(', ')}` },
+          { request_id: requestId }
+        );
+      }
+      updates.status = body.status;
+      
+      if (body.status === 'RESPONSE_SUBMITTED') {
+        updates.response_submitted_date = new Date().toISOString().split('T')[0];
+      }
+    }
+
+    if (body.assigned_to !== undefined) {
+      updates.assigned_to = body.assigned_to || null;
+    }
+
+    updates.updated_at = new Date().toISOString();
+
+    // Update question
+    const { data: updatedQuestion, error: updateError } = await supabaseAdmin
+      .from('regulator_questions')
+      .update(updates)
+      .eq('id', questionId)
+      .select('id, response_text, response_submitted_date, status, updated_at')
+      .single();
+
+    if (updateError || !updatedQuestion) {
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to update regulator question',
+        500,
+        { error: updateError?.message || 'Unknown error' },
+        { request_id: requestId }
+      );
+    }
+
+    const response = successResponse(updatedQuestion, 200, { request_id: requestId });
+    return await addRateLimitHeaders(request, user.id, response);
+  } catch (error: any) {
+    console.error('Update regulator question error:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'An unexpected error occurred',
+      500,
+      { error: error.message || 'Unknown error' },
+      { request_id: requestId }
+    );
+  }
+}
+

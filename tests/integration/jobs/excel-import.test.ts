@@ -17,17 +17,19 @@ describe('Excel Import Processing Job', () => {
   beforeAll(async () => {
     if (hasRedis) {
       try {
-        queue = createTestQueue('document-processing');
-        worker = createTestWorker('document-processing', async (job) => {
+        queue = await createTestQueue('document-processing');
+        worker = await createTestWorker('document-processing', async (job) => {
           if (job.name === 'EXCEL_IMPORT_PROCESSING') {
             await processExcelImportJob(job);
           }
         });
-      } catch (error) {
-        console.warn('Redis not available, skipping queue tests:', error);
+      } catch (error: any) {
+        console.warn('Redis not available, skipping queue tests:', error?.message);
+        queue = null;
+        worker = null;
       }
     }
-  });
+  }, 30000);
 
   afterAll(async () => {
     if (queue && worker) {
@@ -91,10 +93,11 @@ describe('Excel Import Processing Job', () => {
 
     // Upload to storage
     const fileName = `test-import-${Date.now()}.xlsx`;
+    // Upload Excel file - use generic content type that Supabase accepts
     const { error: uploadError } = await supabaseAdmin.storage
       .from('documents')
       .upload(fileName, excelBuffer, {
-        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        contentType: 'application/octet-stream', // Generic binary type
         upsert: true,
       });
 
