@@ -1,0 +1,67 @@
+/**
+ * Deadline Detail Endpoints
+ * GET /api/v1/deadlines/{deadlineId} - Get deadline details
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
+import { requireAuth, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { deadlineId: string } }
+) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    const { deadlineId } = params;
+
+    // Get deadline - RLS will enforce access control
+    const { data: deadline, error } = await supabaseAdmin
+      .from('deadlines')
+      .select('*')
+      .eq('id', deadlineId)
+      .single();
+
+    if (error || !deadline) {
+      if (error?.code === 'PGRST116') {
+        return errorResponse(
+          ErrorCodes.NOT_FOUND,
+          'Deadline not found',
+          404,
+          null,
+          { request_id: requestId }
+        );
+      }
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to fetch deadline',
+        500,
+        { error: error?.message || 'Unknown error' },
+        { request_id: requestId }
+      );
+    }
+
+    const response = successResponse(deadline, 200, { request_id: requestId });
+    return await addRateLimitHeaders(request, user.id, response);
+  } catch (error: any) {
+    console.error('Get deadline error:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'An unexpected error occurred',
+      500,
+      { error: error.message || 'Unknown error' },
+      { request_id: requestId }
+    );
+  }
+}
+

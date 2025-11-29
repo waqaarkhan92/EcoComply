@@ -1,0 +1,91 @@
+-- ============================================================================
+-- Reports Storage Bucket Setup Script
+-- ============================================================================
+-- This script sets up the 'reports' storage bucket in Supabase Storage
+-- Run this in Supabase SQL Editor or via Supabase CLI
+-- ============================================================================
+
+-- Note: Storage buckets cannot be created via SQL in Supabase
+-- This must be done via:
+-- 1. Supabase Dashboard: Storage > New bucket > Create 'reports' bucket
+-- 2. Or via Supabase Management API
+--
+-- This file documents the required configuration
+
+-- ============================================================================
+-- REQUIRED BUCKET CONFIGURATION
+-- ============================================================================
+
+-- Bucket Name: 'reports'
+-- Visibility: Private (NOT public)
+-- File Size Limit: 100 MB (same as audit-packs)
+-- Allowed MIME Types: 
+--   - application/pdf
+--   - text/csv
+--   - application/json
+
+-- ============================================================================
+-- STORAGE BUCKET STRUCTURE
+-- ============================================================================
+-- reports/
+--   ├── {report_id}/
+--   │   ├── report-{report_id}.pdf
+--   │   ├── report-{report_id}.csv
+--   │   └── report-{report_id}.json
+--
+-- Example: reports/a1b2c3d4-e5f6-7890-abcd-ef1234567890/report-a1b2c3d4.pdf
+
+-- ============================================================================
+-- STORAGE POLICIES (RLS)
+-- ============================================================================
+-- Note: Storage bucket policies must be created via Supabase Dashboard
+-- or Management API, not SQL
+--
+-- Required Policies:
+--
+-- 1. SELECT Policy (Download reports)
+--    - Users can download reports for their company
+--    - Consultants can download reports for assigned client companies
+--
+-- 2. INSERT Policy (Upload reports - background jobs only)
+--    - Service role only (for background job uploads)
+--
+-- 3. UPDATE Policy (Update reports)
+--    - Service role only (for background job updates)
+--
+-- 4. DELETE Policy (Delete reports)
+--    - Admin+ roles can delete reports for their company
+--
+-- See scripts/setup-reports-storage-policies.sql for policy SQL
+
+-- ============================================================================
+-- CORS CONFIGURATION
+-- ============================================================================
+-- Allowed Origins: {NEXT_PUBLIC_APP_URL}
+-- Allowed Methods: GET, POST, PUT, DELETE
+-- Allowed Headers: Authorization, Content-Type
+-- Max Age: 3600
+
+-- ============================================================================
+-- RETENTION POLICY
+-- ============================================================================
+-- Reports should be retained for 30 days (as per reports table expires_at)
+-- After expiration, reports can be archived or deleted
+-- Soft delete via database (deleted_at) recommended for compliance
+
+-- ============================================================================
+-- SETUP INSTRUCTIONS
+-- ============================================================================
+-- 
+-- 1. Go to Supabase Dashboard > Storage
+-- 2. Click "New bucket"
+-- 3. Enter bucket name: "reports"
+-- 4. Set visibility: Private
+-- 5. Click "Create bucket"
+-- 6. Configure file size limit: 100 MB
+-- 7. Set CORS settings as specified above
+-- 8. Create storage policies (see setup-reports-storage-policies.sql)
+--
+-- Alternatively, use Supabase CLI:
+-- supabase storage create reports --public false
+

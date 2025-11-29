@@ -38,7 +38,7 @@ describe('Documents API', () => {
       const blob = new Blob([pdfContent], { type: 'application/pdf' });
       formData.append('file', blob, 'test.pdf');
       formData.append('site_id', authenticatedUser.site_id!);
-      formData.append('document_type', 'PERMIT');
+      formData.append('document_type', 'ENVIRONMENTAL_PERMIT');
 
       const response = await client.post('/api/v1/documents', formData, {
         token: authenticatedUser.token!,
@@ -59,7 +59,7 @@ describe('Documents API', () => {
     it('should reject upload without file', async () => {
       const formData = new FormData();
       formData.append('site_id', authenticatedUser.site_id!);
-      formData.append('document_type', 'PERMIT');
+      formData.append('document_type', 'ENVIRONMENTAL_PERMIT');
 
       const response = await client.post('/api/v1/documents', formData, {
         token: authenticatedUser.token!,
@@ -75,7 +75,7 @@ describe('Documents API', () => {
       const formData = new FormData();
       const blob = new Blob([pdfContent], { type: 'application/pdf' });
       formData.append('file', blob, 'test.pdf');
-      formData.append('document_type', 'PERMIT');
+      formData.append('document_type', 'ENVIRONMENTAL_PERMIT');
 
       const response = await client.post('/api/v1/documents', formData, {
         token: authenticatedUser.token!,

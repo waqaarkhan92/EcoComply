@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme {
+  /* Primary Brand + Authority - EcoComply Deep Forest Green */
+  --color-primary: #104B3A;
+  --color-primary-dark: #0B372A;
+  --color-primary-light: #94B49F;
+  
+  /* Primary CTA + Trust - Royal Blue */
+  --color-cta-primary: #0056A6;
+  --color-cta-primary-hover: #004D95;
+  
+  /* Enterprise Neutrals */
+  --color-charcoal: #101314;
+  --color-slate: #E2E6E7;
+  --color-border-gray: #374151;
+  --color-input-border: #E2E6E7;
+  
+  /* Compliance Semantic Colors */
+  --color-success: #2E7D32;
+  --color-warning: #D4A017;
+  --color-danger: #C44536;
+  --color-info: #94B49F;
+  
+  /* Text Colors */
+  --color-text-primary: #101314;
+  --color-text-secondary: #6B7280;
+  --color-text-tertiary: #9CA3AF;
+  --color-text-disabled: #D1D5DB;
+  
+  /* Background Colors */
+  --color-background-primary: #FFFFFF;
+  --color-background-secondary: #E2E6E7;
+  --color-background-tertiary: #F9FAFB;
+  --color-background-dark: #101314;
+}
+
+body {
+  /* Colors are applied via Tailwind classes in layout.tsx */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+/* Safe area support for iOS */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Toast animation */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+

@@ -1,0 +1,161 @@
+/**
+ * Obligation History Endpoint
+ * GET /api/v1/obligations/{obligationId}/history - Get obligation change history
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
+import { requireAuth, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
+import { parseSortParams } from '@/lib/api/pagination';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { obligationId: string } }
+) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    const { obligationId } = params;
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(obligationId)) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Invalid obligation ID format',
+        400,
+        { obligation_id: 'Must be a valid UUID' },
+        { request_id: requestId }
+      );
+    }
+
+    // Verify obligation exists and user has access (RLS will enforce)
+    const { data: obligation, error: obligationError } = await supabaseAdmin
+      .from('obligations')
+      .select('id, company_id')
+      .eq('id', obligationId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (obligationError || !obligation) {
+      return errorResponse(
+        ErrorCodes.NOT_FOUND,
+        'Obligation not found',
+        404,
+        null,
+        { request_id: requestId }
+      );
+    }
+
+    // Parse query parameters
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit') || '50', 10);
+    const cursor = searchParams.get('cursor');
+
+    // Get audit logs for this obligation
+    let query = supabaseAdmin
+      .from('audit_logs')
+      .select(`
+        id,
+        action_type,
+        entity_type,
+        entity_id,
+        previous_values,
+        new_values,
+        user_id,
+        ip_address,
+        created_at
+      `)
+      .eq('entity_type', 'obligation')
+      .eq('entity_id', obligationId)
+      .order('created_at', { ascending: false })
+      .limit(Math.min(limit, 100));
+
+    // Apply cursor-based pagination if provided
+    if (cursor) {
+      try {
+        const cursorData = JSON.parse(Buffer.from(cursor, 'base64').toString());
+        if (cursorData.created_at) {
+          query = query.lt('created_at', cursorData.created_at);
+        }
+      } catch (e) {
+        // Invalid cursor, ignore
+      }
+    }
+
+    const { data: auditLogs, error: logsError } = await query;
+
+    if (logsError) {
+      console.error('Error fetching obligation history:', logsError);
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to fetch obligation history',
+        500,
+        { error: logsError.message || 'Unknown error' },
+        { request_id: requestId }
+      );
+    }
+
+    // Get user details for audit logs
+    const userIds = [...new Set(auditLogs?.map((log: any) => log.user_id).filter(Boolean) || [])];
+    const { data: users } = userIds.length > 0
+      ? await supabaseAdmin
+          .from('users')
+          .select('id, email, full_name')
+          .in('id', userIds)
+      : { data: [] };
+
+    const userMap = new Map((users || []).map((u: any) => [u.id, u]));
+
+    // Format history entries
+    const history = (auditLogs || []).map((log: any) => ({
+      id: log.id,
+      action_type: log.action_type,
+      previous_values: log.previous_values || {},
+      new_values: log.new_values || {},
+      user: log.user_id ? (userMap.get(log.user_id) || { id: log.user_id, email: null, full_name: null }) : null,
+      ip_address: log.ip_address,
+      timestamp: log.created_at,
+    }));
+
+    // Build pagination cursor
+    const lastLog = history[history.length - 1];
+    const nextCursor = lastLog && history.length === limit
+      ? Buffer.from(JSON.stringify({ created_at: lastLog.timestamp })).toString('base64')
+      : null;
+
+    const response = successResponse(
+      {
+        obligation_id: obligationId,
+        history: history,
+        pagination: {
+          cursor: nextCursor,
+          has_more: history.length === limit,
+          total: history.length, // Note: Total count would require separate query
+        },
+      },
+      200,
+      { request_id: requestId }
+    );
+    return await addRateLimitHeaders(request, user.id, response);
+  } catch (error: any) {
+    console.error('Get obligation history error:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'An unexpected error occurred',
+      500,
+      { error: error.message || 'Unknown error' },
+      { request_id: requestId }
+    );
+  }
+}
+

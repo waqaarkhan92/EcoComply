@@ -1,0 +1,130 @@
+/**
+ * Retry Background Job Endpoint
+ * POST /api/v1/background-jobs/{jobId}/retry - Retry failed job
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
+import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
+import { getQueue, QUEUE_NAMES } from '@/lib/queue/queue-manager';
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { jobId: string } }
+) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require Owner, Admin, or Staff role
+    const authResult = await requireRole(request, ['OWNER', 'ADMIN', 'STAFF']);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    const { jobId } = params;
+
+    // Get job
+    const { data: job, error: getError } = await supabaseAdmin
+      .from('background_jobs')
+      .select('*')
+      .eq('id', jobId)
+      .single();
+
+    if (getError || !job) {
+      return errorResponse(
+        ErrorCodes.NOT_FOUND,
+        'Background job not found',
+        404,
+        null,
+        { request_id: requestId }
+      );
+    }
+
+    // Only allow retry for failed jobs
+    if (job.status !== 'FAILED') {
+      return errorResponse(
+        ErrorCodes.UNPROCESSABLE_ENTITY,
+        `Cannot retry job with status: ${job.status}. Only failed jobs can be retried.`,
+        422,
+        { status: job.status },
+        { request_id: requestId }
+      );
+    }
+
+    // Determine queue name from job_type
+    const queueNameMap: Record<string, string> = {
+      'DOCUMENT_EXTRACTION': QUEUE_NAMES.DOCUMENT_PROCESSING,
+      'EXCEL_IMPORT_PROCESSING': QUEUE_NAMES.DOCUMENT_PROCESSING,
+      'AUDIT_PACK_GENERATION': QUEUE_NAMES.AUDIT_PACK_GENERATION,
+      'AER_GENERATION': QUEUE_NAMES.AER_GENERATION,
+    };
+
+    const queueName = queueNameMap[job.job_type] || QUEUE_NAMES.DOCUMENT_PROCESSING;
+    const queue = getQueue(queueName);
+
+    // Parse job data from payload
+    let jobData: any = {};
+    if (job.payload) {
+      try {
+        jobData = typeof job.payload === 'string' ? JSON.parse(job.payload) : job.payload;
+      } catch {
+        // Use empty object if payload parsing fails
+      }
+    }
+
+    // Create new job in queue
+    const newJob = await queue.add(
+      job.job_type,
+      jobData,
+      {
+        priority: job.priority === 'HIGH' ? 1 : job.priority === 'LOW' ? 9 : 5,
+      }
+    );
+
+    // Update original job status to indicate retry
+    await supabaseAdmin
+      .from('background_jobs')
+      .update({
+        status: 'RETRYING',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', jobId);
+
+    // Create new background_jobs record for the retry
+    await supabaseAdmin
+      .from('background_jobs')
+      .insert({
+        job_type: job.job_type,
+        status: 'PENDING',
+        priority: job.priority,
+        entity_type: job.entity_type,
+        entity_id: job.entity_id,
+        company_id: job.company_id,
+        payload: job.payload,
+        job_id: newJob.id,
+      });
+
+    const response = successResponse(
+      {
+        job_id: newJob.id,
+        status: 'PENDING',
+        message: 'Job queued for retry',
+      },
+      200,
+      { request_id: requestId }
+    );
+    return await addRateLimitHeaders(request, user.id, response);
+  } catch (error: any) {
+    console.error('Retry background job error:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'An unexpected error occurred',
+      500,
+      { error: error.message || 'Unknown error' },
+      { request_id: requestId }
+    );
+  }
+}
+

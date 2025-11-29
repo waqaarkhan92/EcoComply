@@ -12,7 +12,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/server';
+import { supabaseAdmin, supabase } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { getRequestId } from '@/lib/api/middleware';
 
@@ -82,46 +82,167 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if email already exists
-    const { data: existingUser } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('email', body.email.toLowerCase())
-      .single();
-
-    if (existingUser) {
-      return errorResponse(
-        ErrorCodes.ALREADY_EXISTS,
-        'Email already registered',
-        409,
-        { email: 'This email is already registered. Please log in instead.' },
-        { request_id: requestId }
-      );
+    // Check if user exists in Supabase Auth FIRST (this is the source of truth)
+    // This handles orphaned users (exist in Auth but not in our DB)
+    const emailLower = body.email.toLowerCase();
+    console.log(`[SIGNUP] Checking for existing user: ${emailLower}`);
+    
+    const { data: authUsers, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers();
+    if (listUsersError) {
+      console.error('[SIGNUP] Error listing users:', listUsersError);
+    }
+    
+    const existingAuthUser = authUsers?.users.find(u => u.email?.toLowerCase() === emailLower);
+    
+    if (existingAuthUser) {
+      console.log(`[SIGNUP] Found user in Auth: ${existingAuthUser.id}, email: ${existingAuthUser.email}`);
+      
+      // Check if user also exists in our database
+      const { data: existingUser, error: userCheckError } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('email', emailLower)
+        .maybeSingle();
+      
+      if (userCheckError && userCheckError.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('[SIGNUP] Error checking user in database:', userCheckError);
+      }
+      
+      if (existingUser) {
+        // User exists in both Auth and DB - truly exists
+        console.log('[SIGNUP] User exists in both Auth and DB - rejecting signup');
+        return errorResponse(
+          ErrorCodes.ALREADY_EXISTS,
+          'This email is already registered. Please try logging in instead.',
+          409,
+          { email: 'Email already exists' },
+          { request_id: requestId }
+        );
+      } else {
+        // User exists in Auth but NOT in our DB - orphaned user
+        // Delete it so we can recreate properly
+        console.warn(`[SIGNUP] Found orphaned auth user (${existingAuthUser.id}), deleting to allow recreation...`);
+        const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(existingAuthUser.id);
+        if (deleteError) {
+          console.error('[SIGNUP] Failed to delete orphaned user:', deleteError);
+          // Try to continue anyway - maybe the create will work
+          console.warn('[SIGNUP] Continuing despite delete error - will attempt to create user');
+        } else {
+          console.log('[SIGNUP] ✅ Orphaned auth user deleted successfully');
+        }
+      }
+    } else {
+      // User doesn't exist in Auth - check DB just to be safe
+      console.log('[SIGNUP] User not found in Auth, checking database...');
+      const { data: existingUser, error: userCheckError } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('email', emailLower)
+        .maybeSingle();
+      
+      if (userCheckError && userCheckError.code !== 'PGRST116') {
+        console.error('[SIGNUP] Error checking user in database:', userCheckError);
+      }
+      
+      if (existingUser) {
+        // User exists in DB but not in Auth - this shouldn't happen, but handle it
+        console.warn('[SIGNUP] User exists in DB but not in Auth - this is unusual');
+        return errorResponse(
+          ErrorCodes.ALREADY_EXISTS,
+          'This email is already registered. Please try logging in instead.',
+          409,
+          { email: 'Email already exists' },
+          { request_id: requestId }
+        );
+      }
+      console.log('[SIGNUP] User does not exist in Auth or DB - proceeding with creation');
     }
 
     // Create Supabase Auth user using admin API (bypasses email validation)
-    // In test environment, auto-confirm email to allow immediate login
-    const isTestEnv = process.env.NODE_ENV === 'test' || process.env.DISABLE_EMAIL_VERIFICATION === 'true';
+    // In test/development environment, auto-confirm email to allow immediate login
+    const isTestEnv = process.env.NODE_ENV === 'test' || 
+                      process.env.NODE_ENV === 'development' || 
+                      process.env.DISABLE_EMAIL_VERIFICATION === 'true';
     
-    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: body.email.toLowerCase(),
-      password: body.password,
-      email_confirm: isTestEnv, // Auto-confirm email in test environment
-      user_metadata: {
-        full_name: body.full_name,
-        company_name: body.company_name,
-      },
-    });
+    console.log('[SIGNUP] Attempting to create auth user...');
+    console.log('[SIGNUP] Email:', body.email.toLowerCase());
+    console.log('[SIGNUP] Is test env:', isTestEnv);
+    console.log('[SIGNUP] Supabase URL:', process.env.SUPABASE_URL?.substring(0, 30) + '...');
+    
+    // Use regular client (anon key) for signUp - service role causes "Database error granting user"
+    // Service role bypasses normal auth flows and can cause permission errors
+    // Try signUp without any options first to avoid Supabase internal errors
+    let signUpData: any = null;
+    let signUpError: any = null;
+    
+    try {
+      const result = await supabase.auth.signUp({
+        email: body.email.toLowerCase(),
+        password: body.password,
+        options: {
+          data: {
+            full_name: body.full_name,
+            company_name: body.company_name,
+          },
+        },
+      });
+      
+      signUpData = result.data;
+      signUpError = result.error;
+    } catch (err: any) {
+      console.error('[SIGNUP] SignUp exception:', err);
+      signUpError = {
+        message: err.message || 'Failed to create user',
+        status: 500,
+      };
+    }
+    
+    const authUser = signUpData;
+    const authError = signUpError;
 
-    if (authError || !authUser.user) {
+    if (authError) {
+      console.error('[SIGNUP] ========== AUTH ERROR ==========');
+      console.error('[SIGNUP] Error code:', authError.status);
+      console.error('[SIGNUP] Error message:', authError.message);
+      console.error('[SIGNUP] Error name:', authError.name);
+      console.error('[SIGNUP] Full error object:', JSON.stringify(authError, null, 2));
+      console.error('[SIGNUP] Error stack:', authError.stack);
+      console.error('[SIGNUP] =================================');
+      
+      // Check if user already exists
+      if (authError?.message?.includes('already registered') || 
+          authError?.message?.includes('already exists') ||
+          authError?.message?.includes('Database error creating new user') ||
+          authError?.status === 422) {
+        return errorResponse(
+          ErrorCodes.VALIDATION_ERROR,
+          `This email is already registered or invalid. Error: ${authError.message}`,
+          409,
+          { email: 'Email already exists', supabase_error: authError.message },
+          { request_id: requestId }
+        );
+      }
       return errorResponse(
         ErrorCodes.INTERNAL_ERROR,
-        'Failed to create user account',
+        `Failed to create user account. Supabase error: ${authError.message || 'Unknown error'}`,
         500,
-        { error: authError?.message || 'Unknown error' },
+        { error: authError.message || 'Unknown error', status: authError.status },
         { request_id: requestId }
       );
     }
+    
+    if (!authUser?.user) {
+      console.error('[SIGNUP] No user returned from createUser');
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to create user account: No user returned',
+        500,
+        { error: 'No user returned from Supabase' },
+        { request_id: requestId }
+      );
+    }
+    
+    console.log('[SIGNUP] ✅ Auth user created:', authUser.user.id);
 
     // Get Module 1 ID (default module)
     const { data: module1 } = await supabaseAdmin
@@ -169,6 +290,7 @@ export async function POST(request: NextRequest) {
 
     // Create user record (link to auth.users - id = auth.users.id)
     // In test environment, mark email as verified immediately
+    // Note: We insert without email_verified first, then update it, to avoid conflicts with Supabase functions
     const { data: user, error: userError } = await supabaseAdmin
       .from('users')
       .insert({
@@ -176,11 +298,21 @@ export async function POST(request: NextRequest) {
         email: body.email.toLowerCase(),
         full_name: body.full_name,
         company_id: company.id,
-        email_verified: isTestEnv || authUser.user.email_confirmed_at !== null, // Auto-verify in test environment
+        email_verified: false, // Set to false initially, then update
         is_active: true,
       })
       .select()
       .single();
+
+    // Update email_verified after user record is created (avoids conflicts with Supabase functions)
+    if (user && !userError) {
+      await supabaseAdmin
+        .from('users')
+        .update({
+          email_verified: isTestEnv || authUser.user.email_confirmed_at !== null,
+        })
+        .eq('id', user.id);
+    }
 
     if (userError || !user) {
       // Rollback: Delete company and auth user
@@ -245,28 +377,34 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate session tokens for the newly created user
-    // Since we're using admin API, we need to create a session manually
-    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',
-      email: body.email.toLowerCase(),
-    });
-
-    // If email verification is required, tokens will be null until email is verified
-    // For now, we'll return the user data but tokens will be null
-    // The frontend should handle redirecting to email verification page
+    // In development/test mode, we auto-confirm email so we can get tokens immediately
     let accessToken: string | null = null;
     let refreshToken: string | null = null;
 
-    // Try to sign in to get tokens (only works if email verification is not required)
-    // Note: In production, you may want to require email verification before allowing login
-    const { data: loginData } = await supabaseAdmin.auth.signInWithPassword({
-      email: body.email.toLowerCase(),
-      password: body.password,
-    });
+    // If email is auto-confirmed, try to sign in to get tokens
+    // Use regular client (not admin) for signInWithPassword
+    if (isTestEnv || process.env.NODE_ENV === 'development') {
+      // Wait a moment for Supabase to process the user creation
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Use regular client (anon key) for sign in, not service role
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+        email: body.email.toLowerCase(),
+        password: body.password,
+      });
 
-    if (loginData?.session) {
-      accessToken = loginData.session.access_token;
-      refreshToken = loginData.session.refresh_token;
+      if (loginData?.session) {
+        accessToken = loginData.session.access_token;
+        refreshToken = loginData.session.refresh_token;
+        console.log('[SIGNUP] ✅ Successfully got session tokens');
+      } else if (loginError) {
+        console.warn('[SIGNUP] Failed to get tokens after signup:', loginError.message);
+        // User was created successfully, but we couldn't get tokens
+        // Frontend will need to redirect to login page
+      }
+    } else {
+      // Production mode - email verification required
+      console.log('[SIGNUP] Email verification required - no tokens generated');
     }
 
     // Return success response
@@ -301,4 +439,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 

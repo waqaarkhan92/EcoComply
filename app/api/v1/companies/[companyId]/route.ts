@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
   request: NextRequest,
@@ -54,7 +55,8 @@ export async function GET(
       );
     }
 
-    return successResponse(company, 200, { request_id: requestId });
+    const response = successResponse(company, 200, { request_id: requestId });
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Get company error:', error);
     return errorResponse(
@@ -182,7 +184,8 @@ export async function PUT(
       );
     }
 
-    return successResponse(updatedCompany, 200, { request_id: requestId });
+    const response = successResponse(updatedCompany, 200, { request_id: requestId });
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Update company error:', error);
     return errorResponse(
@@ -245,11 +248,12 @@ export async function DELETE(
       );
     }
 
-    return successResponse(
+    const response = successResponse(
       { message: 'Company deleted successfully' },
       200,
       { request_id: requestId }
     );
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Delete company error:', error);
     return errorResponse(

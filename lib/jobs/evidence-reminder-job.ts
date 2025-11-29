@@ -30,8 +30,9 @@ export async function processEvidenceReminderJob(job: Job<EvidenceReminderJobDat
         id,
         company_id,
         site_id,
-        obligation_text,
-        summary,
+        original_text,
+        obligation_title,
+        obligation_description,
         deadline_date,
         sites!inner(id, name, company_id)
       `)
@@ -132,8 +133,8 @@ export async function processEvidenceReminderJob(job: Job<EvidenceReminderJobDat
             notification_type: 'EVIDENCE_REMINDER',
             channel: 'EMAIL',
             priority: 'HIGH',
-            subject: `Evidence Required: ${obligation.summary || 'Obligation'}`,
-            body_text: `The obligation "${obligation.summary || obligation.obligation_text}" requires evidence. The deadline has passed and no evidence has been linked.`,
+            subject: `Evidence Required: ${obligation.obligation_title || 'Obligation'}`,
+            body_text: `The obligation "${obligation.obligation_title || obligation.obligation_description || obligation.original_text?.substring(0, 100) || 'Obligation'}" requires evidence. The deadline has passed and no evidence has been linked.`,
             entity_type: 'obligation',
             entity_id: obligation.id,
             status: 'PENDING',

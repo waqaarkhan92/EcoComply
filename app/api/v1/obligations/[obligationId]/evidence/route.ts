@@ -10,6 +10,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, paginatedResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { parsePaginationParams, createCursor } from '@/lib/api/pagination';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
   request: NextRequest,
@@ -70,7 +71,8 @@ export async function GET(
     }
 
     if (!links || links.length === 0) {
-      return paginatedResponse([], undefined, limit, false, { request_id: requestId });
+      const response = paginatedResponse([], undefined, limit, false, { request_id: requestId });
+      return await addRateLimitHeaders(request, user.id, response);
     }
 
     // Get evidence IDs
@@ -131,13 +133,14 @@ export async function GET(
       }
     }
 
-    return paginatedResponse(
+    const response = paginatedResponse(
       results,
       nextCursor,
       limit,
       hasMore,
       { request_id: requestId }
     );
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Get obligation evidence error:', error);
     return errorResponse(

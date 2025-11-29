@@ -7,6 +7,7 @@ import { createTestQueue, createTestWorker, waitForJob, cleanupTestQueue } from 
 import { Queue, Worker } from 'bullmq';
 import { processPackGenerationJob, PackGenerationJobData } from '../../../lib/jobs/pack-generation-job';
 import { supabaseAdmin } from '../../../lib/supabase/server';
+import { createTestData } from '../../helpers/test-data';
 
 describe('Pack Generation Job', () => {
   let queue: Queue | null = null;
@@ -16,15 +17,17 @@ describe('Pack Generation Job', () => {
   beforeAll(async () => {
     if (hasRedis) {
       try {
-        queue = createTestQueue('audit-pack-generation');
-        worker = createTestWorker('audit-pack-generation', async (job) => {
+        queue = await createTestQueue('audit-pack-generation');
+        worker = await createTestWorker('audit-pack-generation', async (job) => {
           await processPackGenerationJob(job);
         });
-      } catch (error) {
-        console.warn('Redis not available, skipping queue tests:', error);
+      } catch (error: any) {
+        console.warn('Redis not available, skipping queue tests:', error?.message);
+        queue = null;
+        worker = null;
       }
     }
-  });
+  }, 30000);
 
   afterAll(async () => {
     if (queue && worker) {
@@ -42,38 +45,8 @@ describe('Pack Generation Job', () => {
     if (!queue) {
       throw new Error('Queue not initialized');
     }
-    // Get test company and site
-    const { data: company } = await supabaseAdmin
-      .from('companies')
-      .select('id, name')
-      .limit(1)
-      .single();
-
-    if (!company) {
-      throw new Error('No company found for testing');
-    }
-
-    const { data: site } = await supabaseAdmin
-      .from('sites')
-      .select('id, name')
-      .eq('company_id', company.id)
-      .limit(1)
-      .single();
-
-    if (!site) {
-      throw new Error('No site found for testing');
-    }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('company_id', company.id)
-      .limit(1)
-      .single();
-
-    if (!user) {
-      throw new Error('No user found for testing');
-    }
+    // Create test data
+    const { company, site, user } = await createTestData();
 
     // Create audit_packs record
     const { data: pack, error: packError } = await supabaseAdmin

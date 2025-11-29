@@ -44,7 +44,8 @@ CREATE TABLE notifications (
             'DEADLINE_ALERT',
             'EXCEEDANCE',
             'BREACH',
-            'MODULE_ACTIVATION'
+            'MODULE_ACTIVATION',
+            'REPORT_READY'
         )),
     channel TEXT NOT NULL 
         CHECK (channel IN ('EMAIL', 'SMS', 'IN_APP', 'PUSH')),

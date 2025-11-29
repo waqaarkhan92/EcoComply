@@ -27,6 +27,26 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 }
 
 /**
+ * Add rate limit headers to a NextResponse
+ * Spec requires: X-Rate-Limit-Limit, X-Rate-Limit-Remaining, X-Rate-Limit-Reset
+ */
+export function addRateLimitHeadersToResponse(
+  response: NextResponse,
+  limit: number,
+  remaining: number,
+  resetAt: number,
+  retryAfter?: number
+): NextResponse {
+  response.headers.set('X-Rate-Limit-Limit', String(limit));
+  response.headers.set('X-Rate-Limit-Remaining', String(remaining));
+  response.headers.set('X-Rate-Limit-Reset', String(Math.floor(resetAt / 1000)));
+  if (retryAfter !== undefined) {
+    response.headers.set('Retry-After', String(retryAfter));
+  }
+  return response;
+}
+
+/**
  * Create success response
  */
 export function successResponse<T>(

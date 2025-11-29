@@ -13,12 +13,26 @@
 CREATE OR REPLACE FUNCTION sync_email_verified()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Update users.email_verified when auth.users.email_confirmed_at changes
-  UPDATE users
-  SET email_verified = (NEW.email_confirmed_at IS NOT NULL)
-  WHERE id = NEW.id;
+  -- Only update if the users record exists and column exists
+  IF EXISTS (
+    SELECT 1 
+    FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'users' 
+    AND column_name = 'email_verified'
+  ) THEN
+    IF EXISTS (SELECT 1 FROM users WHERE id = NEW.id) THEN
+      UPDATE users
+      SET email_verified = (NEW.email_confirmed_at IS NOT NULL)
+      WHERE id = NEW.id;
+    END IF;
+  END IF;
   
   RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Silently ignore errors (column might not exist yet)
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -27,13 +41,27 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION sync_last_login()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Update users.last_login_at when auth.users.last_sign_in_at changes
-  UPDATE users
-  SET last_login_at = NEW.last_sign_in_at
-  WHERE id = NEW.id
-  AND (last_login_at IS NULL OR last_login_at < NEW.last_sign_in_at);
+  -- Only update if the users record exists and column exists
+  IF EXISTS (
+    SELECT 1 
+    FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'users' 
+    AND column_name = 'last_login_at'
+  ) THEN
+    IF EXISTS (SELECT 1 FROM users WHERE id = NEW.id) THEN
+      UPDATE users
+      SET last_login_at = NEW.last_sign_in_at
+      WHERE id = NEW.id
+      AND (last_login_at IS NULL OR last_login_at < NEW.last_sign_in_at);
+    END IF;
+  END IF;
   
   RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Silently ignore errors (column might not exist yet)
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

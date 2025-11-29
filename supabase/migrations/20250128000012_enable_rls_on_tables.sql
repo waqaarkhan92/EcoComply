@@ -53,6 +53,8 @@ ALTER TABLE cross_sell_triggers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE extraction_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE consultant_client_assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pack_distributions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE webhooks ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
 -- TABLES WITH RLS DISABLED (System tables, not tenant-scoped)

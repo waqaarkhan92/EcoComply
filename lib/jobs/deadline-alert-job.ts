@@ -48,14 +48,14 @@ export async function processDeadlineAlertJob(job: Job<DeadlineAlertJobData>): P
           id,
           company_id,
           site_id,
-          obligation_text,
-          summary,
+          original_text,
+          obligation_title,
+          obligation_description,
           category,
           sites!inner(id, name, company_id)
         )
       `)
       .eq('status', 'PENDING')
-      .eq('is_active', true)
       .in('due_date', [sevenDaysDate, threeDaysDate, oneDayDate]);
 
     if (company_id) {
@@ -142,8 +142,8 @@ export async function processDeadlineAlertJob(job: Job<DeadlineAlertJobData>): P
             notification_type: `DEADLINE_WARNING_${alertLevel}`,
             channel: 'EMAIL',
             priority,
-            subject: `Deadline Alert: ${obligation.summary || 'Obligation'} due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}`,
-            body_text: `The obligation "${obligation.summary || obligation.obligation_text}" is due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''} (${deadline.due_date}).`,
+            subject: `Deadline Alert: ${obligation.obligation_title || 'Obligation'} due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}`,
+            body_text: `The obligation "${obligation.obligation_title || obligation.obligation_description || obligation.original_text?.substring(0, 100) || 'Obligation'}" is due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''} (${deadline.due_date}).`,
             entity_type: 'deadline',
             entity_id: deadline.id,
             status: 'PENDING',

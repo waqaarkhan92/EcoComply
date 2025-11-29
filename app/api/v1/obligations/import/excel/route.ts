@@ -8,6 +8,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { getQueue, QUEUE_NAMES } from '@/lib/queue/queue-manager';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 import * as XLSX from 'xlsx';
 import crypto from 'crypto';
 
@@ -278,7 +279,7 @@ export async function POST(request: NextRequest) {
       // Continue anyway - job can be retried manually
     }
 
-    return successResponse(
+    const response = successResponse(
       {
         import_id: excelImport.id,
         status: 'PROCESSING',
@@ -289,6 +290,7 @@ export async function POST(request: NextRequest) {
       202,
       { request_id: requestId }
     );
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Excel import upload error:', error);
     return errorResponse(

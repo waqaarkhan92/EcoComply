@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
   request: NextRequest,
@@ -77,7 +78,7 @@ export async function GET(
       .select('site_id')
       .eq('user_id', userId);
 
-    return successResponse(
+    const response = successResponse(
       {
         ...user,
         roles: roles?.map((r: { role: string }) => r.role) || [],
@@ -86,6 +87,7 @@ export async function GET(
       200,
       { request_id: requestId }
     );
+    return await addRateLimitHeaders(request, currentUser.id, response);
   } catch (error: any) {
     console.error('Get user error:', error);
     return errorResponse(
@@ -186,7 +188,8 @@ export async function PUT(
       );
     }
 
-    return successResponse(updatedUser, 200, { request_id: requestId });
+    const response = successResponse(updatedUser, 200, { request_id: requestId });
+    return await addRateLimitHeaders(request, currentUser.id, response);
   } catch (error: any) {
     console.error('Update user error:', error);
     return errorResponse(
@@ -268,11 +271,12 @@ export async function DELETE(
       console.error('Failed to delete auth user:', authError);
     }
 
-    return successResponse(
+    const response = successResponse(
       { message: 'User deleted successfully' },
       200,
       { request_id: requestId }
     );
+    return await addRateLimitHeaders(request, currentUser.id, response);
   } catch (error: any) {
     console.error('Delete user error:', error);
     return errorResponse(

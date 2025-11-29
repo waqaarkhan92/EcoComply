@@ -7,7 +7,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/glo
 import { createTestQueue, createTestWorker, waitForJob, cleanupTestQueue } from '../../helpers/job-test-helper';
 import { Queue, Worker } from 'bullmq';
 import { processDocumentJob, DocumentProcessingJobData } from '../../../lib/jobs/document-processing-job';
-import { supabaseAdmin } from '../../../lib/supabase/server';
+import { createTestData } from '../../helpers/test-data';
 
 describe('Document Processing Job', () => {
   let queue: Queue | null = null;
@@ -17,15 +17,18 @@ describe('Document Processing Job', () => {
   beforeAll(async () => {
     if (hasRedis) {
       try {
-        queue = createTestQueue('document-processing');
-        worker = createTestWorker('document-processing', async (job) => {
+        queue = await createTestQueue('document-processing');
+        worker = await createTestWorker('document-processing', async (job) => {
           await processDocumentJob(job);
         });
-      } catch (error) {
-        console.warn('Redis not available, skipping queue tests:', error);
+        console.log('✅ Test queue and worker initialized');
+      } catch (error: any) {
+        console.warn('Redis not available, skipping queue tests:', error?.message);
+        queue = null;
+        worker = null;
       }
     }
-  });
+  }, 30000); // 30 second timeout for setup
 
   afterAll(async () => {
     if (queue && worker) {
@@ -44,37 +47,9 @@ describe('Document Processing Job', () => {
     if (!queue) {
       throw new Error('Queue not initialized');
     }
-    // Create a test document
-    const { data: company } = await supabaseAdmin
-      .from('companies')
-      .select('id')
-      .limit(1)
-      .single();
-
-    if (!company) {
-      throw new Error('No company found for testing');
-    }
-
-    const { data: site } = await supabaseAdmin
-      .from('sites')
-      .select('id')
-      .eq('company_id', company.id)
-      .limit(1)
-      .single();
-
-    if (!site) {
-      throw new Error('No site found for testing');
-    }
-
-    const { data: module } = await supabaseAdmin
-      .from('modules')
-      .select('id')
-      .eq('module_code', 'MODULE_1')
-      .single();
-
-    if (!module) {
-      throw new Error('Module 1 not found');
-    }
+    
+    // Create test data
+    const { company, site, module } = await createTestData();
 
     // Create a test document record
     const { data: document, error: docError } = await supabaseAdmin

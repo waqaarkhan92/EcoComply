@@ -1,0 +1,160 @@
+/**
+ * Site Dashboard Endpoint
+ * GET /api/v1/sites/{siteId}/dashboard - Get site dashboard data
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
+import { requireAuth, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { siteId: string } }
+) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    const { siteId } = params;
+
+    // Verify site exists and user has access
+    const { data: site, error: siteError } = await supabaseAdmin
+      .from('sites')
+      .select('id, name, company_id, regulator, is_active')
+      .eq('id', siteId)
+      .is('deleted_at', null)
+      .single();
+
+    if (siteError || !site) {
+      return errorResponse(
+        ErrorCodes.NOT_FOUND,
+        'Site not found',
+        404,
+        null,
+        { request_id: requestId }
+      );
+    }
+
+    // Verify user has access to this company
+    if (site.company_id !== user.company_id) {
+      // Check consultant access
+      const { data: consultantAccess } = await supabaseAdmin
+        .from('consultant_client_assignments')
+        .select('id')
+        .eq('consultant_id', user.id)
+        .eq('client_company_id', site.company_id)
+        .eq('status', 'ACTIVE')
+        .single();
+
+      if (!consultantAccess) {
+        return errorResponse(
+          ErrorCodes.FORBIDDEN,
+          'Insufficient permissions',
+          403,
+          null,
+          { request_id: requestId }
+        );
+      }
+    }
+
+    // Get dashboard statistics
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    // Count overdue obligations
+    const { count: overdueCount } = await supabaseAdmin
+      .from('obligations')
+      .select('id', { count: 'exact', head: true })
+      .eq('site_id', siteId)
+      .eq('status', 'OVERDUE')
+      .is('deleted_at', null);
+
+    // Count upcoming deadlines (next 7 days)
+    const { count: upcomingDeadlinesCount } = await supabaseAdmin
+      .from('deadlines')
+      .select('id', { count: 'exact', head: true })
+      .eq('site_id', siteId)
+      .in('status', ['PENDING', 'DUE_SOON'])
+      .gte('due_date', now.toISOString().split('T')[0])
+      .lte('due_date', sevenDaysFromNow.toISOString().split('T')[0]);
+
+    // Count total obligations
+    const { count: totalObligationsCount } = await supabaseAdmin
+      .from('obligations')
+      .select('id', { count: 'exact', head: true })
+      .eq('site_id', siteId)
+      .is('deleted_at', null);
+
+    // Count completed obligations
+    const { count: completedObligationsCount } = await supabaseAdmin
+      .from('obligations')
+      .select('id', { count: 'exact', head: true })
+      .eq('site_id', siteId)
+      .eq('status', 'COMPLETED')
+      .is('deleted_at', null);
+
+    // Get recent activity (last 10 obligations)
+    const { data: recentObligations } = await supabaseAdmin
+      .from('obligations')
+      .select('id, obligation_title, status, created_at')
+      .eq('site_id', siteId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    // Calculate compliance score
+    const totalObligations = totalObligationsCount || 0;
+    const completedObligations = completedObligationsCount || 0;
+    const complianceScore = totalObligations > 0 
+      ? Math.round((completedObligations / totalObligations) * 100) 
+      : 100;
+
+    // Determine compliance status
+    let complianceStatus = 'COMPLIANT';
+    if (overdueCount && overdueCount > 0) {
+      complianceStatus = 'NON_COMPLIANT';
+    } else if (upcomingDeadlinesCount && upcomingDeadlinesCount > 0) {
+      complianceStatus = 'AT_RISK';
+    }
+
+    const response = successResponse(
+      {
+        site: {
+          id: site.id,
+          name: site.name,
+          regulator: site.regulator,
+          is_active: site.is_active,
+        },
+        statistics: {
+          total_obligations: totalObligations,
+          completed_obligations: completedObligations,
+          overdue_obligations: overdueCount || 0,
+          upcoming_deadlines: upcomingDeadlinesCount || 0,
+          compliance_score: complianceScore,
+          compliance_status: complianceStatus,
+        },
+        recent_activity: recentObligations || [],
+      },
+      200,
+      { request_id: requestId }
+    );
+    return await addRateLimitHeaders(request, user.id, response);
+  } catch (error: any) {
+    console.error('Get site dashboard error:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'An unexpected error occurred',
+      500,
+      { error: error.message || 'Unknown error' },
+      { request_id: requestId }
+    );
+  }
+}

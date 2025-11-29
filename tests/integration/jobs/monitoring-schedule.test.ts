@@ -16,15 +16,17 @@ describe('Monitoring Schedule Job', () => {
   beforeAll(async () => {
     if (hasRedis) {
       try {
-        queue = createTestQueue('monitoring-schedule');
-        worker = createTestWorker('monitoring-schedule', async (job) => {
+        queue = await createTestQueue('monitoring-schedule');
+        worker = await createTestWorker('monitoring-schedule', async (job) => {
           await processMonitoringScheduleJob(job);
         });
-      } catch (error) {
-        console.warn('Redis not available, skipping queue tests:', error);
+      } catch (error: any) {
+        console.warn('Redis not available, skipping queue tests:', error?.message);
+        queue = null;
+        worker = null;
       }
     }
-  });
+  }, 30000);
 
   afterAll(async () => {
     if (queue && worker) {
@@ -81,8 +83,9 @@ describe('Monitoring Schedule Job', () => {
         company_id: company.id,
         site_id: site.id,
         module_id: module.id,
-        obligation_text: 'Test obligation',
-        summary: 'Test',
+        original_text: 'Test obligation',
+        obligation_title: 'Test',
+        obligation_description: 'Test obligation description',
         category: 'MONITORING',
         frequency: 'MONTHLY',
         status: 'ACTIVE',

@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function DELETE(
   request: NextRequest,
@@ -65,11 +66,12 @@ export async function DELETE(
       );
     }
 
-    return successResponse(
+    const response = successResponse(
       { message: 'Evidence unlinked successfully' },
       200,
       { request_id: requestId }
     );
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Unlink evidence error:', error);
     return errorResponse(

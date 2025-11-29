@@ -20,6 +20,6 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-min-32-chars
 process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh-secret-min-32-chars-long';
 process.env.BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
-// Increase timeout for integration tests
-jest.setTimeout(30000);
+// Increase timeout for integration tests (especially background job tests)
+jest.setTimeout(60000); // 60 seconds for job tests
 

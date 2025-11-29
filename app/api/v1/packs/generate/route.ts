@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 import { getQueue, QUEUE_NAMES } from '@/lib/queue/queue-manager';
 
 export async function POST(request: NextRequest) {
@@ -202,7 +203,7 @@ export async function POST(request: NextRequest) {
       // Continue anyway - job can be retried manually
     }
 
-    return successResponse(
+    const response = successResponse(
       {
         pack_id: pack.id,
         pack_type: pack.pack_type,
@@ -212,6 +213,7 @@ export async function POST(request: NextRequest) {
       202,
       { request_id: requestId }
     );
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Pack generation error:', error);
     return errorResponse(

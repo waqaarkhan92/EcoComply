@@ -13,16 +13,22 @@ let mockRedisInstance: any = null;
 /**
  * Create a test Redis connection (in-memory mock or real Redis if available)
  */
-export function createTestRedis(): any {
+export async function createTestRedis(): Promise<any> {
   // Check if REDIS_URL is set and try to use real Redis
   if (process.env.REDIS_URL) {
     try {
-      return new Redis(process.env.REDIS_URL, {
-        maxRetriesPerRequest: 1,
+      const redis = new Redis(process.env.REDIS_URL, {
+        maxRetriesPerRequest: null, // Required by BullMQ
         retryStrategy: () => null, // Don't retry in tests
-        lazyConnect: true, // Don't connect immediately
+        connectTimeout: 5000, // 5 second timeout
+        lazyConnect: false, // Connect immediately
       });
-    } catch {
+
+      // Test connection
+      await redis.ping();
+      return redis;
+    } catch (error) {
+      console.warn('Redis connection failed, using mock:', error);
       // Fall back to mock
     }
   }
@@ -37,8 +43,8 @@ export function createTestRedis(): any {
 /**
  * Create a test queue
  */
-export function createTestQueue<T = any>(queueName: string): Queue<T> {
-  const connection = createTestRedis();
+export async function createTestQueue<T = any>(queueName: string): Promise<Queue<T>> {
+  const connection = await createTestRedis();
   return new Queue<T>(queueName, {
     connection,
     defaultJobOptions: {
@@ -52,21 +58,32 @@ export function createTestQueue<T = any>(queueName: string): Queue<T> {
 /**
  * Create a test worker
  */
-export function createTestWorker<T = any>(
+export async function createTestWorker<T = any>(
   queueName: string,
   processor: (job: any) => Promise<void>
-): Worker<T> {
-  const connection = createTestRedis();
-  return new Worker<T>(
+): Promise<Worker<T>> {
+  const connection = await createTestRedis();
+  const worker = new Worker<T>(
     queueName,
     async (job) => {
-      await processor(job);
+      try {
+        await processor(job);
+      } catch (error: any) {
+        console.error(`Job ${job.id} failed:`, error);
+        throw error;
+      }
     },
     {
       connection,
       concurrency: 1, // Single concurrency for predictable tests
+      removeOnComplete: { count: 100 },
+      removeOnFail: { count: 100 },
     }
   );
+
+  // Wait for worker to be ready
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  return worker;
 }
 
 /**
@@ -78,17 +95,48 @@ export async function waitForJob(
   timeout: number = 10000
 ): Promise<any> {
   const startTime = Date.now();
+  let lastState: string | null = null;
+  
   while (Date.now() - startTime < timeout) {
-    const job = await queue.getJob(jobId);
-    if (job && (await job.getState()) === 'completed') {
-      return await job.returnvalue;
+    try {
+      const job = await queue.getJob(jobId);
+      if (!job) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        continue;
+      }
+      
+      const state = await job.getState();
+      if (state !== lastState) {
+        console.log(`Job ${jobId} state: ${state}`);
+        lastState = state;
+      }
+      
+      if (state === 'completed') {
+        return await job.returnvalue;
+      }
+      if (state === 'failed') {
+        const failedReason = job.failedReason || 'Unknown error';
+        throw new Error(`Job failed: ${failedReason}`);
+      }
+      
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    } catch (error: any) {
+      if (error.message?.includes('Job failed')) {
+        throw error;
+      }
+      // Continue waiting on other errors
+      await new Promise((resolve) => setTimeout(resolve, 200));
     }
-    if (job && (await job.getState()) === 'failed') {
-      throw new Error(`Job failed: ${job.failedReason}`);
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  throw new Error(`Job ${jobId} did not complete within ${timeout}ms`);
+  
+  // Get final state for error message
+  try {
+    const job = await queue.getJob(jobId);
+    const finalState = job ? await job.getState() : 'not found';
+    throw new Error(`Job ${jobId} did not complete within ${timeout}ms. Final state: ${finalState}`);
+  } catch (error: any) {
+    throw new Error(`Job ${jobId} did not complete within ${timeout}ms. ${error.message}`);
+  }
 }
 
 /**

@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id);
 
     // Return user data
-    return successResponse(
+    const response = successResponse(
       {
         id: userData.id,
         email: userData.email,
@@ -68,6 +69,7 @@ export async function GET(request: NextRequest) {
       200,
       { request_id: requestId }
     );
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Get current user error:', error);
     return errorResponse(

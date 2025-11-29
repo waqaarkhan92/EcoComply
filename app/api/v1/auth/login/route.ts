@@ -6,7 +6,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/server';
+import { supabaseAdmin, supabase } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { getRequestId } from '@/lib/api/middleware';
 
@@ -50,16 +50,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Authenticate with Supabase Auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({
+    // Authenticate with Supabase Auth - use regular client (not service role)
+    // Service role bypasses normal auth flows and can cause errors
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: body.email.toLowerCase(),
       password: body.password,
     });
 
     if (authError || !authData.session || !authData.user) {
       // Check if error is due to unverified email
-      // Skip email verification check in test environment
-      const isTestEnv = process.env.NODE_ENV === 'test' || process.env.DISABLE_EMAIL_VERIFICATION === 'true';
+      // Skip email verification check in test/development environment
+      const isTestEnv = process.env.NODE_ENV === 'test' || 
+                        process.env.NODE_ENV === 'development' || 
+                        process.env.DISABLE_EMAIL_VERIFICATION === 'true';
       
       if (!isTestEnv && (authError?.message?.includes('Email not confirmed') || authError?.message?.includes('email_not_confirmed'))) {
         return errorResponse(

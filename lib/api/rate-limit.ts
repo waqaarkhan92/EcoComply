@@ -297,10 +297,10 @@ export async function rateLimitMiddleware(
         { request_id: requestId }
       );
 
-      // Add rate limit headers
-      response.headers.set('X-RateLimit-Limit', String(result.limit));
-      response.headers.set('X-RateLimit-Remaining', '0');
-      response.headers.set('X-RateLimit-Reset', String(Math.floor(result.resetAt / 1000)));
+      // Add rate limit headers (spec format: X-Rate-Limit-*)
+      response.headers.set('X-Rate-Limit-Limit', String(result.limit));
+      response.headers.set('X-Rate-Limit-Remaining', '0');
+      response.headers.set('X-Rate-Limit-Reset', String(Math.floor(result.resetAt / 1000)));
       response.headers.set('Retry-After', String(resetSeconds));
 
       return response;
@@ -332,9 +332,10 @@ export async function addRateLimitHeaders(
 ): Promise<NextResponse> {
   try {
     const result = await getRateLimitStatus(userId, request);
-    response.headers.set('X-RateLimit-Limit', String(result.limit));
-    response.headers.set('X-RateLimit-Remaining', String(result.remaining));
-    response.headers.set('X-RateLimit-Reset', String(Math.floor(result.resetAt / 1000)));
+    // Use spec-compliant header format: X-Rate-Limit-*
+    response.headers.set('X-Rate-Limit-Limit', String(result.limit));
+    response.headers.set('X-Rate-Limit-Remaining', String(result.remaining));
+    response.headers.set('X-Rate-Limit-Reset', String(Math.floor(result.resetAt / 1000)));
     return response;
   } catch (error) {
     // On error, return response without headers

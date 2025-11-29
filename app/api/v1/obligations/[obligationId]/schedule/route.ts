@@ -1,0 +1,109 @@
+/**
+ * Obligation Schedule Endpoint
+ * GET /api/v1/obligations/{obligationId}/schedule - Get schedule for obligation
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
+import { requireAuth, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { obligationId: string } }
+) {
+  const requestId = getRequestId(request);
+
+  try {
+    // Require authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    const { obligationId } = params;
+
+    // Verify obligation exists and user has access
+    const { data: obligation, error: obligationError } = await supabaseAdmin
+      .from('obligations')
+      .select('id, company_id')
+      .eq('id', obligationId)
+      .is('deleted_at', null)
+      .single();
+
+    if (obligationError || !obligation) {
+      return errorResponse(
+        ErrorCodes.NOT_FOUND,
+        'Obligation not found',
+        404,
+        null,
+        { request_id: requestId }
+      );
+    }
+
+    // Verify user has access
+    if (user.company_id !== obligation.company_id) {
+      const { data: consultantAccess } = await supabaseAdmin
+        .from('consultant_client_assignments')
+        .select('id')
+        .eq('consultant_id', user.id)
+        .eq('client_company_id', obligation.company_id)
+        .eq('status', 'ACTIVE')
+        .limit(1)
+        .maybeSingle();
+
+      if (!consultantAccess) {
+        return errorResponse(
+          ErrorCodes.FORBIDDEN,
+          'Insufficient permissions',
+          403,
+          null,
+          { request_id: requestId }
+        );
+      }
+    }
+
+    // Get schedule for obligation
+    const { data: schedule, error } = await supabaseAdmin
+      .from('schedules')
+      .select('id, obligation_id, frequency, next_due_date, status')
+      .eq('obligation_id', obligationId)
+      .eq('status', 'ACTIVE')
+      .maybeSingle();
+
+    if (error && error.code !== 'PGRST116') {
+      return errorResponse(
+        ErrorCodes.INTERNAL_ERROR,
+        'Failed to fetch schedule',
+        500,
+        { error: error.message },
+        { request_id: requestId }
+      );
+    }
+
+    if (!schedule) {
+      return errorResponse(
+        ErrorCodes.NOT_FOUND,
+        'Schedule not found for this obligation',
+        404,
+        null,
+        { request_id: requestId }
+      );
+    }
+
+    const response = successResponse(schedule, 200, { request_id: requestId });
+    return await addRateLimitHeaders(request, user.id, response);
+  } catch (error: any) {
+    console.error('Get obligation schedule error:', error);
+    return errorResponse(
+      ErrorCodes.INTERNAL_ERROR,
+      'An unexpected error occurred',
+      500,
+      { error: error.message || 'Unknown error' },
+      { request_id: requestId }
+    );
+  }
+}
+

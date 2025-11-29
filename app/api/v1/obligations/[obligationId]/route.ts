@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
   request: NextRequest,
@@ -25,17 +26,36 @@ export async function GET(
 
     const { obligationId } = params;
 
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(obligationId)) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Invalid obligation ID format',
+        400,
+        { obligation_id: 'Must be a valid UUID' },
+        { request_id: requestId }
+      );
+    }
+
     // Get obligation - RLS will enforce access control
+    // Use maybeSingle() to return null instead of error when not found
     const { data: obligation, error } = await supabaseAdmin
       .from('obligations')
       .select('*')
       .eq('id', obligationId)
       .is('deleted_at', null)
-      .single();
+      .maybeSingle();
 
-    if (error || !obligation) {
-      if (error?.code === 'PGRST116') {
-        // No rows returned
+    if (error) {
+      // PGRST116 = no rows returned (PostgREST error code)
+      // Also check for other "not found" indicators
+      if (
+        error.code === 'PGRST116' ||
+        error.message?.includes('No rows returned') ||
+        error.message?.includes('not found') ||
+        error.details?.includes('No rows found')
+      ) {
         return errorResponse(
           ErrorCodes.NOT_FOUND,
           'Obligation not found',
@@ -44,11 +64,22 @@ export async function GET(
           { request_id: requestId }
         );
       }
+      console.error('Get obligation error:', error);
       return errorResponse(
         ErrorCodes.INTERNAL_ERROR,
         'Failed to fetch obligation',
         500,
         { error: error?.message || 'Unknown error' },
+        { request_id: requestId }
+      );
+    }
+
+    if (!obligation) {
+      return errorResponse(
+        ErrorCodes.NOT_FOUND,
+        'Obligation not found',
+        404,
+        null,
         { request_id: requestId }
       );
     }
@@ -72,7 +103,7 @@ export async function GET(
       .eq('obligation_id', obligationId)
       .order('due_date', { ascending: true });
 
-    return successResponse(
+    const response = successResponse(
       {
         ...obligation,
         evidence_count: evidenceLinks?.length || 0,
@@ -83,6 +114,7 @@ export async function GET(
       200,
       { request_id: requestId }
     );
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Get obligation error:', error);
     return errorResponse(
@@ -260,7 +292,8 @@ export async function PUT(
       console.error('Failed to log to audit_logs:', auditError);
     }
 
-    return successResponse(updatedObligation, 200, { request_id: requestId });
+    const response = successResponse(updatedObligation, 200, { request_id: requestId });
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Update obligation error:', error);
     return errorResponse(

@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, paginatedResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 import { parsePaginationParams, parseFilterParams, parseSortParams, createCursor } from '@/lib/api/pagination';
 
 export async function GET(request: NextRequest) {
@@ -74,13 +75,14 @@ export async function GET(request: NextRequest) {
       nextCursor = createCursor(lastItem.id, lastItem.created_at);
     }
 
-    return paginatedResponse(
+    const response = paginatedResponse(
       results,
       nextCursor,
       limit,
       hasMore,
       { request_id: requestId }
     );
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Get sites error:', error);
     return errorResponse(
@@ -186,7 +188,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return successResponse(site, 201, { request_id: requestId });
+    const response = successResponse(site, 201, { request_id: requestId });
+    return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Create site error:', error);
     return errorResponse(

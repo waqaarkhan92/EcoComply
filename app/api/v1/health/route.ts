@@ -20,11 +20,46 @@ export async function GET(request: NextRequest) {
 
     const databaseStatus = dbError ? 'unhealthy' : 'healthy';
 
-    // Check storage (Supabase Storage is always available if DB is healthy)
-    const storageStatus = databaseStatus === 'healthy' ? 'healthy' : 'unhealthy';
+    // Check Redis connection
+    let redisStatus: 'healthy' | 'unhealthy' = 'unhealthy';
+    try {
+      const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.REDIS_URL;
+      const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.REDIS_TOKEN;
+      
+      if (redisUrl && redisToken) {
+        // Try Upstash Redis first
+        const { Redis } = await import('@upstash/redis');
+        const redis = new Redis({ url: redisUrl, token: redisToken });
+        await redis.ping();
+        redisStatus = 'healthy';
+      } else if (redisUrl && redisUrl.startsWith('redis://')) {
+        // Try ioredis for standard Redis
+        const Redis = (await import('ioredis')).default;
+        const redis = new Redis(redisUrl, { 
+          maxRetriesPerRequest: 1,
+          connectTimeout: 5000,
+          lazyConnect: true 
+        });
+        await redis.connect();
+        await redis.ping();
+        await redis.quit();
+        redisStatus = 'healthy';
+      }
+    } catch (error) {
+      console.error('Redis health check error:', error);
+      redisStatus = 'unhealthy';
+    }
 
-    // TODO: Check Redis connection (when Redis is set up in Phase 4)
-    const redisStatus = 'healthy'; // Placeholder until Redis is configured
+    // Check Supabase Storage connection
+    let storageStatus: 'healthy' | 'unhealthy' = 'unhealthy';
+    try {
+      // Test storage by listing buckets (non-destructive check)
+      const { data: buckets, error: storageError } = await supabaseAdmin.storage.listBuckets();
+      storageStatus = storageError ? 'unhealthy' : 'healthy';
+    } catch (error) {
+      console.error('Storage health check error:', error);
+      storageStatus = 'unhealthy';
+    }
 
     const overallStatus =
       databaseStatus === 'healthy' && storageStatus === 'healthy' && redisStatus === 'healthy'
