@@ -1,7 +1,7 @@
 /**
  * Module 3 Run Hours Monitoring Job
  * Monitors generator run-hour limits and generates alerts
- * Reference: EP_Compliance_Background_Jobs_Specification.md
+ * Reference: docs/specs/41_Backend_Background_Jobs.md
  */
 
 import { Job } from 'bullmq';

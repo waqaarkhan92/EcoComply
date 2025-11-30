@@ -19,6 +19,18 @@ export async function GET(
   const requestId = getRequestId(request);
   const { generatorId } = params;
 
+  // Validate UUID
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(generatorId)) {
+    return errorResponse(
+      ErrorCodes.BAD_REQUEST,
+      'Invalid generator ID format',
+      400,
+      { generator_id: 'Must be a valid UUID' },
+      { request_id: requestId }
+    );
+  }
+
   try {
     // Require authentication
     const authResult = await requireAuth(request);

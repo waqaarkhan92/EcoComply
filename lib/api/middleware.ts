@@ -96,6 +96,7 @@ export async function verifyToken(token: string): Promise<AuthenticatedUser | nu
 export async function requireAuth(
   request: NextRequest
 ): Promise<{ user: AuthenticatedUser } | NextResponse> {
+  try {
   const token = extractToken(request);
 
   if (!token) {
@@ -117,13 +118,27 @@ export async function requireAuth(
   }
 
   // Apply rate limiting
+    try {
   const { rateLimitMiddleware } = await import('./rate-limit');
   const rateLimitResult = await rateLimitMiddleware(request, user.id);
   if (rateLimitResult) {
     return rateLimitResult;
+      }
+    } catch (rateLimitError) {
+      // If rate limiting fails, log but continue (don't block the request)
+      console.warn('Rate limit check failed:', rateLimitError);
   }
 
   return { user };
+  } catch (error: any) {
+    // If any error occurs during auth, return 401 instead of letting it propagate as 500
+    console.error('Authentication error:', error);
+    return errorResponse(
+      ErrorCodes.UNAUTHORIZED,
+      'Authentication failed',
+      401
+    );
+  }
 }
 
 /**
@@ -160,5 +175,17 @@ export async function requireRole(
  */
 export function getRequestId(request: NextRequest): string {
   return request.headers.get('x-request-id') || crypto.randomUUID();
+}
+
+/**
+ * Safely parse JSON from request body
+ * Returns parsed body or throws error that can be caught and returned as 422
+ */
+export async function parseRequestBody<T = any>(request: NextRequest): Promise<T> {
+  try {
+    return await request.json();
+  } catch (error: any) {
+    throw new Error(`Invalid JSON in request body: ${error.message || 'Request body must be valid JSON'}`);
+  }
 }
 

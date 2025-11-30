@@ -28,6 +28,7 @@ export function createCursor(id: string, created_at: string): string {
 
 /**
  * Parse pagination parameters from request
+ * @throws Error if limit is invalid (caller should catch and return 422)
  */
 export function parsePaginationParams(request: { nextUrl: URL }): {
   limit: number;
@@ -41,15 +42,32 @@ export function parsePaginationParams(request: { nextUrl: URL }): {
   let limit = 20;
   if (limitParam) {
     const parsed = parseInt(limitParam, 10);
-    if (!isNaN(parsed) && parsed > 0) {
-      limit = Math.min(parsed, 100); // Max 100
+    if (isNaN(parsed) || parsed < 1) {
+      // Invalid limit - will be handled by caller to return 422
+      throw new Error('Invalid limit parameter: must be a positive integer between 1 and 100');
     }
+    limit = Math.min(parsed, 100); // Max 100
   }
 
   return {
     limit,
     cursor: cursorParam,
   };
+}
+
+/**
+ * Safely parse pagination parameters with error handling
+ * Returns null if validation fails (caller should return 422)
+ */
+export function safeParsePaginationParams(
+  request: { nextUrl: URL },
+  requestId?: string
+): { limit: number; cursor: string | null } | null {
+  try {
+    return parsePaginationParams(request);
+  } catch (error: any) {
+    return null;
+  }
 }
 
 /**

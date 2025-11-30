@@ -39,7 +39,7 @@ describe('Login Page', () => {
   it('should render login form', () => {
     render(<LoginPage />);
     
-    expect(screen.getByText('Oblicore')).toBeInTheDocument();
+    expect(screen.getByText('EcoComply')).toBeInTheDocument();
     expect(screen.getByText('Sign in to your account')).toBeInTheDocument();
     expect(screen.getByLabelText('Email')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();

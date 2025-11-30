@@ -1,5 +1,5 @@
 {
-  "name": "oblicore",
+  "name": "ecocomply",
   "version": "1.0.0",
   "description": "Compliance Management SaaS for Environmental Permits",
   "main": "index.js",
@@ -10,7 +10,9 @@
     "lint": "next lint",
     "type-check": "tsc --noEmit",
     "validate-env": "tsx scripts/validate-env.ts",
-    "test": "jest",
+    "test": "jest --forceExit",
+    "test:quick": "jest --forceExit tests/smoke-test.test.ts",
+    "test:debug": "jest --detectOpenHandles",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:frontend": "jest tests/frontend",
@@ -38,11 +40,12 @@
     "check-internal-functions": "tsx scripts/check-supabase-internal-functions.ts",
     "recreate-sync-function": "tsx scripts/recreate-sync-function.ts",
     "force-add-column": "tsx scripts/force-add-column.ts",
-    "fix-missing-columns": "tsx scripts/fix-missing-columns.ts"
+    "fix-missing-columns": "tsx scripts/fix-missing-columns.ts",
+    "test:saas": "tsx scripts/test-saas-complete.ts"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/waqaarkhan92/Oblicore.git"
+    "url": "git+https://github.com/waqaarkhan92/EcoComply.git"
   },
   "keywords": [
     "compliance",
@@ -52,9 +55,9 @@
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/waqaarkhan92/Oblicore/issues"
+    "url": "https://github.com/waqaarkhan92/EcoComply/issues"
   },
-  "homepage": "https://github.com/waqaarkhan92/Oblicore#readme",
+  "homepage": "https://github.com/waqaarkhan92/EcoComply#readme",
   "devDependencies": {
     "@playwright/test": "^1.57.0",
     "@testing-library/jest-dom": "^6.9.1",

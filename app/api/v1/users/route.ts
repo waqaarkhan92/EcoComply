@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
     // Send invitation email (if no password provided = invitation)
     if (!body.password) {
       try {
-        const baseUrl = env.BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://app.oblicore.com';
+        const baseUrl = env.BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://app.ecocomply.com';
         const invitationUrl = `${baseUrl}/signup?email=${encodeURIComponent(newUser.email)}&company_id=${companyId}`;
         
         const emailTemplate = userInvitationEmail({

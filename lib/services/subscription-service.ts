@@ -1,7 +1,7 @@
 /**
  * Subscription Plan Validation Service
  * Validates user's subscription tier against feature access requirements
- * Reference: EP_Compliance_Product_Logic_Specification.md Section I.8.1
+ * Reference: docs/specs/30_Product_Business_Logic.md Section I.8.1
  */
 
 export type SubscriptionTier = 'core' | 'growth' | 'consultant';

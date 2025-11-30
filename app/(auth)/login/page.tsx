@@ -89,7 +89,7 @@ export default function LoginPage() {
   return (
     <div className="w-full max-w-md">
       <div className="bg-white rounded-lg shadow-base p-8">
-        <h1 className="text-3xl font-bold text-text-primary mb-2">Oblicore</h1>
+        <h1 className="text-3xl font-bold text-text-primary mb-2">EcoComply</h1>
         <p className="text-text-secondary mb-8">Sign in to your account</p>
 
         <form onSubmit={handleSubmit} className="space-y-6">

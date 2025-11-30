@@ -72,7 +72,7 @@ export async function POST(
           .eq('company_id', clientCompanyId)
           .is('deleted_at', null);
 
-        const baseUrl = env.BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://app.oblicore.com';
+        const baseUrl = env.BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://app.ecocomply.com';
         const clientDashboardUrl = `${baseUrl}/consultant/clients/${clientCompanyId}`;
 
         const emailTemplate = consultantClientAssignedEmail({

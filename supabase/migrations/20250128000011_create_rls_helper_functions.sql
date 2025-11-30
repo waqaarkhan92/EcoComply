@@ -8,6 +8,22 @@
 -- RLS HELPER FUNCTIONS
 -- ============================================================================
 
+-- Function: get_user_company_id
+-- Purpose: Get user's company_id (bypasses RLS with SECURITY DEFINER)
+CREATE OR REPLACE FUNCTION get_user_company_id(user_id UUID)
+RETURNS UUID AS $$
+DECLARE
+  result UUID;
+BEGIN
+  SELECT company_id INTO result
+  FROM users
+  WHERE id = get_user_company_id.user_id
+  AND deleted_at IS NULL;
+  
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
 -- Function: has_company_access
 -- Purpose: Check if user has access to a company
 -- Regular users: Access to their own company (via users.company_id)
@@ -17,7 +33,7 @@ RETURNS BOOLEAN AS $$
 BEGIN
   RETURN (
     -- Regular users: their own company
-    has_company_access.company_id = (SELECT u.company_id FROM users u WHERE u.id = has_company_access.user_id)
+    has_company_access.company_id = get_user_company_id(has_company_access.user_id)
     OR
     -- Consultants: assigned client companies
     EXISTS (

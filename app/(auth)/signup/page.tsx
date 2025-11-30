@@ -134,7 +134,7 @@ export default function SignupPage() {
     <div className="w-full max-w-md">
       <div className="bg-white rounded-lg shadow-base p-8">
         <h1 className="text-3xl font-bold text-text-primary mb-2">Create Account</h1>
-        <p className="text-text-secondary mb-8">Get started with Oblicore</p>
+        <p className="text-text-secondary mb-8">Get started with EcoComply</p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>

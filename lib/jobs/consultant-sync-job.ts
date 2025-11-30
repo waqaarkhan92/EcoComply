@@ -1,7 +1,7 @@
 /**
  * Consultant Sync Job
  * Syncs consultant client data and generates aggregated reports
- * Reference: EP_Compliance_Background_Jobs_Specification.md
+ * Reference: docs/specs/41_Backend_Background_Jobs.md
  */
 
 import { Job } from 'bullmq';

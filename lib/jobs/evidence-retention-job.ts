@@ -5,7 +5,7 @@
  * Trigger: Cron (daily at 2:00 AM)
  * Queue: monitoring-schedule
  * Priority: LOW
- * Reference: EP_Compliance_Product_Logic_Specification.md Section H.7 (Evidence Retention Rules)
+ * Reference: docs/specs/30_Product_Business_Logic.md Section H.7 (Evidence Retention Rules)
  */
 
 import { Job } from 'bullmq';

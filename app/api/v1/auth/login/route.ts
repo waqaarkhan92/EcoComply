@@ -19,8 +19,19 @@ export async function POST(request: NextRequest) {
   const requestId = getRequestId(request);
 
   try {
-    // Parse request body
-    const body: LoginRequest = await request.json();
+    // Parse request body - handle potential JSON parsing errors
+    let body: LoginRequest;
+    try {
+      body = await request.json();
+    } catch (jsonError: any) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Invalid JSON in request body',
+        422,
+        { error: jsonError.message || 'Request body must be valid JSON' },
+        { request_id: requestId }
+      );
+    }
 
     // Validate required fields
     if (!body.email || !body.password) {

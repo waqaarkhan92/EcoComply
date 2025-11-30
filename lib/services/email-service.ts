@@ -1,7 +1,7 @@
 /**
  * Email Notification Service
  * Handles email sending via Resend
- * Reference: EP_Compliance_Notification_Messaging_Specification.md
+ * Reference: docs/specs/42_Backend_Notifications.md
  */
 
 import { env } from '../env';
@@ -53,7 +53,7 @@ async function sendEmailViaResend(options: EmailOptions, apiKey: string): Promis
     const { Resend } = await import('resend');
     const resend = new Resend(apiKey);
     
-    const fromEmail = options.from || process.env.RESEND_FROM_EMAIL || env.RESEND_FROM_EMAIL || 'noreply@oblicore.com';
+    const fromEmail = options.from || process.env.RESEND_FROM_EMAIL || env.RESEND_FROM_EMAIL || 'noreply@ecocomply.com';
     const toEmails = Array.isArray(options.to) ? options.to : [options.to];
     
     const result = await resend.emails.send({

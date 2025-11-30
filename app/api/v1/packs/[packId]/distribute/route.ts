@@ -209,7 +209,7 @@ export async function POST(
     }
 
 
-    const baseUrl = env.BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://app.oblicore.com';
+    const baseUrl = env.BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://app.ecocomply.com';
 
     // Create distribution records
     const distributions: any[] = [];

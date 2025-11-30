@@ -1,7 +1,7 @@
 /**
  * Monitoring Schedule Job
  * Recurring obligation checks, deadline calculations, and schedule maintenance
- * Reference: EP_Compliance_Background_Jobs_Specification.md Section 2.1
+ * Reference: docs/specs/41_Backend_Background_Jobs.md Section 2.1
  */
 
 import { Job } from 'bullmq';

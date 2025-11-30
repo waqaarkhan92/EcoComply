@@ -7,10 +7,10 @@ const helpCategories = [
   {
     id: 'getting-started',
     name: 'Getting Started',
-    description: 'Learn the basics of using Oblicore',
+    description: 'Learn the basics of using EcoComply',
     icon: BookOpen,
     articles: [
-      { id: '1', title: 'Welcome to Oblicore' },
+      { id: '1', title: 'Welcome to EcoComply' },
       { id: '2', title: 'Creating Your First Site' },
       { id: '3', title: 'Uploading Documents' },
     ],
@@ -55,7 +55,7 @@ export default function HelpPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Help Center</h1>
-        <p className="text-gray-600 mt-1">Find answers and learn how to use Oblicore</p>
+        <p className="text-gray-600 mt-1">Find answers and learn how to use EcoComply</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

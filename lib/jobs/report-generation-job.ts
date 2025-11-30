@@ -1,7 +1,7 @@
 /**
  * Report Generation Job
  * Generates PDF/CSV/JSON reports (Compliance Summary, Deadline Report, Obligation Report, Evidence Report)
- * Reference: EP_Compliance_Backend_API_Specification.md Section 27
+ * Reference: docs/specs/40_Backend_API_Specification.md Section 27
  */
 
 import { Job } from 'bullmq';

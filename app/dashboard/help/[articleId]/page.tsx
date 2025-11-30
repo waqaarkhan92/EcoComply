@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 
 const articles: Record<string, { title: string; content: string }> = {
   '1': {
-    title: 'Welcome to Oblicore',
-    content: 'Welcome to Oblicore! This guide will help you get started with managing your environmental compliance.',
+    title: 'Welcome to EcoComply',
+    content: 'Welcome to EcoComply! This guide will help you get started with managing your environmental compliance.',
   },
   '2': {
     title: 'Creating Your First Site',

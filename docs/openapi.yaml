@@ -1,24 +1,24 @@
 openapi: 3.0.0
 info:
-  title: Oblicore API
+  title: EcoComply API
   version: 1.0.0
   description: |
     Compliance Management SaaS for Environmental Permits
     
     This API provides endpoints for managing environmental compliance, obligations, evidence, and audit packs.
   contact:
-    name: Oblicore Support
-    email: support@oblicore.com
+    name: EcoComply Support
+    email: support@ecocomply.com
   license:
     name: Proprietary
-    url: https://oblicore.com/license
+    url: https://ecocomply.com/license
 
 servers:
   - url: http://localhost:3000/api/v1
     description: Development server
-  - url: https://api-staging.oblicore.com/api/v1
+  - url: https://api-staging.ecocomply.com/api/v1
     description: Staging server
-  - url: https://api.oblicore.com/api/v1
+  - url: https://api.ecocomply.com/api/v1
     description: Production server
 
 tags:

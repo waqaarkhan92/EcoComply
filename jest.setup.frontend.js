@@ -1,6 +1,14 @@
 // Frontend-specific Jest setup
 require('@testing-library/jest-dom');
 
+// Mock window.navigator for tests
+Object.defineProperty(window, 'navigator', {
+  writable: true,
+  value: {
+    userAgent: 'jest',
+  },
+});
+
 // Mock Next.js router
 jest.mock('next/navigation', () => ({
   useRouter() {

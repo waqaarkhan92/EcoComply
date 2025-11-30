@@ -9,6 +9,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
+import { recordCorrection } from '@/lib/ai/correction-tracking';
 
 export async function GET(
   request: NextRequest,
@@ -137,14 +138,26 @@ export async function PUT(
     // Require Owner, Admin, or Staff role
     const authResult = await requireRole(request, ['OWNER', 'ADMIN', 'STAFF']);
     if (authResult instanceof NextResponse) {
+      // Return auth error (401 or 403) immediately
       return authResult;
     }
     const { user } = authResult;
 
     const { obligationId } = params;
 
-    // Parse request body
-    const body = await request.json();
+    // Parse request body - handle potential JSON parsing errors
+    let body: any;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Invalid JSON in request body',
+        400,
+        { error: 'Request body must be valid JSON' },
+        { request_id: requestId }
+      );
+    }
 
     // Check if obligation exists and user has access (RLS will enforce)
     const { data: existingObligation, error: checkError } = await supabaseAdmin
@@ -290,6 +303,45 @@ export async function PUT(
     } catch (auditError) {
       // Log but don't fail if audit logging fails
       console.error('Failed to log to audit_logs:', auditError);
+    }
+
+    // Track correction for pattern learning (non-blocking)
+    try {
+      // Determine correction type based on what changed
+      let correctionType: 'category' | 'frequency' | 'deadline' | 'subjective' | 'text' | 'other' = 'other';
+      if (updates.category) correctionType = 'category';
+      else if (updates.frequency) correctionType = 'frequency';
+      else if (updates.deadline_date || updates.deadline_relative) correctionType = 'deadline';
+      else if (updates.is_subjective !== undefined) correctionType = 'subjective';
+      else if (updates.obligation_description || updates.obligation_title) correctionType = 'text';
+
+      // Record correction if any meaningful change was made
+      if (Object.keys(updates).some(key => 
+        ['category', 'frequency', 'deadline_date', 'deadline_relative', 'is_subjective', 'obligation_description', 'obligation_title'].includes(key)
+      )) {
+        recordCorrection({
+          obligation_id: obligationId,
+          pattern_id_used: existingObligation.source_pattern_id || null,
+          original_data: {
+            category: existingObligation.category,
+            frequency: existingObligation.frequency,
+            deadline_date: existingObligation.deadline_date,
+            deadline_relative: existingObligation.deadline_relative,
+            is_subjective: existingObligation.is_subjective,
+            obligation_title: existingObligation.obligation_title,
+            obligation_description: existingObligation.obligation_description,
+          },
+          corrected_data: {
+            ...existingObligation,
+            ...updates,
+          },
+          correction_type: correctionType,
+          corrected_by: user.id,
+        }).catch((err) => console.error('Error recording correction:', err));
+      }
+    } catch (correctionError) {
+      // Log but don't fail if correction tracking fails
+      console.error('Failed to track correction:', correctionError);
     }
 
     const response = successResponse(updatedObligation, 200, { request_id: requestId });

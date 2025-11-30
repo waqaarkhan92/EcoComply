@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
         // Determine which threshold was reached
         const threshold = threshold100 ? 100 : threshold90 ? 90 : 80;
 
-        const baseUrl = env.BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://app.oblicore.com';
+        const baseUrl = env.BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://app.ecocomply.com';
         const actionUrl = `${baseUrl}/module-2/lab-results?parameter_id=${parameter_id}`;
 
         // Send email to each recipient

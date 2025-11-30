@@ -1,7 +1,7 @@
 /**
  * Excel Import Processing Job
  * Processes Excel/CSV files: Validation → Preview → Bulk Obligation Creation
- * Reference: EP_Compliance_Background_Jobs_Specification.md Section 3.2
+ * Reference: docs/specs/41_Backend_Background_Jobs.md Section 3.2
  */
 
 import { Job } from 'bullmq';

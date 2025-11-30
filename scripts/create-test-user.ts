@@ -22,7 +22,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 async function createTestUser() {
-  const testEmail = 'test@oblicore.com';
+  const testEmail = 'test@ecocomply.com';
   const testPassword = 'TestPassword123!';
   const testCompanyName = 'Test Company';
   const testFullName = 'Test User';

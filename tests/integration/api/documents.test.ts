@@ -65,7 +65,10 @@ describe('Documents API', () => {
         token: authenticatedUser.token!,
       });
 
-      expect(response.status).toBeGreaterThanOrEqual(400);
+      expect(response.status).toBe(422);
+      const data = await response.json();
+      expect(data.error).toBeDefined();
+      expect(data.error).toHaveProperty('code');
       const data = await response.json();
       expect(data.error).toBeDefined();
     });
@@ -81,7 +84,10 @@ describe('Documents API', () => {
         token: authenticatedUser.token!,
       });
 
-      expect(response.status).toBeGreaterThanOrEqual(400);
+      expect(response.status).toBe(422);
+      const data = await response.json();
+      expect(data.error).toBeDefined();
+      expect(data.error).toHaveProperty('code');
       const data = await response.json();
       expect(data.error).toBeDefined();
     });

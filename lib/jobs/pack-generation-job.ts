@@ -1,7 +1,7 @@
 /**
  * Pack Generation Job
  * Generates PDF packs (Audit, Regulator, Tender, Board, Insurer)
- * Reference: EP_Compliance_Background_Jobs_Specification.md Section 6.1
+ * Reference: docs/specs/41_Backend_Background_Jobs.md Section 6.1
  */
 
 import { Job } from 'bullmq';

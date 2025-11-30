@@ -22,7 +22,21 @@ export async function GET(request: NextRequest) {
     const { user } = authResult;
 
     // Parse pagination and filter params
-    const { limit, cursor } = parsePaginationParams(request);
+    let limit: number;
+    let cursor: string | null;
+    try {
+      const pagination = parsePaginationParams(request);
+      limit = pagination.limit;
+      cursor = pagination.cursor;
+    } catch (error: any) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        error.message || 'Invalid pagination parameters',
+        422,
+        { limit: 'Limit must be a positive integer between 1 and 100' },
+        { request_id: requestId }
+      );
+    }
     const filters = parseFilterParams(request);
     const sort = parseSortParams(request);
 

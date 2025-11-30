@@ -62,8 +62,8 @@ export async function GET(
       );
     }
 
-    // Build response
-    const response = {
+    // Build response data
+    const responseData = {
       import_id: excelImport.id,
       status: excelImport.status,
       file_name: excelImport.file_name,
@@ -87,7 +87,7 @@ export async function GET(
       })),
     };
 
-    const response = successResponse(response, 200, { request_id: requestId });
+    const response = successResponse(responseData, 200, { request_id: requestId });
     return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Get excel import preview error:', error);

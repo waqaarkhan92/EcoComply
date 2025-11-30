@@ -1,7 +1,7 @@
 /**
  * Queue Manager
  * Manages BullMQ queues and workers
- * Reference: EP_Compliance_Background_Jobs_Specification.md Section 1.1
+ * Reference: docs/specs/41_Backend_Background_Jobs.md Section 1.1
  */
 
 import { Queue, QueueOptions } from 'bullmq';
@@ -24,6 +24,7 @@ export const QUEUE_NAMES = {
   CONSULTANT_SYNC: 'consultant-sync',
   REPORT_GENERATION: 'report-generation',
   EVIDENCE_RETENTION: 'monitoring-schedule', // Same queue as monitoring schedule
+  NOTIFICATION_DELIVERY: 'deadline-alerts', // Same queue as deadline alerts (high priority)
 } as const;
 
 // Redis connection

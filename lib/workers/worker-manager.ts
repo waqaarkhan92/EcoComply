@@ -1,7 +1,7 @@
 /**
  * Worker Manager
  * Manages BullMQ workers for background job processing
- * Reference: EP_Compliance_Background_Jobs_Specification.md Section 1.1
+ * Reference: docs/specs/41_Backend_Background_Jobs.md Section 1.1
  */
 
 import { Worker, WorkerOptions } from 'bullmq';
@@ -22,6 +22,9 @@ import { processConsultantSyncJob } from '../jobs/consultant-sync-job';
 import { processPermitRenewalReminderJob } from '../jobs/permit-renewal-reminder-job';
 import { processReportGenerationJob } from '../jobs/report-generation-job';
 import { processEvidenceRetentionJob } from '../jobs/evidence-retention-job';
+import { processNotificationDeliveryJob } from '../jobs/notification-delivery-job';
+import { processEscalationCheckJob } from '../jobs/escalation-check-job';
+import { processDigestDeliveryJob } from '../jobs/digest-delivery-job';
 
 // Worker instances
 const workers: Map<string, Worker> = new Map();
@@ -111,7 +114,7 @@ export function startAllWorkers(): void {
 
   workers.set(QUEUE_NAMES.MONITORING_SCHEDULE, monitoringWorker);
 
-  // Deadline Alerts Worker (handles both deadline alerts and permit renewal reminders)
+  // Deadline Alerts Worker (handles deadline alerts, permit renewal reminders, and notification delivery)
   const deadlineAlertsWorker = createWorker(
     QUEUE_NAMES.DEADLINE_ALERTS,
     async (job) => {
@@ -119,6 +122,12 @@ export function startAllWorkers(): void {
         await processDeadlineAlertJob(job);
       } else if (job.name === 'PERMIT_RENEWAL_REMINDER') {
         await processPermitRenewalReminderJob(job);
+      } else if (job.name === 'NOTIFICATION_DELIVERY') {
+        await processNotificationDeliveryJob(job);
+      } else if (job.name === 'ESCALATION_CHECK') {
+        await processEscalationCheckJob(job);
+      } else if (job.name === 'DAILY_DIGEST_DELIVERY' || job.name === 'WEEKLY_DIGEST_DELIVERY') {
+        await processDigestDeliveryJob(job);
       } else {
         throw new Error(`Unknown job type: ${job.name}`);
       }

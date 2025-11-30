@@ -8,8 +8,6 @@ const createJestConfig = nextJest({
 // Add any custom config to be passed to Jest
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  // Use node environment for integration tests (API tests), jsdom for frontend tests
-  testEnvironment: 'node',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
@@ -17,7 +15,16 @@ const customJestConfig = {
     '**/__tests__/**/*.[jt]s?(x)',
     '**/?(*.)+(spec|test).[jt]s?(x)',
   ],
-  // Override test environment for frontend tests
+  // Exclude Playwright E2E tests (they should run via 'npx playwright test')
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/.next/',
+    '/tests/e2e/',
+    '/e2e/',
+  ],
+  // Default to node environment, override in individual test files for frontend
+  testEnvironment: 'node',
+  // Override for frontend tests using testEnvironment in test file or via testEnvironmentOptions
   testEnvironmentOptions: {
     customExportConditions: [''],
   },
@@ -29,10 +36,13 @@ const customJestConfig = {
     '!**/node_modules/**',
     '!**/.next/**',
   ],
-  // Transform ignore patterns
   transformIgnorePatterns: [
     'node_modules/(?!(undici)/)',
   ],
+  // Detect open handles only when debugging (use npm run test:debug)
+  // For normal runs, use --forceExit to prevent hanging
+  detectOpenHandles: false,
+  forceExit: false, // Controlled by CLI flag
 };
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

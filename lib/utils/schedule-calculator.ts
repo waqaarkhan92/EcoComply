@@ -1,7 +1,7 @@
 /**
  * Schedule Calculator Utilities
  * Calculates next_due_date based on frequency and base_date
- * Reference: EP_Compliance_Product_Logic_Specification.md Section B.3
+ * Reference: docs/specs/30_Product_Business_Logic.md Section B.3
  */
 
 export type Frequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'ONE_TIME' | 'CONTINUOUS' | 'EVENT_TRIGGERED';

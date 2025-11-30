@@ -1,11 +1,12 @@
 /**
  * Deadline Alert Job
  * Sends notifications for upcoming deadlines (7/3/1 day warnings)
- * Reference: EP_Compliance_Background_Jobs_Specification.md Section 2.2
+ * Reference: docs/specs/41_Backend_Background_Jobs.md Section 2.2
  */
 
 import { Job } from 'bullmq';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { checkEscalation, createEscalationNotification } from '@/lib/services/escalation-service';
 
 export interface DeadlineAlertJobData {
   company_id?: string;
@@ -148,10 +149,26 @@ export async function processDeadlineAlertJob(job: Job<DeadlineAlertJobData>): P
             entity_id: deadline.id,
             status: 'PENDING',
             scheduled_for: new Date().toISOString(),
+            metadata: {
+              obligation_title: obligation.obligation_title,
+              site_name: site.name,
+              deadline_date: deadline.due_date,
+              days_remaining: daysUntilDue,
+              company_name: site.company_id, // Will be resolved in template
+              action_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.epcompliance.com'}/sites/${site.id}/obligations/${obligation.id}`,
+            },
           }));
 
-          await supabaseAdmin.from('notifications').insert(notifications);
+          const { data: insertedNotifications } = await supabaseAdmin
+            .from('notifications')
+            .insert(notifications)
+            .select('id')
+            .limit(1);
+
           alertsCreated[alertLevel]++;
+
+          // Note: Escalation is now handled by the escalation-check job
+          // which runs periodically and checks time-based escalation (24h, 48h)
         }
       } catch (error: any) {
         console.error(`Error processing deadline ${deadline.id}:`, error);

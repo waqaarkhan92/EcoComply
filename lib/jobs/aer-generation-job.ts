@@ -1,7 +1,7 @@
 /**
  * AER (Annual Emissions Report) Generation Job
  * Generates Annual Emissions Reports for Module 3
- * Reference: EP_Compliance_Background_Jobs_Specification.md
+ * Reference: docs/specs/41_Backend_Background_Jobs.md
  */
 
 import { Job } from 'bullmq';

@@ -44,7 +44,7 @@ export default function OnboardingCompletePage() {
           
           <div className="flex items-center justify-center gap-2 mb-4">
             <Sparkles className="h-6 w-6 text-primary" />
-            <h1 className="text-4xl font-bold text-text-primary">Welcome to Oblicore!</h1>
+            <h1 className="text-4xl font-bold text-text-primary">Welcome to EcoComply!</h1>
             <Sparkles className="h-6 w-6 text-primary" />
           </div>
           

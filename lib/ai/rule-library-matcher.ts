@@ -1,8 +1,10 @@
 /**
  * Rule Library Pattern Matcher
  * Matches document text against rule library patterns before LLM extraction
- * Reference: AI_Extraction_Rules_Library.md Section 3
+ * Reference: docs/specs/80_AI_Extraction_Rules_Library.md Section 3
  */
+
+import { supabaseAdmin } from '@/lib/supabase/server';
 
 export interface RulePattern {
   pattern_id: string;
@@ -61,27 +63,147 @@ export interface RuleMatch {
 
 export class RuleLibraryMatcher {
   private patterns: RulePattern[] = [];
+  private patternsLoaded: boolean = false;
 
   /**
-   * Load patterns from database or codebase
-   * TODO: Load from database table `rule_library_patterns` when implemented
-   * For now, we'll use a basic pattern structure
+   * Update pattern performance metrics after use
+   */
+  async recordPatternUsage(patternId: string, success: boolean): Promise<void> {
+    try {
+      const { data: pattern } = await supabaseAdmin
+        .from('rule_library_patterns')
+        .select('performance')
+        .eq('pattern_id', patternId)
+        .single();
+
+      if (!pattern) return;
+
+      const performance = pattern.performance || {
+        usage_count: 0,
+        success_count: 0,
+        false_positive_count: 0,
+        false_negative_count: 0,
+        user_override_count: 0,
+        success_rate: 1.0,
+        last_used_at: null,
+      };
+
+      const newUsageCount = (performance.usage_count || 0) + 1;
+      const newSuccessCount = success ? (performance.success_count || 0) + 1 : (performance.success_count || 0);
+      const newSuccessRate = newSuccessCount / newUsageCount;
+
+      await supabaseAdmin
+        .from('rule_library_patterns')
+        .update({
+          performance: {
+            ...performance,
+            usage_count: newUsageCount,
+            success_count: newSuccessCount,
+            success_rate: newSuccessRate,
+            last_used_at: new Date().toISOString(),
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq('pattern_id', patternId);
+    } catch (error) {
+      console.error('Error recording pattern usage:', error);
+      // Don't throw - this is non-critical tracking
+    }
+  }
+
+  /**
+   * Load patterns from database
+   * Loads active patterns matching the specified criteria, ordered by priority and usage
    */
   async loadPatterns(
     moduleTypes: string[],
     regulator?: string,
     documentType?: string
   ): Promise<void> {
-    // TODO: Load from database
-    // SELECT * FROM rule_library_patterns
-    // WHERE is_active = true
-    //   AND applicability->'module_types' @> ARRAY[moduleTypes]::JSONB
-    //   AND (regulator IS NULL OR applicability->'regulators' @> ARRAY[regulator]::JSONB)
-    //   AND (documentType IS NULL OR applicability->'document_types' @> ARRAY[documentType]::JSONB)
-    // ORDER BY priority ASC, usage_count DESC;
+    try {
+      // Build query for active patterns matching module types
+      let query = supabaseAdmin
+        .from('rule_library_patterns')
+        .select('*')
+        .eq('is_active', true)
+        .order('priority', { ascending: true });
 
-    // For now, return empty array (patterns will be added later)
-    this.patterns = [];
+      // Filter by module types using JSONB containment
+      if (moduleTypes.length > 0) {
+        // For each module type, check if it's in the applicability->module_types array
+        const moduleTypeFilters = moduleTypes.map((mt) => 
+          `applicability->module_types @> '["${mt}"]'::jsonb`
+        ).join(' OR ');
+        
+        // Use raw SQL filter for JSONB array containment
+        // We'll need to filter in JavaScript since Supabase doesn't have easy JSONB array containment
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error loading rule library patterns:', error);
+        this.patterns = [];
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        this.patterns = [];
+        return;
+      }
+
+      // Transform database records to RulePattern format
+      // Also filter by module types, regulator, and document type in memory
+      this.patterns = data
+        .filter((record) => {
+          // Filter by module types
+          const patternModules = record.applicability?.module_types || [];
+          const hasModuleMatch = moduleTypes.some((mt) => patternModules.includes(mt));
+          if (!hasModuleMatch && moduleTypes.length > 0) return false;
+
+          // Filter by regulator
+          if (regulator && record.applicability?.regulators) {
+            if (!record.applicability.regulators.includes(regulator)) return false;
+          }
+
+          // Filter by document type
+          if (documentType && record.applicability?.document_types) {
+            if (!record.applicability.document_types.includes(documentType)) return false;
+          }
+
+          return true;
+        })
+        .map((record) => ({
+          pattern_id: record.pattern_id,
+          pattern_version: record.pattern_version,
+          priority: record.priority || 500,
+          display_name: record.display_name,
+          description: record.description || '',
+          matching: record.matching || {},
+          extraction_template: record.extraction_template || {},
+          applicability: record.applicability || { module_types: [] },
+          performance: record.performance || {
+            usage_count: 0,
+            success_count: 0,
+            success_rate: 1.0,
+          },
+          status: {
+            is_active: record.is_active,
+          },
+        }))
+        // Sort by priority first, then by usage count (descending)
+        .sort((a, b) => {
+          if (a.priority !== b.priority) {
+            return a.priority - b.priority;
+          }
+          const aUsage = a.performance?.usage_count || 0;
+          const bUsage = b.performance?.usage_count || 0;
+          return bUsage - aUsage;
+        });
+    } catch (error) {
+      console.error('Error loading rule library patterns:', error);
+      this.patterns = [];
+    }
   }
 
   /**

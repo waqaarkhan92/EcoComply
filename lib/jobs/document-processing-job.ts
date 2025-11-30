@@ -1,7 +1,7 @@
 /**
  * Document Processing Job
  * Processes uploaded documents: OCR → Text Extraction → LLM Extraction → Obligation Creation
- * Reference: EP_Compliance_Background_Jobs_Specification.md Section 3.1
+ * Reference: docs/specs/41_Backend_Background_Jobs.md Section 3.1
  */
 
 import { Job } from 'bullmq';
@@ -10,6 +10,8 @@ import { getObligationCreator } from '@/lib/ai/obligation-creator';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { createClient } from '@supabase/supabase-js';
 import { env } from '@/lib/env';
+import { checkForPatternDiscovery } from '@/lib/ai/pattern-discovery';
+import { calculateCost } from '@/lib/ai/cost-calculator';
 
 export interface DocumentProcessingJobData {
   document_id: string;
@@ -80,7 +82,26 @@ export async function processDocumentJob(job: Job<DocumentProcessingJobData>): P
     );
 
     // Step 6: Log extraction to extraction_logs
-    await logExtraction(document_id, extractionResult, processingResult);
+    const extractionLogId = await logExtraction(document_id, extractionResult, processingResult);
+
+    // Step 6.5: Check for pattern discovery (if LLM was used and obligations were created successfully)
+    if (extractionResult.usedLLM && creationResult.obligationsCreated > 0 && extractionLogId) {
+      // Get created obligation IDs for pattern discovery
+      const { data: obligations } = await supabaseAdmin
+        .from('obligations')
+        .select('id')
+        .eq('document_id', document_id)
+        .is('status', null)
+        .limit(10);
+
+      if (obligations && obligations.length >= 3) {
+        // Check for pattern discovery asynchronously (non-blocking)
+        checkForPatternDiscovery(
+          extractionLogId,
+          obligations.map((o) => o.id)
+        ).catch((err) => console.error('Error checking for pattern discovery:', err));
+      }
+    }
 
     // Step 7: Update document status
     await supabaseAdmin
@@ -174,16 +195,40 @@ async function updateJobStatus(
 
 /**
  * Log extraction to extraction_logs table
+ * Returns the extraction log ID for pattern discovery
+ * Reference: docs/specs/81_AI_Cost_Optimization.md Section 6.1
  */
 async function logExtraction(
   documentId: string,
   extractionResult: any,
   processingResult: any
-): Promise<void> {
-  await supabaseAdmin.from('extraction_logs').insert({
+): Promise<string | null> {
+  // Calculate costs if LLM was used
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let estimatedCost = 0;
+  const modelIdentifier = extractionResult.usedLLM 
+    ? (extractionResult.usage?.model || 'gpt-4o')
+    : 'rule_library';
+  
+  if (extractionResult.usedLLM && extractionResult.usage) {
+    inputTokens = extractionResult.usage.prompt_tokens || 0;
+    outputTokens = extractionResult.usage.completion_tokens || 0;
+    const costCalc = calculateCost(
+      inputTokens,
+      outputTokens,
+      modelIdentifier as 'gpt-4o' | 'gpt-4o-mini'
+    );
+    estimatedCost = costCalc.totalCost;
+  }
+
+  const ruleLibraryHits = extractionResult.ruleLibraryMatches?.length || 0;
+  const apiCallsMade = extractionResult.usedLLM ? 1 : 0;
+
+  const { data: insertedLog, error: insertError } = await supabaseAdmin.from('extraction_logs').insert({
     document_id: documentId,
     extraction_timestamp: new Date().toISOString(),
-    model_identifier: extractionResult.usedLLM ? 'gpt-4o' : 'rule_library',
+    model_identifier: modelIdentifier,
     rule_library_version: '1.0.0',
     segments_processed: 1, // TODO: Track actual segments if document was segmented
     obligations_extracted: extractionResult.obligations.length,
@@ -191,20 +236,25 @@ async function logExtraction(
     processing_time_ms: processingResult.processingTimeMs + extractionResult.extractionTimeMs,
     ocr_required: processingResult.needsOCR,
     ocr_confidence: processingResult.needsOCR ? 0.85 : null, // TODO: Get actual OCR confidence
+    input_tokens: inputTokens,
+    output_tokens: outputTokens,
+    estimated_cost: estimatedCost,
+    rule_library_hits: ruleLibraryHits,
+    api_calls_made: apiCallsMade,
     errors: extractionResult.errors || [],
     warnings: [],
     metadata: {
-      input_tokens: extractionResult.usedLLM ? extractionResult.usage?.prompt_tokens || 0 : 0,
-      output_tokens: extractionResult.usedLLM ? extractionResult.usage?.completion_tokens || 0 : 0,
-      total_tokens: extractionResult.usedLLM ? extractionResult.usage?.total_tokens || 0 : 0,
-      cost_per_1k_tokens: extractionResult.usedLLM ? 0.002 : 0,
-      estimated_cost: extractionResult.usedLLM
-        ? (extractionResult.usage?.total_tokens || 0) * 0.002 / 1000
-        : 0,
-      rule_library_hit: !extractionResult.usedLLM,
       pattern_id: extractionResult.ruleLibraryMatches?.[0]?.pattern_id || null,
       extraction_confidence: extractionResult.metadata?.extraction_confidence || 0.7,
+      rule_library_hit_rate: ruleLibraryHits > 0 ? ruleLibraryHits / 1 : 0, // segments_processed when tracked
     },
-  });
+  }).select('id').single();
+
+  if (insertError || !insertedLog) {
+    console.error('Error logging extraction:', insertError);
+    return null;
+  }
+
+  return insertedLog.id;
 }
 

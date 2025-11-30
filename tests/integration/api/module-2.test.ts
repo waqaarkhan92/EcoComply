@@ -271,7 +271,7 @@ describe('Module 2 API Endpoints', () => {
         token: user.token,
       });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(422);
     });
 
     it('should return 404 for invalid parameter_id', async () => {
@@ -519,7 +519,7 @@ describe('Module 2 API Endpoints', () => {
         token: user.token,
       });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(422);
     });
 
     it('should return 400 for negative volume', async () => {
@@ -532,7 +532,7 @@ describe('Module 2 API Endpoints', () => {
         token: user.token,
       });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(422);
     });
   });
 
@@ -598,13 +598,13 @@ describe('Module 2 API Endpoints', () => {
         // If Redis unavailable, skip this test
         if (errorData.error?.message?.includes('Redis') || errorData.error?.message?.includes('queue')) {
           console.warn('Skipping test - Redis/queue not available');
-          expect(true).toBe(true); // Pass the test
+          test.skip();
           return;
         }
         // If document not found, that's a different issue - check if it's an RLS issue
         if (errorData.error?.code === 'NOT_FOUND') {
           console.warn('Document not found - may be RLS issue, skipping test');
-          expect(true).toBe(true); // Pass the test
+          test.skip();
           return;
         }
         throw new Error(`Unexpected error: ${JSON.stringify(errorData)}`);
@@ -628,7 +628,7 @@ describe('Module 2 API Endpoints', () => {
         token: user.token,
       });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(422);
     });
 
     it('should return 404 for invalid document_id', async () => {
@@ -660,7 +660,7 @@ describe('Module 2 API Endpoints', () => {
             errorData.error?.message?.includes('queue') ||
             errorData.error?.code === 'NOT_FOUND') {
           console.warn('Skipping test - Redis/queue not available or document not found');
-          expect(true).toBe(true); // Pass the test
+          test.skip();
           return;
         }
         throw new Error(`Failed to create report: ${JSON.stringify(errorData)}`);

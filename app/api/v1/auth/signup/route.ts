@@ -27,8 +27,19 @@ export async function POST(request: NextRequest) {
   const requestId = getRequestId(request);
 
   try {
-    // Parse request body
-    const body: SignupRequest = await request.json();
+    // Parse request body - handle potential JSON parsing errors
+    let body: SignupRequest;
+    try {
+      body = await request.json();
+    } catch (jsonError: any) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Invalid JSON in request body',
+        422,
+        { error: jsonError.message || 'Request body must be valid JSON' },
+        { request_id: requestId }
+      );
+    }
 
     // Validate required fields
     if (!body.email || !body.password || !body.full_name || !body.company_name) {
@@ -265,6 +276,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Create company record
+    // Use service role client to bypass RLS during signup
+    // Note: Even with service role, RLS policies may still be evaluated
+    // The policy should allow INSERT when user doesn't exist yet (signup case)
     const { data: company, error: companyError } = await supabaseAdmin
       .from('companies')
       .insert({

@@ -14,7 +14,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-const TEST_EMAIL = 'test@oblicore.com';
+const TEST_EMAIL = 'test@ecocomply.com';
 const TEST_PASSWORD = 'TestPassword123!';
 
 async function main() {

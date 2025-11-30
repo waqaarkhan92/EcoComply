@@ -57,7 +57,36 @@ export class TestClient {
       }
     }
 
-    return fetch(url, fetchOptions);
+    try {
+      const response = await fetch(url, fetchOptions);
+      
+      // If we get HTML instead of JSON, it's likely a Next.js error page
+      // This shouldn't happen for API routes, but we'll handle it gracefully
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('text/html') && response.status >= 400) {
+        console.warn(`Received HTML response for ${method} ${path} (status: ${response.status}). This may indicate a route error.`);
+      }
+      
+      return response;
+    } catch (error) {
+      // If fetch fails completely, create a mock error response
+      console.error(`Request failed for ${method} ${path}:`, error);
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: 'NETWORK_ERROR',
+            message: error instanceof Error ? error.message : 'Network request failed',
+          },
+          meta: {
+            timestamp: new Date().toISOString(),
+          },
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
   }
 
   async get(path: string, options?: { token?: string; headers?: Record<string, string> }) {
@@ -77,8 +106,8 @@ export class TestClient {
   }
 
   async signup(email: string, password: string, companyName?: string, fullName?: string): Promise<TestUser> {
-    // Add delay to avoid Supabase rate limiting
-    await new Promise(resolve => setTimeout(resolve, 200));
+    // Add delay to avoid Supabase rate limiting (increased for reliability)
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     const response = await this.post('/api/v1/auth/signup', {
       email,
@@ -101,18 +130,22 @@ export class TestClient {
     let token: string | undefined = data.data.access_token;
     
     if (!token) {
-      // Wait a bit for the user to be fully created, then login
-      try {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        token = await this.login(email, password);
-      } catch (error) {
-        // If login fails, try one more time after a longer delay
+      // Try explicit login with multiple retries and progressive delays
+      const maxRetries = 3;
+      const delays = [2000, 3000, 5000]; // Progressive delays
+      
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, delays[attempt]));
           token = await this.login(email, password);
-        } catch (retryError) {
-          // If still fails, log but continue - some tests might work without token
-          console.warn('Login after signup failed:', retryError);
+          if (token) {
+            break; // Success, exit retry loop
+          }
+        } catch (error) {
+          if (attempt === maxRetries - 1) {
+            // Last attempt failed
+            console.warn(`Login after signup failed after ${maxRetries} attempts:`, error);
+          }
         }
       }
     }

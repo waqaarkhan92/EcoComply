@@ -1,7 +1,7 @@
 /**
  * Obligation Creator
  * Creates obligations from LLM extraction results
- * Reference: EP_Compliance_Product_Logic_Specification.md Section B.2.3
+ * Reference: docs/specs/30_Product_Business_Logic.md Section B.2.3
  */
 
 import { createClient } from '@supabase/supabase-js';

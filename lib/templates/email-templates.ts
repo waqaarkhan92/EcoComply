@@ -1,7 +1,7 @@
 /**
  * Email Templates
  * Template rendering utilities for email notifications
- * Reference: EP_Compliance_Notification_Messaging_Specification.md Section 2
+ * Reference: docs/specs/42_Backend_Notifications.md Section 2
  */
 
 export interface TemplateVariables {
@@ -33,7 +33,7 @@ function baseEmailTemplate(content: string, companyName?: string, unsubscribeUrl
   <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <!-- Header -->
     <div style="background-color: #026A67; color: white; padding: 20px; text-align: center;">
-      <h1 style="margin: 0; font-size: 24px;">Oblicore</h1>
+      <h1 style="margin: 0; font-size: 24px;">EcoComply</h1>
     </div>
     
     <!-- Body -->
@@ -43,7 +43,7 @@ function baseEmailTemplate(content: string, companyName?: string, unsubscribeUrl
     
     <!-- Footer -->
     <div style="background-color: #E2E6E7; padding: 20px; text-align: center; font-size: 12px; color: #6b7280;">
-      <p style="margin: 0;">${companyName || 'Oblicore'} | Compliance Management</p>
+      <p style="margin: 0;">${companyName || 'EcoComply'} | Compliance Management</p>
       ${unsubscribeUrl ? `<p style="margin: 5px 0;"><a href="${unsubscribeUrl}" style="color: #026A67;">Unsubscribe</a></p>` : ''}
     </div>
   </div>
@@ -106,13 +106,13 @@ export function userInvitationEmail(variables: {
   invitation_url: string;
   expires_in_days?: number;
 }): { subject: string; html: string; text: string } {
-  const subject = renderTemplate('Invitation to join {{company_name}} on Oblicore', variables);
+  const subject = renderTemplate('Invitation to join {{company_name}} on EcoComply', variables);
   
   const content = `
     <h2 style="color: #026A67; margin-top: 0;">You're Invited!</h2>
     <p>Hello,</p>
-    <p>${variables.inviter_name || 'You'} have been invited to join <strong>${variables.company_name}</strong> on Oblicore.</p>
-    <p>Oblicore helps manage environmental compliance obligations and deadlines.</p>
+    <p>${variables.inviter_name || 'You'} have been invited to join <strong>${variables.company_name}</strong> on EcoComply.</p>
+    <p>EcoComply helps manage environmental compliance obligations and deadlines.</p>
     <div style="text-align: center; margin: 30px 0;">
       <a href="${variables.invitation_url}" style="background-color: #026A67; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Accept Invitation</a>
     </div>

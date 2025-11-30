@@ -136,14 +136,26 @@ export async function PUT(
     // Require Owner, Admin, or Staff role
     const authResult = await requireRole(request, ['OWNER', 'ADMIN', 'STAFF']);
     if (authResult instanceof NextResponse) {
+      // Return auth error (401 or 403) immediately
       return authResult;
     }
     const { user } = authResult;
 
     const { documentId } = params;
 
-    // Parse request body
-    const body = await request.json();
+    // Parse request body - handle potential JSON parsing errors
+    let body: any;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Invalid JSON in request body',
+        400,
+        { error: 'Request body must be valid JSON' },
+        { request_id: requestId }
+      );
+    }
 
     // Validate and build updates
     const updates: any = {};
@@ -249,6 +261,7 @@ export async function DELETE(
     // Require Owner or Admin role
     const authResult = await requireRole(request, ['OWNER', 'ADMIN']);
     if (authResult instanceof NextResponse) {
+      // Return auth error (401 or 403) immediately
       return authResult;
     }
     const { user } = authResult;

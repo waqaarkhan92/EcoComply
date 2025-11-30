@@ -23,7 +23,21 @@ export async function GET(request: NextRequest) {
     const { user } = authResult;
 
     // Parse pagination and filter params
-    const { limit, cursor } = parsePaginationParams(request);
+    let limit: number;
+    let cursor: string | null;
+    try {
+      const pagination = parsePaginationParams(request);
+      limit = pagination.limit;
+      cursor = pagination.cursor;
+    } catch (error: any) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        error.message || 'Invalid pagination parameters',
+        422,
+        { limit: 'Limit must be a positive integer between 1 and 100' },
+        { request_id: requestId }
+      );
+    }
     const filters = parseFilterParams(request);
     const sort = parseSortParams(request);
 
@@ -106,8 +120,19 @@ export async function POST(request: NextRequest) {
     }
     const { user } = authResult;
 
-    // Parse request body
-    const body = await request.json();
+    // Parse request body - handle potential JSON parsing errors
+    let body: any;
+    try {
+      body = await request.json();
+    } catch (jsonError: any) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Invalid JSON in request body',
+        422,
+        { error: jsonError.message || 'Request body must be valid JSON' },
+        { request_id: requestId }
+      );
+    }
 
     // Validate required fields
     if (!body.name || typeof body.name !== 'string' || body.name.length < 2 || body.name.length > 100) {

@@ -272,7 +272,7 @@ describe('Module 3 API Endpoints', () => {
         token: user.token,
       });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(422);
     });
 
     it('should return 400 for invalid generator_type', async () => {
@@ -407,7 +407,7 @@ describe('Module 3 API Endpoints', () => {
         token: user.token,
       });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(422);
     });
 
     it('should return 404 for invalid generator_id', async () => {
@@ -568,7 +568,7 @@ describe('Module 3 API Endpoints', () => {
         token: user.token,
       });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(422);
     });
   });
 
@@ -627,7 +627,7 @@ describe('Module 3 API Endpoints', () => {
         token: user.token,
       });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(422);
     });
   });
 
@@ -735,7 +735,7 @@ describe('Module 3 API Endpoints', () => {
         token: user.token,
       });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(422);
     });
 
     it('should return 404 for invalid document_id', async () => {

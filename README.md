@@ -1,8 +1,8 @@
-# Oblicore Platform
+# EcoComply Platform
 
 **Compliance Management SaaS for Environmental Permits**
 
-Oblicore is a comprehensive compliance management platform designed to help UK businesses manage environmental permits, track obligations, and maintain regulatory compliance.
+EcoComply is a comprehensive compliance management platform designed to help UK businesses manage environmental permits, track obligations, and maintain regulatory compliance.
 
 ## 🚀 Getting Started
 
@@ -19,8 +19,8 @@ Oblicore is a comprehensive compliance management platform designed to help UK b
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/waqaarkhan92/Oblicore.git
-   cd Oblicore
+   git clone https://github.com/waqaarkhan92/EcoComply.git
+   cd EcoComply
    ```
 
 2. Install dependencies:
@@ -46,16 +46,16 @@ Oblicore is a comprehensive compliance management platform designed to help UK b
 
 ## 📚 Documentation
 
-All specification documents are in the repository root:
-- `BUILD_ORDER_AND_IMPLEMENTATION_PROMPTS.md` - Complete build guide
-- `EP_Compliance_Database_Schema.md` - Database structure
-- `EP_Compliance_Backend_API_Specification.md` - API endpoints
-- `EP_Compliance_Product_Logic_Specification.md` - Business logic
-- And more...
+All specification documents are in `docs/specs/`:
+- `docs/specs/90_Build_Order_Implementation.md` - Complete build guide
+- `docs/specs/20_Database_Schema.md` - Database structure
+- `docs/specs/40_Backend_API_Specification.md` - API endpoints
+- `docs/specs/30_Product_Business_Logic.md` - Business logic
+- And more... (see `docs/specs/` for all 19 specification documents)
 
 ## 🏗️ Build Order
 
-Follow the build order in `BUILD_ORDER_AND_IMPLEMENTATION_PROMPTS.md`:
+Follow the build order in `docs/specs/90_Build_Order_Implementation.md`:
 - **Phase 0:** Prerequisites & Setup (current)
 - **Phase 1:** Foundation (Database, Auth, RLS)
 - **Phase 2:** Core API Layer

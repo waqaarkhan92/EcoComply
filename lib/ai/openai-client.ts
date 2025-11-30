@@ -196,6 +196,7 @@ export class OpenAIClient {
 
   /**
    * Extract obligations from document using OpenAI
+   * Supports all three modules: Environmental Permits, Trade Effluent, MCPD
    */
   async extractObligations(
     documentText: string,
@@ -205,15 +206,20 @@ export class OpenAIClient {
       fileSizeBytes?: number;
       regulator?: string;
       permitReference?: string;
+      waterCompany?: string;
+      registrationType?: string;
     }
   ): Promise<OpenAIResponse> {
     // Get prompt template based on document type
     let promptId: string;
     if (documentType === 'ENVIRONMENTAL_PERMIT') {
       promptId = 'PROMPT_M1_EXTRACT_001';
+    } else if (documentType === 'TRADE_EFFLUENT_CONSENT') {
+      promptId = 'PROMPT_M2_EXTRACT_001';
+    } else if (documentType === 'MCPD_REGISTRATION') {
+      promptId = 'PROMPT_M3_EXTRACT_001';
     } else {
-      // TODO: Add prompts for Module 2 and Module 3
-      throw new Error(`Prompt not yet implemented for document type: ${documentType}`);
+      throw new Error(`Unknown document type: ${documentType}`);
     }
 
     const template = getPromptTemplate(promptId);
@@ -222,13 +228,22 @@ export class OpenAIClient {
     }
 
     // Substitute placeholders in user message
-    const userMessage = substitutePromptPlaceholders(template.userMessageTemplate, {
+    const placeholders: Record<string, string | number | null> = {
       document_text: documentText,
       document_type: documentType,
       regulator: options?.regulator || '',
       permit_reference: options?.permitReference || '',
       page_count: options?.pageCount || 0,
-    });
+    };
+
+    // Add module-specific placeholders
+    if (documentType === 'TRADE_EFFLUENT_CONSENT') {
+      placeholders.water_company = options?.waterCompany || '';
+    } else if (documentType === 'MCPD_REGISTRATION') {
+      placeholders.registration_type = options?.registrationType || 'MCPD';
+    }
+
+    const userMessage = substitutePromptPlaceholders(template.userMessageTemplate, placeholders);
 
     const timeout = this.getDocumentTimeout(options?.pageCount, options?.fileSizeBytes);
 
@@ -242,6 +257,314 @@ export class OpenAIClient {
       temperature: template.temperature,
       max_tokens: template.maxTokens,
       timeout,
+    });
+  }
+
+  /**
+   * Extract parameters from trade effluent consent (Module 2)
+   */
+  async extractParameters(
+    consentText: string,
+    waterCompany?: string
+  ): Promise<OpenAIResponse> {
+    const template = getPromptTemplate('PROMPT_M2_PARAM_001');
+    if (!template) {
+      throw new Error('Parameter extraction prompt template not found');
+    }
+
+    const userMessage = substitutePromptPlaceholders(template.userMessageTemplate, {
+      consent_text: consentText,
+      water_company: waterCompany || '',
+    });
+
+    return this.callWithRetry({
+      model: template.model,
+      messages: [
+        { role: 'system', content: template.systemMessage },
+        { role: 'user', content: userMessage },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: template.temperature,
+      max_tokens: template.maxTokens,
+      timeout: TIMEOUT_CONFIG.standard,
+    });
+  }
+
+  /**
+   * Extract run-hour limits from MCPD registration (Module 3)
+   */
+  async extractRunHourLimits(
+    registrationText: string,
+    registrationReference?: string,
+    registrationDate?: string
+  ): Promise<OpenAIResponse> {
+    const template = getPromptTemplate('PROMPT_M3_RUNHOUR_001');
+    if (!template) {
+      throw new Error('Run-hour extraction prompt template not found');
+    }
+
+    const userMessage = substitutePromptPlaceholders(template.userMessageTemplate, {
+      registration_text: registrationText,
+      registration_reference: registrationReference || '',
+      registration_date: registrationDate || '',
+    });
+
+    return this.callWithRetry({
+      model: template.model,
+      messages: [
+        { role: 'system', content: template.systemMessage },
+        { role: 'user', content: userMessage },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: template.temperature,
+      max_tokens: template.maxTokens,
+      timeout: TIMEOUT_CONFIG.standard,
+    });
+  }
+
+  /**
+   * Extract ELVs from permit or registration (Module 1 & 3)
+   */
+  async extractELVs(
+    documentText: string,
+    documentType: 'ENVIRONMENTAL_PERMIT' | 'MCPD_REGISTRATION',
+    moduleType: string,
+    regulator?: string
+  ): Promise<OpenAIResponse> {
+    const template = getPromptTemplate('PROMPT_M1_M3_ELV_001');
+    if (!template) {
+      throw new Error('ELV extraction prompt template not found');
+    }
+
+    const userMessage = substitutePromptPlaceholders(template.userMessageTemplate, {
+      elv_sections_text: documentText,
+      document_type: documentType,
+      module_type: moduleType,
+      regulator: regulator || '',
+    });
+
+    return this.callWithRetry({
+      model: template.model,
+      messages: [
+        { role: 'system', content: template.systemMessage },
+        { role: 'user', content: userMessage },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: template.temperature,
+      max_tokens: template.maxTokens,
+      timeout: TIMEOUT_CONFIG.standard,
+    });
+  }
+
+  /**
+   * Validate extraction results
+   */
+  async validateExtraction(
+    extractionResults: any,
+    documentType: string,
+    pageCount: number,
+    expectedSections?: string[]
+  ): Promise<OpenAIResponse> {
+    const template = getPromptTemplate('PROMPT_VALIDATE_001');
+    if (!template) {
+      throw new Error('Validation prompt template not found');
+    }
+
+    const userMessage = substitutePromptPlaceholders(template.userMessageTemplate, {
+      extraction_results_json: JSON.stringify(extractionResults),
+      document_type: documentType,
+      page_count: pageCount,
+      expected_sections: expectedSections ? JSON.stringify(expectedSections) : '',
+    });
+
+    return this.callWithRetry({
+      model: template.model,
+      messages: [
+        { role: 'system', content: template.systemMessage },
+        { role: 'user', content: userMessage },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: template.temperature,
+      max_tokens: template.maxTokens,
+      timeout: TIMEOUT_CONFIG.standard,
+    });
+  }
+
+  /**
+   * Detect duplicate obligations
+   */
+  async detectDuplicates(obligations: any[]): Promise<OpenAIResponse> {
+    const template = getPromptTemplate('PROMPT_DEDUP_001');
+    if (!template) {
+      throw new Error('Deduplication prompt template not found');
+    }
+
+    const userMessage = substitutePromptPlaceholders(template.userMessageTemplate, {
+      obligations_json: JSON.stringify(obligations),
+    });
+
+    return this.callWithRetry({
+      model: template.model,
+      messages: [
+        { role: 'system', content: template.systemMessage },
+        { role: 'user', content: userMessage },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: template.temperature,
+      max_tokens: template.maxTokens,
+      timeout: TIMEOUT_CONFIG.standard,
+    });
+  }
+
+  /**
+   * Suggest evidence types for obligation
+   */
+  async suggestEvidenceTypes(
+    category: string,
+    frequency: string | null,
+    obligationText: string,
+    isSubjective: boolean
+  ): Promise<OpenAIResponse> {
+    const template = getPromptTemplate('PROMPT_EVID_SUGGEST_001');
+    if (!template) {
+      throw new Error('Evidence suggestion prompt template not found');
+    }
+
+    const userMessage = substitutePromptPlaceholders(template.userMessageTemplate, {
+      category,
+      frequency: frequency || 'null',
+      obligation_text: obligationText,
+      is_subjective: isSubjective.toString(),
+    });
+
+    return this.callWithRetry({
+      model: template.model,
+      messages: [
+        { role: 'system', content: template.systemMessage },
+        { role: 'user', content: userMessage },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: template.temperature,
+      max_tokens: template.maxTokens,
+      timeout: TIMEOUT_CONFIG.standard,
+    });
+  }
+
+  /**
+   * Detect subjective language
+   */
+  async detectSubjectiveLanguage(
+    obligationText: string,
+    category: string,
+    frequency: string | null
+  ): Promise<OpenAIResponse> {
+    const template = getPromptTemplate('PROMPT_SUBJ_DETECT_001');
+    if (!template) {
+      throw new Error('Subjective detection prompt template not found');
+    }
+
+    const userMessage = substitutePromptPlaceholders(template.userMessageTemplate, {
+      obligation_text: obligationText,
+      category,
+      frequency: frequency || 'null',
+    });
+
+    return this.callWithRetry({
+      model: template.model,
+      messages: [
+        { role: 'system', content: template.systemMessage },
+        { role: 'user', content: userMessage },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: template.temperature,
+      max_tokens: template.maxTokens,
+      timeout: TIMEOUT_CONFIG.standard,
+    });
+  }
+
+  /**
+   * Handle OCR failure recovery
+   */
+  async recoverFromOCRFailure(
+    documentText: string,
+    ocrConfidence: number
+  ): Promise<OpenAIResponse> {
+    const template = getPromptTemplate('PROMPT_ERROR_OCR_001');
+    if (!template) {
+      throw new Error('OCR recovery prompt template not found');
+    }
+
+    const userMessage = substitutePromptPlaceholders(template.userMessageTemplate, {
+      document_text: documentText,
+      ocr_confidence: ocrConfidence.toString(),
+    });
+
+    return this.callWithRetry({
+      model: template.model,
+      messages: [
+        { role: 'system', content: template.systemMessage },
+        { role: 'user', content: userMessage },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: template.temperature,
+      max_tokens: template.maxTokens,
+      timeout: TIMEOUT_CONFIG.standard,
+    });
+  }
+
+  /**
+   * Recover from invalid JSON response
+   */
+  async recoverFromInvalidJSON(previousResponse: string): Promise<OpenAIResponse> {
+    const template = getPromptTemplate('PROMPT_ERROR_JSON_001');
+    if (!template) {
+      throw new Error('JSON recovery prompt template not found');
+    }
+
+    const userMessage = substitutePromptPlaceholders(template.userMessageTemplate, {
+      previous_response: previousResponse,
+    });
+
+    return this.callWithRetry({
+      model: template.model,
+      messages: [
+        { role: 'system', content: template.systemMessage },
+        { role: 'user', content: userMessage },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: template.temperature,
+      max_tokens: template.maxTokens,
+      timeout: TIMEOUT_CONFIG.standard,
+    });
+  }
+
+  /**
+   * Recover from low confidence extractions
+   */
+  async recoverFromLowConfidence(
+    documentContext: string,
+    lowConfidenceItems: any[]
+  ): Promise<OpenAIResponse> {
+    const template = getPromptTemplate('PROMPT_ERROR_LOWCONF_001');
+    if (!template) {
+      throw new Error('Low confidence recovery prompt template not found');
+    }
+
+    const userMessage = substitutePromptPlaceholders(template.userMessageTemplate, {
+      document_context: documentContext,
+      low_confidence_items_json: JSON.stringify(lowConfidenceItems),
+    });
+
+    return this.callWithRetry({
+      model: template.model,
+      messages: [
+        { role: 'system', content: template.systemMessage },
+        { role: 'user', content: userMessage },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: template.temperature,
+      max_tokens: template.maxTokens,
+      timeout: TIMEOUT_CONFIG.standard,
     });
   }
 

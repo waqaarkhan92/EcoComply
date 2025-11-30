@@ -31,6 +31,11 @@ describe('Documents List Page', () => {
     jest.clearAllMocks();
   });
 
+  afterEach(async () => {
+    // Clean up any pending async operations
+    await new Promise(resolve => setTimeout(resolve, 0));
+  });
+
   it('should render documents list page', () => {
     mockUseQuery.mockReturnValue({
       data: { data: [], pagination: { limit: 20, has_more: false } },

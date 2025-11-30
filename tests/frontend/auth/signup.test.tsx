@@ -39,7 +39,7 @@ describe('Signup Page', () => {
     render(<SignupPage />);
     
     expect(screen.getByRole('heading', { name: /create account/i })).toBeInTheDocument();
-    expect(screen.getByText('Get started with Oblicore')).toBeInTheDocument();
+    expect(screen.getByText('Get started with EcoComply')).toBeInTheDocument();
     expect(screen.getByLabelText('Company Name')).toBeInTheDocument();
     expect(screen.getByLabelText('Full Name')).toBeInTheDocument();
     expect(screen.getByLabelText('Email')).toBeInTheDocument();

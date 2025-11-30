@@ -16,6 +16,13 @@ describe('Consultant Control Centre API', () => {
   beforeAll(async () => {
     testClient = new TestClient();
 
+    // Clean up old test data
+    const { TestCleanup } = await import('../../helpers/test-cleanup');
+    await TestCleanup.cleanupOldTestData();
+
+    // Add delay to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Create consultant user
     const consultantEmail = `consultant-${Date.now()}@test.com`;
     const consultantSignup = await testClient.signup(

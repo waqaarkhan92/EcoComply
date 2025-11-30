@@ -52,7 +52,7 @@ export function Sidebar() {
   return (
     <div className="hidden md:flex w-64 bg-charcoal h-screen flex-col border-r border-border-gray">
       <div className="h-16 border-b border-border-gray flex items-center px-6">
-        <h1 className="text-xl font-bold text-white">Oblicore</h1>
+        <h1 className="text-xl font-bold text-white">EcoComply</h1>
       </div>
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navigation.map((item) => {

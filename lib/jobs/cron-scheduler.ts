@@ -1,7 +1,7 @@
 /**
  * Cron Scheduler
  * Schedules recurring background jobs
- * Reference: EP_Compliance_Background_Jobs_Specification.md Section 1.1
+ * Reference: docs/specs/41_Backend_Background_Jobs.md Section 1.1
  */
 
 import { Queue } from 'bullmq';
@@ -41,6 +41,18 @@ export async function scheduleRecurringJobs(): Promise<void> {
 
   // Evidence Retention Job (daily at 2 AM)
   await scheduleJob('EVIDENCE_RETENTION', QUEUE_NAMES.MONITORING_SCHEDULE, '0 2 * * *', {});
+
+  // Notification Delivery Job (every 5 minutes)
+  await scheduleJob('NOTIFICATION_DELIVERY', QUEUE_NAMES.DEADLINE_ALERTS, '*/5 * * * *', {});
+
+  // Escalation Check Job (every hour)
+  await scheduleJob('ESCALATION_CHECK', QUEUE_NAMES.DEADLINE_ALERTS, '0 * * * *', {});
+
+  // Daily Digest Job (daily at 8 AM)
+  await scheduleJob('DAILY_DIGEST_DELIVERY', QUEUE_NAMES.DEADLINE_ALERTS, '0 8 * * *', { digest_type: 'DAILY' });
+
+  // Weekly Digest Job (Monday at 8 AM)
+  await scheduleJob('WEEKLY_DIGEST_DELIVERY', QUEUE_NAMES.DEADLINE_ALERTS, '0 8 * * 1', { digest_type: 'WEEKLY' });
 
   console.log('All recurring jobs scheduled');
 }

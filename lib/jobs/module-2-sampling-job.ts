@@ -1,7 +1,7 @@
 /**
  * Module 2 Sampling Schedule Job
  * Generates sampling schedules based on consent parameters
- * Reference: EP_Compliance_Background_Jobs_Specification.md
+ * Reference: docs/specs/41_Backend_Background_Jobs.md
  */
 
 import { Job } from 'bullmq';

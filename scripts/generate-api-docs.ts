@@ -14,7 +14,7 @@ function generateSwaggerUI(openApiSpec: string): string {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Oblicore API Documentation</title>
+  <title>EcoComply API Documentation</title>
   <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
   <style>
     html {
@@ -69,7 +69,7 @@ async function main() {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Oblicore API Documentation</title>
+  <title>EcoComply API Documentation</title>
   <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
   <style>
     html {

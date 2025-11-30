@@ -27,6 +27,18 @@ export async function GET(
 
     const { siteId } = params;
 
+    // Validate UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(siteId)) {
+      return errorResponse(
+        ErrorCodes.BAD_REQUEST,
+        'Invalid site ID format',
+        400,
+        { site_id: 'Must be a valid UUID' },
+        { request_id: requestId }
+      );
+    }
+
     // Get site - RLS will enforce access control
     const { data: site, error } = await supabaseAdmin
       .from('sites')
@@ -79,14 +91,26 @@ export async function PUT(
     // Require Owner or Admin role
     const authResult = await requireRole(request, ['OWNER', 'ADMIN']);
     if (authResult instanceof NextResponse) {
+      // Return auth error (401 or 403) immediately
       return authResult;
     }
     const { user } = authResult;
 
     const { siteId } = params;
 
-    // Parse request body
-    const body = await request.json();
+    // Parse request body - handle potential JSON parsing errors
+    let body: any;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Invalid JSON in request body',
+        400,
+        { error: 'Request body must be valid JSON' },
+        { request_id: requestId }
+      );
+    }
 
     // Validate and build updates
     const updates: any = {};
@@ -221,6 +245,7 @@ export async function DELETE(
     // Require Owner or Admin role
     const authResult = await requireRole(request, ['OWNER', 'ADMIN']);
     if (authResult instanceof NextResponse) {
+      // Return auth error (401 or 403) immediately
       return authResult;
     }
     const { user } = authResult;

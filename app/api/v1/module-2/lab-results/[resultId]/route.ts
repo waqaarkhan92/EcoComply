@@ -112,7 +112,7 @@ export async function GET(
     }
 
     // Format response with parameter details
-    const response = {
+    const responseData = {
       id: labResult.id,
       consent_id: consentId,
       sample_date: labResult.sample_date,
@@ -134,7 +134,7 @@ export async function GET(
       created_at: labResult.created_at,
     };
 
-    const response = successResponse(response, 200, { request_id: requestId });
+    const response = successResponse(responseData, 200, { request_id: requestId });
     return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Error in GET /api/v1/module-2/lab-results/[resultId]:', error);

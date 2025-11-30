@@ -1,11 +1,12 @@
 /**
  * Evidence Reminder Job
  * Sends notifications for obligations requiring evidence
- * Reference: EP_Compliance_Background_Jobs_Specification.md Section 2.3
+ * Reference: docs/specs/41_Backend_Background_Jobs.md Section 2.3
  */
 
 import { Job } from 'bullmq';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { checkEscalation, createEscalationNotification } from '@/lib/services/escalation-service';
 
 export interface EvidenceReminderJobData {
   company_id?: string;
@@ -125,6 +126,10 @@ export async function processEvidenceReminderJob(job: Job<EvidenceReminderJobDat
           .is('deleted_at', null);
 
         if (users && users.length > 0) {
+          const daysSinceDeadline = Math.ceil(
+            (now.getTime() - new Date(obligation.deadline_date).getTime()) / (1000 * 60 * 60 * 24)
+          );
+
           const notifications = users.map((user: any) => ({
             user_id: user.id,
             company_id: site.company_id,
@@ -139,10 +144,27 @@ export async function processEvidenceReminderJob(job: Job<EvidenceReminderJobDat
             entity_id: obligation.id,
             status: 'PENDING',
             scheduled_for: new Date().toISOString(),
+            metadata: {
+              obligation_title: obligation.obligation_title,
+              site_name: site.name,
+              deadline_date: obligation.deadline_date,
+              days_since_deadline: daysSinceDeadline,
+              company_name: site.company_id, // Will be resolved in template
+              action_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.epcompliance.com'}/sites/${site.id}/obligations/${obligation.id}`,
+              evidence_upload_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.epcompliance.com'}/sites/${site.id}/obligations/${obligation.id}/evidence/upload`,
+            },
           }));
 
-          await supabaseAdmin.from('notifications').insert(notifications);
+          const { data: insertedNotifications } = await supabaseAdmin
+            .from('notifications')
+            .insert(notifications)
+            .select('id')
+            .limit(1);
+
           remindersCreated++;
+
+          // Note: Escalation is now handled by the escalation-check job
+          // which runs periodically and checks time-based escalation (24h, 48h)
         }
       } catch (error: any) {
         console.error(`Error processing obligation ${obligation.id}:`, error);
