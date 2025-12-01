@@ -12,7 +12,7 @@ import { getQueue, QUEUE_NAMES } from '@/lib/queue/queue-manager';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -24,7 +24,7 @@ export async function POST(
     }
     const { user } = authResult;
 
-    const { documentId } = params;
+    const { documentId } = await params;
 
     // Parse request body
     let forceReprocess = false;

@@ -12,7 +12,7 @@ import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -24,7 +24,7 @@ export async function GET(
     }
     const { user } = authResult;
 
-    const { documentId } = params;
+    const { documentId } = await params;
 
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

@@ -337,15 +337,28 @@ export async function POST(request: NextRequest) {
       uploaded_by: user.id,
     };
 
+    console.log('Creating document with data:', {
+      site_id: documentData.site_id,
+      document_type: documentData.document_type,
+      title: documentData.title,
+      uploaded_by: documentData.uploaded_by,
+    });
+    
     const { data: document, error: docError } = await supabaseAdmin
       .from('documents')
       .insert(documentData)
       .select('id, site_id, document_type, title, status, extraction_status, file_size_bytes, created_at')
       .single();
 
+    console.log('Document creation result:', {
+      document: document ? { id: document.id, title: document.title } : null,
+      error: docError ? { code: docError.code, message: docError.message } : null,
+    });
+
     if (docError || !document) {
       // Rollback: Delete uploaded file
       await supabaseAdmin.storage.from('documents').remove([storagePath]);
+      console.error('Failed to create document:', docError);
       return errorResponse(
         ErrorCodes.INTERNAL_ERROR,
         'Failed to create document record',
@@ -354,6 +367,8 @@ export async function POST(request: NextRequest) {
         { request_id: requestId }
       );
     }
+    
+    console.log('✅ Document created successfully with ID:', document.id);
 
     // Enqueue background job for document processing
     try {
@@ -418,6 +433,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Return response with file URL
+    console.log('Returning document response with ID:', document.id);
     const response = successResponse(
       {
         ...document,
@@ -428,6 +444,7 @@ export async function POST(request: NextRequest) {
       201,
       { request_id: requestId }
     );
+    console.log('Response data structure:', JSON.stringify({ id: document.id, title: document.title }, null, 2));
     return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Upload document error:', error);

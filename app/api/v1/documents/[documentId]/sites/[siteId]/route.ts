@@ -11,7 +11,7 @@ import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { documentId: string; siteId: string } }
+  { params }: { params: Promise<{ documentId: string; siteId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -23,7 +23,7 @@ export async function DELETE(
     }
     const { user } = authResult;
 
-    const { documentId, siteId } = params;
+    const { documentId, siteId } = await params;
 
     // Verify document exists and is assigned to this site
     const { data: document, error: docError } = await supabaseAdmin

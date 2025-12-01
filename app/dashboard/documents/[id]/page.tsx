@@ -14,6 +14,7 @@ interface Document {
   document_type: string;
   status: string;
   extraction_status: string;
+  extraction_error?: string;
   file_size_bytes: number;
   created_at: string;
   updated_at: string;
@@ -35,12 +36,16 @@ export default function DocumentDetailPage({
 }) {
   const { id } = use(params);
 
-  const { data: document, isLoading: docLoading } = useQuery<Document>({
+  const { data: document, isLoading: docLoading, error: docError } = useQuery<Document>({
     queryKey: ['document', id],
     queryFn: async () => {
+      console.log('Fetching document with id:', id);
       const response = await apiClient.get<Document>(`/documents/${id}`);
+      console.log('Document fetch response:', response);
       return response.data;
     },
+    retry: 1,
+    enabled: !!id, // Only run query if id exists
   });
 
   const { data: obligations, isLoading: obligationsLoading } = useQuery<Obligation[]>({
@@ -59,10 +64,13 @@ export default function DocumentDetailPage({
     );
   }
 
-  if (!document) {
+  if (docError || !document) {
     return (
       <div className="text-center py-12">
-        <p className="text-danger">Document not found</p>
+        <p className="text-danger">
+          {docError ? `Error loading document: ${docError.message || 'Unknown error'}` : 'Document not found'}
+        </p>
+        <p className="text-sm text-text-secondary mt-2">Document ID: {id}</p>
         <Link href="/dashboard/documents">
           <Button variant="outline" className="mt-4">
             Back to Documents
@@ -179,8 +187,22 @@ export default function DocumentDetailPage({
             <p className="text-text-secondary">
               {document.extraction_status === 'PENDING' || document.extraction_status === 'PROCESSING'
                 ? 'Obligations are being extracted...'
+                : document.extraction_status === 'PROCESSING_FAILED'
+                ? `Extraction failed: ${document.extraction_error || 'Unknown error'}. Please try again later or contact support.`
                 : 'No obligations extracted yet'}
             </p>
+            {document.extraction_status === 'PROCESSING_FAILED' && (
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={async () => {
+                  // TODO: Implement retry extraction endpoint
+                  alert('Retry functionality coming soon. Please contact support if the issue persists.');
+                }}
+              >
+                Retry Extraction
+              </Button>
+            )}
           </div>
         )}
       </div>

@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Enable instrumentation hook for worker auto-start
+  instrumentationHook: true,
+  
   // Enable experimental features if needed
   experimental: {
     // Add any experimental features here

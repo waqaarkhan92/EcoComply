@@ -37,9 +37,38 @@ export default function DocumentUploadPage() {
     mutationFn: async (formDataToSubmit: FormData) => {
       return apiClient.upload('/documents', formDataToSubmit);
     },
-    onSuccess: (data) => {
+    onSuccess: (response) => {
+      console.log('Upload response:', JSON.stringify(response, null, 2));
       queryClient.invalidateQueries({ queryKey: ['documents'] });
-      router.push(`/dashboard/documents/${data.data.id}`);
+      
+      // The API returns { data: {...}, meta: {...} }
+      // apiClient.upload returns the full response object
+      let documentId = null;
+      
+      // The API returns { data: {...document...}, meta: {...} }
+      // apiClient.upload returns the parsed JSON response directly
+      // So response should be { data: { id: ..., ... }, meta: {...} }
+      documentId = response?.data?.id;
+      
+      console.log('Extracted document ID:', documentId);
+      console.log('Response structure:', {
+        hasData: !!response?.data,
+        dataKeys: response?.data ? Object.keys(response.data) : [],
+        topLevelKeys: Object.keys(response || {}),
+      });
+      
+      if (!documentId) {
+        console.error('Upload response missing document ID. Full response:', JSON.stringify(response, null, 2));
+        alert('Upload succeeded but document ID is missing. Please refresh the documents list.');
+        router.push('/dashboard/documents');
+        return;
+      }
+      
+      console.log('Navigating to document:', `/dashboard/documents/${documentId}`);
+      router.push(`/dashboard/documents/${documentId}`);
+    },
+    onError: (error: any) => {
+      console.error('Upload error:', error);
     },
   });
 

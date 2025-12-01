@@ -51,8 +51,6 @@ export async function processDocumentJob(job: Job<DocumentProcessingJobData>): P
       .from('documents')
       .update({
         extracted_text: processingResult.extractedText,
-        ocr_text: processingResult.ocrText || null,
-        page_count: processingResult.pageCount,
         file_size_bytes: processingResult.fileSizeBytes,
         extraction_status: 'EXTRACTING',
       })

@@ -13,7 +13,7 @@ import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -25,32 +25,126 @@ export async function GET(
     }
     const { user } = authResult;
 
-    const { documentId } = params;
+    // Debug: Log the entire params object
+    const resolvedParams = await params;
+    console.log('Full params object:', JSON.stringify(resolvedParams, null, 2));
+    console.log('Params keys:', Object.keys(resolvedParams));
+    
+    // Extract documentId - try multiple possible keys
+    const documentId = resolvedParams.documentId || resolvedParams.id || resolvedParams.document_id;
+    
+    if (!documentId) {
+      console.error('Could not find documentId in params. Available keys:', Object.keys(resolvedParams));
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Document ID parameter missing',
+        400,
+        { 
+          document_id: 'Document ID parameter is missing',
+          available_params: Object.keys(resolvedParams),
+          received_params: resolvedParams
+        },
+        { request_id: requestId }
+      );
+    }
+    
+    // Debug logging
+    console.log('Document ID received:', documentId);
+    console.log('Document ID type:', typeof documentId);
+    console.log('Document ID length:', documentId?.length);
 
     // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(documentId)) {
+    if (!documentId || typeof documentId !== 'string') {
       return errorResponse(
         ErrorCodes.VALIDATION_ERROR,
         'Invalid document ID format',
         400,
-        { document_id: 'Must be a valid UUID' },
+        { document_id: 'Document ID is required and must be a string' },
         { request_id: requestId }
       );
     }
 
-    // Get document - RLS will enforce access control
-    // Use maybeSingle() to return null instead of error when not found
-    const { data: document, error } = await supabaseAdmin
-      .from('documents')
-      .select('id, site_id, document_type, title, reference_number, status, extraction_status, storage_path, file_size_bytes, mime_type, page_count, created_at, updated_at')
-      .eq('id', documentId)
-      .is('deleted_at', null)
-      .maybeSingle();
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(documentId)) {
+      console.error('UUID validation failed for:', documentId);
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Invalid document ID format',
+        400,
+        { document_id: 'Must be a valid UUID', received: documentId },
+        { request_id: requestId }
+      );
+    }
 
+    // Get document - supabaseAdmin bypasses RLS, but we still need to verify user access
+    console.log('Querying document with ID:', documentId);
+    console.log('User ID:', user.id);
+    
+    // Query document (supabaseAdmin bypasses RLS)
+    // Include uploaded_by to check if user uploaded it
+    // Retry logic in case of transaction timing issues
+    let document = null;
+    let error = null;
+    const maxRetries = 3;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const result = await supabaseAdmin
+        .from('documents')
+        .select('id, site_id, document_type, title, reference_number, status, extraction_status, storage_path, file_size_bytes, mime_type, created_at, updated_at, uploaded_by')
+        .eq('id', documentId)
+        .is('deleted_at', null)
+        .maybeSingle();
+      
+      document = result.data;
+      error = result.error;
+      
+      if (document) {
+        console.log(`Document found on attempt ${attempt}`);
+        break;
+      }
+      
+      if (attempt < maxRetries) {
+        console.log(`Document not found on attempt ${attempt}, retrying...`);
+        // Wait a bit before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 100 * attempt));
+      }
+    }
+    
+    // If still not found, check without deleted_at filter
+    if (!document && !error) {
+      console.log('Document not found after retries, checking without deleted_at filter...');
+      const { data: docWithoutFilter } = await supabaseAdmin
+        .from('documents')
+        .select('id, deleted_at, site_id, uploaded_by, created_at')
+        .eq('id', documentId)
+        .maybeSingle();
+      
+      if (docWithoutFilter) {
+        console.log('Document exists but deleted_at is:', docWithoutFilter.deleted_at);
+        // Document exists but is deleted
+        return errorResponse(
+          ErrorCodes.NOT_FOUND,
+          'Document not found',
+          404,
+          { document_id: documentId, reason: 'Document has been deleted' },
+          { request_id: requestId }
+        );
+      }
+    }
+    
+    console.log('Query result - document:', document ? `found (id: ${document.id}, site_id: ${document.site_id}, uploaded_by: ${document.uploaded_by})` : 'not found');
+    console.log('Query result - error:', error ? JSON.stringify(error, null, 2) : 'none');
+    
+    // Handle database errors FIRST
     if (error) {
+      console.error('Database error details:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
+      
       // PGRST116 = no rows returned (PostgREST error code)
-      // Also check for other "not found" indicators
       if (
         error.code === 'PGRST116' ||
         error.message?.includes('No rows returned') ||
@@ -61,26 +155,125 @@ export async function GET(
           ErrorCodes.NOT_FOUND,
           'Document not found',
           404,
-          null,
+          { document_id: documentId, error_code: error.code },
           { request_id: requestId }
         );
       }
-      console.error('Get document error:', error);
       return errorResponse(
         ErrorCodes.INTERNAL_ERROR,
         'Failed to fetch document',
         500,
-        { error: error?.message || 'Unknown error' },
+        { error: error?.message || 'Unknown error', error_code: error.code },
         { request_id: requestId }
       );
     }
+    
+    // If document found, verify user has access
+    if (document) {
+      // Check if user uploaded the document (they always have access to their own uploads)
+      const isUploader = document.uploaded_by === user.id;
+      
+      // Also check site_users access
+      const { data: siteAccess } = await supabaseAdmin
+        .from('site_users')
+        .select('site_id')
+        .eq('user_id', user.id)
+        .eq('site_id', document.site_id)
+        .maybeSingle();
+      
+      console.log('User access check:', {
+        site_id: document.site_id,
+        is_uploader: isUploader,
+        has_site_access: !!siteAccess,
+        user_id: user.id,
+        uploaded_by: document.uploaded_by
+      });
+      
+      // User has access if they uploaded it OR have site_users access
+      if (!isUploader && !siteAccess) {
+        // User doesn't have access to this site
+        console.log('User does not have access to document:', {
+          user_id: user.id,
+          document_id: documentId,
+          site_id: document.site_id,
+          uploaded_by: document.uploaded_by
+        });
+        return errorResponse(
+          ErrorCodes.NOT_FOUND,
+          'Document not found',
+          404,
+          { document_id: documentId },
+          { request_id: requestId }
+        );
+      }
+    }
+    
+    // If not found, check if document exists at all (for debugging)
+    if (!document && !error) {
+      console.log('Document not found, checking if it exists at all...');
+      
+      // Check without deleted_at filter
+      const { data: anyDoc } = await supabaseAdmin
+        .from('documents')
+        .select('id, deleted_at, site_id, uploaded_by, created_at')
+        .eq('id', documentId)
+        .maybeSingle();
+      
+      if (anyDoc) {
+        console.log('Document exists but may be deleted:', {
+          id: anyDoc.id,
+          deleted_at: anyDoc.deleted_at,
+          site_id: anyDoc.site_id,
+          uploaded_by: anyDoc.uploaded_by,
+          created_at: anyDoc.created_at
+        });
+        
+        // If document is deleted, return appropriate error
+        if (anyDoc.deleted_at) {
+          return errorResponse(
+            ErrorCodes.NOT_FOUND,
+            'Document not found',
+            404,
+            { document_id: documentId, reason: 'Document has been deleted' },
+            { request_id: requestId }
+          );
+        }
+      } else {
+        console.log('Document does not exist in database at all');
+        console.log('Searching for similar IDs...');
+        
+        // Try to find documents with similar IDs (for debugging)
+        const { data: recentDocs } = await supabaseAdmin
+          .from('documents')
+          .select('id, created_at')
+          .order('created_at', { ascending: false })
+          .limit(5);
+        
+        console.log('Recent documents:', recentDocs);
+      }
+    }
 
+    // Document not found after retries
     if (!document) {
+      console.log('Document not found in database for ID:', documentId);
+      // Try to check if document exists at all (even if deleted)
+      const { data: anyDoc } = await supabaseAdmin
+        .from('documents')
+        .select('id, deleted_at')
+        .eq('id', documentId)
+        .maybeSingle();
+      
+      if (anyDoc) {
+        console.log('Document exists but is deleted or user lacks access');
+      } else {
+        console.log('Document does not exist in database');
+      }
+      
       return errorResponse(
         ErrorCodes.NOT_FOUND,
         'Document not found',
         404,
-        null,
+        { document_id: documentId },
         { request_id: requestId }
       );
     }
@@ -128,7 +321,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -141,7 +334,7 @@ export async function PUT(
     }
     const { user } = authResult;
 
-    const { documentId } = params;
+    const { documentId } = await params;
 
     // Parse request body - handle potential JSON parsing errors
     let body: any;
@@ -253,7 +446,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -266,7 +459,7 @@ export async function DELETE(
     }
     const { user } = authResult;
 
-    const { documentId } = params;
+    const { documentId } = await params;
 
     // Check if document exists and user has access (RLS will enforce)
     const { data: existingDocument, error: checkError } = await supabaseAdmin

@@ -11,7 +11,7 @@ import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -23,7 +23,7 @@ export async function POST(
     }
     const { user } = authResult;
 
-    const { documentId } = params;
+    const { documentId } = await params;
 
     // Parse request body
     const body = await request.json();

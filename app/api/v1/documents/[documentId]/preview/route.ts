@@ -12,7 +12,7 @@ import { env } from '@/lib/env';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -23,7 +23,7 @@ export async function GET(
       return authResult;
     }
 
-    const { documentId } = params;
+    const { documentId } = await params;
     const pageParam = request.nextUrl.searchParams.get('page');
     const pageNumber = pageParam ? parseInt(pageParam, 10) : null;
 

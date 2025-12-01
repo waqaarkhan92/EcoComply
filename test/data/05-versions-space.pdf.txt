@@ -1,0 +1,1099 @@
+
+
+ 
+Permit number  
+EPR/UP3624SW  1 
+ 
+ 
+ 
+Permit with introductory note 
+The Environmental Permitting (England & Wales) Regulations 2016 
+ 
+London 14 Data Centre 
+DC6 
+Unit D 
+Plot C 
+Prologis Park Heathrow 
+Stockley Road 
+Hayes 
+UB3 1QF 
+ 
+ 
+ 
+Permit number 
+EPR/UP3624SW 
+
+ 
+Permit number  
+EPR/UP3624SW  2 
+London 14 Data Centre  
+Permit number EPR/UP3624SW 
+Introductory note 
+This introductory note does not form a part of the notice. 
+The main features of the permit are as follows.   
+The permit authorises the operation of standby electricity generating plant at a data centre located within a 
+light industrial and commercial area in Hayes in the London Borough of Hillingdon at national grid reference 
+TQ 08045 79594. The data centre will under normal operating conditions be powered by grid supplied 
+electricity. 
+ 
+The installation falls under the following Environmental Permitting Regulations (EPR) Schedule 1 listed 
+activity description: 
+Section 1.1 Part A(1)(a) - Burning any fuel in an appliance with a rated thermal input of 50 or more megawatts.  
+ 
+The installation comprises 16 stand-by backup generators to provide electrical power to the data centre in 
+the event of a failure of power supply from the national grid. The standby generators are 6.9 MW
+th
+ new 
+medium combustion plant (MCP) diesel generators with an aggregated thermal input of 110 MW
+th
+.  
+ 
+The plant is limited to operating less than 500 hours/year, including the testing regime. It is estimated that 
+each engine will be tested for approximately 5 hours/year. It is essential that the standby system is routinely 
+tested to ensure the engines function correctly in the event of them being required to operate in an 
+emergency. 
+ 
+Each engine will be tested one at a time at low load (up to 10%  for up to 15 minutes) once a month for 11 
+months per year; then each engine will be tested individually at full load once per year for 20 minutes followed 
+by 75%  load for  120 minutes. Each engine has its own integrally bunded fuel storage tank. Exhaust gases 
+from each engine will be discharged through an individual 14.45m flue. Each of the generators are fitted with 
+Selective Catalytic Reduction (SCR) abatement to reduce emissions to air of oxides of nitrogen (NO
+x
+). 
+ 
+There will be no process effluent discharged from the installation. Uncontaminated surface water run-off from 
+the  roof  and  hard-standing  will  drain  via  oil-water  separators  to  the  surface  water  drainage  system before 
+discharging to ground via a soakaway.  
+ 
+Southwest London Waterbodies Special Protection Area (SPA) and Ramsar site is located within 10km of the 
+installation and there are a number  of Local  Wildlife  Sites (LWS) within 2km of  the installation. The closest 
+residential properties are located approximately 30m from the data centre boundary. 
+There will be an Environmental Management System (EMS) in place based on the ISO 14001 standard. 
+The status log of a permit sets out the permitting history, including any changes to the permit reference 
+number.   
+Status log of the permit 
+Description Date Comments 
+Application 
+EPR/UP3624SW/A001 
+Duly made 
+04/07/2024 
+Application to operate 16 standby diesel 
+fuelled generators in the event of National 
+Grid failure and for testing and maintenance 
+activities. 
+
+ 
+Permit number  
+EPR/UP3624SW  3 
+Status log of the permit 
+Description Date Comments 
+Additional information received 
+23/08/2024, 
+27/09/2024. 
+Additional information on re-fuelling and 
+updated air quality assessment (RevC) 
+Permit determined EPR/ 
+UP3624SW  
+04/03/2025 Permit issued to Virtus Holdco Limited. 
+ 
+End of introductory note
+
+ 
+Permit number 
+EPR/UP3624SW 4 
+Permit 
+The Environmental Permitting (England and Wales) Regulations 2016 
+Permit number 
+EPR/UP3624SW 
+The Environment Agency hereby authorises, under regulation 13 of the Environmental Permitting (England 
+and Wales) Regulations 2016 
+Virtus Holdco Limited (“the operator”), 
+whose registered office is 
+4
+th
+ Floor  
+20 Balderton Street 
+London 
+England 
+W1K 6TL 
+company registration number 07670473  
+to operate an installation at 
+DC6 
+Unit D 
+Plot C 
+Prologis Park Heathrow 
+Stockley Road 
+Hayes 
+UB3 1QF 
+to the extent authorised by and subject to the conditions of this permit. 
+ 
+Name Date 
+Daniel Timney 04/03/2025 
+ 
+Authorised on behalf of the Environment Agency 
+
+ 
+Permit number 
+EPR/UP3624SW 5 
+Conditions 
+1 Management 
+1.1 General management 
+1.1.1  The operator shall manage and operate the activities: 
+(a) in accordance with a written management system that identifies and minimises risks of pollution, 
+including those arising from operations, maintenance, accidents, incidents, non-conformances, 
+closure and those drawn to the attention of the operator as a result of complaints; and 
+(b) using sufficient competent persons and resources. 
+1.1.2 Records demonstrating compliance with condition 1.1.1 shall be maintained.  
+1.1.3 Any person having duties that are or may be affected by the matters set out in this permit shall have 
+convenient access to a copy of it kept at or near the place where those duties are carried out. 
+1.2 Energy efficiency 
+1.2.1 The operator shall: 
+(a) take appropriate measures to ensure that energy is used efficiently in the activities; 
+(b) take appropriate measures to ensure the efficiency of energy generation at the permitted 
+installation is maximised; 
+(c) review and record at least every four years whether there are suitable opportunities to improve 
+the energy efficiency of the activities; and   
+(d) take any further appropriate measures identified by a review.  
+1.3 Efficient use of raw materials 
+1.3.1 The operator shall: 
+(a) take appropriate measures to ensure that raw materials and water are used efficiently in the 
+activities;  
+(b) maintain records of raw materials and water used in the activities; 
+(c) review and record at least every four years whether there are suitable alternative materials that 
+could reduce environmental impact or opportunities to improve the efficiency of raw material 
+and water use; and 
+(d) take any further appropriate measures identified by a review. 
+1.4 Avoidance, recovery and disposal of wastes produced by the 
+activities 
+1.4.1 The operator shall take appropriate measures to ensure that: 
+(a) the waste hierarchy referred to in Article 4 of the Waste Framework Directive is applied  to the 
+generation of  waste by the activities;  
+(b) any waste generated by the activities is treated in accordance with the waste hierarchy referred 
+to in Article 4 of the Waste Framework Directive; and 
+(c) where disposal is necessary, this is undertaken in a manner which minimises its impact on the 
+environment. 
+
+ 
+Permit number 
+EPR/UP3624SW 6 
+1.4.2 The operator shall review and record at least every four years whether changes to those measures 
+should be made and take any further appropriate measures identified by a review. 
+2 Operations 
+2.1 Permitted activities 
+2.1.1 The operator is only authorised to carry out the activities specified in schedule 1 table S1.1 (the 
+“activities”). 
+2.2 The site  
+2.2.1 The activities shall not extend beyond the site, being the land shown edged in green on the site plan 
+at schedule 7 to this permit. 
+2.3 Operating techniques 
+2.3.1 The activities shall, subject to the conditions of this permit, be operated using the techniques and in 
+the manner described in the documentation specified in schedule 1, table S1.2, unless otherwise 
+agreed in writing by the Environment Agency. 
+2.3.2 If notified by the Environment Agency that the activities are giving rise to pollution, the operator shall 
+submit to the Environment Agency for approval within the period specified, a revision of any plan or 
+other documentation (“plan”) specified in schedule 1, table S1.2 or otherwise required under this 
+permit which identifies and minimises the risks of pollution relevant to that plan , and shall implement 
+the approved revised plan in place of the original from the date of approval, unless otherwise agreed 
+in writing by the Environment Agency. 
+2.3.3 Any raw materials or fuels listed in schedule 2 table S2.1 shall conform to the specifications set out in 
+that table. 
+2.3.4 The operator shall ensure that where waste produced by the activities is sent to a relevant waste 
+operation, that operation is provided with the following information, prior to the receipt of the waste: 
+(a) the nature of the process producing the waste; 
+(b) the composition of the waste; 
+(c) the handling requirements of the waste; 
+(d) the hazardous property associated with the waste, if applicable; and 
+(e) the waste code of the waste. 
+2.3.5 The operator shall ensure that where waste produced by the activities is sent to a landfill site, it 
+meets the waste acceptance criteria for that landfill. 
+2.3.6 For the following activities referenced in schedule 1, table S1.1: AR1. The activities shall not operate 
+for more than 500 hours in emergency use per annum.  
+2.4 Improvement programme 
+2.4.1 The operator shall complete the improvements specified in schedule 1 table S1.3 by the date 
+specified in that table unless otherwise agreed in writing by the Environment Agency. 
+2.4.2 Except in the case of an improvement which consists only of a submission to the Environment 
+Agency, the operator shall notify the Environment Agency within 14 days of completion of each 
+improvement. 
+
+ 
+Permit number 
+EPR/UP3624SW 7 
+2.5 Pre-operational conditions 
+2.5.1 The activities shall not be brought into operation until the measures specified in schedule 1 table 
+S1.4 have been completed. 
+3 Emissions and monitoring 
+3.1 Emissions to water, air or land 
+3.1.1 There shall be no point source emissions to water, air or land except from the sources and emission 
+points listed in schedule 3 tables S3.1 and S3.2. 
+3.1.2 The limits given in schedule 3 shall not be exceeded. 
+3.1.3 Periodic monitoring shall be carried out at least once every 5 years for groundwater and 10 years for 
+soil, unless such monitoring is based on a systematic appraisal of the risk of contamination. 
+3.2 Emissions of substances not controlled by emission limits 
+3.2.1 Emissions of substances not controlled by emission limits (excluding odour) shall not cause pollution. 
+The operator shall not be taken to have breached this condition if appropriate measures, including, 
+but not limited to, those specified in any approved emissions management plan, have been taken to 
+prevent or where that is not practicable, to minimise, those emissions. 
+3.2.2 The operator shall: 
+(a) if notified by the Environment Agency that the activities are giving rise to pollution, submit to the 
+Environment Agency for approval within the period specified, an emissions management plan 
+which identifies and minimises the risks of pollution from emissions of substances not controlled 
+by emission limits;  
+(b) implement the approved emissions management plan, from the date of approval, unless 
+otherwise agreed in writing by the Environment Agency. 
+3.2.3 All liquids in containers, whose emission to water or land could cause pollution, shall be provided 
+with secondary containment, unless the operator has used other appropriate measures to prevent or 
+where that is not practicable, to minimise, leakage and spillage from the primary container. 
+3.3 Odour 
+3.3.1 Emissions from the activities shall be free from odour at levels likely to cause pollution outside the 
+site, as perceived by an authorised officer of the Environment Agency, unless the operator has used 
+appropriate measures, including, but not limited to, those specified in any approved odour 
+management plan, to prevent or where that is not practicable to minimise the odour.  
+3.3.2 The operator shall: 
+(a) if notified by the Environment Agency that the activities are giving rise to pollution outside the 
+site due to odour, submit to the Environment Agency for approval within the period specified, an 
+odour management plan which identifies and minimises the  risks of pollution from odour; 
+(b) implement the approved odour management plan, from the date of approval, unless otherwise 
+agreed in writing by the Environment Agency. 
+3.4 Noise and vibration 
+3.4.1 Emissions from the activities shall be free from noise and vibration at levels likely to cause pollution 
+outside the site, as perceived by an authorised officer of the Environment Agency, unless the 
+operator has used appropriate measures, including, but not limited to, those specified in any 
+
+ 
+Permit number 
+EPR/UP3624SW 8 
+approved noise and vibration management plan to prevent or where that is not practicable to 
+minimise the noise and vibration. 
+3.4.2 The operator shall: 
+(a) if notified by the Environment Agency that the activities are giving rise to pollution outside the 
+site due to noise and vibration, submit to the Environment Agency for approval within the period 
+specified, a noise and vibration management plan which identifies and minimises the risks of 
+pollution from noise and vibration; 
+(b) implement the approved noise and vibration management plan, from the date of approval, 
+unless otherwise agreed in writing by the Environment Agency. 
+3.5 Monitoring  
+3.5.1 The operator shall, unless otherwise agreed in writing by the Environment Agency, undertake the 
+monitoring specified in the following tables in schedule 3 to this permit: 
+(a) point source emissions specified in tables S3.1 and S3.2; and 
+(b) process monitoring specified in table S3.3. 
+3.5.2 The operator shall maintain records of all monitoring required by this permit including records of the 
+taking and analysis of samples, instrument measurements (periodic and continuous), calibrations, 
+examinations, tests and surveys and any assessment or evaluation made on the basis of such data. 
+3.5.3 Monitoring equipment, techniques, personnel and organisations employed for the emissions 
+monitoring programme and the environmental or other monitoring specified in condition 3.5.1 shall 
+have either MCERTS certification or MCERTS accreditation (as appropriate), where available, unless 
+otherwise agreed in writing by the Environment Agency. 
+3.5.4 Permanent means of access shall be provided to enable sampling/monitoring to be carried out in 
+relation to the emission points specified in schedule 3 tables S3.1 and S3.2 unless otherwise agreed 
+in writing by the Environment Agency. 
+3.5.5 The first monitoring measurements shall be carried out within four months of the issue date of the 
+permit or the date when the MCP is first put into operation, whichever is later. 
+4 Information 
+4.1 Records 
+4.1.1 All records required to be made by this permit shall: 
+(a) be legible; 
+(b) be made as soon as reasonably practicable; 
+(c) if amended, be amended in such a way that the original and any subsequent amendments 
+remain legible, or are capable of retrieval; and 
+(d) be retained, unless otherwise agreed in writing by the Environment Agency, for at least 6 years 
+from the date when the records were made, or in the case of the following records until permit 
+surrender: 
+(i) off-site environmental effects; and 
+(ii) matters which affect the condition of the land and groundwater. 
+4.1.2 The operator shall keep on site all records, plans and the management system required to be 
+maintained by this permit, unless otherwise agreed in writing by the Environment Agency.  
+
+ 
+Permit number 
+EPR/UP3624SW 9 
+4.2 Reporting 
+4.2.1 The operator shall send all reports and notifications required by the permit to the Environment 
+Agency using the contact details supplied in writing by the Environment Agency. 
+4.2.2 A report or reports on the performance of the activities over the previous year shall be submitted to 
+the Environment Agency by 31 January (or other date agreed in writing by the Environment Agency) 
+each year.  The report(s) shall include as a minimum: 
+a) a review of the results of the monitoring and assessment carried out in accordance with the 
+permit including an interpretive review of that data;  
+b) the performance parameters set out in schedule 4 table S4.2 using the forms specified in 
+table S4.3 of that schedule; 
+c) where conditions 2.3.6 applies, the hours of operation in any year. 
+4.2.3 Within 28 days of the end of the reporting period the operator shall, unless otherwise agreed in 
+writing by the Environment Agency, submit reports of the monitoring and assessment carried out in 
+accordance with the conditions of this permit, as follows: 
+(a) in respect of the parameters and emission points specified in schedule 4 table S4.1; 
+(b) for the reporting periods specified in schedule 4 table S4.1 and using the forms specified in 
+schedule 4 table S4.4; and 
+(c) giving the information from such results and assessments as may be required by the forms 
+specified in those tables. 
+4.2.4 The operator shall, unless notice under this condition has been served within the preceding four 
+years, submit to the Environment Agency, within six months of receipt of a written notice, a report 
+assessing whether there are other appropriate measures that could be taken to prevent, or where 
+that is not practicable, to minimise pollution. 
+4.3 Notifications 
+4.3.1 In the event: 
+(a) that the operation of the activities gives rise to an incident or accident which  significantly affects 
+or may significantly affect the environment, the operator must immediately— 
+(i) inform the Environment Agency,  
+(ii) take the measures necessary to limit the environmental consequences of such an incident 
+or accident, and 
+(iii) take the measures necessary to prevent further possible incidents or accidents; 
+(b) of a breach of any permit condition the operator must immediately— 
+(i) inform the Environment Agency, and 
+(ii) take the measures necessary to ensure that compliance is restored within the shortest 
+possible time; 
+(c) of a breach of permit condition which poses an immediate danger to human health or threatens 
+to cause an immediate significant adverse effect on the environment, the operator must 
+immediately suspend the operation of the activities or the relevant part of it until compliance with 
+the permit conditions has been restored. 
+4.3.2 Any information provided under condition 4.3.1 shall be confirmed by sending the information listed in 
+schedule 5 to this permit within the time period specified in that schedule. 
+4.3.3 Where the Environment Agency has requested in writing that it shall be notified when the operator is 
+to undertake monitoring and/or spot sampling, the operator shall inform the Environment Agency 
+
+ 
+Permit number 
+EPR/UP3624SW 10 
+when the relevant monitoring and/or spot sampling is to take place. The operator shall provide this 
+information to the Environment Agency at least 14 days before the date the monitoring is to be 
+undertaken. 
+4.3.4 The Environment Agency shall be notified within 14 days of the occurrence of the following matters, 
+except where such disclosure is prohibited by Stock Exchange rules: 
+Where the operator is a registered company: 
+(a) any change in the operator’s trading name, registered name or registered office address; and 
+(b) any steps taken with a view to the operator going into administration, entering into a company 
+voluntary arrangement or being wound up. 
+Where the operator is a corporate body other than a registered company: 
+(c) any change in the operator’s name or address; and 
+(d) any steps taken with a view to the dissolution of the operator. 
+In any other case:  
+(e) the death of any of the named operators (where the operator consists of more than one named 
+individual); 
+(f) any change in the operator’s name(s) or address(es); and 
+(g) any steps taken with a view to the operator, or any one of them, going into bankruptcy, entering 
+into a composition or arrangement with creditors, or, in the case of them being in a partnership, 
+dissolving the partnership. 
+4.3.5 Where the operator proposes to make a change in the nature or functioning, or an extension of the 
+activities, which may have consequences for the environment and the change is not otherwise the 
+subject of an application for approval under the Regulations or this permit: 
+(a) the Environment Agency shall be notified at least 14 days before making the change; and 
+(b) the notification shall contain a description of the proposed change in operation. 
+4.3.6 The Environment Agency shall be given at least 14 days’ notice before implementation of any part of 
+the site closure plan. 
+4.3.7 Where the operator has entered into a climate change agreement with the Government, the 
+Environment Agency shall be notified within one month of: 
+(a) a decision by the Secretary of State not to re-certify the agreement; 
+(b) a decision by either the operator or the Secretary of State to terminate the agreement; and 
+(c) any subsequent decision by the Secretary of State to re-certify such an agreement. 
+4.4 Interpretation 
+4.4.1 In this permit the expressions listed in schedule 6 shall have the meaning given in that schedule. 
+4.4.2 In this permit references to reports and notifications mean written reports and notifications, except 
+where reference is made to notification being made “immediately”, in which case it may be provided 
+by telephone. 
+
+ 
+Permit number 
+EPR/UP3624SW 11 
+Schedule 1 – Operations 
+Table S1.1 activities 
+Activity 
+reference 
+Activity listed in Schedule 1 
+of the EP Regulations  
+Description of specified activity Limits of 
+specified activity  
+AR1  
+ 
+ 
+ 
+Section 1.1 Part A(1)(a): 
+Burning any fuel in an 
+appliance with a rated thermal 
+input of 50 megawatts or more. 
+Operation of 16 emergency standby 
+generators with a total thermal input 
+of approximately 110 MWth. 
+The generators will burn diesel 
+solely for the purpose of providing 
+electricity to the data centre in the 
+event of a failure of supply from the 
+National Grid and during 
+maintenance testing. 
+.  
+From receipt of 
+raw materials and 
+generation of 
+electricity to 
+despatch of 
+waste.  
+Including selective 
+catalytic reduction 
+systems fitted to 
+emission points 
+A1 to A16 
+During monthly 
+and annual 
+testing, each 
+generator shall be 
+tested separately. 
+Electricity 
+produced at the 
+installation cannot 
+be exported to the 
+National Grid. 
+Testing of the 
+generators shall 
+only take place 
+during daytime 
+periods. 
+The emergency 
+operational hours 
+of the installation 
+shall not exceed 
+the specifications 
+set out in 
+condition 2.3.6 of 
+this permit. 
+ Directly Associated Activity 
+AR2 Storage of raw materials From receipt of raw materials to use within the facility. 
+AR3 Uncontaminated surface water 
+drainage 
+From input to site drainage system until discharge to 
+soakaway via oil interceptor (emission points S1 and 
+S2).  
+ 
+
+ 
+Permit number 
+EPR/UP3624SW 12 
+Table S1.2 Operating techniques 
+Description Parts Date Received 
+Application  
+EPR/UP3624SW/A001 
+Responses to section 3 of the Application form – 
+Operating techniques and supporting information. 
+04/07/2024 
+Non-Technical Summary 10/10/2023 
+Summary Technical Report and Appendices 10/10/2023 & 03/06/2024 
+Environmental Risk Assessment and Appendices 10/10/2023 & 03/06/2024 
+Figures and drawings 10/10/2023 
+Site Condition Report and Appendices 10/10/2023 & 03/06/2024 
+Application 
+EPR/UP3624SW/A001 
+Generators maintenance 
+testing schedule 
+Generators maintenance testing schedule detailed 
+in application document ‘Summary Technical 
+Report’ – section 3.3 Operating regime. 
+10/10/2023 
+Application 
+EPR/UP3624SW/A001 
+SCR abatement   
+ 
+NOx abatement efficiency for the selective 
+catalytic reduction systems (SCR) fitted to 
+emission points A1 to A16 detailed in application 
+document ‘Summary Technical Report and 
+Appendices’. 
+10/10/2023 
+ 
+Additional Information Air Quality Assessment (Revision C) 27/09/2024 
+27/09/2024 
+Additional information on re-fuelling  
+23/08/2024 
+ 
+Table S1.3 Improvement programme requirements 
+Reference Requirement Date 
+IC1 Air Quality Management Plan (AQMP) 
+The operator shall produce an AQMP in conjunction with the Local 
+Authority outlining response measures to be taken in the event of a grid 
+failure. This must include, but not be limited to, the following 
+considerations:  
+• The response should be tailored to reflect the predicted potential 
+impact indicated by the air dispersion modelling at individual 
+receptors;  
+• Preventative and reactive actions to be implemented to limit the 
+duration of an outage event to less than 50 hours as far as 
+possible; 
+• Specific timescales for response measures; 
+• How local conditions during a grid failure might influence the 
+response required, for example meteorological conditions or 
+time of day; 
+• Contingency for how the response will be carried out in the 
+event scenario i.e. loss of power;  
+• Timescales for continued review of the management plan. 
+The agreed Air Quality Management Plan shall be submitted to the 
+Environment Agency for approval. 
+05/09/2025 
+
+ 
+Permit number 
+EPR/UP3624SW 13 
+Table S1.3 Improvement programme requirements 
+Reference Requirement Date 
+IC2 
+Performance of SCR systems 
+The operator shall submit a written report to the Environment Agency for 
+assessment and written approval. The report must contain: 
+  
+- Detailed information on the specification of the suitability of the 
+NOx sensors and urea solution dosing to the SCR systems 
+- Evidence of the initial calibration of the NOx sensors and 
+verification of the levels of unabated and abated NOx emissions 
+upstream and downstream of the SCR system according to a 
+methodology consistent with web guide ‘Monitoring stack 
+emissions: low risk MCPs and specified generators’ Published 20 
+March 2024 (formerly known as TGN M5) 
+- Confirmation that the SCR systems achieve the NOx abatement 
+performance stated in the application documents referred to in 
+table S1.2, or a proposal for remedial actions when this is not 
+achieved 
+- A plan to periodically calibrate the NOx sensors and verify the 
+performance of the SCR systems, including the proposed 
+frequencies. 
+ 
+The operator must implement the proposals in the report in line with the 
+timescales agreed within the Environment Agency’s written approval. 
+06/06/2025 
+ 
+ 
+Table S1.4 Pre-operational measures 
+Reference Pre-operational measures 
+PO1 
+Commissioning 
+At least one month before operation the operator shall submit a commissioning plan to 
+the Environment Agency for approval.  The plan shall provide timescales for the 
+commissioning of the diesel generators and shall demonstrate that the commissioning 
+of the diesel generators is covered within the site’s permitted regular testing regime, 
+thereby minimising durations and impacts. 
+When the commissioning is not covered within the site’s permitted regular testing 
+regime, the operator shall submit an environmental risk assessment for approval by 
+the Environment Agency, demonstrating that the environmental risks during the 
+commissioning are minimised and remain not significant. The commissioning of the 
+engines shall not begin prior to receiving written approval to the plan and associated 
+environmental risk assessment by the Environment Agency. 
+The plan shall be implemented in accordance with the Environment Agency’s written 
+approval. 
+ 
+ 
+
+ 
+Permit number 
+EPR/UP3624SW 14 
+Schedule 2 – Raw materials and fuels 
+Table S2.1 Raw materials and fuels 
+Raw materials and fuel description  Specification 
+Gas oil Sulphur content 0.001% (w/w) max 
+
+ 
+Permit number 
+EPR/UP3624SW 15 
+Schedule 3 – Emissions and monitoring 
+Table S3.1 Point source emissions to air  
+Emission 
+point ref. & 
+location 
+Source Parameter Limit 
+(including 
+unit) 
+Reference 
+period 
+Monitoring 
+frequency 
+Note 1
+ 
+Monitoring 
+standard 
+or method 
+A1 – A16 
+from 
+generators as 
+shown in 
+Schedule 7 
+ 
+ 
+ 
+Gas oil 
+generator 
+exhausts  
+ 
+(new medium 
+combustion 
+plant) 
+ 
+Oxides of 
+nitrogen  
+(NO and NO
+2
+ 
+expressed as 
+NO
+2
+) 
+No limit set In line with 
+web guide 
+‘Monitoring 
+stack 
+emissions: 
+low risk 
+MCPs and 
+specified 
+generators’   
+Published 
+20 March 
+2024 
+(formerly 
+known as 
+TGN M5)  
+ 
+Every 1500 
+hours of 
+operation or 
+once every 
+five years 
+(whichever 
+comes first). 
+ 
+In line with 
+web guide 
+‘Monitoring 
+stack 
+emissions: 
+low risk 
+MCPs and 
+specified 
+generators’   
+Published 
+20 March 
+2024 
+(formerly 
+known as 
+TGN M5)  
+ 
+Carbon 
+monoxide 
+No limit set In line with 
+web guide 
+‘Monitoring 
+stack 
+emissions: 
+low risk 
+MCPs and 
+specified 
+generators’   
+Published 
+20 March 
+2024 
+(formerly 
+known as 
+TGN M5)  
+ 
+Every 1500 
+hours of 
+operation or 
+once every 
+five years 
+(whichever 
+comes first). 
+ 
+In line with 
+web guide 
+‘Monitoring 
+stack 
+emissions: 
+low risk 
+MCPs and 
+specified 
+generators’   
+Published 
+20 March 
+2024 
+(formerly 
+known as 
+TGN M5)  
+ 
+Sulphur 
+dioxide 
+No limit set - - - 
+Particulates No limit set - - - 
+Ammonia No limit set - - - 
+Vents 
+associated 
+with bulk gas 
+oil storage 
+tanks 
+Vents from 
+storage tanks  
+No 
+parameters 
+set 
+No limit set - - - 
+Note 1: In accordance with condition 3.5.5 of this permit. 
+ 
+
+ 
+Permit number 
+EPR/UP3624SW 16 
+Table S3.2 Point Source emissions to land – emission limits and monitoring requirements  
+Emission point 
+ref. & location 
+Source Parameter   
+Limit 
+(incl. 
+unit)   
+Reference 
+period 
+Monitoring 
+frequency 
+Monitoring 
+standard 
+or method 
+S1 and S2 on 
+site plan in 
+schedule 7 
+emission to 
+soakaway 
+Uncontaminated 
+surface water 
+runoff via oil-
+water separator 
+Oil and grease 
+None 
+visible 
+Spot 
+sample 
+Weekly - 
+ 
+Table S3.3 Process monitoring requirements 
+Emission point 
+reference or source or 
+description of point of 
+measurement 
+Parameter Monitoring 
+frequency  
+Monitoring 
+standard or 
+method  
+Other specifications  
+A1 – A16 from generators 
+as shown in Schedule 7 
+ 
+  
+SCR abatement 
+efficiency 
+Continuous  Continuous 
+reading of 
+NOx sensors 
+fitted to SCR 
+system to 
+manufacturer’s 
+specification. 
+  
+Periodic 
+validation 
+according to 
+the plan 
+approved by 
+the 
+Environment 
+Agency in 
+response to 
+improvement 
+condition IC2. 
+Minimum abatement of 
+NOx, in accordance with 
+operating techniques in 
+application documents listed 
+in table S1.2 
+ 
+ 
+
+ 
+Permit number 
+EPR/UP3624SW 17 
+Schedule 4 – Reporting 
+Parameters, for which reports shall be made, in accordance with conditions of this permit, are listed below.   
+Table S4.1 Reporting of monitoring data 
+Parameter Emission or monitoring 
+point/reference 
+Reporting period Period begins 
+Emissions to air 
+Parameters as required by 
+condition 3.5.1. 
+ 
+A1 to A16 
+ 
+Every 1500 hours 
+of operation or 
+every five years 
+(whichever comes 
+first). 
+ 
+Within four 
+months of the 
+issue date of the 
+permit or the date 
+when the engine 
+is first put into 
+operation, 
+whichever is later. 
+Process monitoring parameters as 
+required by condition 3.5.1 
+A1 to A16 
+ 
+Annually January 
+ 
+Table S4.2 Performance parameters 
+Parameter Frequency of assessment Units 
+Gas oil (or equivalent 
+substitute agreed in 
+writing with the 
+Environment Agency) 
+usage 
+Annually Tonnes 
+Generator operation 
+for testing and 
+maintenance  
+Report to be submitted 
+annually 
+- Total hours for the site (hours), 
+- Total hours per generator (hours), Total 
+number of runs per generator (quantity and 
+dates) 
+- - Number of minutes per run (minutes) 
+Generator operation 
+during emergency 
+scenario 
+Within 24 hours if operation 
+commences 
+- Date and time of grid failure, 
+- Number of generators operating immediately 
+after the failure, 
+- Number of generators operating two hours after 
+failure, 
+- Anticipated duration of the mains supply 
+failure (hours) 
+Generator operation 
+during emergency 
+scenario 
+Annually Total number of runs (quantity), duration of runs 
+(hours) 
+Operation of SCR 
+systems 
+Annually - Gas oil usage in each generator fitted with 
+SCR 
+- Readings of NOx sensors 
+- NOx abatement efficiency 
+Evidence of periodic calibration with frequency 
+specified according to Environment Agency’s 
+approval of improvement condition IC2 
+ 
+
+ 
+Permit number 
+EPR/UP3624SW 18 
+Table S4.3 Reporting forms 
+Media/parameter Reporting format Date of form 
+Air 
+Emissions to Air Reporting Form or other form as agreed 
+in writing by the Environment Agency  
+Version 1, 08/03/2021 
+Other performance 
+indicators 
+Form ‘performance 1’ or other form as agreed in writing 
+by the Environment Agency 
+As agreed with the 
+Environment Agency 
+Generator operation 
+during emergency 
+scenario 
+Form ‘emergency scenario’ or other form as agreed in 
+writing by the Environment Agency  
+As agreed with the 
+Environment Agency 
+Process monitoring 
+Parameters 
+As agreed in writing by the Environment Agency in 
+accordance with improvement condition IC2. 
+As agreed with the 
+Environment Agency 
+  
+
+ 
+Permit number 
+EPR/UP3624SW 19 
+Schedule 5 – Notification 
+These pages outline the information that the operator must provide. 
+Units of measurement used in information supplied under Part A and B requirements shall be appropriate to 
+the circumstances of the emission. Where appropriate, a comparison should be made of actual emissions 
+and authorised emission limits. 
+If any information is considered commercially confidential, it should be separated from non-confidential 
+information, supplied on a separate sheet and accompanied by an application for commercial confidentiality 
+under the provisions of the EP Regulations. 
+Part A  
+Permit Number  
+Name of operator  
+Location of Facility  
+Time and date of the detection   
+ 
+(a) Notification requirements for any malfunction, breakdown or failure of equipment or techniques, 
+accident, or emission of a substance not controlled by an emission limit which has caused, is 
+causing or may cause significant pollution 
+To be notified within 24 hours of detection 
+Date and time of the event  
+Reference or description of the 
+location of the event  
+ 
+Description of where any release 
+into the environment took place 
+ 
+Substances(s) potentially 
+released 
+ 
+Best estimate of the quantity or 
+rate of release of substances 
+ 
+Measures taken, or intended to be 
+taken, to stop any emission 
+ 
+Description of the failure or 
+accident. 
+ 
+ 
+(b) Notification requirements for the breach of a limit 
+To be notified within 24 hours of detection unless otherwise specified below 
+Emission point reference/ source  
+Parameter(s)  
+Limit  
+Measured value and uncertainty  
+Date and time of monitoring  
+
+ 
+Permit number 
+EPR/UP3624SW 20 
+(b) Notification requirements for the breach of a limit 
+To be notified within 24 hours of detection unless otherwise specified below 
+Measures taken, or intended to be 
+taken, to stop the emission 
+ 
+ 
+Time periods for notification following detection of a breach of a limit 
+Parameter Notification period 
+  
+  
+  
+ 
+(c) Notification requirements for the breach of permit conditions not related to limits 
+To be notified within 24 hours of detection 
+Condition breached  
+Date, time and duration of breach  
+Details of the permit breach i.e. 
+what happened including impacts 
+observed. 
+ 
+Measures taken, or intended to be 
+taken, to restore permit 
+compliance. 
+ 
+ 
+(d) Notification requirements for the detection of any significant adverse environmental effect 
+To be notified within 24 hours of detection 
+Description of where the effect on 
+the environment was detected 
+ 
+Substances(s) detected  
+Concentrations of substances 
+detected 
+ 
+Date of monitoring/sampling  
+ 
+Part B – to be submitted as soon as practicable 
+Any more accurate information on the matters for 
+notification under Part A. 
+ 
+Measures taken, or intended to be taken, to prevent 
+a recurrence of the incident 
+ 
+
+ 
+Permit number 
+EPR/UP3624SW 21 
+Measures taken, or intended to be taken, to rectify, 
+limit or prevent any pollution of the environment 
+which has been or may be caused by the emission 
+ 
+The dates of any unauthorised emissions from the 
+facility in the preceding 24 months. 
+ 
+ 
+Name*  
+Post  
+Signature  
+Date  
+* authorised to sign on behalf of the operator 
+
+ 
+Permit number 
+EPR/UP3624SW 22 
+Schedule 6 – Interpretation 
+“accident” means an accident that may result in pollution. 
+“application” means the application for this permit, together with any additional information supplied by the 
+operator as part of the application and any response to a notice served under Schedule 5 to the EP 
+Regulations. 
+“authorised officer” means any person authorised by the Environment Agency under section 108(1) of The 
+Environment Act 1995 to exercise, in accordance with the terms of any such authorisation, any power 
+specified in section 108(4) of that Act. 
+“emissions to land” includes emissions to groundwater. 
+“EP Regulations” means The Environmental Permitting (England and Wales) Regulations SI 2016 No.1154 
+and words and expressions used in this permit which are also used in the Regulations have the same 
+meanings as in those Regulations. 
+“emissions of substances not controlled by emission limits” means emissions of substances to air, water or 
+land from the activities, either from the emission points specified in schedule 3 or from other localised or 
+diffuse sources, which are not controlled by an emission limit. 
+“gas oil” includes diesel and is defined in Article 3(19) of the MCPD. 
+“groundwater” means all water, which is below the surface of the ground in the saturation zone and in direct 
+contact with the ground or subsoil. 
+“Industrial Emissions Directive” means DIRECTIVE 2010/75/EU OF THE EUROPEAN PARLIAMENT AND 
+OF THE COUNCIL of 24 November 2010 on industrial emissions, as read in accordance with Schedule 1A 
+to the Environmental Permitting (England and Wales) Regulations 2016. 
+“MCERTS” means the Environment Agency’s Monitoring Certification Scheme. 
+“Medium Combustion Plant” or ”MCP” means a combustion plant with a rated thermal input equal to or 
+greater than 1 MW but less than 50 MW. 
+“Medium Combustion Plant Directive” or “MCPD” means Directive 2015/2193/EU of the European Parliament 
+and of the Council on the limitation of emissions of certain pollutants into the air from medium combustion 
+plants, as read in accordance with Schedule 1A to the Environmental Permitting (England and Wales) 
+Regulations 2016. 
+“Net rated thermal input” means the rate at which fuel can be burned at the maximum continuous rating of 
+the appliance multiplied by the net calorific value of the fuel and expressed as megawatts thermal.  
+“new MCP” means an MCP first put into operation on or after 20/12/2018.  
+ 
+“operating hours” means the time, expressed in hours, during which a combustion plant is operating and 
+discharging emissions into the air, excluding start-up and shut-down periods.  
+“shut-down” is any period where the plant is being returned to a non-operational state. 
+“start-up” is any period, where the plant has been non-operational, until fuel has been fed to the plant to 
+initiate steady-state conditions. 
+“year” means calendar year ending 31 December. 
+ 
+ 
+
+ 
+Permit number 
+EPR/UP3624SW 23 
+Where a minimum limit is set for any emission parameter, for example pH, reference to exceeding the limit 
+shall mean that the parameter shall not be less than that limit. 
+Unless otherwise stated, any references in this permit to concentrations of substances in emissions into air 
+means: 
+• in relation to emissions from combustion processes, the concentration in dry air at a temperature of 
+273K, at a pressure of 101.3 kPa and with an oxygen content of 3% dry for liquid and gaseous fuels, 6% 
+dry for solid fuels; and/or 
+• in relation to emissions from non-combustion sources, the concentration at a temperature of 273K and at 
+a pressure of 101.3 kPa, with no correction for water vapour content. 
+  
+
+ 
+Permit number 
+EPR/UP3624SW 24 
+Schedule 7 – Site plan 
+ 
+ 
+END OF PERMIT 
+ 
