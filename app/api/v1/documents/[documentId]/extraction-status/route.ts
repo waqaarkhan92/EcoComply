@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
-import { requireAuth, getRequestId } from '@/lib/api/middleware';
+import { requireAuth, getRequestId, addRateLimitHeaders } from '@/lib/api/middleware';
 
 export async function GET(
   request: NextRequest,

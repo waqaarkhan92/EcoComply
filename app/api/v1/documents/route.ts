@@ -397,30 +397,17 @@ export async function POST(request: NextRequest) {
 
       if (jobError) {
         console.error('❌ Failed to create background job record:', JSON.stringify(jobError, null, 2));
-        // Try to enqueue anyway without database record
-        try {
-          await documentQueue.add(
-            'DOCUMENT_EXTRACTION',
-            {
-              document_id: document.id,
-              company_id: site.company_id,
-              site_id: siteId,
-              module_id: module1.id,
-              file_path: storagePath,
-              document_type: dbDocumentType,
-              regulator: metadata.regulator || null,
-              permit_reference: metadata.reference_number || null,
-            },
-            {
-              priority: 5,
-            }
-          );
-          console.log('✅ Job enqueued without database record');
-        } catch (queueError: any) {
-          console.error('❌ Failed to enqueue job:', queueError.message);
-        }
-      } else if (jobRecord) {
-        // Enqueue job in BullMQ
+        console.error('Job error details:', {
+          code: jobError.code,
+          message: jobError.message,
+          details: jobError.details,
+          hint: jobError.hint,
+        });
+      }
+      
+      // Always try to enqueue job (even if DB record creation failed)
+      try {
+        console.log('📤 Enqueuing document extraction job...');
         await documentQueue.add(
           'DOCUMENT_EXTRACTION',
           {
@@ -434,16 +421,24 @@ export async function POST(request: NextRequest) {
             permit_reference: metadata.reference_number || null,
           },
           {
-            jobId: jobRecord.id, // Use database job ID as BullMQ job ID
-            priority: 5, // Normal priority
+            priority: 5,
+            jobId: jobRecord?.id || `doc-${document.id}`,
           }
         );
-
+        console.log('✅ Job enqueued successfully');
+        
         // Update document status to PROCESSING
         await supabaseAdmin
           .from('documents')
           .update({ extraction_status: 'PROCESSING' })
           .eq('id', document.id);
+      } catch (queueError: any) {
+        console.error('❌ Failed to enqueue job:', queueError.message);
+        console.error('Queue error:', queueError);
+      }
+      
+      if (jobRecord) {
+        // Job already enqueued above
       } else {
         console.error('Failed to create background job record:', jobError);
         // Continue anyway - job can be retried manually
