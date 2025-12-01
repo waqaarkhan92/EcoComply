@@ -85,7 +85,7 @@ export async function GET(
     if (document.uploaded_by !== user.id) {
       // Check if user has access to the site
       const { data: siteAccess } = await supabaseAdmin
-        .from('site_users')
+        .from('user_site_assignments')
         .select('id')
         .eq('site_id', document.site_id)
         .eq('user_id', user.id)

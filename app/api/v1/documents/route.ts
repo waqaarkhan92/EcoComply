@@ -371,6 +371,37 @@ export async function POST(request: NextRequest) {
     
     console.log('✅ Document created successfully with ID:', document.id);
 
+    // Ensure user has site access (auto-assign if needed)
+    try {
+      const { data: existingAssignment } = await supabaseAdmin
+        .from('user_site_assignments')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('site_id', siteId)
+        .maybeSingle();
+
+      if (!existingAssignment) {
+        console.log(`📍 Auto-assigning user ${user.id} to site ${siteId}`);
+        const { error: assignError } = await supabaseAdmin
+          .from('user_site_assignments')
+          .insert({
+            user_id: user.id,
+            site_id: siteId,
+            assigned_by: user.id,
+          });
+
+        if (assignError && assignError.code !== '23505') {
+          // Log error but don't fail the upload
+          console.error('⚠️ Failed to auto-assign user to site:', assignError.message);
+        } else {
+          console.log('✅ User auto-assigned to site');
+        }
+      }
+    } catch (assignError) {
+      console.error('⚠️ Error checking/creating site assignment:', assignError);
+      // Don't fail the upload
+    }
+
     // Enqueue background job for document processing
     try {
       const documentQueue = getQueue(QUEUE_NAMES.DOCUMENT_PROCESSING);
