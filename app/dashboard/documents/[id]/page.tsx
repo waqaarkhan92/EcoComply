@@ -22,11 +22,12 @@ interface Document {
 
 interface Obligation {
   id: string;
-  obligation_title: string;
-  original_text: string;
+  obligation_title?: string;
+  obligation_description?: string;
   category: string;
   status: string;
   confidence_score: number;
+  original_text?: string;
 }
 
 export default function DocumentDetailPage({
@@ -39,23 +40,53 @@ export default function DocumentDetailPage({
   const { data: document, isLoading: docLoading, error: docError } = useQuery<Document>({
     queryKey: ['document', id],
     queryFn: async () => {
-      console.log('Fetching document with id:', id);
       const response = await apiClient.get<Document>(`/documents/${id}`);
-      console.log('Document fetch response:', response);
       return response.data;
     },
     retry: 1,
-    enabled: !!id, // Only run query if id exists
+    enabled: !!id,
+    refetchInterval: (data) => {
+      // Poll every 3 seconds if extraction is in progress
+      if (data?.extraction_status === 'PENDING' || data?.extraction_status === 'PROCESSING' || data?.extraction_status === 'EXTRACTING') {
+        return 3000;
+      }
+      return false;
+    },
   });
 
   const { data: obligations, isLoading: obligationsLoading } = useQuery<Obligation[]>({
     queryKey: ['document-obligations', id],
     queryFn: async () => {
-      // TODO: Create endpoint to get obligations for a document
-      // For now, return empty array
-      return [];
+      const response = await apiClient.get<Obligation[]>(`/documents/${id}/obligations`);
+      return response.data || [];
     },
     enabled: !!document,
+    refetchInterval: (data) => {
+      // Poll every 2 seconds if extraction is in progress and no obligations yet
+      if (document?.extraction_status === 'PROCESSING' || document?.extraction_status === 'EXTRACTING') {
+        return 2000;
+      }
+      return false;
+    },
+  });
+
+  // Poll extraction status if processing
+  const { data: extractionStatus } = useQuery<{
+    status: string;
+    progress: number | null;
+    obligation_count: number;
+  }>({
+    queryKey: ['extraction-status', id],
+    queryFn: async () => {
+      const response = await apiClient.get<{
+        status: string;
+        progress: number | null;
+        obligation_count: number;
+      }>(`/documents/${id}/extraction-status`);
+      return response.data;
+    },
+    enabled: !!document && (document.extraction_status === 'PENDING' || document.extraction_status === 'PROCESSING' || document.extraction_status === 'EXTRACTING'),
+    refetchInterval: 2000, // Poll every 2 seconds
   });
 
   if (docLoading) {
@@ -142,10 +173,39 @@ export default function DocumentDetailPage({
         </div>
       </div>
 
+      {/* Extraction Progress */}
+      {(document.extraction_status === 'PENDING' || document.extraction_status === 'PROCESSING' || document.extraction_status === 'EXTRACTING') && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold text-text-primary mb-4">Extraction Progress</h2>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between text-sm text-text-secondary mb-2">
+                <span>Processing document...</span>
+                <span>{extractionStatus?.progress !== null ? `${extractionStatus.progress}%` : '...'}</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${extractionStatus?.progress || 0}%` }}
+                />
+              </div>
+            </div>
+            {extractionStatus?.obligation_count !== undefined && extractionStatus.obligation_count > 0 && (
+              <p className="text-sm text-text-secondary">
+                {extractionStatus.obligation_count} obligation{extractionStatus.obligation_count !== 1 ? 's' : ''} extracted so far...
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Extracted Obligations */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold text-text-primary mb-4">
           Extracted Obligations
+          {obligations && obligations.length > 0 && (
+            <span className="ml-2 text-sm font-normal text-text-secondary">({obligations.length})</span>
+          )}
         </h2>
         {obligationsLoading ? (
           <div className="text-center py-8 text-text-secondary">Loading obligations...</div>
@@ -162,10 +222,10 @@ export default function DocumentDetailPage({
                       href={`/dashboard/obligations/${obligation.id}`}
                       className="text-primary hover:text-primary-dark font-medium"
                     >
-                      {obligation.obligation_title || 'Untitled Obligation'}
+                      {obligation.obligation_title || obligation.obligation_description?.substring(0, 50) || 'Untitled Obligation'}
                     </Link>
                     <p className="text-sm text-text-secondary mt-1 line-clamp-2">
-                      {obligation.original_text.substring(0, 200)}...
+                      {obligation.obligation_description || obligation.original_text || 'No description'}
                     </p>
                     <div className="flex gap-4 mt-2">
                       <span className="text-xs text-text-tertiary">

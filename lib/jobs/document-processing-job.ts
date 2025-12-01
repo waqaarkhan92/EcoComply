@@ -30,6 +30,15 @@ export async function processDocumentJob(job: Job<DocumentProcessingJobData>): P
   try {
     // Update job status in database
     await updateJobStatus(document_id, 'PROCESSING', null);
+    
+    // Update document status to PROCESSING
+    await supabaseAdmin
+      .from('documents')
+      .update({
+        extraction_status: 'PROCESSING',
+        extraction_started_at: new Date().toISOString(),
+      })
+      .eq('id', document_id);
 
     // Step 1: Download file from Supabase Storage
     const fileBuffer = await downloadFile(file_path);
@@ -110,6 +119,8 @@ export async function processDocumentJob(job: Job<DocumentProcessingJobData>): P
         extraction_completed_at: new Date().toISOString(),
       })
       .eq('id', document_id);
+    
+    console.log(`✅ Document ${document_id} extraction completed: ${creationResult.obligationsCreated} obligations created`);
 
     // Step 8: Update job status
     await updateJobStatus(document_id, 'COMPLETED', {
