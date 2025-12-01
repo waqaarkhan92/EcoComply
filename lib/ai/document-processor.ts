@@ -4,8 +4,8 @@
  * Reference: docs/specs/41_Backend_Background_Jobs.md Section 3.1
  */
 
-// @ts-ignore - pdf-parse has inconsistent exports
-const pdfParse = require('pdf-parse');
+// Import pdf-parse v2 API
+const { PDFParse } = require('pdf-parse');
 import { createWorker } from 'tesseract.js';
 import { getOpenAIClient } from './openai-client';
 import { getRuleLibraryMatcher, RuleMatch } from './rule-library-matcher';
@@ -64,9 +64,11 @@ export class DocumentProcessor {
     let ocrText: string | undefined;
 
     try {
-      const pdfData = await pdfParse(fileBuffer);
-      extractedText = pdfData.text;
-      const pageCount = pdfData.numpages;
+      // Use pdf-parse v2 API
+      const parser = new PDFParse({ data: fileBuffer });
+      const result = await parser.getText();
+      extractedText = result.text;
+      const pageCount = result.numpages || 1;
       const fileSizeBytes = fileBuffer.length;
 
       // Check if text extraction was successful (has meaningful content)
