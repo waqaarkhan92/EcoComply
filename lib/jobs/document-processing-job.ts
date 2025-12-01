@@ -36,7 +36,6 @@ export async function processDocumentJob(job: Job<DocumentProcessingJobData>): P
       .from('documents')
       .update({
         extraction_status: 'PROCESSING',
-        extraction_started_at: new Date().toISOString(),
       })
       .eq('id', document_id);
 

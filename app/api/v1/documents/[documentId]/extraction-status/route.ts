@@ -42,10 +42,9 @@ export async function GET(
       .select(`
         id,
         extraction_status,
-        extraction_started_at,
-        extraction_completed_at,
-        obligation_count,
-        processing_error
+        created_at,
+        updated_at,
+        obligation_count
       `)
       .eq('id', documentId)
       .is('deleted_at', null)
@@ -75,8 +74,8 @@ export async function GET(
 
     // Calculate progress if in progress
     let progress: number | null = null;
-    if (apiStatus === 'IN_PROGRESS' && document.extraction_started_at) {
-      const startTime = new Date(document.extraction_started_at).getTime();
+    if (apiStatus === 'IN_PROGRESS' && document.created_at) {
+      const startTime = new Date(document.created_at).getTime();
       const now = Date.now();
       const elapsedSeconds = Math.floor((now - startTime) / 1000);
       
@@ -92,9 +91,9 @@ export async function GET(
         status: apiStatus,
         progress: progress,
         obligation_count: document.obligation_count || 0,
-        started_at: document.extraction_started_at || null,
-        completed_at: document.extraction_completed_at || null,
-        error: document.processing_error || null,
+        started_at: document.created_at || null,
+        completed_at: apiStatus === 'COMPLETED' ? document.updated_at || null : null,
+        error: null,
       },
       200,
       { request_id: requestId }
