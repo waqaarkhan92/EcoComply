@@ -12,6 +12,7 @@ interface User {
   full_name: string;
   company_id: string;
   email_verified: boolean;
+  role?: string; // CONSULTANT, OWNER, MANAGER, etc.
 }
 
 interface Company {

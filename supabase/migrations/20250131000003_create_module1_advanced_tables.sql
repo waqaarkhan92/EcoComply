@@ -310,3 +310,4 @@ CREATE TRIGGER ensure_single_current_permit_version_trigger
     EXECUTE FUNCTION ensure_single_current_permit_version();
 
 
+

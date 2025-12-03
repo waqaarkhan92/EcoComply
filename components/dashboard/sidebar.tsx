@@ -17,15 +17,24 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useModuleActivation } from '@/lib/hooks/use-module-activation';
+import { useAuthStore } from '@/lib/store/auth-store';
 
-// Global navigation (always visible)
-const globalNavigation = [
+// Global navigation - Company User View (most users)
+const getCompanyUserNavigation = () => [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Sites', href: '/dashboard/companies', icon: Building2 },
+  { name: 'Sites', href: '/dashboard/sites', icon: Building2 }, // Company users see "Sites"
   { name: 'Audit Packs', href: '/dashboard/packs', icon: Package },
   { name: 'Compliance Clock', href: '/dashboard/compliance-clocks', icon: Clock3 },
   { name: 'Tasks & Actions', href: '/dashboard/recurring-tasks', icon: ListTodo },
   { name: 'Evidence Library', href: '/dashboard/evidence', icon: FolderOpen },
+  { name: 'Settings', href: '/dashboard/profile', icon: Settings },
+];
+
+// Global navigation - Consultant View (multi-tenant)
+const getConsultantNavigation = () => [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Companies', href: '/dashboard/companies', icon: Building2 }, // Consultants see "Companies"
+  { name: 'Audit Packs', href: '/dashboard/packs', icon: Package },
   { name: 'Settings', href: '/dashboard/profile', icon: Settings },
 ];
 
@@ -61,6 +70,7 @@ const getModule4Navigation = (siteId: string | null) => [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuthStore();
   const { data: isModule2Active, isLoading: isLoadingModule2 } = useModuleActivation('MODULE_2');
   const { data: isModule3Active, isLoading: isLoadingModule3 } = useModuleActivation('MODULE_3');
   const { data: isModule4Active, isLoading: isLoadingModule4 } = useModuleActivation('MODULE_4');
@@ -68,6 +78,12 @@ export function Sidebar() {
   // Extract siteId from pathname if we're on a site page
   const siteIdMatch = pathname?.match(/\/sites\/([^/]+)/);
   const currentSiteId = siteIdMatch ? siteIdMatch[1] : null;
+
+  // Determine if user is a consultant
+  const isConsultant = user?.role === 'CONSULTANT';
+
+  // Get the appropriate navigation based on user role
+  const globalNavigation = isConsultant ? getConsultantNavigation() : getCompanyUserNavigation();
 
   return (
     <div className="hidden md:flex w-64 bg-charcoal h-screen flex-col border-r border-border-gray">

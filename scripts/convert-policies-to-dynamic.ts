@@ -18,3 +18,4 @@ console.log(`Need to convert ${migrationsToConvert.length} migrations to dynamic
 console.log('This will be done manually to ensure correctness.');
 
 
+
