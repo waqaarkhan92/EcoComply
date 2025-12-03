@@ -1,21 +1,29 @@
 'use client';
 
+import { use } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useParams, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
-import { 
-  Upload, 
-  FileText, 
-  Calendar, 
-  AlertCircle, 
-  Clock, 
-  CheckCircle,
-  MoreVertical,
-  Settings
+import {
+  Building2,
+  FileText,
+  AlertCircle,
+  Clock,
+  CheckCircle2,
+  Upload,
+  Package,
+  TrendingUp,
+  ArrowRight,
+  Beaker,
+  Zap,
+  Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
-import UnlinkedEvidenceWidget from '@/components/dashboard/UnlinkedEvidenceWidget';
+import { useRouter } from 'next/navigation';
+
+interface SiteDashboardProps {
+  params: Promise<{ siteId: string }>;
+}
 
 interface Site {
   id: string;
@@ -24,96 +32,93 @@ interface Site {
   city: string;
   postcode: string;
   regulator: string;
-  compliance_score: number;
-  compliance_status: 'COMPLIANT' | 'AT_RISK' | 'NON_COMPLIANT';
+  water_company: string;
+  compliance_score?: number;
+  compliance_status?: 'COMPLIANT' | 'AT_RISK' | 'NON_COMPLIANT';
 }
 
-interface Obligation {
-  id: string;
-  title: string;
-  category: string;
-  due_date: string;
-  status: string;
-  is_overdue: boolean;
+interface DashboardStats {
+  obligations: {
+    total: number;
+    overdue: number;
+    due_soon: number;
+    compliant: number;
+  };
+  documents: {
+    total: number;
+    pending_review: number;
+    approved: number;
+  };
+  upcoming_deadlines: Array<{
+    id: string;
+    obligation_id: string;
+    obligation_title: string;
+    due_date: string;
+    status: string;
+  }>;
 }
 
-interface Deadline {
-  id: string;
-  obligation_id: string;
-  obligation_title: string;
-  due_date: string;
-  status: string;
-  days_remaining: number;
-}
-
-interface DashboardData {
-  site: Site;
-  overdue_obligations: Obligation[];
-  upcoming_deadlines: Deadline[];
-  recent_activity: any[];
-  compliance_score: number;
-}
-
-export default function SiteDashboardPage() {
-  const params = useParams();
+export default function SiteDashboardPage({ params }: SiteDashboardProps) {
+  const { siteId } = use(params);
   const router = useRouter();
-  const siteId = params.siteId as string;
 
-  const { data: dashboardData, isLoading, error } = useQuery<{ data: DashboardData }>({
-    queryKey: ['site-dashboard', siteId],
-    queryFn: async (): Promise<any> => {
-      // Try to fetch from dedicated endpoint, fallback to aggregated calls
-      try {
-        const response = await apiClient.get<{ data: DashboardData }>(`/sites/${siteId}/dashboard`);
-        return response;
-      } catch {
-        // Fallback: fetch individual endpoints
-        const [siteRes, obligationsRes, deadlinesRes] = await Promise.all([
-          apiClient.get<{ data: Site }>(`/sites/${siteId}`),
-          apiClient.get<{ data: Obligation[] }>(`/sites/${siteId}/obligations?filter[status]=OVERDUE&limit=10`),
-          apiClient.get<{ data: Deadline[] }>(`/sites/${siteId}/deadlines/upcoming?days=7&limit=10`),
-        ]);
-
-        return {
-          data: {
-            site: siteRes.data,
-            overdue_obligations: obligationsRes.data || [],
-            upcoming_deadlines: deadlinesRes.data || [],
-            recent_activity: [],
-            compliance_score: siteRes.data.compliance_score || 0,
-          },
-        };
-      }
+  const { data: siteData, isLoading: isSiteLoading } = useQuery({
+    queryKey: ['site', siteId],
+    queryFn: async () => {
+      const response = await apiClient.get(\`/sites/\${siteId}\`);
+      return response.data as Site;
     },
-    enabled: !!siteId,
   });
 
-  const getTrafficLightStatus = (status?: string, score?: number) => {
-    if (status === 'COMPLIANT' || (score && score >= 85)) return 'GREEN';
-    if (status === 'AT_RISK' || (score && score >= 70 && score < 85)) return 'YELLOW';
-    return 'RED';
+  const { data: statsData, isLoading: isStatsLoading } = useQuery({
+    queryKey: ['site-dashboard-stats', siteId],
+    queryFn: async () => {
+      const response = await apiClient.get(\`/sites/\${siteId}/dashboard\`);
+      return response.data as DashboardStats;
+    },
+  });
+
+  const { data: modules } = useQuery({
+    queryKey: ['modules'],
+    queryFn: async () => {
+      const [module2, module3, module4] = await Promise.all([
+        apiClient.get('/modules?filter[module_code]=MODULE_2'),
+        apiClient.get('/modules?filter[module_code]=MODULE_3'),
+        apiClient.get('/modules?filter[module_code]=MODULE_4'),
+      ]);
+      return {
+        module2: module2.data?.[0],
+        module3: module3.data?.[0],
+        module4: module4.data?.[0],
+      };
+    },
+  });
+
+  const site = siteData;
+  const stats = statsData;
+
+  const getStatusColor = (status: string | undefined, score: number | undefined) => {
+    if (!status && !score) return '#6B7280';
+    if (status === 'COMPLIANT' || (score && score >= 85)) return '#2E7D32';
+    if (status === 'AT_RISK' || (score && score >= 70 && score < 85)) return '#D4A017';
+    return '#C44536';
   };
 
-  const getStatusColor = (status: string) => {
-    if (status === 'GREEN') return { bg: 'bg-green-500', text: 'text-green-900' };
-    if (status === 'YELLOW') return { bg: 'bg-yellow-500', text: 'text-yellow-900' };
-    return { bg: 'bg-red-500', text: 'text-red-900' };
+  const getStatusText = (status: string | undefined, score: number | undefined) => {
+    if (!status && !score) return 'Unknown';
+    if (status === 'COMPLIANT' || (score && score >= 85)) return 'Compliant';
+    if (status === 'AT_RISK' || (score && score >= 70 && score < 85)) return 'At Risk';
+    return 'Non-Compliant';
   };
 
-  const getStatusMessage = (status: string, score: number) => {
-    if (status === 'GREEN') return 'All obligations are compliant';
-    if (status === 'YELLOW') return 'Some obligations require attention';
-    return 'Critical compliance issues require immediate action';
-  };
-
-  if (isLoading) {
+  if (isSiteLoading || isStatsLoading) {
     return (
-      <div className="min-h-screen bg-[#101314] p-6">
+      <div className="min-h-screen bg-[#F9FAFB] p-6">
         <div className="max-w-7xl mx-auto space-y-6">
-          <div className="h-12 bg-gray-800 rounded animate-pulse" />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-12 bg-gray-200 rounded animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-64 bg-gray-800 rounded-lg animate-pulse" />
+              <div key={i} className="h-40 bg-white rounded-lg shadow animate-pulse" />
             ))}
           </div>
         </div>
@@ -121,203 +126,251 @@ export default function SiteDashboardPage() {
     );
   }
 
-  if (error || !dashboardData?.data) {
-    return (
-      <div className="min-h-screen bg-[#101314] flex items-center justify-center">
-        <div className="text-center text-white">
-          <h2 className="text-2xl font-bold mb-2">Error Loading Dashboard</h2>
-          <p className="text-gray-400 mb-4">Unable to load site dashboard data</p>
-          <Button onClick={() => window.location.reload()}>Retry</Button>
-        </div>
-      </div>
-    );
-  }
-
-  const { site, overdue_obligations = [], upcoming_deadlines = [], compliance_score = 0 } = dashboardData.data;
-  const trafficLightStatus = getTrafficLightStatus(site.compliance_status, compliance_score);
-  const statusColors = getStatusColor(trafficLightStatus);
+  const statusColor = getStatusColor(site?.compliance_status, site?.compliance_score);
+  const score = site?.compliance_score || 0;
 
   return (
-    <div className="min-h-screen bg-[#101314] p-6">
+    <div className="min-h-screen bg-[#F9FAFB] p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Site Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">{site.name}</h1>
-            <p className="text-gray-400">
-              {site.address_line_1}, {site.city}, {site.postcode}
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href={`/dashboard/sites/${siteId}/settings`}>
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
-            </Link>
-            <Button variant="ghost" size="sm">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Traffic Light Status */}
-        <div className={`bg-white rounded-lg shadow-lg p-6 ${statusColors.bg}`}>
-          <div className="flex items-center justify-between">
+        <div className="bg-white rounded-lg shadow-lg p-6 border-l-4" style={{ borderLeftColor: statusColor }}>
+          <div className="flex items-start justify-between">
             <div>
-              <div className="flex items-center gap-4 mb-2">
-                <div className={`w-6 h-6 rounded-full ${statusColors.bg}`} />
-                <h2 className="text-xl font-semibold text-[#101314]">
-                  {trafficLightStatus === 'GREEN' ? 'Compliant' : trafficLightStatus === 'YELLOW' ? 'At Risk' : 'Non-Compliant'}
-                </h2>
+              <div className="flex items-center gap-3 mb-2">
+                <Building2 className="h-8 w-8 text-[#104B3A]" />
+                <h1 className="text-4xl font-bold text-[#101314]">{site?.name}</h1>
               </div>
-              <p className="text-[#101314] opacity-80">
-                {getStatusMessage(trafficLightStatus, compliance_score)}
+              <p className="text-gray-600">
+                {site?.address_line_1}, {site?.city}, {site?.postcode}
               </p>
             </div>
+
             <div className="text-right">
-              <div className="text-4xl font-bold text-[#101314]">{compliance_score}%</div>
-              <p className="text-sm text-[#101314] opacity-80">Compliance Score</p>
+              <p className="text-sm text-gray-600 mb-2">Compliance Score</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-6xl font-bold" style={{ color: statusColor }}>
+                  {score}
+                </span>
+                <span className="text-3xl font-medium text-gray-400">%</span>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: statusColor }} />
+                <span className="text-sm font-medium" style={{ color: statusColor }}>
+                  {getStatusText(site?.compliance_status, score)}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Overdue Obligations Card */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-[#101314]">Overdue Obligations</h3>
-              <span className="text-3xl font-bold text-[#B13434]">{overdue_obligations.length}</span>
-            </div>
-            {overdue_obligations.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-500" />
-                <p>No overdue obligations</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 text-sm font-medium text-gray-700">Obligation</th>
-                      <th className="text-left py-2 text-sm font-medium text-gray-700">Category</th>
-                      <th className="text-left py-2 text-sm font-medium text-gray-700">Due Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {overdue_obligations.slice(0, 5).map((obligation) => (
-                      <tr key={obligation.id} className="border-b hover:bg-gray-50 cursor-pointer"
-                          onClick={() => router.push(`/dashboard/sites/${siteId}/obligations/${obligation.id}`)}>
-                        <td className="py-3 text-sm font-medium">{obligation.title}</td>
-                        <td className="py-3 text-sm text-gray-600">{obligation.category}</td>
-                        <td className="py-3 text-sm text-red-600">
-                          {new Date(obligation.due_date).toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {overdue_obligations.length > 5 && (
-                  <div className="mt-4 text-center">
-                    <Link href={`/dashboard/sites/${siteId}/obligations?filter=overdue`}>
-                      <Button variant="outline" size="sm">
-                        View All ({overdue_obligations.length})
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )}
+        <div className="bg-gradient-to-br from-[#104B3A] to-[#0B372A] rounded-lg shadow-xl p-6 text-white">
+          <div className="flex items-center gap-3 mb-6">
+            <Clock className="h-6 w-6" />
+            <h2 className="text-2xl font-bold">Compliance Clock</h2>
           </div>
 
-          {/* Upcoming Deadlines Card */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-[#101314]">Upcoming Deadlines</h3>
-              <span className="text-3xl font-bold text-[#CB7C00]">{upcoming_deadlines.length}</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white/10 backdrop-blur rounded-lg p-4 border-2 border-[#C44536]">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-white/80">Overdue</span>
+                <AlertCircle className="h-5 w-5 text-[#C44536]" />
+              </div>
+              <div className="text-4xl font-bold text-[#C44536]">{stats?.obligations.overdue || 0}</div>
+              <Button
+                className="mt-3 w-full bg-[#C44536] hover:bg-[#A33528] text-white"
+                onClick={() => router.push(\`/dashboard/sites/\${siteId}/obligations?filter=overdue\`)}
+              >
+                View →
+              </Button>
             </div>
-            {upcoming_deadlines.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Calendar className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                <p>No upcoming deadlines</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 text-sm font-medium text-gray-700">Obligation</th>
-                      <th className="text-left py-2 text-sm font-medium text-gray-700">Due Date</th>
-                      <th className="text-left py-2 text-sm font-medium text-gray-700">Days Left</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {upcoming_deadlines.slice(0, 5).map((deadline) => (
-                      <tr key={deadline.id} className="border-b hover:bg-gray-50 cursor-pointer"
-                          onClick={() => router.push(`/dashboard/sites/${siteId}/deadlines/${deadline.id}`)}>
-                        <td className="py-3 text-sm font-medium">{deadline.obligation_title}</td>
-                        <td className="py-3 text-sm text-gray-600">
-                          {new Date(deadline.due_date).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 text-sm">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            deadline.days_remaining <= 3 ? 'bg-red-100 text-red-800' :
-                            deadline.days_remaining <= 7 ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-green-100 text-green-800'
-                          }`}>
-                            {deadline.days_remaining} days
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {upcoming_deadlines.length > 5 && (
-                  <div className="mt-4 text-center">
-                    <Link href={`/dashboard/sites/${siteId}/deadlines/upcoming`}>
-                      <Button variant="outline" size="sm">
-                        View All ({upcoming_deadlines.length})
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
 
-          {/* Quick Actions Card */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h3 className="text-xl font-bold text-[#101314] mb-4">Quick Actions</h3>
-            <div className="space-y-3">
-              <Link href={`/dashboard/sites/${siteId}/documents/upload`} className="block">
-                <Button className="w-full justify-start" style={{ backgroundColor: '#026A67' }}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload Document
-                </Button>
-              </Link>
-              <Link href={`/dashboard/evidence/upload?siteId=${siteId}`} className="block">
-                <Button className="w-full justify-start" style={{ backgroundColor: '#026A67' }}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Upload Evidence
-                </Button>
-              </Link>
-              <Link href={`/dashboard/sites/${siteId}/packs/generate`} className="block">
-                <Button className="w-full justify-start" style={{ backgroundColor: '#026A67' }}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Generate Audit Pack
-                </Button>
-              </Link>
+            <div className="bg-white/10 backdrop-blur rounded-lg p-4 border-2 border-[#D4A017]">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-white/80">Due Soon (7 days)</span>
+                <Clock className="h-5 w-5 text-[#D4A017]" />
+              </div>
+              <div className="text-4xl font-bold text-[#D4A017]">{stats?.obligations.due_soon || 0}</div>
+              <Button
+                className="mt-3 w-full bg-[#D4A017] hover:bg-[#B58914] text-white"
+                onClick={() => router.push(\`/dashboard/sites/\${siteId}/obligations?filter=due_soon\`)}
+              >
+                View →
+              </Button>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur rounded-lg p-4 border-2 border-[#2E7D32]">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-white/80">On Track</span>
+                <CheckCircle2 className="h-5 w-5 text-[#2E7D32]" />
+              </div>
+              <div className="text-4xl font-bold text-[#2E7D32]">{stats?.obligations.compliant || 0}</div>
+              <Button
+                className="mt-3 w-full bg-[#2E7D32] hover:bg-[#246627] text-white"
+                onClick={() => router.push(\`/dashboard/sites/\${siteId}/obligations?filter=compliant\`)}
+              >
+                View →
+              </Button>
             </div>
           </div>
+        </div>
 
-          {/* Unlinked Evidence Widget */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <UnlinkedEvidenceWidget siteId={siteId} />
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-[#101314] mb-6">Module Features</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="border-2 border-[#2E7D32] rounded-lg p-5 bg-green-50">
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-2 bg-[#2E7D32] rounded-lg">
+                  <FileText className="h-5 w-5 text-white" />
+                </div>
+                <span className="px-2 py-1 text-xs font-medium bg-[#2E7D32] text-white rounded-full">
+                  ACTIVE
+                </span>
+              </div>
+              <h3 className="font-bold text-[#101314] mb-2">Environmental Permits</h3>
+              <p className="text-sm text-gray-600 mb-4">Core permit management</p>
+              <Button
+                className="w-full bg-[#2E7D32] hover:bg-[#246627] text-white"
+                onClick={() => router.push(\`/dashboard/sites/\${siteId}/permits/documents\`)}
+              >
+                Manage →
+              </Button>
+            </div>
+
+            <div className={\`border-2 rounded-lg p-5 \${modules?.module2 ? 'border-[#2E7D32] bg-green-50' : 'border-gray-300 bg-gray-50'}\`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className={\`p-2 rounded-lg \${modules?.module2 ? 'bg-[#2E7D32]' : 'bg-gray-400'}\`}>
+                  <Beaker className="h-5 w-5 text-white" />
+                </div>
+                <span className={\`px-2 py-1 text-xs font-medium rounded-full \${
+                  modules?.module2
+                    ? 'bg-[#2E7D32] text-white'
+                    : 'bg-gray-300 text-gray-600'
+                }\`}>
+                  {modules?.module2 ? 'ACTIVE' : 'INACTIVE'}
+                </span>
+              </div>
+              <h3 className="font-bold text-[#101314] mb-2">Trade Effluent</h3>
+              <p className="text-sm text-gray-600 mb-4">Water discharge monitoring</p>
+              {modules?.module2 ? (
+                <Button
+                  className="w-full bg-[#2E7D32] hover:bg-[#246627] text-white"
+                  onClick={() => router.push(\`/dashboard/sites/\${siteId}/trade-effluent/parameters\`)}
+                >
+                  Manage →
+                </Button>
+              ) : (
+                <Button variant="outline" className="w-full" disabled>
+                  Not Purchased
+                </Button>
+              )}
+            </div>
+
+            <div className={\`border-2 rounded-lg p-5 \${modules?.module3 ? 'border-[#2E7D32] bg-green-50' : 'border-gray-300 bg-gray-50'}\`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className={\`p-2 rounded-lg \${modules?.module3 ? 'bg-[#2E7D32]' : 'bg-gray-400'}\`}>
+                  <Zap className="h-5 w-5 text-white" />
+                </div>
+                <span className={\`px-2 py-1 text-xs font-medium rounded-full \${
+                  modules?.module3
+                    ? 'bg-[#2E7D32] text-white'
+                    : 'bg-gray-300 text-gray-600'
+                }\`}>
+                  {modules?.module3 ? 'ACTIVE' : 'INACTIVE'}
+                </span>
+              </div>
+              <h3 className="font-bold text-[#101314] mb-2">MCPD/Generators</h3>
+              <p className="text-sm text-gray-600 mb-4">Generator runtime tracking</p>
+              {modules?.module3 ? (
+                <Button
+                  className="w-full bg-[#2E7D32] hover:bg-[#246627] text-white"
+                  onClick={() => router.push(\`/dashboard/sites/\${siteId}/generators/run-hours\`)}
+                >
+                  Manage →
+                </Button>
+              ) : (
+                <Button variant="outline" className="w-full" disabled>
+                  Not Purchased
+                </Button>
+              )}
+            </div>
+
+            <div className={\`border-2 rounded-lg p-5 \${modules?.module4 ? 'border-[#2E7D32] bg-green-50' : 'border-gray-300 bg-gray-50'}\`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className={\`p-2 rounded-lg \${modules?.module4 ? 'bg-[#2E7D32]' : 'bg-gray-400'}\`}>
+                  <Trash2 className="h-5 w-5 text-white" />
+                </div>
+                <span className={\`px-2 py-1 text-xs font-medium rounded-full \${
+                  modules?.module4
+                    ? 'bg-[#2E7D32] text-white'
+                    : 'bg-gray-300 text-gray-600'
+                }\`}>
+                  {modules?.module4 ? 'ACTIVE' : 'INACTIVE'}
+                </span>
+              </div>
+              <h3 className="font-bold text-[#101314] mb-2">Hazardous Waste</h3>
+              <p className="text-sm text-gray-600 mb-4">Waste stream tracking</p>
+              {modules?.module4 ? (
+                <Button
+                  className="w-full bg-[#2E7D32] hover:bg-[#246627] text-white"
+                  onClick={() => router.push(\`/dashboard/sites/\${siteId}/hazardous-waste/waste-streams\`)}
+                >
+                  Manage →
+                </Button>
+              ) : (
+                <Button variant="outline" className="w-full" disabled>
+                  Not Purchased
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-[#101314] mb-6">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button
+              className="w-full h-auto p-6 bg-[#104B3A] hover:bg-[#0B372A] text-white flex items-center justify-between group"
+              onClick={() => router.push(\`/dashboard/sites/\${siteId}/permits/documents/upload\`)}
+            >
+              <div className="flex items-center gap-3">
+                <Upload className="h-6 w-6" />
+                <div className="text-left">
+                  <p className="font-semibold">Upload Document</p>
+                  <p className="text-sm text-white/80">Add permit or evidence</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+            </Button>
+
+            <Button
+              className="w-full h-auto p-6 bg-[#0056A6] hover:bg-[#004080] text-white flex items-center justify-between group"
+              onClick={() => router.push(\`/dashboard/sites/\${siteId}/audit-packs\`)}
+            >
+              <div className="flex items-center gap-3">
+                <Package className="h-6 w-6" />
+                <div className="text-left">
+                  <p className="font-semibold">Generate Audit Pack</p>
+                  <p className="text-sm text-white/80">Create compliance package</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+            </Button>
+
+            <Button
+              className="w-full h-auto p-6 bg-[#104B3A] hover:bg-[#0B372A] text-white flex items-center justify-between group"
+              onClick={() => router.push(\`/dashboard/sites/\${siteId}/settings\`)}
+            >
+              <div className="flex items-center gap-3">
+                <TrendingUp className="h-6 w-6" />
+                <div className="text-left">
+                  <p className="font-semibold">View Reports</p>
+                  <p className="text-sm text-white/80">Compliance analytics</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+            </Button>
           </div>
         </div>
       </div>
     </div>
   );
 }
-
