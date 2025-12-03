@@ -10,6 +10,7 @@ import { successResponse, errorResponse, paginatedResponse, ErrorCodes } from '@
 import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { requireModule } from '@/lib/api/module-check';
 import { parsePaginationParams, parseFilterParams, parseSortParams, createCursor } from '@/lib/api/pagination';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
@@ -102,9 +103,9 @@ export async function GET(request: NextRequest) {
     // Check if there are more results
     const hasMore = (records || []).length > limit;
     const data = hasMore ? (records || []).slice(0, limit) : (records || []);
-    const nextCursor = hasMore && data.length > 0 ? createCursor(data[data.length - 1].created_at) : null;
+    const nextCursor = hasMore && data.length > 0 ? createCursor(data[data.length - 1].id, data[data.length - 1].created_at) : undefined;
 
-    const response = paginatedResponse(data, nextCursor, { request_id: requestId });
+    const response = paginatedResponse(data, nextCursor, limit, hasMore, { request_id: requestId });
     return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Error in GET /api/v1/module-3/run-hours:', error);
@@ -274,7 +275,7 @@ export async function POST(request: NextRequest) {
       : 0;
     const percentageOfMonthly = generator.monthly_run_hour_limit && generator.monthly_run_hour_limit > 0
       ? (monthTotal / generator.monthly_run_hour_limit) * 100
-      : null;
+      : undefined;
 
     // Create run-hour record
     const { data: record, error: recordError } = await supabaseAdmin

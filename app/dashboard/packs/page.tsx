@@ -67,14 +67,14 @@ export default function PacksPage() {
     pagination: any;
   }>({
     queryKey: ['packs'],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const response = await apiClient.get<Pack[]>('/packs');
       // apiClient.get returns {data: [...], pagination: {...}}, so return the whole response
       return response;
     },
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Poll every 5 seconds if there are packs with status PENDING or GENERATING
-      const packs = data?.data || [];
+      const packs = query.state.data?.data || [];
       const hasGenerating = packs.some((p: Pack) =>
         p.status === 'PENDING' || p.status === 'GENERATING'
       );
@@ -88,7 +88,7 @@ export default function PacksPage() {
     data: Site[];
   }>({
     queryKey: ['sites'],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const response = await apiClient.get<Site[]>('/sites');
       return response;
     },
@@ -101,7 +101,7 @@ export default function PacksPage() {
     data: Document[];
   }>({
     queryKey: ['documents', selectedSite],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       if (!selectedSite) return { data: [] };
       const response = await apiClient.get<Document[]>(`/documents?filter[site_id]=${selectedSite}`);
       return response;
@@ -276,6 +276,13 @@ export default function PacksPage() {
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
+                      {pack.status === 'COMPLETED' && (
+                        <Link href={pack.site_id ? `/dashboard/sites/${pack.site_id}/packs/${pack.id}` : `/dashboard/packs/${pack.id}`}>
+                          <Button variant="ghost" size="sm" title="View Details">
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      )}
                       {pack.status === 'COMPLETED' && (
                         <a href={`/api/v1/packs/${pack.id}/download`} download>
                           <Button variant="ghost" size="sm" title="Download">

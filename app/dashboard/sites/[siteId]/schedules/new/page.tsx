@@ -28,7 +28,7 @@ export default function NewSchedulePage() {
   // Fetch obligations for this site
   const { data: obligationsData } = useQuery<{ data: Obligation[] }>({
     queryKey: ['obligations', siteId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       params.append('filter[site_id]', siteId);
       params.append('limit', '100');

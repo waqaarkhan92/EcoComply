@@ -25,7 +25,7 @@ export default function ClientDetailPage() {
 
   const { data: clientData, isLoading } = useQuery<{ data: ClientDetail }>({
     queryKey: ['consultant-client', clientId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: ClientDetail }>(`/consultant/clients/${clientId}`);
     },
   });

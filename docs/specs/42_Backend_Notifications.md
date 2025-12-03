@@ -1,8 +1,8 @@
 # EcoComply Notification & Messaging Specification
 
-**EcoComply v1.0 — Launch-Ready / Last updated: 2024-12-27**
+**EcoComply v1.3 — Launch-Ready / Last updated: 2025-12-01**
 
-**Document Version:** 1.0  
+**Document Version:** 1.3
 **Status:** Complete  
 **Created by:** Cursor  
 **Depends on:**
@@ -13,7 +13,33 @@
 
 **Purpose:** Defines the complete notification and messaging system, including email/SMS templates, escalation chains, delivery mechanisms, rate limiting, and integration with background jobs for the EcoComply platform.
 
-> [v1 UPDATE – Version Header – 2024-12-27]
+> [v1.3 UPDATE – Database Schema v1.3 Features – 2025-12-01]
+
+## Changelog
+
+### v1.4 (2025-01-01)
+- Added severity levels (INFO, WARNING, CRITICAL) to notification schema
+- Added deep linking fields (obligation_id, evidence_id) to notifications table
+- Added breach detection notification templates (COMPLIANCE_BREACH_DETECTED, REGULATORY_DEADLINE_BREACH)
+- Enhanced all breach/SLA notifications with deep links to obligations/evidence
+- Made action_url REQUIRED for all notifications
+- Added background job integration for breach detection and SLA miss alerts
+
+### v1.3 (2025-12-01)
+- Added Compliance Clock notification templates (CRITICAL, REMINDER, OVERDUE)
+- Added Escalation Workflow notification templates (LEVEL_1 through LEVEL_4, RESOLVED)
+- Added Permit Workflow notification templates (RENEWAL_DUE, SUBMITTED, RESPONSE_OVERDUE, APPROVED, SURRENDER_INSPECTION)
+- Added Corrective Action notification templates (ASSIGNED, DUE_SOON, OVERDUE, READY_FOR_CLOSURE, CLOSURE_APPROVED)
+- Added Validation notification templates (CONSIGNMENT_VALIDATION_FAILED, CONSIGNMENT_VALIDATION_WARNING)
+- Added Runtime Monitoring notification templates (VALIDATION_PENDING, VALIDATION_REJECTED)
+- Added SLA Breach notification templates (SLA_BREACH_DETECTED, SLA_BREACH_EXTENDED)
+- Updated TypeScript interfaces with new notification types
+
+### v1.0 (2024-12-27)
+- Initial specification with deadline, parameter, pack, and import notifications
+- Escalation chain logic
+- Multi-channel delivery (Email, SMS, In-app)
+- Rate limiting and preference management
 
 ---
 
@@ -91,30 +117,70 @@ The system supports the following notification types:
 
 | Notification Type | Trigger | Channels | Escalation |
 |-------------------|---------|----------|------------|
+| **Module 1: Core Compliance** |
 | Deadline Warning (7-day) | Background Job | EMAIL, IN_APP | Level 1 |
 | Deadline Warning (3-day) | Background Job | EMAIL, IN_APP | Level 1 → Level 2 |
 | Deadline Warning (1-day) | Background Job | EMAIL, SMS, IN_APP | Level 1 → Level 2 → Level 3 |
 | Overdue Obligation | Background Job | EMAIL, SMS, IN_APP | Level 1 → Level 2 → Level 3 |
 | Evidence Reminder | Background Job | EMAIL, IN_APP | Level 1 → Level 2 |
 | Permit Renewal Reminder | Background Job | EMAIL, IN_APP | Level 1 |
+| **Compliance Clock Notifications (v1.3)** |
+| Compliance Clock Critical | Background Job | EMAIL, IN_APP | Level 1 |
+| Compliance Clock Reminder | Background Job | EMAIL, IN_APP | None |
+| Compliance Clock Overdue | Background Job | EMAIL, IN_APP, SLACK | Level 1 → Level 2 → Level 3 |
+| **Escalation Workflow (v1.3)** |
+| Escalation Level 1 | Background Job | EMAIL, IN_APP | Level 1 |
+| Escalation Level 2 | Background Job | EMAIL, IN_APP | Level 2 |
+| Escalation Level 3 | Background Job | EMAIL, IN_APP, SLACK | Level 3 |
+| Escalation Level 4 | Background Job | EMAIL, IN_APP, SLACK | Level 4 |
+| Escalation Resolved | System Event | EMAIL, IN_APP | None |
+| **Permit Workflows (v1.3)** |
+| Permit Renewal Due | Background Job | EMAIL, IN_APP | Level 1 |
+| Permit Workflow Submitted | System Event | EMAIL, IN_APP | None |
+| Regulator Response Overdue | Background Job | EMAIL, IN_APP | Level 1 |
+| Permit Workflow Approved | System Event | EMAIL, IN_APP | None |
+| Permit Surrender Inspection Due | Background Job | EMAIL, IN_APP | Level 1 |
+| **Corrective Actions (v1.3)** |
+| Corrective Action Item Assigned | System Event | EMAIL, IN_APP | None |
+| Corrective Action Item Due Soon | Background Job | EMAIL, IN_APP | None |
+| Corrective Action Item Overdue | Background Job | EMAIL, IN_APP | Level 1 |
+| Corrective Action Ready for Closure | System Event | EMAIL, IN_APP | None |
+| Corrective Action Closure Approved | System Event | EMAIL, IN_APP | None |
+| **Module 2: Parameter Monitoring** |
 | Parameter Exceedance (80%) | Background Job | EMAIL, IN_APP | Level 1 |
 | Parameter Exceedance (90%) | Background Job | EMAIL, IN_APP | Level 1 → Level 2 |
 | Parameter Exceedance (100%) | Background Job | EMAIL, SMS, IN_APP | Level 1 → Level 2 → Level 3 |
-| Run-Hour Breach (80%) | Background Job | EMAIL, IN_APP | Level 1 |
-| Run-Hour Breach (90%) | Background Job | EMAIL, IN_APP | Level 1 → Level 2 |
-| Run-Hour Breach (100%) | Background Job | EMAIL, SMS, IN_APP | Level 1 → Level 2 → Level 3 |
+| **Module 3: Runtime Monitoring** |
+| Runtime Threshold Exceeded (90%) | Background Job | EMAIL, IN_APP | None (HIGH priority) |
+| Runtime Annual Limit Exceeded (100%) | Background Job | EMAIL, IN_APP | None (HIGH priority) |
+| Runtime Monthly Limit Exceeded (100%) | Background Job | EMAIL, IN_APP | None (HIGH priority) |
+| Runtime Validation Pending | Background Job | EMAIL (Digest) | None |
+| Runtime Validation Rejected | System Event | EMAIL, IN_APP | None |
+| **Module 4: Waste Consignments (v1.3)** |
+| Consignment Validation Failed | Background Job | EMAIL, IN_APP | None |
+| Consignment Validation Warning | Background Job | IN_APP | None |
+| **SLA Management (v1.3)** |
+| SLA Breach Detected | Background Job | EMAIL, IN_APP | Level 1 |
+| SLA Breach Extended | Background Job | EMAIL, IN_APP, SLACK | Level 2 |
+| **Breach Detection (v1.4)** |
+| Compliance Breach Detected | Background Job | EMAIL, SMS, IN_APP | Level 1 → Level 2 → Level 3 |
+| Regulatory Deadline Breach | Background Job | EMAIL, SMS, IN_APP | Level 1 → Level 2 → Level 3 |
+| **Pack Generation** |
 | Audit Pack Ready | Background Job | EMAIL, IN_APP | None |
 | Regulator Pack Ready | Background Job | EMAIL, IN_APP | None |
 | Tender Pack Ready | Background Job | EMAIL, IN_APP | None |
 | Board Pack Ready | Background Job | EMAIL, IN_APP | None |
 | Insurer Pack Ready | Background Job | EMAIL, IN_APP | None |
 | Pack Distributed | Background Job | EMAIL, IN_APP | None |
+| **Consultant Features** |
 | Consultant Client Assigned | System Event | EMAIL, IN_APP | None |
 | Consultant Client Pack Generated | Background Job | EMAIL, IN_APP | None |
 | Consultant Client Activity | System Event | EMAIL, IN_APP | None |
+| **Data Import** |
 | Excel Import Ready for Review | Background Job | EMAIL, IN_APP | None |
 | Excel Import Completed | Background Job | EMAIL, IN_APP | None |
 | Excel Import Failed | Background Job | EMAIL, IN_APP | None |
+| **System** |
 | System Alert | System Event | EMAIL, IN_APP | Admin Only |
 
 ---
@@ -1053,6 +1119,2741 @@ Contact support: {{support_url}}
 
 ---
 
+> [v1.3 UPDATE – Compliance Clock Notifications – 2025-12-01]
+
+## 2.12 Compliance Clock Notification Templates
+
+### 2.12.1 Compliance Clock Critical Template
+
+**Subject Line Template:**
+```
+CRITICAL: {entity_type} '{entity_name}' - {days_remaining} days remaining
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #B13434; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        ⏰
+      </div>
+    </div>
+
+    <h1 style="color: #B13434; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Compliance Clock: CRITICAL Status
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      A compliance clock has entered <strong style="color: #B13434;">CRITICAL</strong> status and requires immediate attention.
+    </p>
+
+    <div style="background-color: #FEF2F2; border-left: 4px solid #B13434; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Entity Type:</span> {{entity_type}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Entity Name:</span> {{entity_name}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Target Date:</span> {{target_date}}
+      </div>
+      <div style="color: #B13434;">
+        <span style="font-weight: 600;">Days Remaining:</span> <span style="font-size: 20px; font-weight: 700;">{{days_remaining}}</span>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{action_url}}" style="background-color: #B13434; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        Take Action Now
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #6B7280; margin-top: 30px; text-align: center;">
+      This notification is sent once when a compliance clock reaches critical status (≤7 days remaining).
+    </p>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+CRITICAL: {{entity_type}} '{{entity_name}}' - {{days_remaining}} days remaining
+
+A compliance clock has entered CRITICAL status and requires immediate attention.
+
+Entity Type: {{entity_type}}
+Entity Name: {{entity_name}}
+Target Date: {{target_date}}
+Days Remaining: {{days_remaining}}
+
+Take Action: {{action_url}}
+
+This notification is sent once when a compliance clock reaches critical status (≤7 days remaining).
+```
+
+**Variables:**
+- `entity_type`: string - Type of entity (e.g., "Obligation", "Permit", "Deadline")
+- `entity_name`: string - Name/title of the entity
+- `target_date`: string - Formatted target date (e.g., "15 Jan 2025")
+- `days_remaining`: number - Days until target date (≤7)
+- `site_name`: string
+- `company_name`: string
+- `action_url`: string - URL to view entity details
+- `unsubscribe_url`: string
+
+**Recipients:** Assigned user + Site managers
+
+**Channels:** EMAIL, IN_APP
+
+**Priority:** HIGH
+
+**Frequency:** Once per transition to RED criticality
+
+**Escalation:** Level 1
+
+**Trigger:** Compliance clock `criticality_status` transitions to RED (days_remaining ≤ 7)
+
+---
+
+### 2.12.2 Compliance Clock Reminder Template
+
+**Subject Line Template:**
+```
+Reminder: {entity_type} '{entity_name}' due in {days_remaining} days
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #CB7C00; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        🔔
+      </div>
+    </div>
+
+    <h1 style="color: #CB7C00; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Compliance Clock Reminder
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      This is a scheduled reminder for an upcoming compliance deadline.
+    </p>
+
+    <div style="background-color: #FFF8E8; border-left: 4px solid #CB7C00; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Entity Type:</span> {{entity_type}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Entity Name:</span> {{entity_name}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Target Date:</span> {{target_date}}
+      </div>
+      <div style="color: #CB7C00;">
+        <span style="font-weight: 600;">Days Remaining:</span> {{days_remaining}}
+      </div>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{action_url}}" style="background-color: #026A67; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        View Details
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #6B7280; margin-top: 30px; text-align: center;">
+      You will receive reminders at {{reminder_intervals}}.
+    </p>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+Reminder: {{entity_type}} '{{entity_name}}' due in {{days_remaining}} days
+
+This is a scheduled reminder for an upcoming compliance deadline.
+
+Entity Type: {{entity_type}}
+Entity Name: {{entity_name}}
+Target Date: {{target_date}} ({{days_remaining}} days away)
+
+View Details: {{action_url}}
+
+You will receive reminders at {{reminder_intervals}}.
+```
+
+**Variables:**
+- `entity_type`: string
+- `entity_name`: string
+- `target_date`: string
+- `days_remaining`: number
+- `reminder_intervals`: string - e.g., "30, 14, 7, and 1 day milestones"
+- `site_name`: string
+- `company_name`: string
+- `action_url`: string
+- `unsubscribe_url`: string
+
+**Recipients:** Assigned user
+
+**Channels:** EMAIL, IN_APP
+
+**Priority:** NORMAL
+
+**Frequency:** Once per reminder threshold (e.g., 30, 14, 7, 1 days)
+
+**Escalation:** None
+
+**Trigger:** Compliance clock `days_remaining` matches value in `reminder_days` array
+
+---
+
+### 2.12.3 Compliance Clock Overdue Template
+
+**Subject Line Template:**
+```
+OVERDUE: {entity_type} '{entity_name}' was due on {target_date}
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #B13434; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        ⚠️
+      </div>
+    </div>
+
+    <h1 style="color: #B13434; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      OVERDUE: Compliance Deadline Missed
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      <strong style="color: #B13434;">This compliance deadline is now overdue and requires immediate resolution.</strong>
+    </p>
+
+    <div style="background-color: #FEF2F2; border-left: 4px solid #B13434; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Entity Type:</span> {{entity_type}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Entity Name:</span> {{entity_name}}
+      </div>
+      <div style="margin-bottom: 10px; color: #B13434;">
+        <span style="font-weight: 600;">Due Date:</span> {{target_date}}
+      </div>
+      <div style="color: #B13434;">
+        <span style="font-weight: 600;">Days Overdue:</span> <span style="font-size: 20px; font-weight: 700;">{{days_overdue}}</span>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{action_url}}" style="background-color: #B13434; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; margin-right: 10px;">
+        Resolve Now
+      </a>
+      <a href="{{escalation_url}}" style="background-color: transparent; color: #026A67; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; border: 2px solid #026A67;">
+        Escalation Details
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #6B7280; margin-top: 30px; text-align: center;">
+      Daily reminders will continue until this is resolved. This has been escalated to site managers and admins.
+    </p>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+OVERDUE: {{entity_type}} '{{entity_name}}' was due on {{target_date}}
+
+This compliance deadline is now overdue and requires immediate resolution.
+
+Entity Type: {{entity_type}}
+Entity Name: {{entity_name}}
+Due Date: {{target_date}}
+Days Overdue: {{days_overdue}}
+
+Resolve Now: {{action_url}}
+Escalation Details: {{escalation_url}}
+
+Daily reminders will continue until this is resolved. This has been escalated to site managers and admins.
+```
+
+**Variables:**
+- `entity_type`: string
+- `entity_name`: string
+- `target_date`: string
+- `days_overdue`: number
+- `site_name`: string
+- `company_name`: string
+- `action_url`: string
+- `escalation_url`: string
+- `unsubscribe_url`: string
+
+**Recipients:** Assigned user + Site managers + Admins
+
+**Channels:** EMAIL, IN_APP, SLACK (if configured)
+
+**Priority:** CRITICAL
+
+**Frequency:** Daily while overdue
+
+**Escalation:** Level 1 → Level 2 → Level 3
+
+**Trigger:** Compliance clock `status` changes to OVERDUE
+
+---
+
+> [v1.3 UPDATE – Escalation Workflow Notifications – 2025-12-01]
+
+## 2.13 Escalation Workflow Notification Templates
+
+### 2.13.1 Escalation Level Templates (Levels 1-4)
+
+**Subject Line Template:**
+```
+ESCALATION LEVEL {level}: {obligation_title} is {days_overdue} days overdue
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: {{level_color}}; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700;">
+        L{{level}}
+      </div>
+    </div>
+
+    <h1 style="color: {{level_color}}; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      ESCALATION LEVEL {{level}}
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      An overdue obligation has been escalated to <strong>Level {{level}}</strong> and requires your immediate attention.
+    </p>
+
+    <div style="background-color: #FEF2F2; border-left: 4px solid {{level_color}}; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Obligation:</span> {{obligation_title}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Site:</span> {{site_name}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Due Date:</span> {{due_date}}
+      </div>
+      <div style="margin-bottom: 10px; color: {{level_color}};">
+        <span style="font-weight: 600;">Days Overdue:</span> <span style="font-size: 20px; font-weight: 700;">{{days_overdue}}</span>
+      </div>
+      <div>
+        <span style="font-weight: 600;">Assigned To:</span> {{assigned_to}}
+      </div>
+    </div>
+
+    {{#if escalation_message}}
+    <div style="background-color: #F9FAFB; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <p style="font-weight: 600; margin-bottom: 10px;">Escalation Message:</p>
+      <p style="margin: 0;">{{escalation_message}}</p>
+    </div>
+    {{/if}}
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{action_url}}" style="background-color: {{level_color}}; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; margin-right: 10px;">
+        Take Action
+      </a>
+      <a href="{{escalation_history_url}}" style="background-color: transparent; color: #026A67; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; border: 2px solid #026A67;">
+        View Escalation History
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #6B7280; margin-top: 30px; text-align: center;">
+      {{escalation_note}}
+    </p>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+ESCALATION LEVEL {{level}}: {{obligation_title}} is {{days_overdue}} days overdue
+
+An overdue obligation has been escalated to Level {{level}} and requires your immediate attention.
+
+Obligation: {{obligation_title}}
+Site: {{site_name}}
+Due Date: {{due_date}}
+Days Overdue: {{days_overdue}}
+Assigned To: {{assigned_to}}
+
+{{#if escalation_message}}
+Escalation Message: {{escalation_message}}
+{{/if}}
+
+Take Action: {{action_url}}
+View Escalation History: {{escalation_history_url}}
+
+{{escalation_note}}
+```
+
+**Variables:**
+- `level`: number - Escalation level (1-4)
+- `level_color`: string - Color code based on level (#CB7C00, #F59E0B, #EF4444, #991B1B)
+- `obligation_title`: string
+- `obligation_id`: string
+- `site_name`: string
+- `company_name`: string
+- `due_date`: string
+- `days_overdue`: number
+- `assigned_to`: string - Name of assigned user
+- `escalation_message`: string (optional) - Custom escalation message
+- `escalation_note`: string - Note about next escalation level
+- `action_url`: string
+- `escalation_history_url`: string
+- `unsubscribe_url`: string
+
+**Recipients:** Users in `level_N_recipients` array (configurable per workflow)
+
+**Channels:**
+- Levels 1-2: EMAIL, IN_APP
+- Levels 3-4: EMAIL, IN_APP, SLACK (if configured)
+
+**Priority:**
+- Level 1: HIGH
+- Level 2: HIGH
+- Level 3: CRITICAL
+- Level 4: URGENT
+
+**Frequency:** Once per level transition
+
+**Trigger:** Escalation level triggered based on `days_overdue` and workflow configuration
+
+**Escalation Logic:**
+- Level 1: Initial escalation (typically at overdue + configured threshold)
+- Level 2: After Level 1 + time threshold with no action
+- Level 3: After Level 2 + time threshold with no action
+- Level 4: After Level 3 + time threshold with no action (highest level)
+
+---
+
+### 2.13.2 Escalation Resolved Template
+
+**Subject Line Template:**
+```
+Escalation Resolved: {obligation_title}
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #1E7A50; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        ✓
+      </div>
+    </div>
+
+    <h1 style="color: #1E7A50; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Escalation Resolved
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      The previously escalated obligation has been completed and the escalation has been resolved.
+    </p>
+
+    <div style="background-color: #F0FDF4; border-left: 4px solid #1E7A50; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Obligation:</span> {{obligation_title}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Site:</span> {{site_name}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Previous Escalation Level:</span> Level {{max_level_reached}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Completed By:</span> {{completed_by}}
+      </div>
+      <div>
+        <span style="font-weight: 600;">Completion Date:</span> {{completion_date}}
+      </div>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{action_url}}" style="background-color: #026A67; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        View Obligation
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #6B7280; margin-top: 30px; text-align: center;">
+      Thank you for your attention to this matter.
+    </p>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+Escalation Resolved: {{obligation_title}}
+
+The previously escalated obligation has been completed and the escalation has been resolved.
+
+Obligation: {{obligation_title}}
+Site: {{site_name}}
+Previous Escalation Level: Level {{max_level_reached}}
+Completed By: {{completed_by}}
+Completion Date: {{completion_date}}
+
+View Obligation: {{action_url}}
+
+Thank you for your attention to this matter.
+```
+
+**Variables:**
+- `obligation_title`: string
+- `obligation_id`: string
+- `site_name`: string
+- `company_name`: string
+- `max_level_reached`: number - Highest escalation level reached
+- `completed_by`: string - Name of user who completed
+- `completion_date`: string
+- `action_url`: string
+- `unsubscribe_url`: string
+
+**Recipients:** All users who received escalation notifications
+
+**Channels:** EMAIL, IN_APP
+
+**Priority:** NORMAL
+
+**Frequency:** Once when resolved
+
+**Escalation:** None
+
+**Trigger:** Overdue obligation completed (status changes from OVERDUE to COMPLETED)
+
+---
+
+> [v1.3 UPDATE – Permit Workflow Notifications – 2025-12-01]
+
+## 2.14 Permit Workflow Notification Templates
+
+### 2.14.1 Permit Renewal Due Template
+
+**Subject Line Template:**
+```
+Permit Renewal: '{permit_number}' expires on {expiry_date}
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #026A67; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        📋
+      </div>
+    </div>
+
+    <h1 style="color: #026A67; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Permit Renewal Required
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      A permit is due for renewal. A renewal workflow has been automatically created to track the application process.
+    </p>
+
+    <div style="background-color: #F9FAFB; border-left: 4px solid #026A67; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Permit Number:</span> {{permit_number}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Permit Type:</span> {{permit_type}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Site:</span> {{site_name}}
+      </div>
+      <div style="margin-bottom: 10px; color: #CB7C00;">
+        <span style="font-weight: 600;">Expiry Date:</span> {{expiry_date}}
+      </div>
+      <div>
+        <span style="font-weight: 600;">Days Until Expiry:</span> {{days_until_expiry}}
+      </div>
+    </div>
+
+    <div style="background-color: #E8F4F3; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <p style="font-weight: 600; margin-bottom: 10px; color: #026A67;">Renewal Workflow Created</p>
+      <p style="margin: 0; font-size: 14px;">
+        A renewal workflow has been created to help you track the application submission, regulator review, and approval process.
+      </p>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{workflow_url}}" style="background-color: #026A67; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; margin-right: 10px;">
+        View Renewal Workflow
+      </a>
+      <a href="{{permit_url}}" style="background-color: transparent; color: #026A67; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; border: 2px solid #026A67;">
+        View Permit
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #6B7280; margin-top: 30px; text-align: center;">
+      Permit renewals are automatically tracked 90 days before expiry.
+    </p>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+Permit Renewal: '{{permit_number}}' expires on {{expiry_date}}
+
+A permit is due for renewal. A renewal workflow has been automatically created to track the application process.
+
+Permit Number: {{permit_number}}
+Permit Type: {{permit_type}}
+Site: {{site_name}}
+Expiry Date: {{expiry_date}}
+Days Until Expiry: {{days_until_expiry}}
+
+Renewal Workflow Created:
+A renewal workflow has been created to help you track the application submission, regulator review, and approval process.
+
+View Renewal Workflow: {{workflow_url}}
+View Permit: {{permit_url}}
+
+Permit renewals are automatically tracked 90 days before expiry.
+```
+
+**Variables:**
+- `permit_number`: string
+- `permit_id`: string
+- `permit_type`: string
+- `site_name`: string
+- `company_name`: string
+- `expiry_date`: string
+- `days_until_expiry`: number
+- `workflow_url`: string - URL to renewal workflow
+- `permit_url`: string - URL to permit details
+- `unsubscribe_url`: string
+
+**Recipients:** Permit owner + Site managers
+
+**Channels:** EMAIL, IN_APP
+
+**Priority:** NORMAL
+
+**Frequency:** Once when renewal workflow created
+
+**Escalation:** Level 1 (for tracking)
+
+**Trigger:** Auto-creation of renewal workflow (typically 90 days before permit expiry)
+
+---
+
+### 2.14.2 Permit Workflow Submitted Template
+
+**Subject Line Template:**
+```
+Permit {workflow_type} Submitted: '{permit_number}'
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #1E7A50; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        📤
+      </div>
+    </div>
+
+    <h1 style="color: #1E7A50; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Permit Application Submitted
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      A permit {{workflow_type}} application has been submitted to the regulator.
+    </p>
+
+    <div style="background-color: #F0FDF4; border-left: 4px solid #1E7A50; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Workflow Type:</span> {{workflow_type}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Permit Number:</span> {{permit_number}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Site:</span> {{site_name}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Submitted Date:</span> {{submitted_date}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Submitted To:</span> {{regulator_name}}
+      </div>
+      <div style="color: #026A67;">
+        <span style="font-weight: 600;">Expected Response By:</span> {{regulator_response_deadline}}
+      </div>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{workflow_url}}" style="background-color: #026A67; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        Track Application Status
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #6B7280; margin-top: 30px; text-align: center;">
+      You will be notified when the regulator responds or if the response deadline is missed.
+    </p>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+Permit {{workflow_type}} Submitted: '{{permit_number}}'
+
+A permit {{workflow_type}} application has been submitted to the regulator.
+
+Workflow Type: {{workflow_type}}
+Permit Number: {{permit_number}}
+Site: {{site_name}}
+Submitted Date: {{submitted_date}}
+Submitted To: {{regulator_name}}
+Expected Response By: {{regulator_response_deadline}}
+
+Track Application Status: {{workflow_url}}
+
+You will be notified when the regulator responds or if the response deadline is missed.
+```
+
+**Variables:**
+- `workflow_type`: string - "Renewal", "Variation", "Transfer", "Surrender"
+- `workflow_id`: string
+- `permit_number`: string
+- `permit_id`: string
+- `site_name`: string
+- `company_name`: string
+- `submitted_date`: string
+- `regulator_name`: string
+- `regulator_response_deadline`: string
+- `workflow_url`: string
+- `unsubscribe_url`: string
+
+**Recipients:** Workflow creator + Admins
+
+**Channels:** EMAIL, IN_APP
+
+**Priority:** NORMAL
+
+**Frequency:** Once when submitted
+
+**Escalation:** None
+
+**Trigger:** Workflow status changes to SUBMITTED
+
+---
+
+### 2.14.3 Regulator Response Overdue Template
+
+**Subject Line Template:**
+```
+Regulator Response Overdue: {workflow_type} for '{permit_number}'
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #CB7C00; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        ⏰
+      </div>
+    </div>
+
+    <h1 style="color: #CB7C00; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Regulator Response Overdue
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      The expected response deadline from the regulator has passed without a response.
+    </p>
+
+    <div style="background-color: #FFF8E8; border-left: 4px solid #CB7C00; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Workflow Type:</span> {{workflow_type}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Permit Number:</span> {{permit_number}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Site:</span> {{site_name}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Submitted Date:</span> {{submitted_date}}
+      </div>
+      <div style="margin-bottom: 10px; color: #CB7C00;">
+        <span style="font-weight: 600;">Expected Response:</span> {{regulator_response_deadline}}
+      </div>
+      <div style="color: #CB7C00;">
+        <span style="font-weight: 600;">Days Overdue:</span> {{days_overdue}}
+      </div>
+    </div>
+
+    <div style="background-color: #F9FAFB; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <p style="font-weight: 600; margin-bottom: 10px;">Recommended Actions:</p>
+      <ul style="margin: 0; padding-left: 20px;">
+        <li>Contact the regulator to check application status</li>
+        <li>Update the workflow with any response received</li>
+        <li>Document any delays or issues</li>
+      </ul>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{workflow_url}}" style="background-color: #026A67; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        Update Workflow
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+Regulator Response Overdue: {{workflow_type}} for '{{permit_number}}'
+
+The expected response deadline from the regulator has passed without a response.
+
+Workflow Type: {{workflow_type}}
+Permit Number: {{permit_number}}
+Site: {{site_name}}
+Submitted Date: {{submitted_date}}
+Expected Response: {{regulator_response_deadline}}
+Days Overdue: {{days_overdue}}
+
+Recommended Actions:
+- Contact the regulator to check application status
+- Update the workflow with any response received
+- Document any delays or issues
+
+Update Workflow: {{workflow_url}}
+```
+
+**Variables:**
+- `workflow_type`: string
+- `workflow_id`: string
+- `permit_number`: string
+- `permit_id`: string
+- `site_name`: string
+- `company_name`: string
+- `submitted_date`: string
+- `regulator_response_deadline`: string
+- `days_overdue`: number
+- `workflow_url`: string
+- `unsubscribe_url`: string
+
+**Recipients:** Workflow creator + Admins
+
+**Channels:** EMAIL, IN_APP
+
+**Priority:** HIGH
+
+**Frequency:** Once when overdue, then weekly reminders
+
+**Escalation:** Level 1
+
+**Trigger:** `regulator_response_deadline` passed with no response recorded
+
+---
+
+### 2.14.4 Permit Workflow Approved Template
+
+**Subject Line Template:**
+```
+Permit {workflow_type} Approved: '{permit_number}'
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #1E7A50; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        ✓
+      </div>
+    </div>
+
+    <h1 style="color: #1E7A50; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Permit Application Approved
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      Great news! Your permit {{workflow_type}} application has been approved by the regulator.
+    </p>
+
+    <div style="background-color: #F0FDF4; border-left: 4px solid #1E7A50; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Workflow Type:</span> {{workflow_type}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Permit Number:</span> {{permit_number}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Site:</span> {{site_name}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Approved Date:</span> {{approved_date}}
+      </div>
+      {{#if new_expiry_date}}
+      <div style="color: #1E7A50;">
+        <span style="font-weight: 600;">New Expiry Date:</span> {{new_expiry_date}}
+      </div>
+      {{/if}}
+    </div>
+
+    {{#if obligations_count}}
+    <div style="background-color: #E8F4F3; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <p style="font-weight: 600; margin-bottom: 10px; color: #026A67;">Obligations Updated</p>
+      <p style="margin: 0; font-size: 14px;">
+        {{obligations_count}} obligation(s) have been updated to reflect the approved changes.
+      </p>
+    </div>
+    {{/if}}
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{permit_url}}" style="background-color: #026A67; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; margin-right: 10px;">
+        View Updated Permit
+      </a>
+      <a href="{{workflow_url}}" style="background-color: transparent; color: #026A67; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; border: 2px solid #026A67;">
+        View Workflow
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+Permit {{workflow_type}} Approved: '{{permit_number}}'
+
+Great news! Your permit {{workflow_type}} application has been approved by the regulator.
+
+Workflow Type: {{workflow_type}}
+Permit Number: {{permit_number}}
+Site: {{site_name}}
+Approved Date: {{approved_date}}
+{{#if new_expiry_date}}
+New Expiry Date: {{new_expiry_date}}
+{{/if}}
+
+{{#if obligations_count}}
+Obligations Updated:
+{{obligations_count}} obligation(s) have been updated to reflect the approved changes.
+{{/if}}
+
+View Updated Permit: {{permit_url}}
+View Workflow: {{workflow_url}}
+```
+
+**Variables:**
+- `workflow_type`: string
+- `workflow_id`: string
+- `permit_number`: string
+- `permit_id`: string
+- `site_name`: string
+- `company_name`: string
+- `approved_date`: string
+- `new_expiry_date`: string (optional, for renewals)
+- `obligations_count`: number (optional)
+- `permit_url`: string
+- `workflow_url`: string
+- `unsubscribe_url`: string
+
+**Recipients:** Workflow creator + Affected users
+
+**Channels:** EMAIL, IN_APP
+
+**Priority:** NORMAL
+
+**Frequency:** Once when approved
+
+**Escalation:** None
+
+**Trigger:** Workflow status changes to APPROVED
+
+---
+
+### 2.14.5 Permit Surrender Inspection Due Template
+
+**Subject Line Template:**
+```
+Final Inspection Required: Permit Surrender for '{permit_number}'
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #026A67; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        🔍
+      </div>
+    </div>
+
+    <h1 style="color: #026A67; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Final Inspection Required
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      A final inspection is required as part of the permit surrender process.
+    </p>
+
+    <div style="background-color: #F9FAFB; border-left: 4px solid #026A67; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Permit Number:</span> {{permit_number}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Site:</span> {{site_name}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Surrender Workflow Created:</span> {{workflow_created_date}}
+      </div>
+      <div style="color: #026A67;">
+        <span style="font-weight: 600;">Inspection Scheduled:</span> {{final_inspection_date}}
+      </div>
+    </div>
+
+    <div style="background-color: #E8F4F3; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <p style="font-weight: 600; margin-bottom: 10px; color: #026A67;">Inspection Preparation</p>
+      <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+        <li>Ensure site is accessible for inspection</li>
+        <li>Prepare all required documentation</li>
+        <li>Coordinate with site personnel</li>
+        <li>Review surrender application requirements</li>
+      </ul>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{workflow_url}}" style="background-color: #026A67; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        View Surrender Workflow
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+Final Inspection Required: Permit Surrender for '{{permit_number}}'
+
+A final inspection is required as part of the permit surrender process.
+
+Permit Number: {{permit_number}}
+Site: {{site_name}}
+Surrender Workflow Created: {{workflow_created_date}}
+Inspection Scheduled: {{final_inspection_date}}
+
+Inspection Preparation:
+- Ensure site is accessible for inspection
+- Prepare all required documentation
+- Coordinate with site personnel
+- Review surrender application requirements
+
+View Surrender Workflow: {{workflow_url}}
+```
+
+**Variables:**
+- `workflow_id`: string
+- `permit_number`: string
+- `permit_id`: string
+- `site_name`: string
+- `company_name`: string
+- `workflow_created_date`: string
+- `final_inspection_date`: string
+- `workflow_url`: string
+- `unsubscribe_url`: string
+
+**Recipients:** Site managers + Inspectors
+
+**Channels:** EMAIL, IN_APP
+
+**Priority:** HIGH
+
+**Frequency:** Once when workflow created, reminder 7 days before inspection
+
+**Escalation:** Level 1
+
+**Trigger:** Surrender workflow created + final_inspection_date approaching
+
+---
+
+> [v1.3 UPDATE – Corrective Action Notifications – 2025-12-01]
+
+## 2.15 Corrective Action Notification Templates
+
+### 2.15.1 Corrective Action Item Assigned Template
+
+**Subject Line Template:**
+```
+Action Item Assigned: '{item_title}'
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #026A67; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        ✓
+      </div>
+    </div>
+
+    <h1 style="color: #026A67; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Action Item Assigned
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      A corrective action item has been assigned to you.
+    </p>
+
+    <div style="background-color: #F9FAFB; border-left: 4px solid #026A67; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Action Item:</span> {{item_title}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Parent Action:</span> {{action_title}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Site:</span> {{site_name}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Assigned By:</span> {{assigned_by}}
+      </div>
+      <div style="color: #026A67;">
+        <span style="font-weight: 600;">Due Date:</span> {{due_date}}
+      </div>
+    </div>
+
+    {{#if item_description}}
+    <div style="background-color: #E8F4F3; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <p style="font-weight: 600; margin-bottom: 10px; color: #026A67;">Description:</p>
+      <p style="margin: 0; font-size: 14px;">{{item_description}}</p>
+    </div>
+    {{/if}}
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{action_url}}" style="background-color: #026A67; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        View Action Item
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+Action Item Assigned: '{{item_title}}'
+
+A corrective action item has been assigned to you.
+
+Action Item: {{item_title}}
+Parent Action: {{action_title}}
+Site: {{site_name}}
+Assigned By: {{assigned_by}}
+Due Date: {{due_date}}
+
+{{#if item_description}}
+Description: {{item_description}}
+{{/if}}
+
+View Action Item: {{action_url}}
+```
+
+**Variables:**
+- `item_title`: string
+- `item_id`: string
+- `action_title`: string - Parent corrective action title
+- `action_id`: string
+- `site_name`: string
+- `company_name`: string
+- `assigned_by`: string - Name of user who assigned
+- `due_date`: string
+- `item_description`: string (optional)
+- `action_url`: string
+- `unsubscribe_url`: string
+
+**Recipients:** assigned_to user
+
+**Channels:** EMAIL, IN_APP
+
+**Priority:** NORMAL
+
+**Frequency:** Once when assigned
+
+**Escalation:** None
+
+**Trigger:** New corrective action item created with assignment
+
+---
+
+### 2.15.2 Corrective Action Item Due Soon Template
+
+**Subject Line Template:**
+```
+Action Item Due Soon: '{item_title}' - Due in {days_remaining} days
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #CB7C00; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        ⏰
+      </div>
+    </div>
+
+    <h1 style="color: #CB7C00; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Action Item Due Soon
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      A corrective action item assigned to you is due soon.
+    </p>
+
+    <div style="background-color: #FFF8E8; border-left: 4px solid #CB7C00; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Action Item:</span> {{item_title}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Parent Action:</span> {{action_title}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Site:</span> {{site_name}}
+      </div>
+      <div style="margin-bottom: 10px; color: #CB7C00;">
+        <span style="font-weight: 600;">Due Date:</span> {{due_date}}
+      </div>
+      <div style="color: #CB7C00;">
+        <span style="font-weight: 600;">Days Remaining:</span> <span style="font-size: 20px; font-weight: 700;">{{days_remaining}}</span>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{action_url}}" style="background-color: #CB7C00; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; margin-right: 10px;">
+        Complete Action Item
+      </a>
+      <a href="{{parent_action_url}}" style="background-color: transparent; color: #026A67; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; border: 2px solid #026A67;">
+        View Full Action
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+Action Item Due Soon: '{{item_title}}' - Due in {{days_remaining}} days
+
+A corrective action item assigned to you is due soon.
+
+Action Item: {{item_title}}
+Parent Action: {{action_title}}
+Site: {{site_name}}
+Due Date: {{due_date}}
+Days Remaining: {{days_remaining}}
+
+Complete Action Item: {{action_url}}
+View Full Action: {{parent_action_url}}
+```
+
+**Variables:**
+- `item_title`: string
+- `item_id`: string
+- `action_title`: string
+- `action_id`: string
+- `site_name`: string
+- `company_name`: string
+- `due_date`: string
+- `days_remaining`: number (typically 3)
+- `action_url`: string
+- `parent_action_url`: string
+- `unsubscribe_url`: string
+
+**Recipients:** assigned_to user
+
+**Channels:** EMAIL, IN_APP
+
+**Priority:** HIGH
+
+**Frequency:** Once at 3 days before due date
+
+**Escalation:** None
+
+**Trigger:** Item due_date in 3 days AND status != COMPLETED
+
+---
+
+### 2.15.3 Corrective Action Item Overdue Template
+
+**Subject Line Template:**
+```
+OVERDUE: Action Item '{item_title}' - Was due {due_date}
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #B13434; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        ⚠️
+      </div>
+    </div>
+
+    <h1 style="color: #B13434; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Action Item Overdue
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      <strong style="color: #B13434;">A corrective action item assigned to you is now overdue.</strong>
+    </p>
+
+    <div style="background-color: #FEF2F2; border-left: 4px solid #B13434; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Action Item:</span> {{item_title}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Parent Action:</span> {{action_title}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Site:</span> {{site_name}}
+      </div>
+      <div style="margin-bottom: 10px; color: #B13434;">
+        <span style="font-weight: 600;">Due Date:</span> {{due_date}}
+      </div>
+      <div style="color: #B13434;">
+        <span style="font-weight: 600;">Days Overdue:</span> <span style="font-size: 20px; font-weight: 700;">{{days_overdue}}</span>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{action_url}}" style="background-color: #B13434; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        Complete Now
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #6B7280; margin-top: 30px; text-align: center;">
+      Daily reminders will continue until this action item is completed. The corrective action owner has been notified.
+    </p>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+OVERDUE: Action Item '{{item_title}}' - Was due {{due_date}}
+
+A corrective action item assigned to you is now overdue.
+
+Action Item: {{item_title}}
+Parent Action: {{action_title}}
+Site: {{site_name}}
+Due Date: {{due_date}}
+Days Overdue: {{days_overdue}}
+
+Complete Now: {{action_url}}
+
+Daily reminders will continue until this action item is completed. The corrective action owner has been notified.
+```
+
+**Variables:**
+- `item_title`: string
+- `item_id`: string
+- `action_title`: string
+- `action_id`: string
+- `site_name`: string
+- `company_name`: string
+- `due_date`: string
+- `days_overdue`: number
+- `action_url`: string
+- `unsubscribe_url`: string
+
+**Recipients:** assigned_to user + Corrective action owner
+
+**Channels:** EMAIL, IN_APP
+
+**Priority:** CRITICAL
+
+**Frequency:** Daily while overdue
+
+**Escalation:** Level 1
+
+**Trigger:** Item overdue AND status != COMPLETED
+
+---
+
+### 2.15.4 Corrective Action Ready for Closure Template
+
+**Subject Line Template:**
+```
+Corrective Action Ready for Closure: '{action_title}'
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #1E7A50; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        ✓
+      </div>
+    </div>
+
+    <h1 style="color: #1E7A50; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Corrective Action Ready for Closure
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      All action items have been completed. This corrective action is ready for closure review{{#if requires_approval}} and approval{{/if}}.
+    </p>
+
+    <div style="background-color: #F0FDF4; border-left: 4px solid #1E7A50; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Corrective Action:</span> {{action_title}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Site:</span> {{site_name}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Created Date:</span> {{created_date}}
+      </div>
+      <div style="margin-bottom: 10px; color: #1E7A50;">
+        <span style="font-weight: 600;">Items Completed:</span> {{item_count}} / {{item_count}}
+      </div>
+      <div>
+        <span style="font-weight: 600;">Lifecycle Phase:</span> RESOLUTION
+      </div>
+    </div>
+
+    {{#if requires_approval}}
+    <div style="background-color: #E8F4F3; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <p style="font-weight: 600; margin-bottom: 10px; color: #026A67;">Manager Approval Required</p>
+      <p style="margin: 0; font-size: 14px;">
+        This corrective action requires manager approval before closure.
+      </p>
+    </div>
+    {{/if}}
+
+    <div style="text-align: center; margin: 30px 0;">
+      {{#if requires_approval}}
+      <a href="{{approval_url}}" style="background-color: #026A67; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; margin-right: 10px;">
+        Review & Approve
+      </a>
+      {{else}}
+      <a href="{{action_url}}" style="background-color: #026A67; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; margin-right: 10px;">
+        Close Action
+      </a>
+      {{/if}}
+      <a href="{{action_url}}" style="background-color: transparent; color: #026A67; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; border: 2px solid #026A67;">
+        View Details
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+Corrective Action Ready for Closure: '{{action_title}}'
+
+All action items have been completed. This corrective action is ready for closure review{{#if requires_approval}} and approval{{/if}}.
+
+Corrective Action: {{action_title}}
+Site: {{site_name}}
+Created Date: {{created_date}}
+Items Completed: {{item_count}} / {{item_count}}
+Lifecycle Phase: RESOLUTION
+
+{{#if requires_approval}}
+Manager Approval Required:
+This corrective action requires manager approval before closure.
+
+Review & Approve: {{approval_url}}
+{{else}}
+Close Action: {{action_url}}
+{{/if}}
+
+View Details: {{action_url}}
+```
+
+**Variables:**
+- `action_title`: string
+- `action_id`: string
+- `site_name`: string
+- `company_name`: string
+- `created_date`: string
+- `item_count`: number
+- `requires_approval`: boolean
+- `approval_url`: string (if requires_approval)
+- `action_url`: string
+- `unsubscribe_url`: string
+
+**Recipients:** Corrective action owner + Managers (if approval required)
+
+**Channels:** EMAIL, IN_APP
+
+**Priority:** NORMAL
+
+**Frequency:** Once when all items completed
+
+**Escalation:** None
+
+**Trigger:** All items completed + lifecycle_phase = RESOLUTION
+
+---
+
+### 2.15.5 Corrective Action Closure Approved Template
+
+**Subject Line Template:**
+```
+Corrective Action Closed: '{action_title}'
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #1E7A50; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        ✓
+      </div>
+    </div>
+
+    <h1 style="color: #1E7A50; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Corrective Action Closed
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      A corrective action has been successfully closed.
+    </p>
+
+    <div style="background-color: #F0FDF4; border-left: 4px solid #1E7A50; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Corrective Action:</span> {{action_title}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Site:</span> {{site_name}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Closed Date:</span> {{closed_date}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Approved By:</span> {{approved_by_name}}
+      </div>
+      <div>
+        <span style="font-weight: 600;">Total Items Completed:</span> {{item_count}}
+      </div>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{action_url}}" style="background-color: #026A67; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        View Closed Action
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #6B7280; margin-top: 30px; text-align: center;">
+      Great work completing this corrective action!
+    </p>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+Corrective Action Closed: '{{action_title}}'
+
+A corrective action has been successfully closed.
+
+Corrective Action: {{action_title}}
+Site: {{site_name}}
+Closed Date: {{closed_date}}
+Approved By: {{approved_by_name}}
+Total Items Completed: {{item_count}}
+
+View Closed Action: {{action_url}}
+
+Great work completing this corrective action!
+```
+
+**Variables:**
+- `action_title`: string
+- `action_id`: string
+- `site_name`: string
+- `company_name`: string
+- `closed_date`: string
+- `approved_by_name`: string
+- `item_count`: number
+- `action_url`: string
+- `unsubscribe_url`: string
+
+**Recipients:** Corrective action owner + All assigned users
+
+**Channels:** EMAIL, IN_APP
+
+**Priority:** NORMAL
+
+**Frequency:** Once when closure approved
+
+**Escalation:** None
+
+**Trigger:** Closure approved by manager
+
+---
+
+> [v1.3 UPDATE – Module 4 Validation Notifications – 2025-12-01]
+
+## 2.16 Waste Consignment Validation Notification Templates
+
+### 2.16.1 Consignment Validation Failed Template
+
+**Subject Line Template:**
+```
+Consignment Validation Failed: {consignment_reference} - {error_count} errors
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #B13434; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        ✗
+      </div>
+    </div>
+
+    <h1 style="color: #B13434; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Consignment Validation Failed
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      The waste consignment validation has failed. <strong style="color: #B13434;">{{error_count}} error(s)</strong> must be resolved before submission.
+    </p>
+
+    <div style="background-color: #FEF2F2; border-left: 4px solid #B13434; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Consignment:</span> {{consignment_reference}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Site:</span> {{site_name}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Validation Date:</span> {{validation_date}}
+      </div>
+      <div style="color: #B13434;">
+        <span style="font-weight: 600;">Errors Found:</span> <span style="font-size: 20px; font-weight: 700;">{{error_count}}</span>
+      </div>
+    </div>
+
+    <div style="background-color: #F9FAFB; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <p style="font-weight: 600; margin-bottom: 10px; color: #B13434;">Validation Errors:</p>
+      <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+        {{#each validation_errors}}
+        <li style="margin-bottom: 5px;">{{this}}</li>
+        {{/each}}
+      </ul>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{action_url}}" style="background-color: #B13434; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        Fix Errors
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #6B7280; margin-top: 30px; text-align: center;">
+      The consignment cannot be submitted until all validation errors are resolved.
+    </p>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+Consignment Validation Failed: {{consignment_reference}} - {{error_count}} errors
+
+The waste consignment validation has failed. {{error_count}} error(s) must be resolved before submission.
+
+Consignment: {{consignment_reference}}
+Site: {{site_name}}
+Validation Date: {{validation_date}}
+Errors Found: {{error_count}}
+
+Validation Errors:
+{{#each validation_errors}}
+- {{this}}
+{{/each}}
+
+Fix Errors: {{action_url}}
+
+The consignment cannot be submitted until all validation errors are resolved.
+```
+
+**Variables:**
+- `consignment_reference`: string
+- `consignment_id`: string
+- `site_name`: string
+- `company_name`: string
+- `validation_date`: string
+- `error_count`: number
+- `validation_errors`: Array<string> - List of error messages
+- `action_url`: string - URL to edit consignment
+- `unsubscribe_url`: string
+
+**Recipients:** Consignment creator + Waste managers
+
+**Channels:** EMAIL, IN_APP
+
+**Priority:** HIGH
+
+**Frequency:** Once per validation failure
+
+**Escalation:** None
+
+**Trigger:** Consignment validation completes with pre_validation_status = FAILED
+
+---
+
+### 2.16.2 Consignment Validation Warning Template
+
+**Subject Line Template:**
+```
+Consignment Validation Warnings: {consignment_reference}
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #CB7C00; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        ⚠️
+      </div>
+    </div>
+
+    <h1 style="color: #CB7C00; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Consignment Validation Warnings
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      The waste consignment has <strong>{{warning_count}} warning(s)</strong>. Review these before submission.
+    </p>
+
+    <div style="background-color: #FFF8E8; border-left: 4px solid #CB7C00; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Consignment:</span> {{consignment_reference}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Site:</span> {{site_name}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Validation Date:</span> {{validation_date}}
+      </div>
+      <div style="color: #CB7C00;">
+        <span style="font-weight: 600;">Warnings:</span> {{warning_count}}
+      </div>
+    </div>
+
+    <div style="background-color: #F9FAFB; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <p style="font-weight: 600; margin-bottom: 10px; color: #CB7C00;">Warnings Detected:</p>
+      <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+        {{#each validation_warnings}}
+        <li style="margin-bottom: 5px;">{{this}}</li>
+        {{/each}}
+      </ul>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{action_url}}" style="background-color: #026A67; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        Review Consignment
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #6B7280; margin-top: 30px; text-align: center;">
+      Warnings do not prevent submission, but should be reviewed to ensure accuracy.
+    </p>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+Consignment Validation Warnings: {{consignment_reference}}
+
+The waste consignment has {{warning_count}} warning(s). Review these before submission.
+
+Consignment: {{consignment_reference}}
+Site: {{site_name}}
+Validation Date: {{validation_date}}
+Warnings: {{warning_count}}
+
+Warnings Detected:
+{{#each validation_warnings}}
+- {{this}}
+{{/each}}
+
+Review Consignment: {{action_url}}
+
+Warnings do not prevent submission, but should be reviewed to ensure accuracy.
+```
+
+**Variables:**
+- `consignment_reference`: string
+- `consignment_id`: string
+- `site_name`: string
+- `company_name`: string
+- `validation_date`: string
+- `warning_count`: number
+- `validation_warnings`: Array<string> - List of warning messages
+- `action_url`: string
+- `unsubscribe_url`: string
+
+**Recipients:** Consignment creator
+
+**Channels:** IN_APP only (warnings don't warrant email)
+
+**Priority:** NORMAL
+
+**Frequency:** Once per validation with warnings
+
+**Escalation:** None
+
+**Trigger:** Validation passes with WARNING severity results
+
+---
+
+> [v1.3 UPDATE – Module 3 Runtime Monitoring Notifications – 2025-12-01]
+
+## 2.17 Runtime Monitoring Notification Templates
+
+### 2.17.1 Runtime Validation Pending (Digest) Template
+
+**Subject Line Template:**
+```
+Daily Digest: {count} manual runtime entries pending validation
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #026A67; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        ⏱️
+      </div>
+    </div>
+
+    <h1 style="color: #026A67; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Manual Runtime Entries Pending Validation
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      You have <strong>{{count}}</strong> manual runtime entries awaiting your validation.
+    </p>
+
+    <div style="background-color: #F9FAFB; border-left: 4px solid #026A67; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <p style="font-weight: 600; margin-bottom: 10px;">Pending Entries by Generator:</p>
+      {{#each pending_by_generator}}
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px;">
+        <span>{{generator_name}}</span>
+        <span style="font-weight: 600; color: #026A67;">{{entry_count}} entries</span>
+      </div>
+      {{/each}}
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{validation_url}}" style="background-color: #026A67; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        Review Entries
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #6B7280; margin-top: 30px; text-align: center;">
+      This is a daily digest. You will receive this notification once per day if there are pending entries.
+    </p>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+Daily Digest: {{count}} manual runtime entries pending validation
+
+You have {{count}} manual runtime entries awaiting your validation.
+
+Pending Entries by Generator:
+{{#each pending_by_generator}}
+- {{generator_name}}: {{entry_count}} entries
+{{/each}}
+
+Review Entries: {{validation_url}}
+
+This is a daily digest. You will receive this notification once per day if there are pending entries.
+```
+
+**Variables:**
+- `count`: number - Total pending entries
+- `pending_by_generator`: Array<{generator_name: string, entry_count: number}>
+- `site_name`: string (optional, if single site)
+- `company_name`: string
+- `validation_url`: string - URL to validation queue
+- `unsubscribe_url`: string
+
+**Recipients:** Generator managers with pending validations
+
+**Channels:** EMAIL (digest format)
+
+**Priority:** NORMAL
+
+**Frequency:** Daily digest (once per day if pending entries exist)
+
+**Escalation:** None
+
+**Trigger:** Manual runtime entries with validation_status = PENDING (aggregated daily)
+
+---
+
+### 2.17.2 Runtime Validation Rejected Template
+
+**Subject Line Template:**
+```
+Manual Runtime Entry Rejected: {generator_name} ({runtime_date})
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #B13434; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        ✗
+      </div>
+    </div>
+
+    <h1 style="color: #B13434; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Manual Runtime Entry Rejected
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      Your manual runtime entry has been rejected by a manager.
+    </p>
+
+    <div style="background-color: #FEF2F2; border-left: 4px solid #B13434; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Generator:</span> {{generator_name}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Runtime Date:</span> {{runtime_date}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Runtime Value:</span> {{runtime_value}} hours
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Rejected By:</span> {{rejected_by}}
+      </div>
+      <div>
+        <span style="font-weight: 600;">Rejection Date:</span> {{rejection_date}}
+      </div>
+    </div>
+
+    {{#if rejection_reason}}
+    <div style="background-color: #F9FAFB; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <p style="font-weight: 600; margin-bottom: 10px; color: #B13434;">Rejection Reason:</p>
+      <p style="margin: 0; font-size: 14px;">{{rejection_reason}}</p>
+    </div>
+    {{/if}}
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{action_url}}" style="background-color: #026A67; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        Resubmit Entry
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #6B7280; margin-top: 30px; text-align: center;">
+      Please review the rejection reason and correct the entry before resubmitting.
+    </p>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+Manual Runtime Entry Rejected: {{generator_name}} ({{runtime_date}})
+
+Your manual runtime entry has been rejected by a manager.
+
+Generator: {{generator_name}}
+Runtime Date: {{runtime_date}}
+Runtime Value: {{runtime_value}} hours
+Rejected By: {{rejected_by}}
+Rejection Date: {{rejection_date}}
+
+{{#if rejection_reason}}
+Rejection Reason: {{rejection_reason}}
+{{/if}}
+
+Resubmit Entry: {{action_url}}
+
+Please review the rejection reason and correct the entry before resubmitting.
+```
+
+**Variables:**
+- `generator_name`: string
+- `generator_id`: string
+- `runtime_date`: string
+- `runtime_value`: number
+- `rejected_by`: string - Name of manager who rejected
+- `rejection_date`: string
+- `rejection_reason`: string (optional)
+- `site_name`: string
+- `company_name`: string
+- `action_url`: string - URL to edit/resubmit entry
+- `unsubscribe_url`: string
+
+**Recipients:** Entry creator
+
+**Channels:** EMAIL, IN_APP
+
+**Priority:** NORMAL
+
+**Frequency:** Once when rejected
+
+**Escalation:** None
+
+**Trigger:** Manager rejects manual runtime entry (validation_status changes to REJECTED)
+
+---
+
+### 2.17.3 Runtime Exceedance Alert Template
+
+**Subject Line Template:**
+```
+⚠️ Generator Runtime Limit Exceeded: {generator_identifier} ({exceedance_type})
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #B13434; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        ⚠️
+      </div>
+    </div>
+
+    <h1 style="color: #B13434; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      Generator Runtime Limit Exceeded
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      Generator <strong>{{generator_identifier}}</strong> has exceeded its runtime limit. Immediate action may be required to maintain compliance.
+    </p>
+
+    <div style="background-color: #FEF2F2; border-left: 4px solid #B13434; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Generator:</span> {{generator_identifier}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Run Date:</span> {{run_date}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Runtime Hours:</span> {{runtime_hours}} hours
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Run Duration:</span> {{run_duration}} hours
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Reason Code:</span> {{reason_code}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Exceedance Type:</span> {{exceedance_type}}
+      </div>
+      {{#if annual_percentage}}
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Annual Usage:</span> {{annual_percentage}}% of limit ({{current_year_hours}} / {{annual_limit}} hours)
+      </div>
+      {{/if}}
+      {{#if monthly_percentage}}
+      <div>
+        <span style="font-weight: 600;">Monthly Usage:</span> {{monthly_percentage}}% of limit ({{current_month_hours}} / {{monthly_limit}} hours)
+      </div>
+      {{/if}}
+    </div>
+
+    {{#if exceedance_details}}
+    <div style="background-color: #FFF7ED; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <p style="font-weight: 600; margin-bottom: 10px; color: #F59E0B;">Exceedance Details:</p>
+      <p style="margin: 0; font-size: 14px;">{{exceedance_details}}</p>
+    </div>
+    {{/if}}
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{action_url}}" style="background-color: #B13434; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        View Generator Details
+      </a>
+    </div>
+
+    <div style="background-color: #F9FAFB; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <p style="font-weight: 600; margin-bottom: 10px;">Next Steps:</p>
+      <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+        <li>Review generator runtime history</li>
+        <li>Check Compliance Clock for related alerts</li>
+        <li>Consider corrective actions if limit exceeded</li>
+        <li>Update exemption records if applicable</li>
+      </ul>
+    </div>
+
+    <p style="font-size: 14px; color: #6B7280; margin-top: 30px; text-align: center;">
+      This notification was triggered automatically when the runtime limit was exceeded. The Compliance Clock has been updated to reflect this exceedance.
+    </p>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+⚠️ Generator Runtime Limit Exceeded: {{generator_identifier}} ({{exceedance_type}})
+
+Generator {{generator_identifier}} has exceeded its runtime limit. Immediate action may be required to maintain compliance.
+
+Generator: {{generator_identifier}}
+Run Date: {{run_date}}
+Runtime Hours: {{runtime_hours}} hours
+Run Duration: {{run_duration}} hours
+Reason Code: {{reason_code}}
+Exceedance Type: {{exceedance_type}}
+
+{{#if annual_percentage}}
+Annual Usage: {{annual_percentage}}% of limit ({{current_year_hours}} / {{annual_limit}} hours)
+{{/if}}
+
+{{#if monthly_percentage}}
+Monthly Usage: {{monthly_percentage}}% of limit ({{current_month_hours}} / {{monthly_limit}} hours)
+{{/if}}
+
+{{#if exceedance_details}}
+Exceedance Details: {{exceedance_details}}
+{{/if}}
+
+View Generator Details: {{action_url}}
+
+Next Steps:
+- Review generator runtime history
+- Check Compliance Clock for related alerts
+- Consider corrective actions if limit exceeded
+- Update exemption records if applicable
+
+This notification was triggered automatically when the runtime limit was exceeded. The Compliance Clock has been updated to reflect this exceedance.
+```
+
+**Variables:**
+- `generator_identifier`: string - Generator identifier/name
+- `generator_id`: string - Generator UUID
+- `run_date`: string - Date when runtime occurred (ISO date)
+- `runtime_hours`: number - Total runtime hours
+- `run_duration`: number - Duration of runtime period in hours
+- `reason_code`: string - Reason code (Test, Emergency, Maintenance, Normal)
+- `exceedance_type`: string - Type of exceedance (THRESHOLD_EXCEEDED, ANNUAL_LIMIT_EXCEEDED, MONTHLY_LIMIT_EXCEEDED)
+- `annual_percentage`: number - Percentage of annual limit used (optional)
+- `current_year_hours`: number - Current year runtime hours (optional)
+- `annual_limit`: number - Annual runtime hour limit (optional)
+- `monthly_percentage`: number - Percentage of monthly limit used (optional)
+- `current_month_hours`: number - Current month runtime hours (optional)
+- `monthly_limit`: number - Monthly runtime hour limit (optional)
+- `exceedance_details`: string - Additional details about the exceedance (optional)
+- `site_name`: string
+- `company_name`: string
+- `action_url`: string - URL to generator details page
+- `unsubscribe_url`: string
+
+**Recipients:** Site managers, admins, and owners
+
+**Channels:** EMAIL, IN_APP
+
+**Priority:** HIGH
+
+**Frequency:** Once per exceedance (per runtime entry)
+
+**Escalation:** None (high priority notification)
+
+**Trigger:** Background job detects runtime exceedance (job_escalation flags set to true)
+
+**Business Logic:**
+- Notification is sent when `CHECK_RUNTIME_EXCEEDANCES` job detects an exceedance
+- Only sent if `job_escalation_notification_sent` is false
+- Compliance Clock is updated with RED criticality status
+- Notification includes both annual and monthly percentages if applicable
+- Different messaging based on exceedance type (threshold vs limit exceeded)
+
+---
+
+> [v1.3 UPDATE – SLA Management Notifications – 2025-12-01]
+
+## 2.18 SLA Breach Notification Templates
+
+### 2.18.1 SLA Breach Detected Template
+
+**Subject Line Template:**
+```
+SLA BREACH: '{deadline_title}' exceeded internal SLA
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #B13434; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        ⚠️
+      </div>
+    </div>
+
+    <h1 style="color: #B13434; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      SLA BREACH DETECTED
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      <strong style="color: #B13434;">An internal SLA has been breached.</strong> The regulatory deadline has not yet passed, but your internal buffer time has expired.
+    </p>
+
+    <div style="background-color: #FEF2F2; border-left: 4px solid #B13434; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Deadline:</span> {{deadline_title}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Site:</span> {{site_name}}
+      </div>
+      <div style="margin-bottom: 10px; color: #B13434;">
+        <span style="font-weight: 600;">Internal SLA:</span> {{sla_target_date}} (BREACHED)
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Regulatory Deadline:</span> {{due_date}}
+      </div>
+      <div style="color: #CB7C00;">
+        <span style="font-weight: 600;">Days to Regulatory Deadline:</span> {{days_to_due_date}}
+      </div>
+    </div>
+
+    <div style="background-color: #F9FAFB; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <p style="font-weight: 600; margin-bottom: 10px;">What is an SLA?</p>
+      <p style="margin: 0; font-size: 14px;">
+        SLAs (Service Level Agreements) are internal buffer dates set before regulatory deadlines to ensure timely completion. This breach means your internal target has been missed, though you still have time before the legal deadline.
+      </p>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{action_url}}" style="background-color: #B13434; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        Take Action Now
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #6B7280; margin-top: 30px; text-align: center;">
+      You still have {{days_to_due_date}} days before the regulatory deadline.
+    </p>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+SLA BREACH: '{{deadline_title}}' exceeded internal SLA
+
+An internal SLA has been breached. The regulatory deadline has not yet passed, but your internal buffer time has expired.
+
+Deadline: {{deadline_title}}
+Site: {{site_name}}
+Internal SLA: {{sla_target_date}} (BREACHED)
+Regulatory Deadline: {{due_date}}
+Days to Regulatory Deadline: {{days_to_due_date}}
+
+What is an SLA?
+SLAs (Service Level Agreements) are internal buffer dates set before regulatory deadlines to ensure timely completion. This breach means your internal target has been missed, though you still have time before the legal deadline.
+
+Take Action Now: {{action_url}}
+
+You still have {{days_to_due_date}} days before the regulatory deadline.
+```
+
+**Variables:**
+- `deadline_title`: string
+- `deadline_id`: string
+- `site_name`: string
+- `company_name`: string
+- `sla_target_date`: string - Internal SLA date
+- `due_date`: string - Regulatory deadline
+- `days_to_due_date`: number - Days remaining until regulatory deadline
+- `sla_breach_hours`: number - Hours since SLA breach
+- `action_url`: string
+- `unsubscribe_url`: string
+
+**Recipients:** Deadline assignee + Managers
+
+**Channels:** EMAIL, IN_APP
+
+**Priority:** HIGH
+
+**Severity:** CRITICAL
+
+**Frequency:** Once when SLA breached
+
+**Escalation:** Level 1
+
+**Trigger:** Deadline crosses sla_target_date without completion
+
+**Deep Linking:**
+- `obligation_id`: UUID of related obligation (required)
+- `action_url`: URL to obligation detail page (required)
+- Format: `https://app.epcompliance.com/sites/{siteId}/obligations/{obligationId}`
+
+---
+
+### 2.18.2 SLA Breach Extended Template
+
+**Subject Line Template:**
+```
+EXTENDED SLA BREACH: '{deadline_title}' - Breached for {sla_breach_duration_hours} hours
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #991B1B; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        🚨
+      </div>
+    </div>
+
+    <h1 style="color: #991B1B; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      EXTENDED SLA BREACH
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      <strong style="color: #991B1B;">URGENT:</strong> An SLA breach has been ongoing for <strong>{{sla_breach_duration_hours}} hours</strong> without resolution.
+    </p>
+
+    <div style="background-color: #FEF2F2; border: 2px solid #991B1B; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Deadline:</span> {{deadline_title}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Site:</span> {{site_name}}
+      </div>
+      <div style="margin-bottom: 10px; color: #991B1B;">
+        <span style="font-weight: 600;">Internal SLA:</span> {{sla_target_date}}
+      </div>
+      <div style="margin-bottom: 10px; color: #991B1B;">
+        <span style="font-weight: 600;">SLA Breach Duration:</span> <span style="font-size: 20px; font-weight: 700;">{{sla_breach_duration_hours}} hours</span>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Regulatory Deadline:</span> {{due_date}}
+      </div>
+      <div style="color: #CB7C00;">
+        <span style="font-weight: 600;">Days to Regulatory Deadline:</span> {{days_to_due_date}}
+      </div>
+    </div>
+
+    <div style="background-color: #FFF8E8; padding: 15px; margin: 20px 0; border-radius: 4px; border-left: 4px solid #CB7C00;">
+      <p style="font-weight: 600; margin-bottom: 10px; color: #CB7C00;">Critical Action Required</p>
+      <p style="margin: 0; font-size: 14px;">
+        This deadline has been breaching its SLA for over 24 hours. Management has been notified. Please prioritize completion immediately to avoid missing the regulatory deadline.
+      </p>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{action_url}}" style="background-color: #991B1B; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        Resolve Immediately
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+EXTENDED SLA BREACH: '{{deadline_title}}' - Breached for {{sla_breach_duration_hours}} hours
+
+URGENT: An SLA breach has been ongoing for {{sla_breach_duration_hours}} hours without resolution.
+
+Deadline: {{deadline_title}}
+Site: {{site_name}}
+Internal SLA: {{sla_target_date}}
+SLA Breach Duration: {{sla_breach_duration_hours}} hours
+Regulatory Deadline: {{due_date}}
+Days to Regulatory Deadline: {{days_to_due_date}}
+
+Critical Action Required:
+This deadline has been breaching its SLA for over 24 hours. Management has been notified. Please prioritize completion immediately to avoid missing the regulatory deadline.
+
+Resolve Immediately: {{action_url}}
+```
+
+**Variables:**
+- `deadline_title`: string
+- `deadline_id`: string
+- `site_name`: string
+- `company_name`: string
+- `sla_target_date`: string
+- `due_date`: string
+- `days_to_due_date`: number
+- `sla_breach_duration_hours`: number - Hours since SLA breach
+- `action_url`: string
+- `unsubscribe_url`: string
+
+**Recipients:** Site managers + Company admins
+
+**Channels:** EMAIL, IN_APP, SLACK (if configured)
+
+**Priority:** URGENT
+
+**Severity:** CRITICAL
+
+**Frequency:** Once when breach >24 hours, then daily
+
+**Escalation:** Level 2
+
+**Trigger:** SLA breach duration > 24 hours
+
+**Deep Linking:**
+- `obligation_id`: UUID of related obligation (required)
+- `action_url`: URL to obligation detail page (required)
+- Format: `https://app.epcompliance.com/sites/{siteId}/obligations/{obligationId}`
+
+---
+
+> [v1.4 UPDATE – Breach Detection Notifications – 2025-01-01]
+
+## 2.19 Breach Detection Notification Templates
+
+### 2.19.1 Compliance Breach Detected Template
+
+**Purpose:** Alert when a regulatory deadline is breached (deadline passed without completion).
+
+**Subject Line Template:**
+```
+🚨 COMPLIANCE BREACH: '{{obligation_title}}' deadline passed
+```
+
+**HTML Body Template:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #101314; background-color: #E2E6E7; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="background-color: #991B1B; color: #FFFFFF; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">
+        🚨
+      </div>
+    </div>
+
+    <h1 style="color: #991B1B; font-size: 24px; margin-bottom: 20px; text-align: center;">
+      COMPLIANCE BREACH DETECTED
+    </h1>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      <strong style="color: #991B1B;">CRITICAL:</strong> A regulatory deadline has been breached. The obligation deadline has passed without completion.
+    </p>
+
+    <div style="background-color: #FEF2F2; border: 2px solid #991B1B; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Obligation:</span> {{obligation_title}}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Site:</span> {{site_name}}
+      </div>
+      <div style="margin-bottom: 10px; color: #991B1B;">
+        <span style="font-weight: 600;">Deadline:</span> {{deadline_date}} <strong>(BREACHED)</strong>
+      </div>
+      <div style="margin-bottom: 10px; color: #991B1B;">
+        <span style="font-weight: 600;">Days Overdue:</span> <span style="font-size: 20px; font-weight: 700;">{{days_overdue}} days</span>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: 600;">Regulator:</span> {{regulator_name}}
+      </div>
+    </div>
+
+    <div style="background-color: #FFF8E8; padding: 15px; margin: 20px 0; border-radius: 4px; border-left: 4px solid #CB7C00;">
+      <p style="font-weight: 600; margin-bottom: 10px; color: #CB7C00;">Immediate Action Required</p>
+      <p style="margin: 0; font-size: 14px;">
+        This compliance breach may result in regulatory penalties. Please complete the obligation and upload evidence immediately. Management has been notified.
+      </p>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{action_url}}" style="background-color: #991B1B; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; margin-right: 10px;">
+        View Obligation
+      </a>
+      <a href="{{evidence_upload_url}}" style="background-color: #10B981; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        Upload Evidence
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+```
+
+**Plain Text Version:**
+```
+🚨 COMPLIANCE BREACH: '{{obligation_title}}' deadline passed
+
+CRITICAL: A regulatory deadline has been breached. The obligation deadline has passed without completion.
+
+Obligation: {{obligation_title}}
+Site: {{site_name}}
+Deadline: {{deadline_date}} (BREACHED)
+Days Overdue: {{days_overdue}} days
+Regulator: {{regulator_name}}
+
+Immediate Action Required:
+This compliance breach may result in regulatory penalties. Please complete the obligation and upload evidence immediately. Management has been notified.
+
+View Obligation: {{action_url}}
+Upload Evidence: {{evidence_upload_url}}
+```
+
+**Variables:**
+- `obligation_title`: string
+- `obligation_id`: UUID
+- `deadline_id`: UUID
+- `site_name`: string
+- `company_name`: string
+- `deadline_date`: string - Formatted deadline date
+- `days_overdue`: number - Days since deadline passed
+- `regulator_name`: string - Name of regulator
+- `action_url`: string - URL to obligation detail page (REQUIRED)
+- `evidence_upload_url`: string - URL to upload evidence
+- `unsubscribe_url`: string
+
+**Recipients:** Obligation assignee + Site managers + Company admins
+
+**Channels:** EMAIL, SMS, IN_APP
+
+**Priority:** CRITICAL
+
+**Severity:** CRITICAL
+
+**Frequency:** Immediately when breach detected, then daily until resolved
+
+**Escalation:** Level 1 → Level 2 (24h) → Level 3 (48h)
+
+**Trigger:** Deadline passes without obligation completion
+
+**Deep Linking:**
+- `obligation_id`: UUID of breached obligation (required)
+- `action_url`: URL to obligation detail page (required)
+- Format: `https://app.epcompliance.com/sites/{siteId}/obligations/{obligationId}`
+
+---
+
+### 2.19.2 Regulatory Deadline Breach Template
+
+**Purpose:** Alert when a regulatory deadline is breached and evidence is missing.
+
+**Subject Line Template:**
+```
+🚨 REGULATORY BREACH: '{{obligation_title}}' - Evidence missing
+```
+
+**HTML Body Template:**
+Similar structure to Compliance Breach Detected, but with focus on missing evidence.
+
+**Variables:**
+- Same as Compliance Breach Detected
+- `evidence_required`: string - Description of required evidence
+- `evidence_status`: string - Current evidence status
+
+**Recipients:** Obligation assignee + Site managers + Company admins
+
+**Channels:** EMAIL, SMS, IN_APP
+
+**Priority:** CRITICAL
+
+**Severity:** CRITICAL
+
+**Frequency:** Immediately when breach detected, then daily until resolved
+
+**Escalation:** Level 1 → Level 2 (24h) → Level 3 (48h)
+
+**Trigger:** Deadline passes without required evidence
+
+**Deep Linking:**
+- `obligation_id`: UUID of breached obligation (required)
+- `evidence_id`: UUID of missing evidence (if applicable)
+- `action_url`: URL to obligation detail page (required)
+- Format: `https://app.epcompliance.com/sites/{siteId}/obligations/{obligationId}`
+
+---
+
 # 3. SMS Notification Templates
 
 ## 3.1 SMS Template Structure
@@ -1524,12 +4325,18 @@ CREATE TABLE notifications (
       'DEADLINE_ALERT',
       'EXCEEDANCE',
       'BREACH',
-      'MODULE_ACTIVATION'
+      'MODULE_ACTIVATION',
+      'SLA_BREACH_DETECTED',
+      'SLA_BREACH_EXTENDED',
+      'COMPLIANCE_BREACH_DETECTED',
+      'REGULATORY_DEADLINE_BREACH'
     )),
   channel TEXT NOT NULL 
     CHECK (channel IN ('EMAIL', 'SMS', 'IN_APP', 'PUSH')),
   priority TEXT NOT NULL DEFAULT 'NORMAL'
     CHECK (priority IN ('LOW', 'NORMAL', 'HIGH', 'CRITICAL', 'URGENT')),
+  severity TEXT NOT NULL DEFAULT 'INFO'
+    CHECK (severity IN ('INFO', 'WARNING', 'CRITICAL')),
   
   -- Content
   subject TEXT NOT NULL, -- Email subject or SMS preview
@@ -1556,10 +4363,12 @@ CREATE TABLE notifications (
   max_retries INTEGER DEFAULT 3 
     CHECK (max_retries >= 0),
   
-  -- Entity Reference
+  -- Entity Reference (Deep Linking)
   entity_type TEXT, -- 'obligation', 'deadline', 'evidence', 'audit_pack', etc.
   entity_id UUID,
-  action_url TEXT, -- URL to relevant page
+  obligation_id UUID REFERENCES obligations(id) ON DELETE SET NULL, -- Deep link to obligation
+  evidence_id UUID REFERENCES evidence_items(id) ON DELETE SET NULL, -- Deep link to evidence
+  action_url TEXT NOT NULL, -- URL to relevant page (REQUIRED for all notifications)
   
   -- Scheduling
   scheduled_for TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -1590,6 +4399,10 @@ CREATE INDEX idx_notifications_scheduled_for ON notifications(scheduled_for);
 CREATE INDEX idx_notifications_read_at ON notifications(read_at);
 CREATE INDEX idx_notifications_created_at ON notifications(created_at);
 CREATE INDEX idx_notifications_entity ON notifications(entity_type, entity_id);
+CREATE INDEX idx_notifications_obligation_id ON notifications(obligation_id);
+CREATE INDEX idx_notifications_evidence_id ON notifications(evidence_id);
+CREATE INDEX idx_notifications_severity ON notifications(severity);
+CREATE INDEX idx_notifications_severity_priority ON notifications(severity, priority);
 
 -- Composite index for escalation checks
 CREATE INDEX idx_notifications_escalation_check ON notifications(entity_type, entity_id, escalation_state, created_at);
@@ -2008,15 +4821,17 @@ async function createDeadlineNotification(
       notification_type,
       channel,
       priority,
+      severity,
       subject,
       body_html,
       body_text,
       variables,
       entity_type,
       entity_id,
+      obligation_id,
       action_url,
       status
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'PENDING')
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'PENDING')
   `, [
     recipient.userId,
     deadline.company_id,
@@ -2025,12 +4840,14 @@ async function createDeadlineNotification(
     notificationType,
     'EMAIL',
     severity === 'CRITICAL' ? 'CRITICAL' : severity === 'WARNING' ? 'HIGH' : 'NORMAL',
+    severity,
     subject,
     bodyHtml,
     bodyText,
     JSON.stringify(variables),
     'deadline',
     deadline.id,
+    deadline.obligation_id,
     variables.action_url
   ]);
   
@@ -2057,6 +4874,127 @@ async function createDeadlineNotification(
 5. **Module 3: Run-Hour Monitoring Job (2.3.6):** Creates run-hour breach notifications (80%/90%/100%)
 6. **AER Generation Job (2.3.7):** Creates AER generation success/failure notifications
 7. **Audit Pack Generation Job (2.3.10):** Creates audit pack ready notifications
+
+---
+
+### Breach Detection Integration
+
+The `DETECT_BREACHES_AND_ALERTS` background job (runs every 15 minutes) MUST trigger notifications for all breaches and SLA misses:
+
+```typescript
+// Example: Breach Detection Job creating notifications
+async function createBreachNotification(
+  deadline: Deadline,
+  breachType: 'COMPLIANCE_BREACH' | 'SLA_BREACH'
+): Promise<void> {
+  // Determine notification type and severity
+  let notificationType: string;
+  let severity: 'CRITICAL' | 'WARNING' | 'INFO';
+  
+  if (breachType === 'COMPLIANCE_BREACH') {
+    // Check if evidence is missing
+    const evidenceCount = await getEvidenceCount(deadline.obligation_id);
+    const evidenceRequired = await isEvidenceRequired(deadline.obligation_id);
+    
+    if (evidenceRequired && evidenceCount === 0) {
+      notificationType = 'REGULATORY_DEADLINE_BREACH';
+    } else {
+      notificationType = 'COMPLIANCE_BREACH_DETECTED';
+    }
+    severity = 'CRITICAL'; // All compliance breaches are CRITICAL
+  } else {
+    notificationType = 'SLA_BREACH_DETECTED';
+    const breachHours = calculateBreachDuration(deadline.sla_breached_at);
+    severity = breachHours > 48 ? 'CRITICAL' : breachHours > 24 ? 'WARNING' : 'INFO';
+  }
+  
+  // Get recipients (assignee + managers + admins)
+  const recipients = await getBreachRecipients(deadline);
+  
+  // Generate deep link
+  const actionUrl = generateActionUrl(deadline.site_id, deadline.obligation_id);
+  
+  // Render template
+  const template = await getTemplate(notificationType, 'EMAIL');
+  const variables = {
+    obligation_title: deadline.obligation.title,
+    obligation_id: deadline.obligation_id,
+    deadline_id: deadline.id,
+    deadline_date: formatDate(deadline.due_date),
+    days_overdue: calculateDaysOverdue(deadline.due_date),
+    site_name: deadline.site.name,
+    company_name: deadline.company.name,
+    action_url: actionUrl, // REQUIRED: Deep link to obligation
+    evidence_upload_url: `${BASE_URL}/sites/${deadline.site_id}/obligations/${deadline.obligation_id}/evidence/upload`,
+    unsubscribe_url: `${BASE_URL}/preferences/unsubscribe?type=${notificationType}`
+  };
+  
+  const subject = renderTemplate(template.subject, variables);
+  const bodyHtml = renderTemplate(template.body_html, variables);
+  const bodyText = renderTemplate(template.body_text, variables);
+  
+  // Create notification for each recipient
+  for (const recipient of recipients) {
+    await db.query(`
+      INSERT INTO notifications (
+        user_id,
+        company_id,
+        site_id,
+        recipient_email,
+        recipient_phone,
+        notification_type,
+        channel,
+        priority,
+        severity,
+        subject,
+        body_html,
+        body_text,
+        variables,
+        entity_type,
+        entity_id,
+        obligation_id,
+        action_url,
+        status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'PENDING')
+    `, [
+      recipient.userId,
+      deadline.company_id,
+      deadline.site_id,
+      recipient.email,
+      recipient.phone,
+      notificationType,
+      severity === 'CRITICAL' ? 'EMAIL, SMS, IN_APP' : 'EMAIL, IN_APP',
+      severity === 'CRITICAL' ? 'CRITICAL' : 'HIGH',
+      severity,
+      subject,
+      bodyHtml,
+      bodyText,
+      JSON.stringify(variables),
+      'deadline',
+      deadline.id,
+      deadline.obligation_id,
+      actionUrl
+    ]);
+  }
+  
+  // Mark breach notification as sent
+  await db.query(`
+    UPDATE deadlines
+    SET breach_notification_sent = true,
+        breach_detected_at = NOW()
+    WHERE id = $1
+  `, [deadline.id]);
+}
+```
+
+**Key Requirements:**
+- **All breaches MUST trigger notifications** (no exceptions)
+- **Severity MUST be set** (INFO, WARNING, or CRITICAL)
+- **Deep links MUST be included** (`action_url` pointing to obligation detail page)
+- **Obligation reference MUST be included** (`obligation_id` for linking)
+- **Evidence reference MUST be included** (`evidence_id` if evidence is missing)
+
+**Reference:** Background Jobs Specification Section 13.2 (Detect Breaches and Trigger Alerts Job)
 
 ---
 
@@ -2901,29 +5839,70 @@ interface Notification {
 }
 
 type NotificationType =
+  // Core Module 1 - Compliance
   | 'DEADLINE_WARNING_7D'
   | 'DEADLINE_WARNING_3D'
   | 'DEADLINE_WARNING_1D'
   | 'OVERDUE_OBLIGATION'
   | 'EVIDENCE_REMINDER'
   | 'PERMIT_RENEWAL_REMINDER'
+  // v1.3 - Compliance Clock
+  | 'COMPLIANCE_CLOCK_CRITICAL'
+  | 'COMPLIANCE_CLOCK_REMINDER'
+  | 'COMPLIANCE_CLOCK_OVERDUE'
+  // v1.3 - Escalation Workflow
+  | 'ESCALATION_LEVEL_1'
+  | 'ESCALATION_LEVEL_2'
+  | 'ESCALATION_LEVEL_3'
+  | 'ESCALATION_LEVEL_4'
+  | 'ESCALATION_RESOLVED'
+  // v1.3 - Permit Workflows
+  | 'PERMIT_RENEWAL_DUE'
+  | 'PERMIT_WORKFLOW_SUBMITTED'
+  | 'REGULATOR_RESPONSE_OVERDUE'
+  | 'PERMIT_WORKFLOW_APPROVED'
+  | 'PERMIT_SURRENDER_INSPECTION_DUE'
+  // v1.3 - Corrective Actions
+  | 'CORRECTIVE_ACTION_ITEM_ASSIGNED'
+  | 'CORRECTIVE_ACTION_ITEM_DUE_SOON'
+  | 'CORRECTIVE_ACTION_ITEM_OVERDUE'
+  | 'CORRECTIVE_ACTION_READY_FOR_CLOSURE'
+  | 'CORRECTIVE_ACTION_CLOSURE_APPROVED'
+  // Module 2 - Parameter Monitoring
   | 'PARAMETER_EXCEEDANCE_80'
   | 'PARAMETER_EXCEEDANCE_90'
   | 'PARAMETER_EXCEEDANCE_100'
+  // Module 3 - Runtime Monitoring
   | 'RUN_HOUR_BREACH_80'
   | 'RUN_HOUR_BREACH_90'
   | 'RUN_HOUR_BREACH_100'
+  | 'RUNTIME_VALIDATION_PENDING'
+  | 'RUNTIME_VALIDATION_REJECTED'
+  | 'RUNTIME_EXCEEDANCE'
+  // v1.3 - Module 4 - Waste Consignments
+  | 'CONSIGNMENT_VALIDATION_FAILED'
+  | 'CONSIGNMENT_VALIDATION_WARNING'
+  // v1.3 - SLA Management
+  | 'SLA_BREACH_DETECTED'
+  | 'SLA_BREACH_EXTENDED'
+  // Pack Generation
   | 'AUDIT_PACK_READY'
   | 'REGULATOR_PACK_READY'
   | 'TENDER_PACK_READY'
   | 'BOARD_PACK_READY'
   | 'INSURER_PACK_READY'
   | 'PACK_DISTRIBUTED'
+  // Consultant Features
   | 'CONSULTANT_CLIENT_ASSIGNED'
   | 'CONSULTANT_CLIENT_PACK_GENERATED'
   | 'CONSULTANT_CLIENT_ACTIVITY'
+  // Data Import
+  | 'EXCEL_IMPORT_READY_FOR_REVIEW'
+  | 'EXCEL_IMPORT_COMPLETED'
+  | 'EXCEL_IMPORT_FAILED'
+  // System
   | 'SYSTEM_ALERT'
-  | 'ESCALATION';
+  | 'ESCALATION'; // Legacy - use specific ESCALATION_LEVEL_N types
 
 type Channel = 'EMAIL' | 'SMS' | 'IN_APP' | 'PUSH';
 

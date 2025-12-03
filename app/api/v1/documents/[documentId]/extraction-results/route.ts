@@ -135,7 +135,7 @@ export async function GET(
           rule_library_hits: extractionLogs.metadata?.rule_library_hit ? 1 : 0,
           api_calls_made: extractionLogs.metadata?.rule_library_hit ? 0 : 1,
         }
-      : null;
+      : undefined;
 
     const response = successResponse(
       {

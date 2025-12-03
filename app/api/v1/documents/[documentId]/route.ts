@@ -25,28 +25,9 @@ export async function GET(
     }
     const { user } = authResult;
 
-    // Debug: Log the entire params object
+    // Extract documentId from params
     const resolvedParams = await params;
-    console.log('Full params object:', JSON.stringify(resolvedParams, null, 2));
-    console.log('Params keys:', Object.keys(resolvedParams));
-    
-    // Extract documentId - try multiple possible keys
-    const documentId = resolvedParams.documentId || resolvedParams.id || resolvedParams.document_id;
-    
-    if (!documentId) {
-      console.error('Could not find documentId in params. Available keys:', Object.keys(resolvedParams));
-      return errorResponse(
-        ErrorCodes.VALIDATION_ERROR,
-        'Document ID parameter missing',
-        400,
-        { 
-          document_id: 'Document ID parameter is missing',
-          available_params: Object.keys(resolvedParams),
-          received_params: resolvedParams
-        },
-        { request_id: requestId }
-      );
-    }
+    const { documentId } = resolvedParams;
     
     // Debug logging
     console.log('Document ID received:', documentId);

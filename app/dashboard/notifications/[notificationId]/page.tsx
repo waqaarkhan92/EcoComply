@@ -26,7 +26,7 @@ export default function NotificationDetailPage() {
 
   const { data: notificationData, isLoading } = useQuery<{ data: Notification }>({
     queryKey: ['notification', notificationId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Notification }>(`/notifications/${notificationId}`);
     },
   });
@@ -43,7 +43,7 @@ export default function NotificationDetailPage() {
   // Mark as read when opened
   useQuery({
     queryKey: ['mark-read', notificationId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       if (notificationData?.data && !notificationData.data.read_at) {
         await markAsRead.mutateAsync();
       }

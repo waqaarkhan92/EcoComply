@@ -45,7 +45,7 @@ export default function MCPDRegistrationDetailPage() {
 
   const { data: registrationData, isLoading, error } = useQuery<{ data: MCPDRegistration }>({
     queryKey: ['module-3-registration', registrationId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: MCPDRegistration }>(`/module-3/mcpd-registrations/${registrationId}`);
     },
     enabled: !!registrationId,

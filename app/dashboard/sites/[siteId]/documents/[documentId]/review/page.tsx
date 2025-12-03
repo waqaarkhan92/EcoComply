@@ -29,14 +29,14 @@ export default function DocumentReviewPage() {
 
   const { data: documentData } = useQuery<{ data: Document }>({
     queryKey: ['document', documentId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Document }>(`/documents/${documentId}`);
     },
   });
 
   const { data: obligationsData } = useQuery<{ data: Obligation[] }>({
     queryKey: ['document-obligations', documentId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Obligation[] }>(`/documents/${documentId}/obligations`);
     },
   });

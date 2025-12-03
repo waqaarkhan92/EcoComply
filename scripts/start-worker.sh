@@ -30,3 +30,5 @@ echo "📝 View logs: pm2 logs oblicore-worker"
 echo "🛑 Stop worker: pm2 stop oblicore-worker"
 
 
+
+

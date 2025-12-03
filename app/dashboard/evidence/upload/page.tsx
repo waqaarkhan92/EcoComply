@@ -29,7 +29,7 @@ export default function EvidenceUploadPage() {
     data: Obligation[];
   }>({
     queryKey: ['obligations'],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const response = await apiClient.get('/obligations?limit=100');
       return response.data;
     },

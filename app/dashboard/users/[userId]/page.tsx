@@ -22,7 +22,7 @@ export default function UserDetailPage() {
 
   const { data: userData, isLoading } = useQuery<{ data: User }>({
     queryKey: ['user', userId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: User }>(`/users/${userId}`);
     },
   });

@@ -35,7 +35,7 @@ export default function DeadlinesPage() {
 
   const { data: deadlinesData, isLoading, error } = useQuery<DeadlinesResponse>({
     queryKey: ['deadlines', siteId, cursor, filter],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       params.append('filter[site_id]', siteId);
       if (filter !== 'all') {

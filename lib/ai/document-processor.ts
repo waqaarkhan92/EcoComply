@@ -11,6 +11,7 @@ import { getOpenAIClient } from './openai-client';
 import { getRuleLibraryMatcher, RuleMatch } from './rule-library-matcher';
 import { recordPatternSuccess } from './correction-tracking';
 import { checkForPatternDiscovery } from './pattern-discovery';
+import { getExtractionCache } from './extraction-cache';
 
 export interface DocumentProcessingResult {
   extractedText: string;
@@ -37,6 +38,7 @@ export interface ExtractionResult {
 export class DocumentProcessor {
   private openAIClient = getOpenAIClient();
   private ruleLibraryMatcher = getRuleLibraryMatcher();
+  private extractionCache = getExtractionCache();
 
   /**
    * Process document: Extract text, determine if OCR needed, process
@@ -136,6 +138,18 @@ export class DocumentProcessor {
   ): Promise<ExtractionResult> {
     const startTime = Date.now();
 
+    // Step 0: Check cache for document extraction result
+    const documentHash = this.extractionCache.generateDocumentHash(documentText);
+    const cachedResult = await this.extractionCache.getDocumentCache(documentHash);
+    
+    if (cachedResult) {
+      console.log('✅ Cache hit: Using cached extraction result');
+      return {
+        ...cachedResult,
+        extractionTimeMs: Date.now() - startTime,
+      };
+    }
+
     // Step 1: Try rule library matching first (cost optimization)
     const ruleLibraryMatches = await this.ruleLibraryMatcher.findMatches(
       documentText,
@@ -145,6 +159,22 @@ export class DocumentProcessor {
     );
 
     console.log(`📋 Rule library matches: ${ruleLibraryMatches.length} (top score: ${ruleLibraryMatches[0]?.match_score || 0})`);
+    
+    // Check cache for rule library match result
+    if (ruleLibraryMatches.length > 0 && ruleLibraryMatches[0].match_score >= 0.9) {
+      const patternHash = this.extractionCache.generatePatternHash(ruleLibraryMatches[0].pattern || '');
+      const cachedRuleMatch = await this.extractionCache.getRuleMatchCache(documentHash, patternHash);
+      
+      if (cachedRuleMatch) {
+        console.log('✅ Cache hit: Using cached rule library match result');
+        // Cache the full document result too
+        await this.extractionCache.setDocumentCache(documentHash, cachedRuleMatch);
+        return {
+          ...cachedRuleMatch,
+          extractionTimeMs: Date.now() - startTime,
+        };
+      }
+    }
     
     // If we have high-confidence matches (≥90%), use them
     if (ruleLibraryMatches.length > 0 && ruleLibraryMatches[0].match_score >= 0.9) {
@@ -171,7 +201,7 @@ export class DocumentProcessor {
         );
       });
 
-      return {
+      const result: ExtractionResult = {
         obligations,
         metadata: {
           regulator: options.regulator,
@@ -181,6 +211,16 @@ export class DocumentProcessor {
         usedLLM: false,
         extractionTimeMs: Date.now() - startTime,
       };
+
+      // Cache the result
+      const documentHash = this.extractionCache.generateDocumentHash(documentText);
+      if (ruleLibraryMatches.length > 0) {
+        const patternHash = this.extractionCache.generatePatternHash(ruleLibraryMatches[0].pattern || '');
+        await this.extractionCache.setRuleMatchCache(documentHash, patternHash, result);
+      }
+      await this.extractionCache.setDocumentCache(documentHash, result);
+
+      return result;
     }
 
     // Step 2: Use LLM extraction (fallback when rule library doesn't match)
@@ -568,13 +608,18 @@ export class DocumentProcessor {
 
     console.log(`✅ LLM extraction complete: ${obligations.length} obligations transformed`);
 
-    return {
+    const result: ExtractionResult = {
       obligations,
       metadata,
       ruleLibraryMatches: [],
       usedLLM: true,
       extractionTimeMs: Date.now() - startTime,
     };
+
+    // Cache the LLM extraction result (reuse documentHash declared at line 142)
+    await this.extractionCache.setDocumentCache(documentHash, result);
+
+    return result;
   }
 
   /**

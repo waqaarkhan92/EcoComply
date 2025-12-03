@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
       // Get obligations for all client sites
       const { data: obligations, error: obligationsError } = await supabaseAdmin
         .from('obligations')
-        .select('id, status, deadline_date')
+        .select('id, site_id, status, deadline_date')
         .in('site_id', siteIds);
 
       if (!obligationsError && obligations) {

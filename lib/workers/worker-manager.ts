@@ -25,6 +25,20 @@ import { processEvidenceRetentionJob } from '../jobs/evidence-retention-job';
 import { processNotificationDeliveryJob } from '../jobs/notification-delivery-job';
 import { processEscalationCheckJob } from '../jobs/escalation-check-job';
 import { processDigestDeliveryJob } from '../jobs/digest-delivery-job';
+import { processComplianceClockUpdateJob } from '../jobs/compliance-clock-update-job';
+import { processRecurringTaskGenerationJob } from '../jobs/recurring-task-generation-job';
+import { processEvidenceExpiryTrackingJob } from '../jobs/evidence-expiry-tracking-job';
+import { processSLABreachTimersJob } from '../jobs/sla-breach-timers-job';
+import { processDetectBreachesAndAlertsJob } from '../jobs/detect-breaches-and-alerts-job';
+import { processAutoCreateRenewalWorkflowsJob } from '../jobs/auto-create-renewal-workflows-job';
+import { processCheckRegulatorResponseDeadlinesJob } from '../jobs/check-regulator-response-deadlines-job';
+import { processMonitorCorrectiveActionItemsJob } from '../jobs/monitor-corrective-action-items-job';
+import { processAutoTransitionCorrectiveActionsJob } from '../jobs/auto-transition-corrective-actions-job';
+import { processAutoValidateConsignmentNotesJob } from '../jobs/auto-validate-consignment-notes-job';
+import { processFlagPendingRuntimeValidationsJob } from '../jobs/flag-pending-runtime-validations-job';
+import { processExecutePendingRecurrenceTriggersJob } from '../jobs/execute-pending-recurrence-triggers-job';
+import { processProcessTriggerConditionsJob } from '../jobs/process-trigger-conditions-job';
+import { processRefreshComplianceDashboardJob } from '../jobs/refresh-compliance-dashboard-job';
 
 // Worker instances
 const workers: Map<string, Worker> = new Map();
@@ -60,7 +74,7 @@ export function createWorker<T = any>(
 /**
  * Start all workers
  */
-export function startAllWorkers(): void {
+export async function startAllWorkers(): Promise<void> {
   console.log('Starting background job workers...');
 
   // Document Processing Worker (handles both document extraction and Excel import)
@@ -114,7 +128,7 @@ export function startAllWorkers(): void {
 
   workers.set(QUEUE_NAMES.MONITORING_SCHEDULE, monitoringWorker);
 
-  // Deadline Alerts Worker (handles deadline alerts, permit renewal reminders, and notification delivery)
+  // Deadline Alerts Worker (handles deadline alerts, permit renewal reminders, notification delivery, and escalations)
   const deadlineAlertsWorker = createWorker(
     QUEUE_NAMES.DEADLINE_ALERTS,
     async (job) => {
@@ -124,7 +138,7 @@ export function startAllWorkers(): void {
         await processPermitRenewalReminderJob(job);
       } else if (job.name === 'NOTIFICATION_DELIVERY') {
         await processNotificationDeliveryJob(job);
-      } else if (job.name === 'ESCALATION_CHECK') {
+      } else if (job.name === 'ESCALATION_CHECK' || job.name === 'PROCESS_ESCALATIONS') {
         await processEscalationCheckJob(job);
       } else if (job.name === 'DAILY_DIGEST_DELIVERY' || job.name === 'WEEKLY_DIGEST_DELIVERY') {
         await processDigestDeliveryJob(job);
@@ -359,6 +373,257 @@ export function startAllWorkers(): void {
   });
 
   workers.set(QUEUE_NAMES.REPORT_GENERATION, reportGenerationWorker);
+
+  // Compliance Clock Update Worker
+  const complianceClockWorker = createWorker(
+    QUEUE_NAMES.COMPLIANCE_CLOCK_UPDATE,
+    async (job) => {
+      if (job.name === 'update-compliance-clocks' || job.name === 'UPDATE_COMPLIANCE_CLOCKS') {
+        await processComplianceClockUpdateJob(job);
+      } else {
+        throw new Error(`Unknown job type: ${job.name}`);
+      }
+    },
+    {
+      concurrency: 3, // Moderate concurrency for database updates
+    }
+  );
+
+  complianceClockWorker.on('completed', (job) => {
+    console.log(`Compliance clock update job ${job.id} completed`);
+  });
+
+  complianceClockWorker.on('failed', (job, error) => {
+    console.error(`Compliance clock update job ${job?.id} failed:`, error);
+  });
+
+  workers.set(QUEUE_NAMES.COMPLIANCE_CLOCK_UPDATE, complianceClockWorker);
+
+  // Recurring Task Generation Worker
+  const recurringTaskWorker = createWorker(
+    QUEUE_NAMES.RECURRING_TASK_GENERATION,
+    async (job) => {
+      if (job.name === 'generate-recurring-tasks') {
+        await processRecurringTaskGenerationJob(job);
+      } else {
+        throw new Error(`Unknown job type: ${job.name}`);
+      }
+    },
+    {
+      concurrency: 1, // Low concurrency for scheduled task generation
+    }
+  );
+
+  recurringTaskWorker.on('completed', (job) => {
+    console.log(`Recurring task generation job ${job.id} completed`);
+  });
+
+  recurringTaskWorker.on('failed', (job, error) => {
+    console.error(`Recurring task generation job ${job?.id} failed:`, error);
+  });
+
+  workers.set(QUEUE_NAMES.RECURRING_TASK_GENERATION, recurringTaskWorker);
+
+  // Evidence Expiry Tracking Worker
+  const evidenceExpiryWorker = createWorker(
+    QUEUE_NAMES.EVIDENCE_EXPIRY_TRACKING,
+    async (job) => {
+      if (job.name === 'update-evidence-expiry-tracking') {
+        await processEvidenceExpiryTrackingJob(job);
+      } else {
+        throw new Error(`Unknown job type: ${job.name}`);
+      }
+    },
+    {
+      concurrency: 2, // Moderate concurrency for expiry tracking
+    }
+  );
+
+  evidenceExpiryWorker.on('completed', (job) => {
+    console.log(`Evidence expiry tracking job ${job.id} completed`);
+  });
+
+  evidenceExpiryWorker.on('failed', (job, error) => {
+    console.error(`Evidence expiry tracking job ${job?.id} failed:`, error);
+  });
+
+  workers.set(QUEUE_NAMES.EVIDENCE_EXPIRY_TRACKING, evidenceExpiryWorker);
+
+  // SLA Breach Timers Worker (also handles breach detection)
+  if (workers.has(QUEUE_NAMES.SLA_BREACH_ALERTS)) {
+    const existingWorker = workers.get(QUEUE_NAMES.SLA_BREACH_ALERTS);
+    if (existingWorker) {
+      await existingWorker.close();
+    }
+  }
+
+  const slaBreachTimersWorker = createWorker(
+    QUEUE_NAMES.SLA_BREACH_ALERTS,
+    async (job) => {
+      if (job.name === 'UPDATE_SLA_BREACH_TIMERS') {
+        await processSLABreachTimersJob(job);
+      } else if (job.name === 'DETECT_BREACHES_AND_ALERTS') {
+        await processDetectBreachesAndAlertsJob(job);
+      } else {
+        throw new Error(`Unknown job type: ${job.name}`);
+      }
+    },
+    {
+      concurrency: 5, // Higher concurrency for high-priority breach detection
+    }
+  );
+
+  slaBreachTimersWorker.on('completed', (job) => {
+    console.log(`SLA breach job ${job.id} completed`);
+  });
+
+  slaBreachTimersWorker.on('failed', (job, error) => {
+    console.error(`SLA breach job ${job?.id} failed:`, error);
+  });
+
+  workers.set(QUEUE_NAMES.SLA_BREACH_ALERTS, slaBreachTimersWorker);
+
+  // Permit Workflows Worker
+  const permitWorkflowsWorker = createWorker(
+    QUEUE_NAMES.PERMIT_WORKFLOWS,
+    async (job) => {
+      if (job.name === 'AUTO_CREATE_RENEWAL_WORKFLOWS') {
+        await processAutoCreateRenewalWorkflowsJob(job);
+      } else if (job.name === 'CHECK_REGULATOR_RESPONSE_DEADLINES') {
+        await processCheckRegulatorResponseDeadlinesJob(job);
+      } else {
+        throw new Error(`Unknown job type: ${job.name}`);
+      }
+    }
+  );
+
+  permitWorkflowsWorker.on('completed', (job) => {
+    console.log(`Permit workflow job ${job.id} completed`);
+  });
+
+  permitWorkflowsWorker.on('failed', (job, error) => {
+    console.error(`Permit workflow job ${job?.id} failed:`, error);
+  });
+
+  workers.set(QUEUE_NAMES.PERMIT_WORKFLOWS, permitWorkflowsWorker);
+
+  // Corrective Actions Worker
+  const correctiveActionsWorker = createWorker(
+    QUEUE_NAMES.CORRECTIVE_ACTIONS,
+    async (job) => {
+      if (job.name === 'MONITOR_CORRECTIVE_ACTION_ITEMS') {
+        await processMonitorCorrectiveActionItemsJob(job);
+      } else if (job.name === 'AUTO_TRANSITION_CORRECTIVE_ACTIONS') {
+        await processAutoTransitionCorrectiveActionsJob(job);
+      } else {
+        throw new Error(`Unknown job type: ${job.name}`);
+      }
+    }
+  );
+
+  correctiveActionsWorker.on('completed', (job) => {
+    console.log(`Corrective action job ${job.id} completed`);
+  });
+
+  correctiveActionsWorker.on('failed', (job, error) => {
+    console.error(`Corrective action job ${job?.id} failed:`, error);
+  });
+
+  workers.set(QUEUE_NAMES.CORRECTIVE_ACTIONS, correctiveActionsWorker);
+
+  // Validation Processing Worker
+  const validationProcessingWorker = createWorker(
+    QUEUE_NAMES.VALIDATION_PROCESSING,
+    async (job) => {
+      if (job.name === 'AUTO_VALIDATE_CONSIGNMENT_NOTES') {
+        await processAutoValidateConsignmentNotesJob(job);
+      } else {
+        throw new Error(`Unknown job type: ${job.name}`);
+      }
+    }
+  );
+
+  validationProcessingWorker.on('completed', (job) => {
+    console.log(`Validation processing job ${job.id} completed`);
+  });
+
+  validationProcessingWorker.on('failed', (job, error) => {
+    console.error(`Validation processing job ${job?.id} failed:`, error);
+  });
+
+  workers.set(QUEUE_NAMES.VALIDATION_PROCESSING, validationProcessingWorker);
+
+  // Runtime Monitoring Worker
+  const runtimeMonitoringWorker = createWorker(
+    QUEUE_NAMES.RUNTIME_MONITORING,
+    async (job) => {
+      if (job.name === 'FLAG_PENDING_RUNTIME_VALIDATIONS') {
+        await processFlagPendingRuntimeValidationsJob(job);
+      } else {
+        throw new Error(`Unknown job type: ${job.name}`);
+      }
+    }
+  );
+
+  runtimeMonitoringWorker.on('completed', (job) => {
+    console.log(`Runtime monitoring job ${job.id} completed`);
+  });
+
+  runtimeMonitoringWorker.on('failed', (job, error) => {
+    console.error(`Runtime monitoring job ${job?.id} failed:`, error);
+  });
+
+  workers.set(QUEUE_NAMES.RUNTIME_MONITORING, runtimeMonitoringWorker);
+
+  // Trigger Execution Worker
+  const triggerExecutionWorker = createWorker(
+    QUEUE_NAMES.TRIGGER_EXECUTION,
+    async (job) => {
+      if (job.name === 'EXECUTE_PENDING_RECURRENCE_TRIGGERS') {
+        await processExecutePendingRecurrenceTriggersJob(job);
+      } else if (job.name === 'PROCESS_TRIGGER_CONDITIONS') {
+        await processProcessTriggerConditionsJob(job);
+      } else {
+        throw new Error(`Unknown job type: ${job.name}`);
+      }
+    }
+  );
+
+  triggerExecutionWorker.on('completed', (job) => {
+    console.log(`Trigger execution job ${job.id} completed`);
+  });
+
+  triggerExecutionWorker.on('failed', (job, error) => {
+    console.error(`Trigger execution job ${job?.id} failed:`, error);
+  });
+
+  workers.set(QUEUE_NAMES.TRIGGER_EXECUTION, triggerExecutionWorker);
+
+  // Dashboard Refresh Worker
+  const dashboardRefreshWorker = createWorker(
+    QUEUE_NAMES.DASHBOARD_REFRESH,
+    async (job) => {
+      if (job.name === 'REFRESH_COMPLIANCE_DASHBOARD') {
+        await processRefreshComplianceDashboardJob(job);
+      } else {
+        throw new Error(`Unknown job type: ${job.name}`);
+      }
+    },
+    {
+      concurrency: 1, // Single concurrent refresh to avoid conflicts
+    }
+  );
+
+  dashboardRefreshWorker.on('completed', (job) => {
+    console.log(`Dashboard refresh job ${job.id} completed`);
+  });
+
+  dashboardRefreshWorker.on('failed', (job, error) => {
+    console.error(`Dashboard refresh job ${job?.id} failed:`, error);
+  });
+
+  workers.set(QUEUE_NAMES.DASHBOARD_REFRESH, dashboardRefreshWorker);
+
 
   console.log('All workers started successfully');
 }

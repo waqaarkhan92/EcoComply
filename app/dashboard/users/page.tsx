@@ -26,7 +26,7 @@ interface UsersResponse {
 export default function UsersPage() {
   const { data: usersData, isLoading } = useQuery<UsersResponse>({
     queryKey: ['users'],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<UsersResponse>('/users');
     },
   });

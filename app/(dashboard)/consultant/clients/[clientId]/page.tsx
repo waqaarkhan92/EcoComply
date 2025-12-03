@@ -12,11 +12,24 @@ export default function ConsultantClientPage() {
   const router = useRouter();
   const clientId = params.clientId as string;
 
+  interface ClientData {
+    company_name: string;
+    site_count: number;
+    compliance_summary: {
+      total_obligations: number;
+      overdue_count: number;
+      approaching_deadline_count: number;
+      compliance_score: number;
+    };
+    sites: Array<{ id: string; site_name: string; status?: string }>;
+    upcoming_deadlines: Array<any>;
+  }
+
   const { data: clientData, isLoading } = useQuery({
     queryKey: ['consultant-client', clientId],
-    queryFn: async () => {
+    queryFn: async (): Promise<ClientData> => {
       const response = await apiClient.get(`/consultant/clients/${clientId}`);
-      return response.data;
+      return response.data as ClientData;
     },
   });
 

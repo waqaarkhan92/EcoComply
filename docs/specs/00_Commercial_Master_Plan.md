@@ -36,14 +36,14 @@ UK SMEs hold 47,000+ active environmental permits. Each contains 50–200 specif
 
 The product is module-structured. The sales motion is ICP-structured. Module 1 is the universal entry point. Modules 2 and 3 are cross-sold based on ICP-specific triggers.
 
-| ICP (Industry) | Module 1: Permits | Module 2: Effluent | Module 3: MCPD | Commercial Priority | Max ARPU Potential |
+| ICP (Industry) | Module 1: Permits | Module 2: Effluent | Module 3: MCPD | Module 4: Waste | Commercial Priority | Max ARPU Potential |
 
 **Note:** This module map represents commercial strategy. The technical module registry is stored in the `modules` table (see Canonical Dictionary Section C.4 - Module Registry Table). For business logic on adding new modules, see Product Logic Specification Section C.4 (Module Extension Pattern). New modules can be added to the system via configuration without code changes.
-|----------------|------------------|-------------------|----------------|---------------------|-------------------|
-| **Waste & Recycling Operators** (2,300 sites) | 100% (Mandatory) | 60–70% (Likely) | 15–25% (Moderate) | #1 — Fastest PMF | £149 → £287 → £435 |
-| **Food & Beverage Processors** (1,800 sites) | 100% (Mandatory) | 90–100% (Mandatory) | 40–60% (Medium) | #2 — Drives Module 2 | £149 → £287 → £435 |
-| **Small Manufacturers** (4,500 sites) | 100% (Mandatory) | 10–35% (Low) | 45–80% (High) | #3 — Drives Module 3 | £149 → £228 → £435 |
-| **Chemical / Pharma Sites** | 80% (High) | 70–90% (High) | 40–60% (Medium) | Year 2 ICP | £149 → £287 → £435 |
+|----------------|------------------|-------------------|----------------|------------------|---------------------|-------------------|
+| **Waste & Recycling Operators** (2,300 sites) | 100% (Mandatory) | 60–70% (Likely) | 15–25% (Moderate) | 80–90% (High) | #1 — Fastest PMF | £149 → £287 → £435 → £522 |
+| **Food & Beverage Processors** (1,800 sites) | 100% (Mandatory) | 90–100% (Mandatory) | 40–60% (Medium) | 60–70% (High) | #2 — Drives Module 2 | £149 → £287 → £435 → £522 |
+| **Small Manufacturers** (4,500 sites) | 100% (Mandatory) | 10–35% (Low) | 45–80% (High) | 50–60% (Medium) | #3 — Drives Module 3 | £149 → £228 → £435 → £522 |
+| **Chemical / Pharma Sites** | 80% (High) | 70–90% (High) | 40–60% (Medium) | 85–95% (Very High) | Year 2 ICP | £149 → £287 → £435 → £522 |
 
 ### ICP #1 — Waste & Recycling Operators
 
@@ -82,6 +82,7 @@ Enterprises with dedicated compliance teams (>250 employees), single-person oper
 - **Module 1 — Environmental Permits:** "Your permit has 73 hidden obligations. We find them in 60 seconds."
 - **Module 2 — Trade Effluent:** "Your consent has 15 parameters. We track limits and flag exceedances instantly."
 - **Module 3 — MCPD/Generators:** "500-hour generator limits. We track every minute and prevent breaches."
+- **Module 4 — Hazardous Waste:** "Your waste chain of custody has gaps. We detect them before the regulator does."
 
 ### Why Module 1 Wedge is Strongest
 
@@ -96,14 +97,24 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 **Core Compliance Engine (80% shared across all modules):**
 - Document ingestion pipeline (PDF upload, OCR, text extraction)
 - Obligation extraction engine (LLM-powered parsing, deadline detection, subjective obligation flagging)
-- Evidence management system (file upload, obligation linking, audit trail)
-- Monitoring scheduler (recurring tasks, deadline alerts)
+- Evidence management system (file upload, obligation linking, audit trail, versioning, expiry tracking)
+- Monitoring scheduler (recurring tasks, deadline alerts, dynamic schedules, event-based triggers)
 - Pack generator (5 pack types: Regulator, Tender, Board, Insurer, Audit — evidence compilation, inspector-ready PDFs)
+- **Cross-cutting compliance features (foundational - not optional):**
+  - RLS scoping to site, unit, permit condition (granular access control)
+  - Automated recurring task generation (dynamic task creation from schedules)
+  - Overdue escalation + audit trail of decisions (automatic escalation workflows, decision logging)
+  - Evidence ageing + expiry rules (expiry tracking, renewal reminders)
+  - Full inspector/auditor sharing flows (secure pack sharing, time-limited access)
+  - Audit pack integration from day 1 (standalone pack capability per module)
+  
+**Critical Implementation Note:** These cross-cutting features are foundational and must be built into module architecture from the start. They cannot be retrofitted later without significant rework. Consistency across modules is critical for user experience.
 
 **Module-Specific Rule Libraries (20% per module):**
-- **Module 1:** EA/SEPA/NRW permit patterns, standard conditions library
-- **Module 2:** Water company consent patterns, parameter tracking, exceedance detection
-- **Module 3:** MCPD registration patterns, run-hour calculations, limit monitoring
+- **Module 1:** EA/SEPA/NRW permit patterns, standard conditions library, condition-level evidence mapping
+- **Module 2:** Water company consent patterns, parameter tracking, exceedance detection, reconciliation rules
+- **Module 3:** MCPD registration patterns, run-hour calculations, limit monitoring, exemption logic
+- **Module 4:** Waste stream classification (EWC codes), consignment note patterns, chain of custody validation
 
 **Note:** Module-specific rules are stored in the rule library with `module_id` reference (or `module_code` in JSON). New modules add their own rule patterns following the same schema. The system queries the `modules` table to determine which rules apply to which modules.
 
@@ -112,20 +123,40 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 - **Module 1 (Environmental Permits):** Built first. 4–6 weeks development. Launches immediately. Builds the 80% core engine plus permit-specific rules.
 - **Module 2 (Trade Effluent):** Built when cross-sell triggers appear from Module 1 customers. 2–3 weeks (adds effluent rules only). Typical trigger: Month 6+.
 - **Module 3 (MCPD/Generators):** Built when cross-sell triggers appear. 2–3 weeks (adds MCPD rules only). Typical trigger: Month 9+.
+- **Module 4 (Hazardous Waste):** Built when cross-sell triggers appear. 3–4 weeks (adds waste rules and chain of custody logic). Typical trigger: Month 12+.
 
 ### Module 1 — Environmental Permits (Launch Module)
 
 **Core Features:**
-- Permit upload & processing (drag-drop PDF, auto-parse in 60 seconds)
+- Permit upload & processing (drag-drop PDF, auto-parse in 60 seconds) — **Key Feature:** 60-second parsing is a core differentiator and demo highlight
 - Obligation extraction (LLM-powered, subjective obligation flagging requiring manual review)
+- **Condition-level evidence mapping:**
+  - Allowed evidence types per condition
+  - Automated completeness scoring
+  - Versioned evidence history
+- **Triggering rules for recurrence:**
+  - Dynamic schedules (e.g., "6 months from commissioning")
+  - Event-based triggers (not just fixed schedules)
+  - Conditional recurrence logic
+- **Permit change tracking:**
+  - Full redline comparison between permit versions
+  - Version impact analysis on obligations
+  - Obligation change history
+- **Deadline/breach automation:**
+  - Escalation workflows (automatic escalation chains)
+  - Overdue logic and alerts (detailed overdue detection)
+  - SLA timers and notifications
 - Evidence capture (mobile-responsive upload, photos, CSV import)
 - Monitoring schedule (auto-generated, customisable frequencies)
+- Compliance calendar (calendar view with deadline indicators, recurrence logic, month/week/day views)
 - Compliance dashboard (traffic light status, overdue obligations, upcoming deadlines)
 - Pack generator (5 pack types: Regulator, Tender, Board, Insurer, Audit — one-click, inspector-ready PDFs)
 - Multi-site support (site switcher, consolidated view, permissions)
 - Alerts & notifications (email/SMS, escalation chains)
 - Human override workflow (edit obligations, override frequencies, mark N/A)
-- Permit variations & version control
+- Permit variations, renewals, and surrender workflow (version control, renewal tracking, surrender documentation)
+- **Enforcement notice tracking** (enforcement notice management and response)
+- **Documented justification for compliance decisions** (decision logging and audit trail)
 
 > [v1 UPDATE – Pack Types – 2024-12-27]
 
@@ -140,43 +171,179 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 - **Core Plan:** Download + Email (Regulator Pack, Audit Pack only)
 - **Growth Plan:** Download + Email + Shared Links (all pack types)
 
-**ROI:** Replaces £6,400/year consultant fees (8 days → 2 days). Saves 6–10 hours/week internal time (£9,360–15,600/year value). Prevents £5k–10k fine risk annually (40% failure rate → 5%). **Total value: £20,760–32,000/year. Cost: £1,788/year. ROI: 500–900%.**
+**Critical Requirement:** Every module must be able to generate its own audit pack independently. If any module cannot produce a pack alone, it is not sellable stand-alone. This requirement applies to all modules (Modules 1, 2, 3, and 4).
+
+**Main Value Add:**
+- You define the regulated scope
+- Evidence burden becomes visible
+- You create operational accountability
+- This is the wedge: without this, the rest is admin
+- One-click compliance proof for inspections and audits
+- **Audit-ready compliance** (automated completeness scoring ensures nothing is missed)
+- **Reliable audit packs** (versioned evidence history provides defensible audit trail)
+
+**ROI:** Replaces £6,400/year consultant fees (8 days → 2 days). Saves 6–10 hours/week internal time (£9,360–15,600/year value). Prevents £5k–10k fine risk annually (40% failure rate → 5%). Pack generation saves 10–20 hours per inspection/audit - high value add. **Total value: £20,760–32,000/year. Cost: £1,788/year. ROI: 500–900%.**
+
+**Commercial Notes:**
+This is always module 1 because it defines what else they need. Without permits, there is no compliance system.
+**Critical:** Without condition-level evidence mapping and deadline automation, this module cannot produce reliable audit packs. These features are essential for auditor confidence.
 
 **Standalone Purchase:** ✅ Yes — Module 1 is the entry point for all customers.
+
+**Critical Requirement:** This module must be able to generate its own audit pack independently. If it cannot produce a pack alone, it is not sellable stand-alone.
 
 ### Module 2 — Trade Effluent (Cross-Sell Module)
 
 **Extends Module 1 With:**
 - Consent document parsing (effluent-specific patterns)
+- **Consent validity state machine:**
+  - Draft → In force → Superseded → Expired
+  - State transition tracking
+  - Active consent management
+- **Automated reconciliation rules:**
+  - Concentration × volume exposure calculations
+  - Breach likelihood scoring
+  - Predictive breach alerts
+  - Risk-based monitoring prioritization
+- **Corrective action workflows:**
+  - Breach response procedures
+  - Documentary evidence trail
+  - Action item tracking
+  - Resolution verification
+- **Sampling logistics automation:**
+  - Sampling reminders and scheduling
+  - Sample collection tracking
+  - Courier coordination
+  - Lab submission tracking
+  - Certificate receipt and ingestion
+  - Automatic evidence linking
 - Parameter limit extraction and tracking
-- Sampling schedule generation (daily/weekly/monthly)
+- Sampling/monitoring plan + chain of custody (daily/weekly/monthly schedules, sample collection tracking, chain of custody documentation)
 - Lab result import and validation
-- Exceedance detection and alerting (80% threshold warnings)
+- Exceedance detection and alerting (80%/90%/100% threshold warnings with escalation)
 - Discharge volume calculations
-- Water company report formatting
+- Water company report formatting (automated formatting to water company standards, ready for submission)
+- Evidence trail for water company audits (complete audit trail of all sampling, lab results, exceedances, and corrective actions for water company inspections)
+
+**Main Value Add:**
+- Converts variable, high-consequence operational activity into provable compliance
+- Reduces consultant costs and avoids surcharges/fines
+- Clear ROI when breaches avoided
+- Instant audit readiness for water company inspections
+- **Automated workflow** (sampling → lab → evidence linking eliminates manual coordination)
+- **Proactive breach prevention** (breach likelihood scoring enables early intervention)
 
 **ROI:** Prevents trade effluent surcharges (£10k–15k/year). Reduces sampling errors (5–10% = £1k–2k savings). Eliminates manual report compilation (4–6 hours/month = £1,440–2,160/year). **Total value: £12,440–19,160/year. Cost: £708/year. ROI: 600–900%.**
+
+**Commercial Notes:**
+High willingness to pay because effluent breaches create immediate financial consequences. Audit pack generation eliminates manual compilation for water company audits.
+**Critical:** Without automated reconciliation rules and sampling logistics, this module requires manual work that defeats the automation value. The "how" (workflows) is as important as the "what" (data capture).
 
 **Cross-Sell Triggers:** Water company enforcement notice (immediate), unexpected surcharge bill (£10k+ shock), lab result chaos (PDFs everywhere, no trending), acquisition due diligence, approaching parameter limits (80% threshold), in-app detection of effluent keywords in Module 1 permits.
 
 **Standalone Purchase:** ❌ No — requires prerequisite module (defined in `modules.requires_module_id`, currently Module 1, but configurable).
 
+**Critical Requirement:** This module must be able to generate its own audit pack independently. If it cannot produce a pack alone, it is not sellable stand-alone.
+
 ### Module 3 — MCPD/Generators (Cross-Sell Module)
 
 **Extends Module 1 With:**
 - Registration document parsing (MCPD-specific patterns)
+- **Runtime monitoring integration:**
+  - Automated runtime data capture (not just manual logs)
+  - Integration with generator monitoring systems
+  - Real-time runtime tracking
+  - Scalable data collection
+- **Emission exemption logic:**
+  - Testing vs emergency operation classification
+  - Exemption evidence requirements
+  - Exemption duration tracking
+  - Compliance verification for exemptions
+- **Regulation thresholds logic:**
+  - MW thresholds → monitoring frequency requirements
+  - Automatic frequency calculation based on capacity
+  - Threshold-based compliance rules
+  - Dynamic monitoring schedules
+- **Compliance clock:**
+  - Countdown to next mandated testing
+  - Certification expiry tracking
+  - Testing deadline alerts
+  - Certification renewal reminders
 - Run-hour limit tracking (annual/monthly limits, cumulative calculations)
 - Multi-generator aggregation
-- Automatic limit breach warnings (80%/90%/100% thresholds)
+- Automatic limit breach warnings (80%/90%/100% thresholds with escalation)
 - Maintenance record linking
 - Stack test scheduling
-- Annual return auto-population
+- Annual return auto-population (AER form pre-filled from tracked data: run-hours, fuel consumption, emissions calculations)
+
+**Main Value Add:**
+- Avoids operational shutdown risk
+- Removes complexity of reporting
+- Captures a large portion of industrial audit scope
+- Instant audit readiness with automated pack generation
+- **Automated runtime monitoring** (eliminates manual log entry, scales with multiple generators)
+- **Proactive compliance management** (compliance clock prevents missed testing deadlines)
 
 **ROI:** Prevents permit breach fines (£10k–20k annually). Eliminates manual run-hour tracking (3–4 hours/week = £4,680–6,240/year). Automates annual returns (20–30 hours = £600–900/year). **Total value: £15,280–26,140/year. Cost: £948/year. ROI: 500–800%.**
+
+**Commercial Notes:**
+Strong audit forcing function. Good bundled with trade effluent. Pack generation saves hours of manual compilation for MCPD audits.
+**Critical:** Without runtime monitoring integration and exemption logic automation, this module requires manual work that doesn't scale. Competitive only if automation of runtime + exemption evidence is included.
 
 **Cross-Sell Triggers:** Run-hour limit breach (£25k fine — immediate trigger), generator failure during power outage (maintenance record gaps), lost maintenance records during EA inspection, annual return complexity (40 hours manual work), multiple generator coordination.
 
 **Standalone Purchase:** ❌ No — requires prerequisite module (defined in `modules.requires_module_id`, currently Module 1, but configurable).
+
+**Critical Requirement:** This module must be able to generate its own audit pack independently. If it cannot produce a pack alone, it is not sellable stand-alone.
+
+### Module 4 — Hazardous Waste Chain of Custody (Cross-Sell Module)
+
+**Purpose:** Trace high-liability waste streams and prevent enforcement exposure
+
+**ICP:** Same industrial footprint as TE/MCPD + chemical, coatings, plating, aerospace
+
+**Extends Module 1 With:**
+- Waste stream classification (EWC codes)
+- **Validation rules engine:**
+  - Carrier licence validity vs waste type (automatic validation)
+  - Volume vs permit limits (real-time checking)
+  - Storage duration vs regulations (compliance verification)
+  - Pre-submission validation prevents errors
+- **Return evidence / end-point proof:**
+  - Destruction/recycling outcome documentation
+  - End-point verification tracking
+  - Certificate of destruction/recycling
+  - Complete chain of custody closure
+- **Chain-break detection:**
+  - Alerts if evidence missing
+  - Contractor non-compliance detection
+  - Gap identification in chain of custody
+  - Automatic breach notifications
+- Consignment notes (digital capture + validation)
+- Contractor licence checks + expiry monitoring
+- Volume limits vs permit
+- Chain of custody reporting
+- Waste compliance packs (regulator inspection ready — complete chain of custody documentation, validation proof, end-point certificates)
+
+**Main Value Add:**
+- Establishes legal defensibility when waste leaves site
+- Material enforcement risk reduction
+- Huge pain for consultants manually reconciling this today
+- Automated audit pack generation eliminates manual reconciliation
+- **Proactive compliance** (validation rules prevent violations before they occur)
+- **Complete chain closure** (end-point proof provides full defensibility)
+
+**ROI:** Establishes legal defensibility when waste leaves site. Material enforcement risk reduction. Huge pain for consultants manually reconciling this today. Automated audit pack generation eliminates manual reconciliation. **Total value: £12,000–18,000/year. Cost: £87.50/month. ROI: 600–800%.**
+
+**Commercial Notes:**
+Don't sell waste admin. Sell enforcement risk reduction. Pack generation is critical - waste audits are evidence-intensive and time-consuming.
+**Critical:** Without validation rules engine and chain-break detection, this module cannot provide enforcement defensibility. These control checkpoints are essential for legal protection.
+
+**Cross-Sell Triggers:** Waste audit approaching, enforcement notice for waste violations, missing consignment notes during inspection, contractor licence expiry issues, volume limit breaches, acquisition due diligence.
+
+**Standalone Purchase:** ❌ No — requires prerequisite module (defined in `modules.requires_module_id`, currently Module 1, but configurable).
+
+**Critical Requirement:** This module must be able to generate its own audit pack independently. If it cannot produce a pack alone, it is not sellable stand-alone.
 
 ---
 
@@ -227,6 +394,7 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 - Pack distribution: All methods (Download, Email, Shared Links) for all pack types
 - Module 2 (Trade Effluent) add-on: £59/month per site
 - Module 3 (MCPD/Generators) add-on: £79/month per company
+- Module 4 (Hazardous Waste) add-on: £87.50/month per site
 
 **Growth Plan Value:** Client-facing packs (Tender, Board, Insurer) + shared link distribution for professional client engagement
 
@@ -246,6 +414,7 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 | **Additional Site** | £99/month each | For multi-site operators |
 | **Module 2 — Trade Effluent (Add-On)** | £59/month per site | Requires prerequisite module (enforced via `modules.requires_module_id`, currently Module 1). Unlimited consents per site |
 | **Module 3 — MCPD/Generators (Add-On)** | £79/month per company | Requires prerequisite module (enforced via `modules.requires_module_id`, currently Module 1). Unlimited MCPD units/generators |
+| **Module 4 — Hazardous Waste (Add-On)** | £87.50/month per site | Requires prerequisite module (enforced via `modules.requires_module_id`, currently Module 1). Unlimited waste streams per site |
 
 ### Pricing Justification
 
@@ -315,13 +484,16 @@ Highest pain visibility (40% fail first inspection), highest complexity (50–20
 
 **Module 3 TAM:** 5,300 UK sites with MCPD/generators × £79/month × 12 = **£5.0M/year**
 
-**Combined Platform TAM:** **£24.8M/year**
+**Module 4 TAM:** 4,200 UK sites with hazardous waste × £87.50/month × 12 = **£4.4M/year**
+
+**Combined Platform TAM:** **£29.2M/year**
 
 **Serviceable Available Market (SMEs 10–250 employees):**
 - **Module 1 SAM:** 2,850 sites = **£5.1M/year**
 - **Module 2 SAM (40% of Module 1):** 1,140 sites = **£0.8M/year**
 - **Module 3 SAM (25% of Module 1):** 713 sites = **£0.7M/year**
-- **Total SAM:** **£6.6M/year**
+- **Module 4 SAM (60% of Module 1):** 1,710 sites = **£1.8M/year**
+- **Total SAM:** **£8.4M/year**
 
 ---
 

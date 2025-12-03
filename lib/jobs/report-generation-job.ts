@@ -729,6 +729,8 @@ async function uploadReportToStorage(reportId: string, fileBuffer: Buffer, forma
 
 /**
  * Calculate compliance score
+ * @deprecated Use calculateModuleComplianceScore from compliance-score-service instead
+ * This function is kept for backward compatibility but should be replaced with the full implementation
  */
 function calculateComplianceScore(
   totalObligations: number,

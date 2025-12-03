@@ -1,17 +1,110 @@
 # EcoComply Frontend Routes & Component Map
 
-**EcoComply v1.0 — Launch-Ready / Last updated: 2025-01-29**
+**EcoComply v1.0 — Launch-Ready / Last updated: 2025-02-03**
 
-**Document Version:** 1.1  
-**Status:** Implemented  
-**Created by:** Cursor  
+> [v1.7 UPDATE – Module 1 & Module 2 Advanced Routes – 2025-02-03]
+> - Added Section 3.32: Module 1 Advanced Routes (Environmental Permits)
+>   - Enforcement Notices routes (list, create, detail, edit)
+>   - Compliance Decisions routes (list, create, detail, edit)
+>   - Condition Evidence Rules routes (list, create, detail, edit)
+>   - Condition Permissions routes (list, create, detail)
+>   - Evidence Completeness Scores route (list with scoring algorithm)
+>   - Permit Versions routes (list, create, detail, edit)
+>   - Permit Workflows routes (list, create, detail)
+> - Added Section 3.33: Module 2 Advanced Routes (Trade Effluent)
+>   - Sampling Logistics routes (list, create, detail, edit) with 5-stage workflow
+>   - Monthly Statements routes (list, upload, detail) with auto-reconciliation
+>   - Consent States routes (list, create, detail) with state machine
+>   - Corrective Actions routes (list, create, detail, edit)
+> - Added Section 3.34: Component Library Documentation
+>   - Template Components (CrudListPage, CrudDetailPage, FormWrapper)
+>   - Confidence Score Components (Badge, Indicator)
+>   - State Machine Components (StateFlowVisualization, StatusBadge)
+> - Total: 27 Module 1 pages + 15 Module 2 pages documented = 42 new pages
+> [v1.6 UPDATE – Standardized Audit Pack Generation Hooks – 2025-01-01]
+> - Added Section 5.6: Pack Generation Hooks
+> - Added `useGeneratePack` hook with standardized pack generation
+> - Added `usePackDetails` hook for fetching pack with all universal fields
+> - Added `PackGenerationDialog` component specification
+> - Standardized pack generation to include all 6 universal sections
+> - Added SLA tracking and secure access token support
+> [v1.5 UPDATE – Added Compliance Score Hooks – 2025-01-01]
+> - Added Section 5.4: Compliance Score Hooks
+> - Added `useComplianceScore` hook with real-time updates via Supabase Realtime
+> - Added `useComplianceScoreTrend` hook for trend analysis
+> - Added automatic score invalidation in obligation mutation hooks
+> - Updated all site and module endpoints to include compliance_score fields
+> [v1.3 UPDATE – Complete API Integration – 2025-01-01]
+> Added all missing API integration hooks and patterns:
+> - Error Handling System (complete)
+> - Filter/Sort Parameter Mapping
+> - Module 4 API Integration Hooks
+> - Compliance Clocks API Integration Hooks
+> - Escalation Workflows Routes & Hooks
+> - Permit Workflows Routes & Hooks
+> - Background Jobs Monitoring Routes & Hooks
+> - Recurrence Trigger Executions Hook
+> - Role-Based Access Control Hooks
+> - Upload Progress Tracking
+> - Notifications API Integration Hooks
+> - Pack Generation API Integration Hooks
+> - Excel Import API Integration Hooks
+> - Review Queue API Integration Hooks
+> - Health Check Integration
+> - Rate Limiting Handling
+> - Polling Strategy Documentation
+> - Cache Strategy & Invalidation
+> - WebSocket/Real-Time Updates Strategy (Supabase Realtime)
+> - Shared Type Definitions & OpenAPI Type Generation
+> - Search API Integration Documentation
+> - Chunked Upload for Large Files
+> - API Integration Testing Patterns
+
+**Document Version:** 1.7
+**Status:** Updated - Module 1 & Module 2 Advanced Routes
+**Created by:** Cursor
 **Depends on:**
-- ✅ Product Logic Specification (1.1) - Complete
+- ✅ Product Logic Specification (1.5) - Complete
 - ✅ User Workflow Maps (1.3) - Complete
-- ✅ Backend API (2.5) - Complete
+- ✅ Backend API (1.6) - Complete
+- ✅ High Level Product Plan (01) - Complete
 
 **Purpose:** Defines the complete frontend routing structure, component hierarchy, navigation patterns, and implementation specifications for the EcoComply platform. This document ensures world-class design, mobile responsiveness, accessibility compliance, and optimal performance.
 
+**Important Note on Pagination:** The EcoComply platform uses **cursor-based pagination** (not page-based) throughout the application. This matches the backend API implementation and provides better performance for large datasets. All pagination components, hooks, and examples in this document use cursor-based pagination.
+
+> [v1.3 UPDATE – Complete API Integration – 2025-01-01]
+> Added all missing API integration hooks and patterns:
+> - Error Handling System (complete with error codes, message mapping, field-level validation)
+> - Filter/Sort Parameter Mapping utilities
+> - Module 4 API Integration Hooks (waste streams, consignment notes, validation rules, etc.)
+> - Compliance Clocks API Integration Hooks
+> - Escalation Workflows Routes & Hooks (complete feature)
+> - Permit Workflows Routes & Hooks (all 16 endpoints)
+> - Background Jobs Monitoring Routes & Hooks
+> - Recurrence Trigger Executions Hook
+> - Role-Based Access Control Hooks & Route Guards
+> - Upload Progress Tracking
+> - Notifications API Integration Hooks
+> - Pack Generation API Integration Hooks (all pack types)
+> - Excel Import API Integration Hooks
+> - Review Queue API Integration Hooks
+> - Health Check Integration
+> - Rate Limiting Handling
+> - Polling Strategy Documentation
+
+> [v1.2 UPDATE – Added Module 4 and New Features – 2025-01-01]
+> New features added:
+> - Module 4 (Hazardous Waste) routes and components
+> - Compliance Clock routes and components
+> - Enhanced Audit Pack Generation routes
+> - Consultant Mode routes
+> - Condition-level evidence mapping routes
+> - Recurrence trigger configuration routes
+> - Permit change tracking routes
+> - Corrective action lifecycle routes
+> - Validation rules UI (Module 4)
+> - Chain of custody UI (Module 4)
 > [v1.1 UPDATE – Implementation Complete – 2025-01-29]
 > All features implemented:
 > - All routes in app/ directory
@@ -29,6 +122,13 @@
 3. [Detailed Route Specifications](#3-detailed-route-specifications)
 4. [Component Hierarchy](#4-component-hierarchy)
 5. [Data Fetching Logic](#5-data-fetching-logic)
+   - 5.1 [Data Fetching Strategy](#51-data-fetching-strategy)
+   - 5.2 [Custom Hooks - List Queries](#52-custom-hooks---list-queries)
+   - 5.3 [Custom Hooks - Detail Queries](#53-custom-hooks---detail-queries)
+   - 5.4 [Error Handling & API Error Management](#54-error-handling--api-error-management)
+   - 5.5 [Custom Hooks - Mutations](#55-custom-hooks---mutations)
+   - 5.6 [Role-Based Access Control](#56-role-based-access-control)
+   - 5.7 [Upload Progress Tracking](#57-upload-progress-tracking)
 6. [State Management](#6-state-management)
 7. [Navigation Flow](#7-navigation-flow)
 8. [Route Guards](#8-route-guards)
@@ -125,17 +225,72 @@ app/
 │   │   │   │       └── evidence/
 │   │   │   │           └── upload/
 │   │   │   │               └── page.tsx
-│   │   │   ├── module-2/
+│   │   │   ├── permits/
+│   │   │   │   ├── documents/
+│   │   │   │   │   ├── page.tsx
+│   │   │   │   │   ├── upload/
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   └── [documentId]/
+│   │   │   │   │       ├── page.tsx
+│   │   │   │   │       └── review/
+│   │   │   │   │           └── page.tsx
+│   │   │   │   ├── obligations/
+│   │   │   │   │   ├── page.tsx
+│   │   │   │   │   └── [obligationId]/
+│   │   │   │   │       ├── page.tsx
+│   │   │   │   │       └── evidence/
+│   │   │   │   │           └── upload/
+│   │   │   │   │               └── page.tsx
+│   │   │   │   └── workflows/
+│   │   │   │       ├── page.tsx
+│   │   │   │       └── [workflowId]/
+│   │   │   │           └── page.tsx
+│   │   │   ├── trade-effluent/
 │   │   │   │   ├── parameters/
 │   │   │   │   │   └── page.tsx
-│   │   │   │   └── lab-results/
-│   │   │   │       └── import/
+│   │   │   │   ├── lab-results/
+│   │   │   │   │   └── import/
+│   │   │   │   │       └── page.tsx
+│   │   │   │   ├── exceedances/
+│   │   │   │   │   ├── page.tsx
+│   │   │   │   │   └── [exceedanceId]/
+│   │   │   │   │       └── page.tsx
+│   │   │   │   └── corrective-actions/
+│   │   │   │       ├── page.tsx
+│   │   │   │       └── [actionId]/
 │   │   │   │           └── page.tsx
-│   │   │   └── module-3/
-│   │   │       ├── run-hours/
+│   │   │   ├── generators/
+│   │   │   │   ├── run-hours/
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── aer/
+│   │   │   │   │   └── generate/
+│   │   │   │   │       └── page.tsx
+│   │   │   │   └── runtime-monitoring/
+│   │   │   │       └── page.tsx
+│   │   │   └── hazardous-waste/
+│   │   │       ├── waste-streams/
+│   │   │       │   ├── page.tsx
+│   │   │       │   └── [wasteStreamId]/
+│   │   │       │       └── page.tsx
+│   │   │       ├── consignment-notes/
+│   │   │       │   ├── page.tsx
+│   │   │       │   ├── create/
+│   │   │       │   │   └── page.tsx
+│   │   │       │   └── [consignmentNoteId]/
+│   │   │       │       └── page.tsx
+│   │   │       ├── chain-of-custody/
+│   │   │       │   ├── page.tsx
+│   │   │       │   └── [chainId]/
+│   │   │       │       └── page.tsx
+│   │   │       ├── validation-rules/
 │   │   │       │   └── page.tsx
-│   │   │       └── aer/
-│   │   │           └── generate/
+│   │   │       ├── end-point-proof/
+│   │   │       │   ├── page.tsx
+│   │   │       │   └── [proofId]/
+│   │   │       │       └── page.tsx
+│   │   │       └── corrective-actions/
+│   │   │           ├── page.tsx
+│   │   │           └── [actionId]/
 │   │   │               └── page.tsx
 │   │   └── layout.tsx
 ├── modules/
@@ -196,10 +351,11 @@ Home > Sites > Site Name > Documents > Upload Document
 - Layout: Full application layout (header, sidebar, footer)
 - Access: Authenticated users only
 
-**Route Group: `(modules)`**
-- Purpose: Module-specific routes
-- Layout: Module-specific layout (if needed)
-- Access: Module activation required
+**Route Group: `(dashboard)`**
+- Purpose: All protected application routes
+- Layout: Full application layout (header, sidebar, footer)
+- Access: Authenticated users only
+- Global Navigation: Dashboard, Sites, Audit Packs, Compliance Clock, Tasks & Actions, Evidence Library, Settings
 
 ---
 
@@ -310,7 +466,41 @@ SignupPage
 
 ---
 
-## 3.2 Dashboard Routes
+## 3.2 Global Navigation Routes
+
+### Global Navigation Structure
+
+**Top-Level Sidebar Navigation (Always Visible):**
+- Dashboard - `/dashboard`
+- Sites - `/sites`
+- Audit Packs - `/packs` (global with site/module filters)
+- Compliance Clock - `/compliance-clocks` (global with obligations deep-links)
+- Tasks & Actions - `/tasks` (global, linked to modules)
+- Evidence Library - `/evidence` (global with context filters)
+- Settings - `/settings` (hidden for Consultant role)
+
+**Consultant-Specific Navigation:**
+- Consultants see all global navigation items EXCEPT Settings
+- Consultants have access to:
+  - Dashboard (shows all assigned client sites)
+  - Sites (all assigned client sites, grouped by company)
+  - Audit Packs (can generate for assigned clients only)
+  - Compliance Clock (all assigned client sites)
+  - Tasks & Actions (all assigned client sites)
+  - Evidence Library (all assigned client sites)
+- Consultants CANNOT access:
+  - Settings (company settings, subscription, billing)
+  - Subscription management
+  - Billing information
+
+**Key Principles:**
+- Global navigation items are always visible (not dependent on module activation)
+- Audit Packs and Compliance Clock are never hidden under any module
+- All global features support site and module filtering
+- Module visibility is derived from tenancy entitlements
+- Consultant role: Settings navigation hidden, subscription/billing access blocked
+
+---
 
 ### Route: `/dashboard`
 
@@ -428,10 +618,37 @@ SiteDashboardPage
 - `useUpcomingDeadlines(siteId, days=7)` - Fetch upcoming deadlines
 - `useRecentActivity(siteId)` - Fetch recent activity
 
+**Dashboard Widgets (Enhanced - v1.7):**
+- Upcoming Deadlines widget
+- Overdue Items widget
+- Recent Activity widget
+- Review Queue widget
+- **Unlinked Evidence Widget (NEW - v1.7)**
+  ├── WidgetHeader
+  │   ├── Title: "Unlinked Evidence"
+  │   └── ViewAllButton (links to `/sites/[siteId]/evidence/unlinked`)
+  ├── UnlinkedCountBadge
+  │   ├── Count (total unlinked evidence items)
+  │   └── ColorCoded (green if 0, amber if 1-5, red if >5)
+  ├── EnforcementStatusBreakdown
+  │   ├── WarningCount (UNLINKED_WARNING)
+  │   ├── CriticalCount (UNLINKED_CRITICAL)
+  │   └── ArchivedCount (UNLINKED_ARCHIVED)
+  ├── RecentUnlinkedList (last 5 items)
+  │   └── UnlinkedEvidenceItem (repeated)
+  │       ├── FileName (truncated)
+  │       ├── DaysSinceUpload
+  │       ├── EnforcementStatusBadge
+  │       └── LinkButton
+  └── GracePeriodAlerts
+      ├── ApproachingGracePeriod (items within 2 days of 7-day deadline)
+      └── PastGracePeriod (items past 7-day deadline)
+
 **User Interactions:**
 - Click overdue obligation → navigate to obligation detail
 - Click upcoming deadline → navigate to obligation detail
 - Click quick action → navigate to respective upload/generation page
+- Click unlinked evidence item → navigate to evidence detail or unlinked evidence page
 - Refresh dashboard data
 - Filter by date range
 
@@ -455,7 +672,125 @@ SiteDashboardPage
 
 ---
 
-## 3.3 Document Routes
+## 3.3 Site-Level Module Routes
+
+### Site-Level Navigation Structure
+
+**Site Overview:**
+- `/sites/[siteId]/dashboard` - Site dashboard (always available)
+
+**Permits Module (Always Present):**
+- `/sites/[siteId]/permits/documents` - Permit documents
+- `/sites/[siteId]/permits/obligations` - Permit obligations
+- `/sites/[siteId]/permits/workflows` - Permit workflows
+
+**Trade Effluent Module (If Purchased):**
+- `/sites/[siteId]/trade-effluent/parameters` - Parameter tracking
+- `/sites/[siteId]/trade-effluent/exceedances` - Exceedances
+- `/sites/[siteId]/trade-effluent/corrective-actions` - Corrective actions
+
+**MCPD / Generators Module (If Purchased):**
+- `/sites/[siteId]/generators/run-hours` - Run hours tracking
+- `/sites/[siteId]/generators/runtime-monitoring` - Runtime monitoring
+- `/sites/[siteId]/generators/fuel-usage-logs` - Fuel usage logs
+- `/sites/[siteId]/generators/sulphur-content-reports` - Sulphur content reports
+- `/sites/[siteId]/generators/aer` - AER generation
+
+**Hazardous Waste Module (If Purchased):**
+- `/sites/[siteId]/hazardous-waste/waste-streams` - Waste streams
+- `/sites/[siteId]/hazardous-waste/consignment-notes` - Consignment notes
+- `/sites/[siteId]/hazardous-waste/chain-of-custody` - Chain of custody
+- `/sites/[siteId]/hazardous-waste/validation-rules` - Validation rules
+- `/sites/[siteId]/hazardous-waste/end-point-proof` - End-point proofs
+- `/sites/[siteId]/hazardous-waste/corrective-actions` - Corrective actions
+
+**Module Visibility:**
+- Derived from tenancy entitlements (`tenancy_entitlements` table)
+- Upsell hooks appear where module is inactive but supported by site context
+- Permits module is always visible (core functionality)
+
+---
+
+### Route: `/sites/[siteId]/permits/documents`
+
+**URL Pattern:** `/sites/:siteId/permits/documents`  
+**File:** `app/(dashboard)/sites/[siteId]/permits/documents/page.tsx`  
+**Access:** Authenticated users with site access
+
+**Component Structure:**
+```
+PermitDocumentsPage
+├── DocumentsHeader
+│   ├── PageTitle
+│   └── UploadDocumentButton
+├── DocumentsFilterBar
+│   ├── SearchInput
+│   ├── DocumentTypeFilter
+│   ├── StatusFilter
+│   └── DateRangeFilter
+├── DocumentsList
+│   └── DocumentRow (repeated)
+│       ├── DocumentTitle
+│       ├── DocumentTypeBadge
+│       ├── StatusBadge
+│       ├── UploadDate
+│       └── Actions
+└── UploadDocumentModal
+    ├── FileUploadZone
+    ├── DocumentTypeSelector
+    └── UploadButton
+```
+
+**Data Fetching:**
+- `usePermitDocuments(siteId, filters)` - Fetch permit documents
+- `useUploadPermitDocument()` - Mutation hook for uploading
+
+**Route Guards:** Authenticated users with site access
+
+**Note:** This route replaces the previous `/sites/[siteId]/documents` route. All document functionality is now under the Permits module.
+
+---
+
+### Route: `/sites/[siteId]/permits/obligations`
+
+**URL Pattern:** `/sites/:siteId/permits/obligations`  
+**File:** `app/(dashboard)/sites/[siteId]/permits/obligations/page.tsx`  
+**Access:** Authenticated users with site access
+
+**Component Structure:**
+```
+PermitObligationsPage
+├── ObligationsHeader
+│   ├── PageTitle
+│   └── FilterBar
+│       ├── SearchInput
+│       ├── StatusFilter
+│       ├── CategoryFilter
+│       └── DeadlineFilter
+├── ObligationsList
+│   └── ObligationRow (repeated)
+│       ├── ObligationTitle
+│       ├── CategoryBadge
+│       ├── StatusBadge
+│       ├── DeadlineDate
+│       └── Actions
+└── ObligationDetailModal
+    ├── ObligationDetails
+    ├── LinkedEvidence
+    └── Actions
+```
+
+**Data Fetching:**
+- `usePermitObligations(siteId, filters)` - Fetch permit obligations
+- `useObligation(obligationId)` - Fetch obligation details
+
+**Route Guards:** Authenticated users with site access
+
+**Note:** This route replaces the previous `/sites/[siteId]/obligations` route. All obligation functionality is now under the Permits module.
+
+---
+
+## 3.4 Document Routes (Legacy - Redirects to Permits)
 
 ### Route: `/sites/[siteId]/documents`
 
@@ -758,7 +1093,7 @@ DocumentDetailPage
 
 ---
 
-## 3.4 Obligation Routes
+## 3.5 Obligation Routes (Legacy - Redirects to Permits)
 
 ### Route: `/sites/[siteId]/obligations`
 
@@ -907,7 +1242,111 @@ ObligationDetailPage
 
 ---
 
-## 3.5 Evidence Routes
+## 3.6 Evidence Routes
+
+### Route: `/sites/[siteId]/evidence/unlinked` (NEW - v1.7)
+
+> [v1.7 UPDATE – Evidence Enforcement UI – 2025-01-XX]
+
+**URL Pattern:** `/sites/:siteId/evidence/unlinked`  
+**File:** `app/(dashboard)/sites/[siteId]/evidence/unlinked/page.tsx`  
+**Access:** Owner, Admin, Staff roles with site access
+
+**Purpose:** Display evidence items without obligation links (enforcement status management)
+
+**Component Structure:**
+```
+UnlinkedEvidencePage
+├── UnlinkedEvidenceHeader
+│   ├── PageTitle: "Unlinked Evidence"
+│   ├── UnlinkedCountBadge (shows count)
+│   └── FilterButton
+├── EnforcementStatusFilters
+│   ├── StatusFilter (multi-select)
+│   │   ├── UNLINKED_WARNING (7-13 days)
+│   │   ├── UNLINKED_CRITICAL (14-29 days)
+│   │   └── UNLINKED_ARCHIVED (30+ days)
+│   ├── GracePeriodFilter
+│   │   ├── WithinGracePeriod (0-7 days)
+│   │   ├── WarningPeriod (7-14 days)
+│   │   └── CriticalPeriod (14-30 days)
+│   └── DateRangeFilter
+├── UnlinkedEvidenceList
+│   └── UnlinkedEvidenceCard (repeated)
+│       ├── EvidencePreview
+│       ├── EvidenceMetadata
+│       │   ├── FileName
+│       │   ├── UploadedAt
+│       │   ├── UploadedBy
+│       │   └── FileSize
+│       ├── EnforcementStatusBadge
+│       │   ├── StatusIcon (warning/critical/archived)
+│       │   ├── StatusText
+│       │   └── DaysSinceUpload
+│       ├── GracePeriodCountdown
+│       │   ├── DaysRemaining (if within grace period)
+│       │   ├── DaysOverdue (if past grace period)
+│       │   └── ProgressBar (visual countdown)
+│       ├── SuggestedObligations
+│       │   └── SuggestedObligationCard (repeated)
+│       │       ├── ObligationTitle
+│       │       ├── MatchReason (e.g., "Filename match", "Date match")
+│       │       └── LinkButton
+│       └── Actions
+│           ├── LinkToObligationButton
+│           ├── MarkTemporaryButton (if Admin/Owner)
+│           ├── RequestExemptionButton (if Admin/Owner)
+│           └── ViewDetailsButton
+└── BulkActionsBar (if items selected)
+    ├── SelectedCount
+    ├── BulkLinkButton
+    ├── BulkMarkTemporaryButton (if Admin/Owner)
+    └── BulkRequestExemptionButton (if Admin/Owner)
+```
+
+**Data Fetching:**
+- `useUnlinkedEvidence(siteId, filters)` - Fetch unlinked evidence items
+- `useEvidenceEnforcementStatus(evidenceId)` - Fetch enforcement status
+- `useSuggestedObligations(evidenceId)` - Fetch suggested obligations for linking
+- `useLinkEvidenceToObligation()` - Mutation hook for linking
+- `useMarkEvidenceTemporary()` - Mutation hook (Admin/Owner only)
+- `useRequestEvidenceExemption()` - Mutation hook (Admin/Owner only)
+
+**Enforcement Status Display:**
+- **UNLINKED_WARNING (7-13 days):** Amber badge, "Warning: Link required"
+- **UNLINKED_CRITICAL (14-29 days):** Red badge, "Critical: Link required"
+- **UNLINKED_ARCHIVED (30+ days):** Gray badge, "Archived: Requires restoration"
+
+**Grace Period Countdown:**
+- Visual progress bar showing days remaining/overdue
+- Color-coded: Green (within grace), Amber (warning), Red (critical)
+- Tooltip: "Evidence must be linked within 7 days of upload"
+
+**Evidence Exemption Modal (Admin/Owner only):**
+```
+EvidenceExemptionModal
+├── ModalHeader
+│   ├── Title: "Request Evidence Exemption"
+│   └── CloseButton
+├── ExemptionForm
+│   ├── EvidenceInfo
+│   │   ├── FileName
+│   │   └── UploadedAt
+│   ├── ExemptionReasonTextarea (required)
+│   │   └── Placeholder: "e.g., Draft document for internal review only"
+│   ├── ExemptionTypeSelector
+│   │   ├── Option: "Temporary Evidence" (is_temporary = true)
+│   │   └── Option: "Enforcement Exempt" (enforcement_exempt = true)
+│   └── AuditTrailNotice
+│       └── Text: "This exemption will be logged in the audit trail"
+└── ModalFooter
+    ├── CancelButton
+    └── SubmitButton
+```
+
+**Route Guards:** Owner, Admin, Staff roles with site access
+
+---
 
 ### Route: `/sites/[siteId]/obligations/[obligationId]/evidence/upload`
 
@@ -998,7 +1437,189 @@ EvidenceUploadPage
 
 ---
 
-## 3.6 Module Routes
+### Route: `/sites/[siteId]/evidence/[evidenceId]` (NEW - v1.7)
+
+> [v1.7 UPDATE – Evidence Detail & Chain-of-Custody – 2025-01-XX]
+
+**URL Pattern:** `/sites/:siteId/evidence/:evidenceId`  
+**File:** `app/(dashboard)/sites/[siteId]/evidence/[evidenceId]/page.tsx`  
+**Access:** Owner, Admin, Staff roles with site access
+
+**Component Structure:**
+```
+EvidenceDetailPage
+├── EvidenceHeader
+│   ├── EvidenceFileName
+│   ├── EvidenceStatusBadge
+│   └── EvidenceActionsMenu
+│       ├── DownloadButton
+│       ├── LinkToObligationButton
+│       ├── ApproveButton (if Admin/Owner/Manager)
+│       └── ViewChainOfCustodyButton
+├── EvidenceTabs
+│   ├── DetailsTab
+│   ├── LinkedObligationsTab
+│   ├── ChainOfCustodyTab (NEW - v1.7)
+│   └── ApprovalHistoryTab
+├── EvidenceDetails
+│   ├── EvidenceMetadata
+│   │   ├── FileName
+│   │   ├── FileType
+│   │   ├── FileSize
+│   │   ├── UploadedAt
+│   │   ├── UploadedBy
+│   │   ├── FileHash (SHA-256, for integrity)
+│   │   └── StoragePath
+│   ├── EvidencePreview
+│   │   └── FileViewer (PDF/Image/CSV viewer)
+│   └── EvidenceStatus
+│       ├── ApprovalStatus
+│       ├── EnforcementStatus
+│       └── ComplianceStatus
+├── LinkedObligationsList
+│   └── ObligationCard (repeated)
+│       ├── ObligationTitle
+│       ├── LinkDate
+│       └── UnlinkButton
+└── ChainOfCustodyReport (NEW - v1.7)
+    ├── ChainOfCustodyHeader
+    │   ├── Title: "Chain of Custody Report"
+    │   ├── ExportReportButton
+    │   └── ReportGeneratedAt
+    ├── ChainOfCustodyTimeline
+    │   └── ChainEvent (repeated, chronological order)
+    │       ├── EventType
+    │       │   ├── EVIDENCE_UPLOADED
+    │       │   ├── EVIDENCE_LINKED
+    │       │   ├── EVIDENCE_UNLINKED
+    │       │   ├── EVIDENCE_ACCESSED
+    │       │   ├── EVIDENCE_DOWNLOADED
+    │       │   ├── EVIDENCE_APPROVED
+    │       │   └── EVIDENCE_MODIFICATION_ATTEMPTED
+    │       ├── EventTimestamp
+    │       ├── EventActor
+    │       │   ├── UserName
+    │       │   ├── UserRole
+    │       │   └── UserEmail
+    │       ├── EventDetails
+    │       │   ├── ActionDescription
+    │       │   ├── IPAddress (if applicable)
+    │       │   ├── LinkedObligationId (if EVIDENCE_LINKED/UNLINKED)
+    │       │   └── Reason (if EVIDENCE_UNLINKED or MODIFICATION_ATTEMPTED)
+    │       └── EventMetadata
+    │           ├── FileHash (at time of event)
+    │           └── StoragePath (at time of event)
+    ├── ChainOfCustodySummary
+    │   ├── TotalEventsCount
+    │   ├── UniqueActorsCount
+    │   ├── AccessCount
+    │   ├── DownloadCount
+    │   └── ModificationAttemptsCount
+    └── ChainOfCustodyExport
+        ├── ExportFormatSelector (PDF/CSV/JSON)
+        └── ExportButton
+```
+
+**Data Fetching:**
+- `useEvidence(evidenceId)` - Fetch evidence details
+- `useEvidenceChainOfCustody(evidenceId)` - Fetch complete chain-of-custody report (NEW - v1.7)
+- `useEvidenceLinkedObligations(evidenceId)` - Fetch linked obligations
+- `useEvidenceApprovalHistory(evidenceId)` - Fetch approval history
+
+**Chain-of-Custody Report Features:**
+- Chronological timeline of all evidence actions
+- Immutable audit trail (all events logged with timestamps)
+- Export functionality (PDF/CSV/JSON formats)
+- Integrity verification (file hash at each event)
+- Access tracking (IP addresses, user agents)
+
+**Route Guards:** Owner, Admin, Staff roles with site access
+
+---
+
+## 3.7 Trade Effluent Module Routes
+
+### 3.7.1 Consent State Machine Routes
+
+> [v1.4 UPDATE – Consent State Machine – 2025-02-01]
+
+### Route: `/module-2/consent-states`
+
+**URL Pattern:** `/module-2/consent-states`  
+**File:** `app/dashboard/module-2/consent-states/page.tsx`  
+**Access:** Admin/Staff, Module 2 active
+
+**Component Structure:**
+```
+ConsentStatesPage
+├── StatesHeader
+│   ├── PageTitle
+│   └── CreateStateButton
+├── StatesList
+│   └── StateCard (repeated)
+│       ├── DocumentName
+│       ├── StateBadge (DRAFT/IN_FORCE/SUPERSEDED/EXPIRED)
+│       ├── EffectiveDate
+│       ├── ExpiryDate
+│       ├── TransitionedBy
+│       ├── TransitionedAt
+│       └── Actions
+│           ├── ViewButton
+│           └── TransitionButton
+└── CreateStateModal
+    ├── DocumentSelector
+    ├── StateSelector
+    ├── EffectiveDateInput
+    ├── ExpiryDateInput
+    ├── TransitionReasonTextarea
+    └── SubmitButton
+```
+
+**Data Fetching:**
+- `useConsentStates(filters)` - Fetch consent states
+- `useCreateConsentState()` - Create state transition mutation
+
+**Route Guards:** Admin/Staff, Module 2 active
+
+---
+
+### Route: `/module-2/consent-states/[stateId]`
+
+**URL Pattern:** `/module-2/consent-states/:stateId`  
+**File:** `app/dashboard/module-2/consent-states/[stateId]/page.tsx`  
+**Access:** Admin/Staff, Module 2 active
+
+**Component Structure:**
+```
+ConsentStateDetailPage
+├── StateHeader
+│   ├── DocumentName
+│   ├── StateBadge
+│   └── Actions
+│       └── TransitionButton
+├── StateDetails
+│   ├── CurrentState
+│   ├── EffectiveDate
+│   ├── ExpiryDate
+│   ├── TransitionReason
+│   ├── TransitionedBy
+│   ├── TransitionedAt
+│   └── PreviousStateLink (if exists)
+└── StateTransitionModal
+    ├── NewStateSelector
+    ├── EffectiveDateInput
+    ├── ExpiryDateInput
+    ├── TransitionReasonTextarea
+    └── SubmitButton
+```
+
+**Data Fetching:**
+- `useConsentState(stateId)` - Fetch state details
+- `useConsentStateTransition()` - Create state transition mutation
+
+---
+
+## 3.7.2 Trade Effluent Module Routes (Original)
 
 ### Route: `/modules`
 
@@ -1042,9 +1663,50 @@ ModuleSelectionPage
 **User Interactions:**
 - View module details
 - Activate module (with confirmation)
-- Deactivate module (with confirmation)
+- Deactivate module (with confirmation and cascading warning) (ENHANCED - v1.7)
 - Dismiss cross-sell prompts
 - View module screens (if active)
+
+**Module Deactivation Modal (ENHANCED - v1.7):**
+```
+DeactivateModuleModal
+├── ModalHeader
+│   ├── Title: "Deactivate Module"
+│   └── CloseButton
+├── ModuleInfo
+│   ├── ModuleName
+│   ├── ModuleDescription
+│   └── CurrentStatus
+├── CascadingDeactivationWarning (if Module 1)
+│   ├── WarningIcon (amber)
+│   ├── WarningTitle: "Cascading Deactivation"
+│   ├── WarningMessage: "Deactivating Module 1 will also deactivate the following dependent modules:"
+│   ├── DependentModulesList
+│   │   └── DependentModuleCard (repeated)
+│   │       ├── ModuleName (e.g., "Module 2: Trade Effluent")
+│   │       ├── ModuleStatus: "Active"
+│   │       └── DependencyIndicator: "Requires Module 1"
+│   ├── DataPreservationNotice
+│   │   └── Text: "Data for Module 2 and Module 3 will be preserved. Reactivating Module 1 will restore access to these modules."
+│   └── DependencyVisualization
+│       ├── VisualFlow: Module 1 → Module 2, Module 1 → Module 3
+│       └── FlowDescription: "Module 1 is required for Module 2 and Module 3"
+├── DeactivationConfirmation (if cascading)
+│   ├── Checkbox: "I understand that Module 2 and Module 3 will be deactivated"
+│   └── ConfirmationRequired: true (must check to proceed)
+└── ModalFooter
+    ├── CancelButton
+    └── DeactivateButton (disabled if cascading and not confirmed)
+```
+
+**Cascading Deactivation Flow:**
+1. User clicks "Deactivate" on Module 1
+2. System checks `modules` table for dependent modules (`requires_module_id = Module 1's ID`)
+3. If dependent modules found, show cascading warning modal
+4. User must confirm understanding of cascading deactivation
+5. System deactivates Module 1 and all dependent modules
+6. User notification: "Module 1 has been deactivated. Module 2 and Module 3 have also been deactivated as they require Module 1."
+7. Data preserved for all modules (not deleted)
 
 **Navigation Flow:**
 - Entry: From navigation menu or cross-sell prompt
@@ -1058,11 +1720,11 @@ ModuleSelectionPage
 
 ---
 
-### Route: `/sites/[siteId]/module-2/parameters`
+### Route: `/sites/[siteId]/trade-effluent/parameters`
 
-**URL Pattern:** `/sites/:siteId/module-2/parameters`  
-**File:** `app/(dashboard)/sites/[siteId]/module-2/parameters/page.tsx`  
-**Access:** Module 2 activation required
+**URL Pattern:** `/sites/:siteId/trade-effluent/parameters`  
+**File:** `app/(dashboard)/sites/[siteId]/trade-effluent/parameters/page.tsx`  
+**Access:** Trade Effluent module activation required (derived from tenancy entitlements)
 
 **Component Structure:**
 ```
@@ -1091,7 +1753,7 @@ ParameterTrackingPage
 - `useParameters(siteId)` - Fetch parameter tracking data
 - `useExceedances(siteId)` - Fetch exceedance alerts
 
-**Route Guards:** Module 2 activation required
+**Route Guards:** Trade Effluent module activation required (derived from tenancy entitlements)
 
 **Mobile Responsiveness:**
 - List: Card layout on mobile
@@ -1099,11 +1761,165 @@ ParameterTrackingPage
 
 ---
 
-### Route: `/sites/[siteId]/module-3/run-hours`
+### Route: `/sites/[siteId]/trade-effluent/exceedances`
 
-**URL Pattern:** `/sites/:siteId/module-3/run-hours`  
-**File:** `app/(dashboard)/sites/[siteId]/module-3/run-hours/page.tsx`  
-**Access:** Module 3 activation required
+**URL Pattern:** `/sites/:siteId/trade-effluent/exceedances`  
+**File:** `app/(dashboard)/sites/[siteId]/trade-effluent/exceedances/page.tsx`  
+**Access:** Trade Effluent module activation required (derived from tenancy entitlements)
+
+**Component Structure:**
+```
+ExceedancesPage
+├── ExceedancesHeader
+│   ├── PageTitle
+│   └── FilterBar
+│       ├── StatusFilter
+│       ├── ParameterFilter
+│       └── DateRangeFilter
+├── ExceedancesList
+│   └── ExceedanceCard (repeated)
+│       ├── ParameterName
+│       ├── ExceededValue
+│       ├── LimitValue
+│       ├── ExceedanceDate
+│       ├── StatusBadge
+│       └── Actions
+│           ├── ViewButton
+│           ├── ResolveButton
+│           └── CreateCorrectiveActionButton
+└── ExceedanceDetailModal
+    ├── ExceedanceDetails
+    ├── CorrectiveActionLink
+    └── ResolutionNotes
+```
+
+**Data Fetching:**
+- `useExceedances(siteId)` - Fetch exceedances
+- `useResolveExceedance()` - Resolve exceedance mutation
+
+**Route Guards:** Trade Effluent module activation required (derived from tenancy entitlements)
+
+---
+
+### Route: `/sites/[siteId]/trade-effluent/exceedances/[exceedanceId]`
+
+**URL Pattern:** `/sites/:siteId/trade-effluent/exceedances/:exceedanceId`  
+**File:** `app/(dashboard)/sites/[siteId]/trade-effluent/exceedances/[exceedanceId]/page.tsx`  
+**Access:** Trade Effluent module activation required (derived from tenancy entitlements)
+
+**Component Structure:**
+```
+ExceedanceDetailPage
+├── ExceedanceHeader
+│   ├── ParameterName
+│   ├── StatusBadge
+│   └── Actions
+│       ├── ResolveButton
+│       └── CreateCorrectiveActionButton
+├── ExceedanceDetails
+│   ├── ParameterInfo
+│   ├── ExceededValue
+│   ├── LimitValue
+│   ├── ExceedanceDate
+│   └── ResolutionNotes
+└── CorrectiveActionSection
+    ├── LinkedCorrectiveAction
+    └── CreateCorrectiveActionButton
+```
+
+**Data Fetching:**
+- `useExceedance(exceedanceId)` - Fetch exceedance details
+- `useLinkedCorrectiveAction(exceedanceId)` - Fetch linked corrective action
+
+---
+
+### Route: `/sites/[siteId]/trade-effluent/corrective-actions`
+
+**URL Pattern:** `/sites/:siteId/trade-effluent/corrective-actions`  
+**File:** `app/(dashboard)/sites/[siteId]/trade-effluent/corrective-actions/page.tsx`  
+**Access:** Trade Effluent module activation required (derived from tenancy entitlements)
+
+**Component Structure:**
+```
+CorrectiveActionsPage
+├── CorrectiveActionsHeader
+│   ├── PageTitle
+│   └── FilterBar
+│       ├── StatusFilter
+│       ├── PriorityFilter
+│       └── DateRangeFilter
+├── CorrectiveActionsList
+│   └── CorrectiveActionCard (repeated)
+│       ├── ActionTitle
+│       ├── TriggerEvent (Breach or exceedance)
+│       ├── StatusBadge
+│       ├── PriorityBadge
+│       ├── AssignedTo
+│       ├── DueDate
+│       └── Actions
+│           ├── ViewButton
+│           └── EditButton
+└── CorrectiveActionLifecycleView
+    ├── TriggerSection
+    ├── InvestigationSection
+    ├── ActionItemsSection
+    ├── EvidenceSection
+    └── ClosureSection
+```
+
+**Data Fetching:**
+- `useCorrectiveActions(siteId)` - Fetch corrective actions
+- `useCreateCorrectiveAction()` - Create corrective action mutation
+
+**Note:** Corrective action lifecycle follows the pattern defined in the High Level Product Plan.
+
+---
+
+### Route: `/sites/[siteId]/trade-effluent/corrective-actions/[actionId]`
+
+**URL Pattern:** `/sites/:siteId/trade-effluent/corrective-actions/:actionId`  
+**File:** `app/(dashboard)/sites/[siteId]/trade-effluent/corrective-actions/[actionId]/page.tsx`  
+**Access:** Trade Effluent module activation required (derived from tenancy entitlements)
+
+**Component Structure:**
+```
+CorrectiveActionDetailPage
+├── CorrectiveActionHeader
+│   ├── ActionTitle
+│   ├── StatusBadge
+│   └── Actions
+│       ├── EditButton
+│       └── CloseButton
+├── CorrectiveActionLifecycle
+│   ├── TriggerSection
+│   │   ├── TriggerEvent
+│   │   └── TriggerDetails
+│   ├── InvestigationSection
+│   │   ├── RootCauseAnalysis
+│   │   └── ImpactAssessment
+│   ├── ActionItemsSection
+│   │   └── ActionItemList
+│   │       └── ActionItemCard (repeated)
+│   ├── EvidenceSection
+│   │   └── EvidenceList
+│   └── ClosureSection
+│       ├── ClosureStatus
+│       └── RegulatorJustification
+└── RelatedExceedanceLink
+```
+
+**Data Fetching:**
+- `useCorrectiveAction(actionId)` - Fetch corrective action details
+- `useActionItems(actionId)` - Fetch action items
+- `useCorrectiveActionEvidence(actionId)` - Fetch evidence
+
+---
+
+### Route: `/sites/[siteId]/generators/run-hours`
+
+**URL Pattern:** `/sites/:siteId/generators/run-hours`  
+**File:** `app/(dashboard)/sites/[siteId]/generators/run-hours/page.tsx`  
+**Access:** MCPD / Generators module activation required (derived from tenancy entitlements)
 
 **Component Structure:**
 ```
@@ -1132,7 +1948,7 @@ RunHourTrackingPage
 - `useRunHours(siteId)` - Fetch run-hour records
 - `useLimitBreaches(siteId)` - Fetch limit breach alerts
 
-**Route Guards:** Module 3 activation required
+**Route Guards:** MCPD / Generators module activation required (derived from tenancy entitlements)
 
 **Mobile Responsiveness:**
 - Form: Full-screen modal on mobile
@@ -1141,7 +1957,1671 @@ RunHourTrackingPage
 
 ---
 
-## 3.7 Pack Routes (v1.0)
+### Route: `/sites/[siteId]/generators/runtime-monitoring`
+
+**URL Pattern:** `/sites/:siteId/generators/runtime-monitoring`  
+**File:** `app/(dashboard)/sites/[siteId]/generators/runtime-monitoring/page.tsx`  
+**Access:** MCPD / Generators module activation required (derived from tenancy entitlements)
+
+**Component Structure:**
+```
+RuntimeMonitoringPage
+├── RuntimeMonitoringHeader
+│   ├── PageTitle
+│   └── AddRuntimeEntryButton
+├── RuntimeEntryForm (modal or inline)
+│   ├── GeneratorSelector
+│   ├── RuntimeHoursInput
+│   ├── DateInput
+│   ├── ReasonCodeSelector (Test/Emergency/Maintenance)
+│   ├── SourceSelector (Manual/CSV/Email/Integration)
+│   └── SubmitButton
+├── RuntimeEntriesList
+│   └── RuntimeEntryRow (repeated)
+│       ├── GeneratorName
+│       ├── RuntimeHours
+│       ├── Date
+│       ├── ReasonCode
+│       ├── Source
+│       └── Actions
+└── RuntimeChart
+    ├── ChartContainer
+    └── LimitTracking
+```
+
+**Data Fetching:**
+- `useRuntimeMonitoring(siteId)` - Fetch runtime monitoring entries
+- `useCreateRuntimeEntry()` - Create runtime entry mutation
+- `useRuntimeLimits(siteId)` - Fetch runtime limits
+
+**Route Guards:** MCPD / Generators module activation required (derived from tenancy entitlements)
+
+**Note:** Supports manual entry with reason codes, CSV upload, email parsing, and optional integration (v2 enhancement).
+
+---
+
+## 3.8 MCPD / Generators Module Routes
+
+### 3.8.1 Fuel Usage Logs Routes
+
+> [v1.5 UPDATE – Fuel Usage Logs – 2025-02-01]
+
+### Route: `/sites/[siteId]/generators/fuel-usage-logs`
+
+**URL Pattern:** `/sites/:siteId/generators/fuel-usage-logs`  
+**File:** `app/(dashboard)/sites/[siteId]/generators/fuel-usage-logs/page.tsx`  
+**Access:** MCPD / Generators module activation required
+
+**Component Structure:**
+```
+FuelUsageLogsPage
+├── FuelUsageLogsHeader
+│   ├── PageTitle
+│   └── AddFuelLogButton
+├── FuelUsageLogForm (modal or inline)
+│   ├── GeneratorSelector
+│   ├── LogDateInput
+│   ├── FuelTypeSelector
+│   ├── QuantityInput
+│   ├── UnitSelector
+│   ├── SulphurContentPercentageInput
+│   ├── SulphurContentMgPerKgInput
+│   ├── EntryMethodSelector
+│   ├── EvidenceLinkSelector
+│   └── SubmitButton
+├── FuelUsageLogsList
+│   └── FuelUsageLogRow (repeated)
+│       ├── GeneratorName
+│       ├── LogDate
+│       ├── FuelType
+│       ├── Quantity + Unit
+│       ├── SulphurContent
+│       ├── EntryMethod
+│       └── Actions
+└── FuelUsageChart
+    ├── ChartContainer
+    └── FuelTypeBreakdown
+```
+
+**Data Fetching:**
+- `useFuelUsageLogs(siteId)` - Fetch fuel usage logs
+- `useCreateFuelUsageLog()` - Create fuel log mutation
+- `useUpdateFuelUsageLog()` - Update fuel log mutation
+- `useDeleteFuelUsageLog()` - Delete fuel log mutation
+
+**Route Guards:** MCPD / Generators module activation required
+
+---
+
+### Route: `/sites/[siteId]/generators/fuel-usage-logs/[logId]`
+
+**URL Pattern:** `/sites/:siteId/generators/fuel-usage-logs/:logId`  
+**File:** `app/(dashboard)/sites/[siteId]/generators/fuel-usage-logs/[logId]/page.tsx`  
+**Access:** MCPD / Generators module activation required
+
+**Component Structure:**
+```
+FuelUsageLogDetailPage
+├── LogHeader
+│   ├── GeneratorName
+│   ├── LogDate
+│   └── Actions
+│       ├── EditButton
+│       └── DeleteButton
+├── LogDetails
+│   ├── FuelType
+│   ├── Quantity + Unit
+│   ├── SulphurContent
+│   ├── EntryMethod
+│   ├── EvidenceLink
+│   └── Notes
+└── EditLogModal
+```
+
+**Data Fetching:**
+- `useFuelUsageLog(logId)` - Fetch fuel log details
+
+---
+
+### 3.8.2 Sulphur Content Reports Routes
+
+> [v1.5 UPDATE – Sulphur Content Reports – 2025-02-01]
+
+### Route: `/sites/[siteId]/generators/sulphur-content-reports`
+
+**URL Pattern:** `/sites/:siteId/generators/sulphur-content-reports`  
+**File:** `app/(dashboard)/sites/[siteId]/generators/sulphur-content-reports/page.tsx`  
+**Access:** MCPD / Generators module activation required
+
+**Component Structure:**
+```
+SulphurContentReportsPage
+├── ReportsHeader
+│   ├── PageTitle
+│   └── AddReportButton
+├── SulphurContentReportForm (modal or inline)
+│   ├── GeneratorSelector (optional)
+│   ├── FuelTypeSelector
+│   ├── TestDateInput
+│   ├── BatchReferenceInput
+│   ├── SupplierNameInput
+│   ├── SulphurContentPercentageInput
+│   ├── SulphurContentMgPerKgInput
+│   ├── TestMethodInput
+│   ├── TestStandardInput
+│   ├── TestLaboratoryInput
+│   ├── TestCertificateReferenceInput
+│   ├── RegulatoryLimitPercentageInput
+│   ├── RegulatoryLimitMgPerKgInput
+│   ├── ComplianceStatusSelector
+│   ├── EvidenceLinkSelector
+│   └── SubmitButton
+├── ReportsList
+│   └── ReportRow (repeated)
+│       ├── TestDate
+│       ├── FuelType
+│       ├── BatchReference
+│       ├── SulphurContent
+│       ├── ComplianceStatusBadge
+│       ├── RegulatoryLimit
+│       └── Actions
+└── ComplianceSummary
+    ├── CompliantCount
+    ├── NonCompliantCount
+    └── ExceededCount
+```
+
+**Data Fetching:**
+- `useSulphurContentReports(siteId)` - Fetch sulphur content reports
+- `useCreateSulphurContentReport()` - Create report mutation
+- `useUpdateSulphurContentReport()` - Update report mutation
+- `useDeleteSulphurContentReport()` - Delete report mutation
+
+**Route Guards:** MCPD / Generators module activation required
+
+---
+
+### Route: `/sites/[siteId]/generators/sulphur-content-reports/[reportId]`
+
+**URL Pattern:** `/sites/:siteId/generators/sulphur-content-reports/:reportId`  
+**File:** `app/(dashboard)/sites/[siteId]/generators/sulphur-content-reports/[reportId]/page.tsx`  
+**Access:** MCPD / Generators module activation required
+
+**Component Structure:**
+```
+SulphurContentReportDetailPage
+├── ReportHeader
+│   ├── TestDate
+│   ├── FuelType
+│   ├── ComplianceStatusBadge
+│   └── Actions
+│       ├── EditButton
+│       └── DeleteButton
+├── ReportDetails
+│   ├── BatchReference
+│   ├── SupplierName
+│   ├── SulphurContent
+│   ├── RegulatoryLimit
+│   ├── TestMethod
+│   ├── TestLaboratory
+│   ├── TestCertificateReference
+│   ├── EvidenceLink
+│   └── ExceedanceDetails (if exceeded)
+└── EditReportModal
+```
+
+**Data Fetching:**
+- `useSulphurContentReport(reportId)` - Fetch report details
+
+---
+
+### 3.8.3 Regulation Thresholds Routes
+
+> [v1.4 UPDATE – Regulation Thresholds – 2025-02-01]
+
+### Route: `/module-3/regulation-thresholds`
+
+**URL Pattern:** `/module-3/regulation-thresholds`  
+**File:** `app/dashboard/module-3/regulation-thresholds/page.tsx`  
+**Access:** Admin/Staff, Module 3 active
+
+**Component Structure:**
+```
+RegulationThresholdsPage
+├── ThresholdsHeader
+│   ├── PageTitle
+│   └── CreateThresholdButton
+├── ThresholdsList
+│   └── ThresholdCard (repeated)
+│       ├── ThresholdTypeBadge (MCPD_1_5MW/MCPD_5_50MW/SPECIFIED_GENERATOR/CUSTOM)
+│       ├── CapacityRange (min MW - max MW)
+│       ├── MonitoringFrequency
+│       ├── StackTestFrequency
+│       ├── ReportingFrequency
+│       ├── ActiveStatusBadge
+│       └── Actions
+│           ├── ViewButton
+│           ├── EditButton
+│           └── DeleteButton
+└── CreateThresholdModal
+    ├── ThresholdTypeSelector
+    ├── CapacityMinInput
+    ├── CapacityMaxInput
+    ├── MonitoringFrequencySelector
+    ├── StackTestFrequencySelector
+    ├── ReportingFrequencySelector
+    ├── RegulationReferenceInput
+    └── SubmitButton
+```
+
+**Data Fetching:**
+- `useRegulationThresholds(filters)` - Fetch regulation thresholds
+- `useCreateRegulationThreshold()` - Create threshold mutation
+- `useUpdateRegulationThreshold()` - Update threshold mutation
+- `useDeleteRegulationThreshold()` - Delete threshold mutation
+
+**Route Guards:** Admin/Staff, Module 3 active
+
+---
+
+### Route: `/module-3/regulation-thresholds/[thresholdId]`
+
+**URL Pattern:** `/module-3/regulation-thresholds/:thresholdId`  
+**File:** `app/dashboard/module-3/regulation-thresholds/[thresholdId]/page.tsx`  
+**Access:** Admin/Staff, Module 3 active
+
+**Component Structure:**
+```
+RegulationThresholdDetailPage
+├── ThresholdHeader
+│   ├── ThresholdType
+│   ├── CapacityRange
+│   └── Actions
+│       ├── EditButton
+│       └── DeleteButton
+├── ThresholdDetails
+│   ├── CapacityRange
+│   ├── MonitoringFrequency
+│   ├── StackTestFrequency
+│   ├── ReportingFrequency
+│   ├── RegulationReference
+│   └── ActiveStatus
+└── FrequencyCalculationsSection
+    ├── CalculationsList
+    │   └── CalculationCard (repeated)
+    │       ├── GeneratorName
+    │       ├── GeneratorCapacity
+    │       ├── CalculatedFrequencies
+    │       ├── CalculationDate
+    │       └── AppliedStatus
+    └── CalculateFrequencyButton
+```
+
+**Data Fetching:**
+- `useRegulationThreshold(thresholdId)` - Fetch threshold details
+- `useFrequencyCalculations(thresholdId)` - Fetch frequency calculations
+- `useCalculateFrequency()` - Calculate frequency mutation
+
+---
+
+### Route: `/module-3/generators/[generatorId]/calculate-frequency`
+
+**URL Pattern:** `/module-3/generators/:generatorId/calculate-frequency`  
+**File:** `app/dashboard/module-3/generators/[generatorId]/calculate-frequency/page.tsx`  
+**Access:** Admin/Staff, Module 3 active
+
+**Component Structure:**
+```
+FrequencyCalculationPage
+├── CalculationHeader
+│   ├── GeneratorName
+│   ├── GeneratorCapacity
+│   └── CalculateButton
+├── CalculationResults
+│   ├── MatchingThreshold
+│   ├── CalculatedMonitoringFrequency
+│   ├── CalculatedStackTestFrequency
+│   ├── CalculatedReportingFrequency
+│   └── ApplyButton
+└── CalculationHistory
+    └── PreviousCalculationCard (repeated)
+```
+
+**Data Fetching:**
+- `useGenerator(generatorId)` - Fetch generator details
+- `useCalculateFrequency(generatorId)` - Calculate frequency mutation
+- `useFrequencyCalculationHistory(generatorId)` - Fetch calculation history
+
+---
+
+## 3.8.2 MCPD / Generators Module Routes (Original)
+
+> [v2.0 UPDATE – Site-First Dynamic Module Model – 2025-01-01]
+
+### Route: `/sites/[siteId]/generators/aer/generate`
+
+**URL Pattern:** `/sites/:siteId/generators/aer/generate`  
+**File:** `app/(dashboard)/sites/[siteId]/generators/aer/generate/page.tsx`  
+**Access:** MCPD / Generators module activation required (derived from tenancy entitlements)
+
+**Component Structure:**
+```
+AERGenerationPage
+├── AERHeader
+│   ├── PageTitle
+│   └── GenerateAERButton
+├── AERConfigurationForm
+│   ├── DateRangeSelector
+│   ├── GeneratorSelector (multi-select)
+│   └── OptionsSection
+└── AERPreview
+    ├── PreviewStats
+    └── GenerateButton
+```
+
+**Data Fetching:**
+- `useGenerators(siteId)` - Fetch generators for selection
+- `useGenerateAER()` - Mutation hook for AER generation
+
+**Route Guards:** MCPD / Generators module activation required (derived from tenancy entitlements)
+
+---
+
+## 3.9 Hazardous Waste Module Routes
+
+> [v2.0 UPDATE – Site-First Dynamic Module Model – 2025-01-01]
+
+### Route: `/sites/[siteId]/hazardous-waste/waste-streams`
+
+**URL Pattern:** `/sites/:siteId/hazardous-waste/waste-streams`  
+**File:** `app/(dashboard)/sites/[siteId]/hazardous-waste/waste-streams/page.tsx`  
+**Access:** Hazardous Waste module activation required (derived from tenancy entitlements)
+
+**Component Structure:**
+```
+WasteStreamsPage
+├── WasteStreamsHeader
+│   ├── PageTitle
+│   └── CreateWasteStreamButton
+├── WasteStreamsList
+│   └── WasteStreamCard (repeated)
+│       ├── EWCCode
+│       ├── Description
+│       ├── Classification
+│       ├── VolumeTracking
+│       ├── StatusBadge
+│       └── Actions
+│           ├── ViewButton
+│           ├── EditButton
+│           └── DeleteButton
+└── CreateWasteStreamModal
+    ├── EWCCodeInput
+    ├── DescriptionInput
+    ├── ClassificationSelector
+    └── SubmitButton
+```
+
+**Data Fetching:**
+- `useWasteStreams(siteId)` - Fetch waste streams
+- `useCreateWasteStream()` - Create waste stream mutation
+
+**Route Guards:** Hazardous Waste module activation required (derived from tenancy entitlements)
+
+---
+
+### Route: `/sites/[siteId]/hazardous-waste/consignment-notes`
+
+**URL Pattern:** `/sites/:siteId/hazardous-waste/consignment-notes`  
+**File:** `app/(dashboard)/sites/[siteId]/hazardous-waste/consignment-notes/page.tsx`  
+**Access:** Hazardous Waste module activation required (derived from tenancy entitlements)
+
+**Component Structure:**
+```
+ConsignmentNotesPage
+├── ConsignmentNotesHeader
+│   ├── PageTitle
+│   ├── CreateConsignmentNoteButton
+│   └── ValidationRulesButton
+├── ConsignmentNotesList
+│   └── ConsignmentNoteRow (repeated)
+│       ├── ConsignmentNumber
+│       ├── WasteStream
+│       ├── Carrier
+│       ├── Date
+│       ├── ValidationStatusBadge
+│       ├── ChainStatusBadge
+│       └── Actions
+│           ├── ViewButton
+│           ├── ValidateButton
+│           └── ViewChainButton
+└── CreateConsignmentNoteModal
+    ├── WasteStreamSelector
+    ├── CarrierSelector
+    ├── VolumeInput
+    ├── DateInput
+    ├── PhotoUpload (operator photo)
+    ├── QRCodeScanButton
+    └── SubmitButton (triggers validation)
+```
+
+**Data Fetching:**
+- `useConsignmentNotes(siteId)` - Fetch consignment notes
+- `useCreateConsignmentNote()` - Create consignment note mutation
+- `useValidateConsignmentNote()` - Validate consignment note mutation
+
+**Route Guards:** Hazardous Waste module activation required (derived from tenancy entitlements)
+
+**Validation Flow:**
+1. User creates consignment note
+2. System runs pre-submission validation
+3. Display validation results
+4. User fixes errors or confirms submission
+
+---
+
+### Route: `/sites/[siteId]/hazardous-waste/consignment-notes/[consignmentNoteId]`
+
+**URL Pattern:** `/sites/:siteId/hazardous-waste/consignment-notes/:consignmentNoteId`  
+**File:** `app/(dashboard)/sites/[siteId]/hazardous-waste/consignment-notes/[consignmentNoteId]/page.tsx`  
+**Access:** Hazardous Waste module activation required (derived from tenancy entitlements)
+
+**Component Structure:**
+```
+ConsignmentNoteDetailPage
+├── ConsignmentNoteHeader
+│   ├── ConsignmentNumber
+│   ├── StatusBadge
+│   └── Actions
+│       ├── EditButton
+│       ├── ValidateButton
+│       └── ViewChainButton
+├── ConsignmentNoteDetails
+│   ├── WasteStreamInfo
+│   ├── CarrierInfo
+│   ├── VolumeInfo
+│   ├── DateInfo
+│   └── ValidationResults
+│       ├── ValidationStatus
+│       ├── ValidationErrors (if any)
+│       ├── ValidationHistory
+│       └── ValidationExecutionsSection (NEW - v1.7)
+│           ├── ExecutionHistoryHeader
+│           │   ├── Title: "Validation Execution History"
+│           │   └── ViewAllButton
+│           ├── RecentExecutionsList
+│           │   └── ExecutionRow (repeated)
+│           │       ├── ExecutionTimestamp
+│           │       ├── ValidationRuleName
+│           │       ├── ExecutionStatus (Success/Failed)
+│           │       ├── ExecutionResult
+│           │       └── ViewDetailsButton
+│           └── ExecutionStats
+│               ├── TotalExecutions
+│               ├── SuccessRate
+│               └── LastExecutionDate
+├── ChainOfCustodySection
+│   ├── ChainStatus
+│   ├── ChainBreakAlerts (if any)
+│   └── ChainTimeline
+└── EndPointProofSection
+    ├── EndPointProofStatus
+    ├── EndPointProofDocument
+    └── UploadEndPointProofButton
+```
+
+**Data Fetching:**
+- `useConsignmentNote(consignmentNoteId)` - Fetch consignment note details
+- `useValidationHistory(consignmentNoteId)` - Fetch validation history
+- `useChainOfCustody(consignmentNoteId)` - Fetch chain of custody
+
+---
+
+### Route: `/sites/[siteId]/hazardous-waste/chain-of-custody`
+
+**URL Pattern:** `/sites/:siteId/hazardous-waste/chain-of-custody`  
+**File:** `app/(dashboard)/sites/[siteId]/hazardous-waste/chain-of-custody/page.tsx`  
+**Access:** Hazardous Waste module activation required (derived from tenancy entitlements)
+
+**Component Structure:**
+```
+ChainOfCustodyPage
+├── ChainOfCustodyHeader
+│   ├── PageTitle
+│   └── FilterBar
+│       ├── StatusFilter
+│       ├── DateRangeFilter
+│       └── WasteStreamFilter
+├── ChainOfCustodyList
+│   └── ChainCard (repeated)
+│       ├── ConsignmentNumber
+│       ├── WasteStream
+│       ├── ChainStatusBadge
+│       ├── ChainBreakAlerts (if any)
+│       ├── CompletionPercentage
+│       └── Actions
+│           ├── ViewChainButton
+│           └── ResolveBreakButton (if chain break)
+└── ChainBreakAlertsSection
+    ├── AlertsCount
+    └── AlertsList
+        └── ChainBreakAlertCard (repeated)
+```
+
+**Data Fetching:**
+- `useChainOfCustodyList(siteId)` - Fetch chain of custody records
+- `useChainBreakAlerts(siteId)` - Fetch chain break alerts
+
+---
+
+### Route: `/sites/[siteId]/hazardous-waste/validation-rules`
+
+**URL Pattern:** `/sites/:siteId/hazardous-waste/validation-rules`  
+**File:** `app/(dashboard)/sites/[siteId]/hazardous-waste/validation-rules/page.tsx`  
+**Access:** Admin only, Hazardous Waste module activation required (derived from tenancy entitlements)
+
+**Component Structure:**
+```
+ValidationRulesPage
+├── ValidationRulesHeader
+│   ├── PageTitle
+│   └── CreateRuleButton
+├── ValidationRulesList
+│   └── ValidationRuleCard (repeated)
+│       ├── RuleName
+│       ├── RuleType
+│       ├── RuleDescription
+│       ├── IsActiveToggle
+│       └── Actions
+│           ├── EditButton
+│           ├── TestButton
+│           └── DeleteButton
+└── CreateValidationRuleModal
+    ├── RuleNameInput
+    ├── RuleTypeSelector
+    │   ├── WASTE_CODE_CHECK
+    │   ├── QUANTITY_LIMIT
+    │   ├── CONTRACTOR_LICENCE_CHECK
+    │   ├── CHAIN_OF_CUSTODY
+    │   └── CUSTOM
+    ├── RuleConfigEditor (JSONB editor)
+    └── SubmitButton
+```
+
+**Data Fetching:**
+- `useValidationRules(siteId)` - Fetch validation rules
+- `useCreateValidationRule()` - Create validation rule mutation
+- `useUpdateValidationRule()` - Update validation rule mutation
+
+**Route Guards:** Admin only, Hazardous Waste module activation required (derived from tenancy entitlements)
+
+---
+
+### Route: `/sites/[siteId]/hazardous-waste/end-point-proof`
+
+**URL Pattern:** `/sites/:siteId/hazardous-waste/end-point-proof`  
+**File:** `app/(dashboard)/sites/[siteId]/hazardous-waste/end-point-proof/page.tsx`  
+**Access:** Hazardous Waste module activation required (derived from tenancy entitlements)
+
+**Component Structure:**
+```
+EndPointProofPage
+├── EndPointProofHeader
+│   ├── PageTitle
+│   └── UploadEndPointProofButton
+├── EndPointProofList
+│   └── EndPointProofCard (repeated)
+│       ├── ConsignmentNumber
+│       ├── WasteStream
+│       ├── ProofType (Destruction/Recycling)
+│       ├── CertificateDocument
+│       ├── Date
+│       ├── StatusBadge
+│       └── Actions
+│           ├── ViewButton
+│           ├── DownloadButton
+│           └── EditButton
+└── UploadEndPointProofModal
+    ├── ConsignmentNoteSelector
+    ├── ProofTypeSelector
+    ├── CertificateUpload
+    ├── DateInput
+    └── SubmitButton
+```
+
+**Data Fetching:**
+- `useEndPointProofs(siteId)` - Fetch end-point proofs
+- `useUploadEndPointProof()` - Upload end-point proof mutation
+
+---
+
+### Route: `/sites/[siteId]/hazardous-waste/corrective-actions`
+
+**URL Pattern:** `/sites/:siteId/hazardous-waste/corrective-actions`  
+**File:** `app/(dashboard)/sites/[siteId]/hazardous-waste/corrective-actions/page.tsx`  
+**Access:** Hazardous Waste module activation required (derived from tenancy entitlements)
+
+**Component Structure:**
+```
+CorrectiveActionsPage
+├── CorrectiveActionsHeader
+│   ├── PageTitle
+│   └── FilterBar
+│       ├── StatusFilter
+│       ├── PriorityFilter
+│       └── DateRangeFilter
+├── CorrectiveActionsList
+│   └── CorrectiveActionCard (repeated)
+│       ├── ActionTitle
+│       ├── TriggerEvent (Chain-break, validation failure, etc.)
+│       ├── StatusBadge
+│       ├── PriorityBadge
+│       ├── AssignedTo
+│       ├── DueDate
+│       └── Actions
+│           ├── ViewButton
+│           └── EditButton
+└── CorrectiveActionLifecycleView
+    ├── TriggerSection
+    ├── InvestigationSection
+    ├── ActionItemsSection
+    ├── EvidenceSection
+    └── ClosureSection
+```
+
+**Data Fetching:**
+- `useCorrectiveActions(siteId)` - Fetch corrective actions
+- `useCreateCorrectiveAction()` - Create corrective action mutation
+
+**Note:** Corrective action lifecycle follows the same pattern as Trade Effluent module.
+
+---
+
+## 3.10 Global Feature Routes
+
+### 3.10.1 Audit Packs (Global Route)
+
+> [v2.0 UPDATE – Site-First Dynamic Module Model – 2025-01-01]
+
+**Global Route:** `/packs`
+
+**URL Pattern:** `/packs`  
+**File:** `app/(dashboard)/packs/page.tsx`  
+**Access:** Authenticated users
+
+**Component Structure:**
+```
+GlobalPacksPage
+├── PacksHeader
+│   ├── PageTitle
+│   └── GeneratePackButton
+├── PacksFilterBar
+│   ├── SiteFilter (multi-select)
+│   ├── ModuleFilter (multi-select)
+│   ├── PackTypeFilter
+│   ├── StatusFilter
+│   └── DateRangeFilter
+├── PacksList
+│   └── PackRow (repeated)
+│       ├── SiteName
+│       ├── ModuleBadge
+│       ├── PackTypeBadge
+│       ├── PackTitle
+│       ├── PackStatusBadge
+│       └── Actions
+└── GeneratePackModal
+    ├── SiteSelector
+    ├── ModuleSelector
+    ├── PackTypeSelector
+    └── GenerateButton
+```
+
+**Key Features:**
+- Global view of all packs across all sites
+- Site filter: Filter by one or more sites
+- Module filter: Filter by module (Permits, Trade Effluent, Generators, Hazardous Waste)
+- Pack generation is never module-owned (global feature)
+- Supports all pack types: Regulator, Tender, Board, Insurer, Audit
+
+**Data Fetching:**
+- `useGlobalPacks(filters)` - Fetch packs across all sites
+- `useSites()` - Fetch user's accessible sites for filter
+- `useGeneratePack()` - Mutation hook for generation
+
+---
+
+### 3.10.2 Compliance Clock (Global Route)
+
+> [v2.0 UPDATE – Site-First Dynamic Module Model – 2025-01-01]
+
+### Route: `/compliance-clocks`
+
+**URL Pattern:** `/compliance-clocks`  
+**File:** `app/(dashboard)/compliance-clocks/page.tsx`  
+**Access:** Authenticated users
+
+**Component Structure:**
+```
+ComplianceClocksPage
+├── ComplianceClocksHeader
+│   ├── PageTitle
+│   └── FilterBar
+│       ├── StatusFilter (Red/Amber/Green)
+│       ├── ModuleFilter
+│       ├── SiteFilter
+│       └── RefreshButton
+├── ComplianceClocksDashboard
+│   ├── SummaryCards
+│   │   ├── RedClocksCount
+│   │   ├── AmberClocksCount
+│   │   └── GreenClocksCount
+│   └── CriticalClocksList
+│       └── ComplianceClockCard (repeated)
+│           ├── ClockTitle
+│           ├── ModuleBadge
+│           ├── SiteName
+│           ├── DaysRemaining
+│           ├── StatusIndicator (Red/Amber/Green)
+│           ├── DeadlineDate
+│           └── Actions
+│               ├── ViewDetailsButton
+│               └── ViewRelatedEntityButton
+└── ComplianceClocksList
+    └── ComplianceClockRow (repeated)
+        ├── ClockTitle
+        ├── ModuleBadge
+        ├── SiteName
+        ├── DaysRemaining
+        ├── StatusIndicator
+        ├── DeadlineDate
+        └── Actions
+```
+
+**Data Fetching:**
+- `useComplianceClocks(filters)` - Fetch compliance clocks
+- `useComplianceClocksDashboard()` - Fetch dashboard metrics
+
+**Route Guards:** Authenticated users
+
+**Mobile Responsiveness:**
+- Dashboard: Stacked cards on mobile
+- List: Card layout on mobile
+
+---
+
+### Route: `/compliance-clocks/[clockId]`
+
+**URL Pattern:** `/compliance-clocks/:clockId`  
+**File:** `app/(dashboard)/compliance-clocks/[clockId]/page.tsx`  
+**Access:** Authenticated users
+
+**Component Structure:**
+```
+ComplianceClockDetailPage
+├── ComplianceClockHeader
+│   ├── ClockTitle
+│   ├── StatusBadge
+│   └── Actions
+│       ├── RefreshButton
+│       └── ViewRelatedEntityButton
+├── ComplianceClockDetails
+│   ├── ClockInfo
+│   │   ├── Module
+│   │   ├── Site
+│   │   ├── EntityType
+│   │   └── EntityId
+│   ├── CountdownSection
+│   │   ├── DaysRemaining
+│   │   ├── DeadlineDate
+│   │   ├── StatusIndicator
+│   │   └── ProgressBar
+│   └── RelatedEntityLink
+└── ComplianceClockHistory
+    └── HistoryTimeline
+        └── HistoryEvent (repeated)
+```
+
+**Data Fetching:**
+- `useComplianceClock(clockId)` - Fetch compliance clock details
+
+---
+
+## 3.11 Condition-Level Evidence Mapping Routes (Permits Module)
+
+> [v1.2 UPDATE – Condition-Level Evidence Mapping – 2025-01-01]
+
+### Route: `/sites/[siteId]/obligations/[obligationId]/evidence-rules`
+
+**URL Pattern:** `/sites/:siteId/obligations/:obligationId/evidence-rules`  
+**File:** `app/(dashboard)/sites/[siteId]/obligations/[obligationId]/evidence-rules/page.tsx`  
+**Access:** Admin/Staff, Module 1 active
+
+**Component Structure:**
+```
+EvidenceRulesPage
+├── EvidenceRulesHeader
+│   ├── ObligationTitle
+│   └── ConfigureRulesButton
+├── EvidenceRulesList
+│   └── EvidenceRuleCard (repeated)
+│       ├── AllowedEvidenceType
+│       ├── CompletenessScore
+│       ├── VersionedHistory
+│       └── Actions
+│           ├── EditButton
+│           └── DeleteButton
+└── ConfigureEvidenceRulesModal
+    ├── AllowedEvidenceTypesSelector
+    ├── CompletenessScoringConfig
+    └── SubmitButton
+```
+
+**Data Fetching:**
+- `useEvidenceRules(obligationId)` - Fetch evidence rules
+- `useConfigureEvidenceRules()` - Configure evidence rules mutation
+
+**Route Guards:** Admin/Staff, Module 1 active
+
+---
+
+## 3.12 Recurrence Trigger Configuration Routes (Permits Module)
+
+> [v1.2 UPDATE – Recurrence Trigger Routes – 2025-01-01]
+
+### Route: `/sites/[siteId]/obligations/[obligationId]/recurrence-triggers`
+
+**URL Pattern:** `/sites/:siteId/obligations/:obligationId/recurrence-triggers`  
+**File:** `app/(dashboard)/sites/[siteId]/obligations/[obligationId]/recurrence-triggers/page.tsx`  
+**Access:** Admin/Staff, Module 1 active
+
+**Component Structure:**
+```
+RecurrenceTriggersPage
+├── RecurrenceTriggersHeader
+│   ├── ObligationTitle
+│   └── CreateTriggerButton
+├── RecurrenceTriggersList
+│   └── RecurrenceTriggerCard (repeated)
+│       ├── TriggerName
+│       ├── TriggerType (Dynamic/Event-based/Conditional)
+│       ├── Schedule
+│       ├── LastExecution
+│       ├── NextExecution
+│       └── Actions
+│           ├── EditButton
+│           ├── ViewExecutionsButton
+│           └── DeleteButton
+└── CreateRecurrenceTriggerModal
+    ├── TriggerNameInput
+    ├── TriggerTypeSelector
+    ├── ScheduleConfig
+    ├── EventBasedConfig (if event-based)
+    ├── ConditionalConfig (if conditional)
+    └── SubmitButton
+```
+
+**Detailed Component Specifications:**
+
+**CreateRecurrenceTriggerModal - Visual Trigger Builder:**
+
+The recurrence trigger configuration uses a visual builder interface with drag-and-drop capabilities:
+
+```
+CreateRecurrenceTriggerModal
+├── ModalHeader
+│   ├── Title: "Create Recurrence Trigger"
+│   └── CloseButton
+├── TriggerBuilder
+│   ├── LeftPanel (Trigger Configuration)
+│   │   ├── TriggerNameSection
+│   │   │   ├── Label: "Trigger Name"
+│   │   │   ├── InputField (required)
+│   │   │   └── HelperText: "e.g., Monthly pH Testing"
+│   │   ├── TriggerTypeSection
+│   │   │   ├── Label: "Trigger Type"
+│   │   │   ├── RadioGroup
+│   │   │   │   ├── Option: "Dynamic Schedule" (default)
+│   │   │   │   ├── Option: "Event-Based"
+│   │   │   │   └── Option: "Conditional"
+│   │   │   └── InfoIcon with tooltip explaining each type
+│   │   └── ConditionBuilder (if Conditional selected)
+│   │       ├── VisualFlowDiagram
+│   │       │   ├── StartNode
+│   │       │   ├── ConditionNodes (draggable)
+│   │       │   ├── ActionNodes (draggable)
+│   │       │   └── EndNode
+│   │       ├── ConditionPalette
+│   │       │   ├── AvailableConditions (draggable cards)
+│   │       │   │   ├── "Deadline Passed"
+│   │       │   │   ├── "Evidence Linked"
+│   │       │   │   ├── "Status Changed"
+│   │       │   │   └── "Date Range"
+│   │       │   └── ActionPalette
+│   │       │       ├── "Create Schedule"
+│   │       │       ├── "Generate Deadline"
+│   │       │       └── "Send Notification"
+│   │       └── FlowEditor
+│   │           ├── Canvas (visual flow builder)
+│   │           ├── ConnectionLines (between nodes)
+│   │           └── NodePropertiesPanel (when node selected)
+│   ├── CenterPanel (Schedule Configuration)
+│   │   ├── ScheduleTypeSelector
+│   │   │   ├── Option: "Fixed Frequency" (Daily/Weekly/Monthly/etc.)
+│   │   │   ├── Option: "Dynamic Calculation" (e.g., "6 months from commissioning")
+│   │   │   └── Option: "Custom Expression"
+│   │   ├── FrequencyConfig (if Fixed Frequency)
+│   │   │   ├── FrequencyDropdown: Daily/Weekly/Monthly/Quarterly/Annual
+│   │   │   ├── DayOfWeekSelector (if Weekly)
+│   │   │   ├── DayOfMonthSelector (if Monthly)
+│   │   │   └── MonthSelector (if Annual)
+│   │   ├── DynamicConfig (if Dynamic Calculation)
+│   │   │   ├── BaseDateSelector
+│   │   │   │   ├── Option: "Commissioning Date"
+│   │   │   │   ├── Option: "Last Completion Date"
+│   │   │   │   ├── Option: "Custom Date"
+│   │   │   │   └── DatePicker (if Custom Date)
+│   │   │   └── OffsetInput
+│   │   │       ├── NumberInput (e.g., 6)
+│   │   │       └── UnitDropdown: Days/Weeks/Months/Years
+│   │   └── ExpressionBuilder (if Custom Expression)
+│   │       ├── CodeEditor (monaco-editor or similar)
+│   │       ├── SyntaxHighlighting
+│   │       ├── VariablePalette
+│   │       └── ValidationErrors (inline)
+│   └── RightPanel (Preview & Validation)
+│       ├── PreviewSection
+│       │   ├── Label: "Schedule Preview"
+│       │   ├── NextDeadlinesList
+│       │   │   └── DeadlinePreviewItem (next 5 deadlines)
+│       │   │       ├── Date
+│       │   │       ├── Status (Calculated)
+│       │   │       └── CalculationMethod
+│       │   └── PreviewTimeline (visual calendar view)
+│       └── ValidationSection
+│           ├── ValidationStatusIcon (green/yellow/red)
+│           ├── ValidationMessages
+│           │   ├── Success: "Trigger configuration is valid"
+│           │   ├── Warning: "Warning: [message]"
+│           │   └── Error: "Error: [message]"
+│           └── TestTriggerButton
+│               └── Tooltip: "Test trigger with sample data"
+├── ModalFooter
+│   ├── CancelButton
+│   └── CreateButton (disabled if validation fails)
+└── TriggerExecutionHistory (when viewing existing trigger)
+    ├── ExecutionTimeline
+    │   └── ExecutionEvent (repeated)
+    │       ├── Timestamp
+    │       ├── Status (Success/Failed)
+    │       ├── Result (e.g., "Created schedule: 2025-02-01")
+    │       └── ErrorMessage (if failed)
+    └── ExecutionStats
+        ├── TotalExecutions
+        ├── SuccessRate
+        └── AverageExecutionTime
+```
+
+**Visual Flow Builder Specifications:**
+
+**Canvas Editor:**
+- Drag-and-drop nodes from palette onto canvas
+- Connect nodes by dragging from output port to input port
+- Visual feedback: highlight valid connection targets, show connection preview
+- Zoom controls: +/- buttons, mouse wheel support
+- Pan controls: click and drag background, or arrow keys
+- Grid background: 20px grid for alignment
+- Snapping: nodes snap to grid for alignment
+
+**Node Types:**
+- **Start Node:** Green circle, "START" label
+- **Condition Nodes:** Diamond shape, condition name, input/output ports
+- **Action Nodes:** Rectangle shape, action name, input port only
+- **End Node:** Red circle, "END" label
+
+**Node Properties Panel:**
+- Appears when node is selected
+- Shows node-specific configuration options
+- Real-time validation of node properties
+- "Remove Node" button with confirmation
+
+**Schedule Preview Timeline:**
+- Visual calendar view showing next 5 calculated deadlines
+- Color-coded by status (upcoming/overdue/completed)
+- Hover shows detailed deadline information
+- Click to see full deadline details
+
+**Data Fetching:**
+- `useRecurrenceTriggers(obligationId)` - Fetch recurrence triggers
+- `useCreateRecurrenceTrigger()` - Create recurrence trigger mutation
+- `useRecurrenceTriggerExecutions(triggerId)` - Fetch trigger execution history
+
+---
+
+### Route: `/sites/[siteId]/obligations/[obligationId]/recurrence-triggers/[triggerId]` (NEW - v1.7)
+
+> [v1.7 UPDATE – Recurrence Trigger Detail & Execution History – 2025-01-XX]
+
+**URL Pattern:** `/sites/:siteId/obligations/:obligationId/recurrence-triggers/:triggerId`  
+**File:** `app/(dashboard)/sites/[siteId]/obligations/[obligationId]/recurrence-triggers/[triggerId]/page.tsx`  
+**Access:** Admin/Staff, Module 1 active
+
+**Component Structure:**
+```
+RecurrenceTriggerDetailPage
+├── TriggerHeader
+│   ├── TriggerName
+│   ├── TriggerTypeBadge
+│   └── Actions
+│       ├── EditButton
+│       ├── DeleteButton
+│       └── TestTriggerButton
+├── TriggerTabs
+│   ├── ConfigurationTab
+│   ├── ExecutionHistoryTab (NEW - v1.7)
+│   └── SchedulePreviewTab
+├── TriggerConfiguration
+│   ├── TriggerDetails
+│   ├── ScheduleConfig
+│   └── ConditionConfig (if conditional)
+├── ExecutionHistoryTab (NEW - v1.7)
+│   ├── ExecutionHistoryHeader
+│   │   ├── Title: "Execution History"
+│   │   ├── TotalExecutionsCount
+│   │   └── RefreshButton
+│   ├── ExecutionFilters
+│   │   ├── StatusFilter (Success/Failed/All)
+│   │   ├── DateRangeFilter
+│   │   └── ResultTypeFilter
+│   ├── ExecutionStats
+│   │   ├── SuccessRateCard
+│   │   ├── TotalExecutionsCard
+│   │   ├── AverageExecutionTimeCard
+│   │   └── LastExecutionCard
+│   ├── ExecutionsList
+│   │   └── ExecutionRow (repeated)
+│   │       ├── ExecutionTimestamp
+│   │       ├── ExecutionStatusBadge
+│   │       ├── ExecutionResult
+│   │       │   ├── CreatedScheduleId (if schedule created)
+│   │       │   ├── CreatedDeadlineId (if deadline created)
+│   │       │   ├── NotificationSent (if notification sent)
+│   │       │   └── ErrorMessage (if failed)
+│   │       ├── ExecutionDuration
+│   │       └── ViewDetailsButton
+│   └── ExecutionDetailModal
+│       ├── ExecutionDetails
+│       │   ├── ExecutionId
+│       │   ├── ExecutionTimestamp
+│       │   ├── ExecutionStatus
+│       │   ├── ExecutionDuration
+│       │   └── TriggeredBy (system/user)
+│       ├── ExecutionInput
+│       │   └── InputData (JSON viewer)
+│       ├── ExecutionOutput
+│       │   ├── CreatedEntities (schedules, deadlines)
+│       │   ├── NotificationsSent
+│       │   └── Errors (if any)
+│       └── ExecutionLogs
+│           └── LogEntries (chronological)
+└── SchedulePreview
+    ├── NextDeadlinesList
+    └── PreviewTimeline
+```
+
+**Data Fetching:**
+- `useRecurrenceTrigger(triggerId)` - Fetch trigger details
+- `useRecurrenceTriggerExecutions(triggerId, filters, cursor)` - Fetch execution history with pagination (ENHANCED - v1.7)
+- `useRecurrenceTriggerExecutionStats(triggerId, timeRange)` - Fetch execution statistics (NEW - v1.7)
+- `useRecurrenceTriggerExecution(executionId)` - Fetch single execution details (NEW - v1.7)
+
+**Route Guards:** Admin/Staff, Module 1 active
+- `useTestRecurrenceTrigger(config)` - Test trigger configuration with sample data
+- `useValidateTriggerExpression(expression)` - Validate custom expression syntax
+
+**User Interactions:**
+- Drag trigger type options to see configuration change
+- Build visual flow diagram for conditional triggers
+- Test trigger configuration before saving
+- Preview calculated deadlines in timeline view
+- Validate expression syntax in real-time
+
+**Validation:**
+- Real-time validation as user configures trigger
+- Visual indicators (green/yellow/red) for validation status
+- Clear error messages with suggestions for fixes
+- Prevent saving if critical errors exist
+
+**Mobile Responsiveness:**
+- Simplified interface on mobile (no drag-and-drop)
+- Step-by-step wizard format
+- Touch-friendly controls
+- Stacked panels instead of side-by-side
+
+**Route Guards:** Admin/Staff, Module 1 active
+
+---
+
+## 3.13 Escalation Workflows Routes
+
+> [v1.3 UPDATE – Escalation Workflows – 2025-01-01]
+
+### Route: `/escalation-workflows`
+
+**URL Pattern:** `/escalation-workflows`  
+**File:** `app/(dashboard)/escalation-workflows/page.tsx`  
+**Access:** Authenticated users (Owner, Admin)
+
+**Component Structure:**
+```
+EscalationWorkflowsPage
+├── EscalationWorkflowsHeader
+│   ├── PageTitle
+│   └── CreateWorkflowButton
+├── EscalationWorkflowsList
+│   └── EscalationWorkflowCard (repeated)
+│       ├── WorkflowName
+│       ├── CompanyName
+│       ├── TriggerConditions
+│       ├── EscalationLevels
+│       ├── IsActiveBadge
+│       └── Actions
+│           ├── EditButton
+│           ├── DeleteButton
+│           └── ToggleActiveButton
+└── CreateWorkflowModal
+    ├── WorkflowForm
+    │   ├── NameInput
+    │   ├── CompanySelector
+    │   ├── TriggerConditionsEditor
+    │   ├── EscalationLevelsEditor
+    │   └── ActiveToggle
+    └── FormActions
+```
+
+**Data Fetching:**
+- `useEscalationWorkflows()` - Fetch all escalation workflows
+
+---
+
+### Route: `/escalation-workflows/[id]`
+
+**URL Pattern:** `/escalation-workflows/:id`  
+**File:** `app/(dashboard)/escalation-workflows/[id]/page.tsx`  
+**Access:** Authenticated users (Owner, Admin)
+
+**Component Structure:**
+```
+EscalationWorkflowDetailPage
+├── WorkflowHeader
+│   ├── WorkflowName
+│   ├── CompanyName
+│   ├── ActiveStatusBadge
+│   └── Actions
+│       ├── EditButton
+│       ├── DeleteButton
+│       └── ToggleActiveButton
+├── WorkflowDetails
+│   ├── TriggerConditions
+│   ├── EscalationLevels
+│   │   └── EscalationLevelCard (repeated)
+│   │       ├── LevelNumber
+│   │       ├── DelayDuration
+│   │       ├── Actions
+│   │       └── Recipients
+│   └── ExecutionHistory
+└── EditWorkflowModal
+```
+
+**Data Fetching:**
+- `useEscalationWorkflow(id)` - Fetch escalation workflow details
+
+---
+
+## 3.13.1 Condition Permissions Routes (Permits Module)
+
+> [v1.4 UPDATE – Condition Permissions – 2025-02-01]
+
+### Route: `/module-1/condition-permissions`
+
+**URL Pattern:** `/module-1/condition-permissions`  
+**File:** `app/dashboard/module-1/condition-permissions/page.tsx`  
+**Access:** Admin/Staff, Module 1 active
+
+**Component Structure:**
+```
+ConditionPermissionsPage
+├── PermissionsHeader
+│   ├── PageTitle
+│   └── CreatePermissionButton
+├── PermissionsList
+│   └── PermissionCard (repeated)
+│       ├── UserName
+│       ├── DocumentName
+│       ├── ConditionReference
+│       ├── PermissionTypeBadge (VIEW/EDIT/MANAGE/FULL)
+│       ├── ActiveStatusBadge
+│       ├── GrantedBy
+│       ├── GrantedAt
+│       └── Actions
+│           ├── EditButton
+│           ├── RevokeButton
+│           └── DeleteButton
+└── CreatePermissionModal
+    ├── UserSelector
+    ├── DocumentSelector
+    ├── ConditionReferenceInput
+    ├── PermissionTypeSelector
+    └── SubmitButton
+```
+
+**Data Fetching:**
+- `useConditionPermissions(filters)` - Fetch condition permissions
+- `useCreateConditionPermission()` - Create permission mutation
+- `useUpdateConditionPermission()` - Update permission mutation
+- `useRevokeConditionPermission()` - Revoke permission mutation
+
+**Route Guards:** Admin/Staff, Module 1 active
+
+---
+
+### Route: `/module-1/condition-permissions/[permissionId]`
+
+**URL Pattern:** `/module-1/condition-permissions/:permissionId`  
+**File:** `app/dashboard/module-1/condition-permissions/[permissionId]/page.tsx`  
+**Access:** Admin/Staff, Module 1 active
+
+**Component Structure:**
+```
+ConditionPermissionDetailPage
+├── PermissionHeader
+│   ├── UserName
+│   ├── DocumentName
+│   ├── ConditionReference
+│   └── Actions
+│       ├── EditButton
+│       └── RevokeButton
+├── PermissionDetails
+│   ├── PermissionType
+│   ├── ActiveStatus
+│   ├── GrantedBy
+│   ├── GrantedAt
+│   ├── RevokedBy (if revoked)
+│   └── RevokedAt (if revoked)
+└── EditPermissionModal
+```
+
+**Data Fetching:**
+- `useConditionPermission(permissionId)` - Fetch permission details
+
+---
+
+## 3.13.2 SLA Timer Tracking Routes (Cross-Cutting)
+
+> [v1.4 UPDATE – SLA Timer Tracking – 2025-02-01]
+
+### Route: `/deadlines/[deadlineId]/sla`
+
+**URL Pattern:** `/deadlines/:deadlineId/sla`  
+**File:** `app/dashboard/deadlines/[deadlineId]/sla/page.tsx`  
+**Access:** Authenticated users
+
+**Component Structure:**
+```
+SLATrackingPage
+├── SLAHeader
+│   ├── DeadlineTitle
+│   └── RefreshButton
+├── SLADetails
+│   ├── SLATargetDate
+│   ├── SLAStatusBadge (COMPLIANT/BREACHED)
+│   ├── SLABreachedAt (if breached)
+│   ├── SLABreachDuration (hours)
+│   └── EscalationStatus (if breached > 24h)
+└── SLAHistory
+    └── SLAEventCard (repeated)
+        ├── EventType
+        ├── Timestamp
+        └── Details
+```
+
+**Data Fetching:**
+- `useDeadline(deadlineId)` - Fetch deadline with SLA fields
+- `useSLAHistory(deadlineId)` - Fetch SLA event history
+
+**Note:** SLA tracking is primarily displayed inline in deadline detail pages. This dedicated route provides detailed SLA analytics.
+
+---
+
+## 3.14 Permit Workflows Routes (Permits Module)
+
+> [v1.3 UPDATE – Permit Workflows – 2025-01-01]
+
+### Route: `/sites/[siteId]/documents/[documentId]/workflows`
+
+**URL Pattern:** `/sites/:siteId/documents/:documentId/workflows`  
+**File:** `app/(dashboard)/sites/[siteId]/documents/[documentId]/workflows/page.tsx`  
+**Access:** Authenticated users (Module 1 active)
+
+**Component Structure:**
+```
+PermitWorkflowsPage
+├── WorkflowsHeader
+│   ├── DocumentName
+│   └── CreateWorkflowButton
+├── WorkflowsList
+│   └── WorkflowCard (repeated)
+│       ├── WorkflowType (VARIATION/RENEWAL/SURRENDER)
+│       ├── StatusBadge
+│       ├── CreatedDate
+│       ├── LastUpdated
+│       └── Actions
+│           ├── ViewButton
+│           ├── EditButton (if DRAFT)
+│           ├── SubmitButton (if DRAFT)
+│           └── DeleteButton (if DRAFT)
+└── CreateWorkflowModal
+    ├── WorkflowTypeSelector
+    ├── WorkflowForm
+    └── FormActions
+```
+
+**Data Fetching:**
+- `usePermitWorkflows(documentId)` - Fetch workflows for permit
+
+---
+
+### Route: `/sites/[siteId]/documents/[documentId]/workflows/[workflowId]`
+
+**URL Pattern:** `/sites/:siteId/documents/:documentId/workflows/:workflowId`  
+**File:** `app/(dashboard)/sites/[siteId]/documents/[documentId]/workflows/[workflowId]/page.tsx`  
+**Access:** Authenticated users (Module 1 active)
+
+**Component Structure:**
+```
+PermitWorkflowDetailPage
+├── WorkflowHeader
+│   ├── WorkflowType
+│   ├── StatusBadge
+│   └── Actions (based on status)
+│       ├── EditButton (if DRAFT)
+│       ├── SubmitButton (if DRAFT)
+│       ├── ApproveButton (if SUBMITTED, Admin/Owner)
+│       ├── RejectButton (if SUBMITTED, Admin/Owner)
+│       ├── CompleteButton (if APPROVED)
+│       └── DeleteButton (if DRAFT)
+├── WorkflowDetails
+│   ├── VariationDetails (if VARIATION)
+│   │   ├── VariationType
+│   │   ├── ProposedChanges
+│   │   └── ImpactAssessment
+│   ├── SurrenderDetails (if SURRENDER)
+│   │   ├── SurrenderReason
+│   │   ├── SiteClosureDate
+│   │   └── RegulatorSignOff
+│   └── WorkflowHistory
+│       └── HistoryTimeline
+└── EditWorkflowModal (if DRAFT)
+```
+
+**Data Fetching:**
+- `usePermitWorkflow(workflowId)` - Fetch workflow details
+- `usePermitWorkflowVariation(workflowId)` - Fetch variation details (if VARIATION)
+- `usePermitWorkflowSurrender(workflowId)` - Fetch surrender details (if SURRENDER)
+- `useRecurrenceTriggerExecutions(triggerId)` - Fetch trigger executions
+
+---
+
+### Route: `/sites/[siteId]/documents/[documentId]/workflows/[workflowId]/variation`
+
+**URL Pattern:** `/sites/:siteId/documents/:documentId/workflows/:workflowId/variation`  
+**File:** `app/(dashboard)/sites/[siteId]/documents/[documentId]/workflows/[workflowId]/variation/page.tsx`  
+**Access:** Authenticated users (Module 1 active)
+
+**Component Structure:**
+```
+PermitVariationPage
+├── VariationHeader
+│   ├── VariationType
+│   └── EditButton (if DRAFT)
+├── VariationForm
+│   ├── VariationTypeSelector
+│   ├── ProposedChangesTextarea
+│   ├── ImpactAssessmentTextarea
+│   ├── RegulatorConsultationToggle
+│   └── PublicConsultationToggle
+└── FormActions
+```
+
+**Data Fetching:**
+- `usePermitWorkflowVariation(workflowId)` - Fetch variation details
+- `useUpdateVariation()` - Mutation hook
+
+---
+
+### Route: `/sites/[siteId]/documents/[documentId]/workflows/[workflowId]/surrender`
+
+**URL Pattern:** `/sites/:siteId/documents/:documentId/workflows/:workflowId/surrender`  
+**File:** `app/(dashboard)/sites/[siteId]/documents/[documentId]/workflows/[workflowId]/surrender/page.tsx`  
+**Access:** Authenticated users (Module 1 active)
+
+**Component Structure:**
+```
+PermitSurrenderPage
+├── SurrenderHeader
+│   └── EditButton (if DRAFT)
+├── SurrenderForm
+│   ├── SurrenderReasonTextarea
+│   ├── SiteClosureDatePicker
+│   ├── FinalSiteConditionReportToggle
+│   └── RegulatorSignOffRequiredToggle
+└── FormActions
+```
+
+**Data Fetching:**
+- `usePermitWorkflowSurrender(workflowId)` - Fetch surrender details
+- `useUpdateSurrender()` - Mutation hook
+
+---
+
+## 3.15 Permit Change Tracking Routes (Permits Module)
+
+> [v1.2 UPDATE – Permit Change Tracking Routes – 2025-01-01]
+
+### Route: `/sites/[siteId]/documents/[documentId]/versions`
+
+**URL Pattern:** `/sites/:siteId/documents/:documentId/versions`  
+**File:** `app/(dashboard)/sites/[siteId]/documents/[documentId]/versions/page.tsx`  
+**Access:** Authenticated users, Module 1 active
+
+**Component Structure:**
+```
+PermitVersionsPage
+├── PermitVersionsHeader
+│   ├── DocumentTitle
+│   └── UploadNewVersionButton
+├── PermitVersionsList
+│   └── PermitVersionCard (repeated)
+│       ├── VersionNumber
+│       ├── VersionDate
+│       ├── ChangeType (Variation/Renewal/Surrender)
+│       ├── ChangeSummary
+│       └── Actions
+│           ├── ViewVersionButton
+│           ├── CompareVersionsButton
+│           └── ViewImpactButton
+└── CompareVersionsModal
+    ├── VersionSelector (From/To)
+    ├── RedlineComparisonView
+    │   ├── AddedSections
+    │   ├── RemovedSections
+    │   └── ModifiedSections
+    └── ImpactAnalysisSection
+        ├── ObligationChanges
+        └── ImpactSummary
+```
+
+**Data Fetching:**
+- `usePermitVersions(documentId)` - Fetch permit versions
+- `useCompareVersions(fromVersionId, toVersionId)` - Compare versions
+- `useVersionImpact(versionId)` - Fetch version impact analysis
+
+**Route Guards:** Authenticated users, Module 1 active
+
+---
+
+### Route: `/sites/[siteId]/documents/[documentId]/versions/[versionId]/impact`
+
+**URL Pattern:** `/sites/:siteId/documents/:documentId/versions/:versionId/impact`  
+**File:** `app/(dashboard)/sites/[siteId]/documents/[documentId]/versions/[versionId]/impact/page.tsx`  
+**Access:** Authenticated users, Module 1 active
+
+**Component Structure:**
+```
+VersionImpactPage
+├── VersionImpactHeader
+│   ├── VersionInfo
+│   └── Actions
+│       ├── CompareButton
+│       └── ExportReportButton
+├── ImpactAnalysis
+│   ├── ObligationChangesSection
+│   │   ├── NewObligations
+│   │   ├── RemovedObligations
+│   │   └── ModifiedObligations
+│   └── ImpactSummary
+│       ├── TotalObligations
+│       ├── ChangedObligations
+│       └── ImpactScore
+└── ObligationChangeHistory
+    └── ObligationChangeRow (repeated)
+        ├── ObligationTitle
+        ├── ChangeType
+        ├── ChangeDate
+        └── ChangeDetails
+```
+
+**Data Fetching:**
+- `useVersionImpact(versionId)` - Fetch version impact analysis
+- `useObligationChangeHistory(versionId)` - Fetch obligation change history
+
+---
+
+## 3.15 Consultant Mode Routes
+
+> [v1.2 UPDATE – Consultant Mode Routes – 2025-01-01]
+
+### Route: `/consultant/clients`
+
+**URL Pattern:** `/consultant/clients`  
+**File:** `app/(dashboard)/consultant/clients/page.tsx`  
+**Access:** Consultant role
+
+**Component Structure:**
+```
+ConsultantClientsPage
+├── ConsultantClientsHeader
+│   ├── PageTitle
+│   └── AddClientButton
+├── ConsultantClientsList
+│   └── ClientCard (repeated)
+│       ├── ClientName
+│       ├── ClientSitesCount
+│       ├── ActiveModules
+│       ├── LastActivity
+│       └── Actions
+│           ├── ViewClientButton
+│           ├── GeneratePackButton
+│           └── ManageAccessButton
+└── AddClientModal
+    ├── ClientSelector
+    ├── AccessLevelSelector (Read/Write)
+    └── SubmitButton
+```
+
+**Data Fetching:**
+- `useConsultantClients()` - Fetch consultant's clients
+- `useAddClient()` - Add client assignment mutation
+
+**Route Guards:** Consultant role
+
+---
+
+### Route: `/consultant/clients/[clientId]`
+
+**URL Pattern:** `/consultant/clients/:clientId`  
+**File:** `app/(dashboard)/consultant/clients/[clientId]/page.tsx`  
+**Access:** Consultant role, client assignment
+
+**Component Structure:**
+```
+ConsultantClientPage
+├── ConsultantClientHeader
+│   ├── ClientName
+│   └── Actions
+│       ├── GeneratePackButton
+│       ├── SharePackButton
+│       └── ManageAccessButton
+├── ClientSitesList
+│   └── SiteCard (repeated)
+│       ├── SiteName
+│       ├── ComplianceStatus
+│       ├── ActiveModules
+│       └── Actions
+│           └── ViewSiteButton
+└── ClientActivityFeed
+    └── ActivityRow (repeated)
+        ├── ActivityType
+        ├── ActivityDate
+        └── ActivityDetails
+```
+
+**Data Fetching:**
+- `useConsultantClient(clientId)` - Fetch client details
+- `useClientSites(clientId)` - Fetch client sites
+- `useClientActivity(clientId)` - Fetch client activity
+
+---
+
+### Route: `/consultant/packs`
+
+**URL Pattern:** `/consultant/packs`  
+**File:** `app/(dashboard)/consultant/packs/page.tsx`  
+**Access:** Consultant role
+
+**Component Structure:**
+```
+ConsultantPacksPage
+├── ConsultantPacksHeader
+│   ├── PageTitle
+│   └── GeneratePackButton
+├── ConsultantPacksList
+│   └── PackCard (repeated)
+│       ├── PackType
+│       ├── ClientName
+│       ├── SiteName
+│       ├── GeneratedDate
+│       ├── ConsultantBranding (if enabled)
+│       └── Actions
+│           ├── ViewButton
+│           ├── DownloadButton
+│           ├── ShareButton
+│           └── DeleteButton
+└── GeneratePackModal
+    ├── ClientSelector
+    ├── SiteSelector
+    ├── PackTypeSelector
+    ├── ConsultantBrandingToggle
+    └── GenerateButton
+```
+
+**Data Fetching:**
+- `useConsultantPacks()` - Fetch consultant's packs
+- `useGenerateConsultantPack()` - Generate pack mutation
+
+**Route Guards:** Consultant role
+
+---
+
+## 3.16 Pack Routes (v1.0)
 
 > [v1 UPDATE – Pack Routes – 2024-12-27]
 
@@ -1220,13 +3700,66 @@ PackDetailPage
 │       └── DeleteButton
 ├── PackTabs
 │   ├── PreviewTab
+│   ├── ContentsTab (NEW - v1.7)
+│   ├── AccessLogsTab (NEW - v1.7, if secure link generated)
 │   ├── MetadataTab
 │   └── DistributionTab (if Growth Plan)
 ├── PackPreview
+├── PackContentsTab (NEW - v1.7)
+│   ├── ContentsHeader
+│   │   ├── TotalEvidenceCount
+│   │   ├── TotalObligationsCount
+│   │   └── ExportContentsButton
+│   ├── EvidenceContentsList
+│   │   └── EvidenceContentRow (repeated)
+│   │       ├── EvidenceSnapshot
+│   │       │   ├── FileName (from snapshot)
+│   │       │   ├── FileType (from snapshot)
+│   │       │   ├── FileSize (from snapshot)
+│   │       │   ├── UploadedAt (from snapshot)
+│   │       │   ├── UploadedBy (from snapshot)
+│   │       │   └── FileHash (from snapshot, for integrity)
+│   │       ├── ObligationSnapshot (if linked)
+│   │       │   ├── ObligationTitle (from snapshot)
+│   │       │   ├── ObligationStatus (from snapshot)
+│   │       │   └── DeadlineDate (from snapshot)
+│   │       ├── IncludedAt (timestamp when added to pack)
+│   │       └── VersionLockedBadge (indicates immutable snapshot)
+│   └── ContentsSummary
+│       ├── EvidenceBreakdown (by type, by module)
+│       └── ObligationBreakdown (by status, by module)
+├── PackAccessLogsTab (NEW - v1.7, if secure link generated)
+│   ├── AccessLogsHeader
+│   │   ├── TotalAccessCount
+│   │   ├── UniqueAccessorsCount
+│   │   └── ExportLogsButton
+│   ├── AccessLogsFilters
+│   │   ├── DateRangeFilter
+│   │   ├── AccessorEmailFilter
+│   │   └── IPAddressFilter
+│   ├── AccessLogsTable
+│   │   └── AccessLogRow (repeated)
+│   │       ├── AccessorEmail (if provided)
+│   │       ├── IPAddress
+│   │       ├── UserAgent
+│   │       ├── FirstAccessedAt
+│   │       ├── LastAccessedAt
+│   │       ├── ViewCount
+│   │       ├── DownloadCount
+│   │       └── PagesViewed (array of page numbers)
+│   └── AccessLogsSummary
+│       ├── AccessTimelineChart
+│       └── AccessorGeolocation (if IP geolocation available)
 └── PackDistributionSection (if Growth Plan)
     ├── EmailDistributionForm
     └── SharedLinkSection
 ```
+
+**Data Fetching (Enhanced):**
+- `usePack(packId)` - Fetch pack details
+- `usePackContents(packId)` - Fetch pack contents (version-locked evidence snapshots) (NEW)
+- `usePackAccessLogs(packId, filters)` - Fetch pack access logs (NEW)
+- `usePackDownload()` - Mutation hook for downloading pack
 
 ---
 
@@ -1399,12 +3932,20 @@ AuditPackDetailPage
 │   ├── AuditPackTitle
 │   ├── AuditPackStatusBadge
 │   └── AuditPackActionsMenu
+├── AuditPackTabs
+│   ├── PreviewTab
+│   ├── ContentsTab (NEW - v1.7)
+│   ├── AccessLogsTab (NEW - v1.7, if secure link generated)
+│   ├── MetadataTab
+│   └── DistributionTab (if Growth Plan)
 │       ├── DownloadButton
 │       ├── ShareButton
 │       ├── RegenerateButton
 │       └── DeleteButton
 ├── AuditPackTabs
 │   ├── PreviewTab
+│   ├── ContentsTab (NEW - v1.7)
+│   ├── AccessLogsTab (NEW - v1.7, if secure link generated)
 │   ├── MetadataTab
 │   └── ObligationsTab
 ├── AuditPackPreview (if status === COMPLETED)
@@ -1428,6 +3969,51 @@ AuditPackDetailPage
 │       ├── ProgressBar
 │       ├── ProgressPercentage
 │       └── EstimatedTimeRemaining
+├── AuditPackContentsTab (NEW - v1.7)
+│   ├── ContentsHeader
+│   │   ├── TotalEvidenceCount
+│   │   ├── TotalObligationsCount
+│   │   └── ExportContentsButton
+│   ├── EvidenceContentsList
+│   │   └── EvidenceContentRow (repeated)
+│   │       ├── EvidenceSnapshot
+│   │       │   ├── FileName (from snapshot)
+│   │       │   ├── FileType (from snapshot)
+│   │       │   ├── FileSize (from snapshot)
+│   │       │   ├── UploadedAt (from snapshot)
+│   │       │   ├── UploadedBy (from snapshot)
+│   │       │   └── FileHash (from snapshot, for integrity)
+│   │       ├── ObligationSnapshot (if linked)
+│   │       │   ├── ObligationTitle (from snapshot)
+│   │       │   ├── ObligationStatus (from snapshot)
+│   │       │   └── DeadlineDate (from snapshot)
+│   │       ├── IncludedAt (timestamp when added to pack)
+│   │       └── VersionLockedBadge (indicates immutable snapshot)
+│   └── ContentsSummary
+│       ├── EvidenceBreakdown (by type, by module)
+│       └── ObligationBreakdown (by status, by module)
+├── AuditPackAccessLogsTab (NEW - v1.7, if secure link generated)
+│   ├── AccessLogsHeader
+│   │   ├── TotalAccessCount
+│   │   ├── UniqueAccessorsCount
+│   │   └── ExportLogsButton
+│   ├── AccessLogsFilters
+│   │   ├── DateRangeFilter
+│   │   ├── AccessorEmailFilter
+│   │   └── IPAddressFilter
+│   ├── AccessLogsTable
+│   │   └── AccessLogRow (repeated)
+│   │       ├── AccessorEmail (if provided)
+│   │       ├── IPAddress
+│   │       ├── UserAgent
+│   │       ├── FirstAccessedAt
+│   │       ├── LastAccessedAt
+│   │       ├── ViewCount
+│   │       ├── DownloadCount
+│   │       └── PagesViewed (array of page numbers)
+│   └── AccessLogsSummary
+│       ├── AccessTimelineChart
+│       └── AccessorGeolocation (if IP geolocation available)
 ├── AuditPackStatus (if status !== COMPLETED)
 │   ├── StatusIndicator
 │   ├── StatusMessage
@@ -1489,7 +4075,7 @@ AuditPackDetailPage
 
 > [v1 UPDATE – Consultant Routes – 2024-12-27]
 
-## 3.8 Consultant Control Centre Routes
+## 3.17 Consultant Control Centre Routes
 
 ### Route: `/consultant/dashboard`
 
@@ -1603,7 +4189,294 @@ ConsultantPacksPage
 
 ---
 
-## 3.8 Schedule Routes
+## 3.18 Background Jobs Monitoring Routes
+
+> [v1.3 UPDATE – Background Jobs Monitoring – 2025-01-01]
+
+### Route: `/admin/jobs`
+
+**URL Pattern:** `/admin/jobs`  
+**File:** `app/(dashboard)/admin/jobs/page.tsx`  
+**Access:** Authenticated users (Owner, Admin)
+
+**Component Structure:**
+```
+BackgroundJobsPage
+├── JobsHeader
+│   ├── PageTitle: "Background Jobs Monitoring"
+│   ├── LastUpdated (timestamp, auto-refresh indicator)
+│   └── RefreshButton (manual refresh)
+├── DashboardMetrics (Summary Cards)
+│   ├── TotalJobsCard
+│   │   ├── Count (total jobs in time range)
+│   │   ├── TrendIndicator (↑/↓ vs previous period)
+│   │   └── Chart: Mini line chart (last 24 hours)
+│   ├── ActiveJobsCard
+│   │   ├── Count (jobs currently RUNNING)
+│   │   ├── QueueLength (pending jobs)
+│   │   └── ProgressBar (queue processing rate)
+│   ├── SuccessRateCard
+│   │   ├── Percentage (success rate %)
+│   │   ├── SuccessCount / TotalCount
+│   │   └── TrendIndicator
+│   ├── FailedJobsCard
+│   │   ├── Count (failed jobs)
+│   │   ├── CriticalBadge (if > threshold)
+│   │   └── Link: "View Failed Jobs"
+│   ├── AvgProcessingTimeCard
+│   │   ├── Duration (average processing time)
+│   │   ├── TrendIndicator
+│   │   └── BreakdownByJobType (tooltip)
+│   └── QueueHealthCard
+│       ├── HealthStatus (Healthy/Degraded/Critical)
+│       ├── StatusIndicator (green/yellow/red)
+│       └── Metrics: Queue depth, worker count, error rate
+├── AnalyticsCharts (Interactive Charts)
+│   ├── JobsOverTimeChart
+│   │   ├── ChartType: Line chart
+│   │   ├── X-Axis: Time (last 7 days, 24 hours, 1 hour)
+│   │   ├── Y-Axis: Job count
+│   │   ├── Lines: Total, Successful, Failed
+│   │   ├── TimeRangeSelector: 1h / 24h / 7d / 30d
+│   │   └── HoverTooltip: Detailed stats per time point
+│   ├── JobTypeDistributionChart
+│   │   ├── ChartType: Pie/Doughnut chart
+│   │   ├── Segments: Job type counts
+│   │   ├── ClickAction: Filter by job type
+│   │   └── Legend: Job type names with counts
+│   ├── ProcessingTimeChart
+│   │   ├── ChartType: Bar chart
+│   │   ├── X-Axis: Job types
+│   │   ├── Y-Axis: Average processing time (seconds)
+│   │   ├── ColorCoding: Green (<1min), Yellow (1-5min), Red (>5min)
+│   │   └── HoverTooltip: Min, Max, Average, P95, P99
+│   └── FailureRateByTypeChart
+│       ├── ChartType: Stacked bar chart
+│       ├── X-Axis: Job types
+│       ├── Y-Axis: Failure rate (%)
+│       ├── Segments: Error types (Timeout, Validation, System, Other)
+│       └── ClickAction: View jobs with specific error
+├── JobsFilters
+│   ├── StatusFilter (multi-select)
+│   │   ├── PENDING
+│   │   ├── RUNNING
+│   │   ├── COMPLETED
+│   │   └── FAILED
+│   ├── JobTypeFilter (multi-select)
+│   │   ├── All 26 job types
+│   │   ├── SearchInput (filter job types)
+│   │   └── GroupBy: Queue / Module / Priority
+│   ├── DateRangeFilter
+│   │   ├── QuickOptions: Last hour / 24 hours / 7 days / 30 days
+│   │   ├── CustomRange: DatePicker
+│   │   └── TimeRange: Start/End datetime picker
+│   ├── QueueFilter (if multiple queues)
+│   │   └── QueueSelector (multi-select)
+│   ├── PriorityFilter
+│   │   └── PrioritySelector: HIGH / NORMAL / LOW
+│   └── ClearFiltersButton
+├── JobsTable (Enhanced)
+│   ├── TableHeader (sortable columns)
+│   │   ├── Column: Job ID (sortable, searchable)
+│   │   ├── Column: Job Type (sortable, filterable)
+│   │   ├── Column: Status (sortable, filterable)
+│   │   ├── Column: Queue (sortable)
+│   │   ├── Column: Priority (sortable)
+│   │   ├── Column: Created At (sortable)
+│   │   ├── Column: Started At (sortable)
+│   │   ├── Column: Completed At (sortable)
+│   │   ├── Column: Duration (sortable)
+│   │   ├── Column: Progress % (if RUNNING)
+│   │   └── Column: Actions
+│   ├── JobRow (repeated, expandable)
+│   │   ├── JobId (clickable, link to detail)
+│   │   ├── JobType
+│   │   │   ├── TypeName
+│   │   │   ├── TypeIcon
+│   │   │   └── QueueBadge
+│   │   ├── StatusBadge
+│   │   │   ├── StatusIcon (spinner if RUNNING)
+│   │   │   ├── StatusText
+│   │   │   └── ProgressBar (if RUNNING, shows %)
+│   │   ├── PriorityBadge (HIGH/NORMAL/LOW)
+│   │   ├── CreatedAt (relative time: "2m ago")
+│   │   ├── StartedAt (relative time or "-")
+│   │   ├── CompletedAt (relative time or "-")
+│   │   ├── Duration
+│   │   │   ├── HumanReadable (e.g., "1m 23s")
+│   │   │   └── ColorCoded (green/yellow/red based on expected duration)
+│   │   ├── ProgressIndicator (if RUNNING)
+│   │   │   ├── ProgressBar (0-100%)
+│   │   │   └── EstimatedTimeRemaining
+│   │   ├── ErrorIndicator (if FAILED)
+│   │   │   ├── ErrorIcon (red)
+│   │   │   ├── ErrorMessagePreview (truncated)
+│   │   │   └── ErrorCount (if multiple errors)
+│   │   ├── ExpandRowButton
+│   │   └── Actions
+│   │       ├── ViewButton (navigate to detail)
+│   │       ├── RetryButton (if FAILED)
+│   │       ├── CancelButton (if RUNNING)
+│   │       └── ViewLogsButton
+│   └── ExpandedRowContent (when expanded)
+│       ├── JobDetailsAccordion
+│       │   ├── JobMetadata
+│       │   │   ├── Job ID
+│       │   │   ├── Queue Name
+│       │   │   ├── Priority
+│       │   │   ├── Attempt Count
+│       │   │   └── Retry Count
+│       │   ├── JobInputData
+│       │   │   ├── DataPreview (formatted JSON)
+│       │   │   ├── Expand/CollapseButton
+│       │   │   └── CopyButton
+│       │   ├── JobOutputData (if completed)
+│       │   │   └── OutputPreview (formatted JSON)
+│       │   └── TimingBreakdown
+│       │       ├── Created → Started: Duration
+│       │       ├── Started → Completed: Duration
+│       │       └── Total: Duration
+│       ├── ErrorDetails (if FAILED)
+│       │   ├── ErrorMessage (full text)
+│       │   ├── ErrorStack (expandable)
+│       │   ├── ErrorType
+│       │   ├── FailedAt (timestamp)
+│       │   └── RetryInformation
+│       │       ├── WillRetry: Yes/No
+│       │       ├── RetryAfter: Duration
+│       │       └── MaxRetries: Count
+│       └── RecentLogsPreview
+│           ├── Last 10 log entries
+│           ├── LogLevelBadge (INFO/WARN/ERROR)
+│           ├── LogTimestamp
+│           ├── LogMessage
+│           └── ViewAllLogsLink
+├── PaginationControls
+│   ├── CursorBasedPagination
+│   ├── ItemsPerPageSelector (10/25/50/100)
+│   ├── PageInfo: "Showing X-Y of Z jobs"
+│   └── Navigation: Previous/Next buttons
+└── JobDetailModal (Enhanced)
+    ├── ModalHeader
+    │   ├── JobType
+    │   ├── StatusBadge
+    │   └── CloseButton
+    ├── JobTabs
+    │   ├── DetailsTab
+    │   ├── LogsTab
+    │   ├── TimelineTab
+    │   └── RetryHistoryTab (if retried)
+    ├── DetailsTabContent
+    │   ├── JobMetadataSection
+    │   │   ├── Job ID (with copy button)
+    │   │   ├── Queue Name
+    │   │   ├── Priority
+    │   │   ├── Status
+    │   │   └── Created By (if available)
+    │   ├── TimingSection
+    │   │   ├── TimelineVisualization
+    │   │   │   ├── CreatedAt → StartedAt → CompletedAt
+    │   │   │   └── DurationMarkers
+    │   │   └── DurationBreakdown
+    │   ├── InputDataSection
+    │   │   ├── JSONViewer (syntax highlighted)
+    │   │   ├── Expand/CollapseAll
+    │   │   └── CopyButton
+    │   ├── OutputDataSection (if completed)
+    │   │   └── JSONViewer
+    │   └── ErrorSection (if FAILED)
+    │       ├── ErrorType
+    │       ├── ErrorMessage (full)
+    │       ├── ErrorStack (expandable)
+    │       └── ErrorContext
+    ├── LogsTabContent
+    │   ├── LogFilters
+    │   │   ├── LogLevelFilter (ALL/INFO/WARN/ERROR)
+    │   │   ├── SearchInput
+    │   │   └── AutoScrollToggle
+    │   ├── LogsViewer
+    │   │   ├── VirtualizedList (for large log files)
+    │   │   └── LogEntry (repeated)
+    │   │       ├── Timestamp
+    │   │       ├── LogLevelBadge (color-coded)
+    │   │       ├── LogMessage
+    │   │       └── LogContext (expandable JSON)
+    │   └── LogActions
+    │       ├── DownloadLogsButton
+    │       ├── CopyLogsButton
+    │       └── ClearLogsButton
+    ├── TimelineTabContent
+    │   ├── TimelineVisualization
+    │   │   └── TimelineEvent (repeated)
+    │   │       ├── Timestamp
+    │   │       ├── EventType (Created/Started/Progress/Completed/Failed)
+    │   │       ├── EventDetails
+    │   │       └── DurationSincePrevious
+    │   └── TimelineFilters
+    │       └── EventTypeFilter (multi-select)
+    ├── RetryHistoryTabContent (if retried)
+    │   └── RetryAttempt (repeated)
+    │       ├── Attempt Number
+    │       ├── Started At
+    │       ├── Completed At (or Failed At)
+    │       ├── Duration
+    │       ├── Status
+    │       └── ErrorMessage (if failed)
+    └── ModalFooter
+        ├── CloseButton
+        ├── RetryButton (if FAILED)
+        ├── CancelButton (if RUNNING)
+        └── ViewInQueueButton
+```
+
+**Data Fetching:**
+- `useBackgroundJobs(filters, cursor)` - Fetch background jobs
+- `useBackgroundJobsMetrics(timeRange)` - Fetch dashboard metrics
+- `useBackgroundJobsAnalytics(timeRange, groupBy)` - Fetch analytics data
+- `useJobQueueHealth()` - Fetch queue health metrics
+- `useRetryJob()` - Mutation hook
+- `useCancelJob()` - Mutation hook
+- `useJobLogs(jobId, filters, cursor)` - Fetch job logs with pagination
+
+---
+
+### Route: `/admin/jobs/[jobId]`
+
+**URL Pattern:** `/admin/jobs/:jobId`  
+**File:** `app/(dashboard)/admin/jobs/[jobId]/page.tsx`  
+**Access:** Authenticated users (Owner, Admin)
+
+**Component Structure:**
+```
+BackgroundJobDetailPage
+├── JobHeader
+│   ├── JobId
+│   ├── JobType
+│   ├── StatusBadge
+│   └── Actions
+│       ├── RetryButton (if FAILED)
+│       └── RefreshButton
+├── JobDetails
+│   ├── CreatedAt
+│   ├── StartedAt
+│   ├── CompletedAt
+│   ├── Duration
+│   ├── ErrorMessage (if FAILED)
+│   └── Progress (if RUNNING)
+├── JobLogs
+│   └── LogsViewer
+│       └── LogEntry (repeated)
+└── RetryJobModal (if FAILED)
+```
+
+**Data Fetching:**
+- `useBackgroundJob(jobId)` - Fetch job details
+- `useJobLogs(jobId)` - Fetch job logs
+- `useRetryJob()` - Mutation hook
+
+---
+
+## 3.19 Schedule Routes
 
 ### Route: `/sites/[siteId]/schedules`
 
@@ -1714,7 +4587,7 @@ ScheduleDetailPage
 
 ---
 
-## 3.9 Deadline Routes
+## 3.20 Deadline Routes
 
 ### Route: `/sites/[siteId]/deadlines`
 
@@ -1770,7 +4643,7 @@ DeadlinesListPage
 
 ---
 
-## 3.10 Review Queue Routes
+## 3.21 Review Queue Routes
 
 ### Route: `/sites/[siteId]/review-queue`
 
@@ -1830,7 +4703,7 @@ ReviewQueuePage
 
 ---
 
-## 3.11 User Management Routes
+## 3.22 User Management Routes
 
 ### Route: `/users`
 
@@ -1940,13 +4813,13 @@ UserDetailPage
 
 ---
 
-## 3.12 Company Management Routes
+## 3.23 Company Management Routes
 
 ### Route: `/company`
 
 **URL Pattern:** `/company`  
 **File:** `app/(dashboard)/company/page.tsx`  
-**Access:** Owner, Admin roles
+**Access:** Owner, Admin roles (Consultants blocked - returns 403 FORBIDDEN)
 
 **Component Structure:**
 ```
@@ -1993,13 +4866,13 @@ CompanyPage
 
 ---
 
-## 3.13 Site Management Routes
+## 3.24 Site Management Routes
 
 ### Route: `/sites/[siteId]/settings`
 
 **URL Pattern:** `/sites/:siteId/settings`  
 **File:** `app/(dashboard)/sites/[siteId]/settings/page.tsx`  
-**Access:** Owner, Admin roles with site access
+**Access:** Owner, Admin roles with site access (Consultants blocked - returns 403 FORBIDDEN)
 
 **Component Structure:**
 ```
@@ -2022,6 +4895,16 @@ SiteSettingsPage
 ├── SiteDocuments
 │   └── DocumentsList
 └── AdvancedSettings
+    ├── BusinessDayAdjustmentSection (NEW - v1.7)
+    │   ├── SectionTitle: "Deadline Configuration"
+    │   ├── BusinessDayToggle
+    │   │   ├── ToggleSwitch: "Adjust deadlines to business days"
+    │   │   ├── ToggleState: adjust_for_business_days (true/false)
+    │   │   └── HelpText: "When enabled, deadlines falling on weekends or UK bank holidays will be moved to the previous working day"
+    │   ├── BusinessDayInfo
+    │   │   ├── InfoIcon
+    │   │   └── InfoText: "Business days exclude weekends and UK bank holidays. This setting applies to all deadlines for this site."
+    │   └── SaveButton
     └── SettingsForm
 ```
 
@@ -2029,6 +4912,8 @@ SiteSettingsPage
 - `useSite(siteId)` - Fetch site details
 - `useSiteUsers(siteId)` - Fetch site users
 - `useSiteUpdate()` - Mutation hook for updating site
+- `useSiteBusinessDaySettings(siteId)` - Fetch business day adjustment setting (NEW - v1.7)
+- `useUpdateBusinessDaySettings()` - Mutation hook for updating business day setting (NEW - v1.7)
 
 **User Interactions:**
 - Edit site details
@@ -2042,9 +4927,94 @@ SiteSettingsPage
 
 ---
 
-## 3.14 Regulator Questions Routes
+## 3.25 Manual Override Modals (Cross-Cutting) (NEW - v1.7)
 
-### Route: `/sites/[siteId]/regulator-questions`
+> [v1.7 UPDATE – Manual Override UI – 2025-01-XX]
+
+**Purpose:** Context-dependent modals for manual overrides (Admin/Owner only) with audit trail requirements
+
+### Manual Override Modal Component
+
+**Component:** `ManualOverrideModal`
+
+**Usage:** Appears when Admin/Owner needs to override system decisions (obligation edits, evidence exemptions, deadline adjustments, etc.)
+
+**Component Structure:**
+```
+ManualOverrideModal
+├── ModalHeader
+│   ├── Title: "Manual Override"
+│   ├── OverrideTypeBadge (e.g., "Obligation Edit", "Evidence Exemption")
+│   └── CloseButton
+├── OverrideContext
+│   ├── EntityInfo
+│   │   ├── EntityType (e.g., "Obligation", "Evidence", "Deadline")
+│   │   ├── EntityName/Title
+│   │   └── CurrentValue (what system determined)
+│   └── OverrideReason (required)
+│       ├── Label: "Reason for Override"
+│       ├── Textarea (required, min 10 characters)
+│       ├── Placeholder: "e.g., Document interpretation requires manual adjustment"
+│       └── CharacterCount (min 10, max 500)
+├── OverrideForm (context-dependent)
+│   ├── ObligationOverrideForm (if overriding obligation)
+│   │   ├── EditableFields
+│   │   │   ├── ObligationText (editable)
+│   │   │   ├── Category (editable)
+│   │   │   ├── Frequency (editable)
+│   │   │   └── DeadlineDate (editable)
+│   │   ├── NonEditableFields (read-only)
+│   │   │   ├── SubjectiveFlag (system-determined)
+│   │   │   ├── ConfidenceScore (system-determined)
+│   │   │   └── ComplianceStatus (partial - can mark complete/N/A)
+│   │   └── PreviousValuesDisplay
+│   │       └── PreviousValueCard (shows original value)
+│   ├── EvidenceExemptionForm (if overriding evidence enforcement)
+│   │   ├── EvidenceInfo
+│   │   ├── ExemptionTypeSelector
+│   │   └── ExemptionReason (required)
+│   ├── DeadlineOverrideForm (if overriding deadline)
+│   │   ├── CurrentDeadline
+│   │   ├── NewDeadlineInput
+│   │   └── OverrideReason (required)
+│   └── ComplianceStatusOverrideForm (if overriding compliance status)
+│       ├── CurrentStatus
+│       ├── NewStatusSelector
+│       └── OverrideReason (required)
+├── AuditTrailNotice
+│   ├── WarningIcon
+│   ├── WarningText: "This override will be logged in the audit trail with your name and timestamp."
+│   └── AuditTrailPreview
+│       └── PreviewText: "Audit entry: [Override Type] by [Your Name] at [Timestamp]"
+└── ModalFooter
+    ├── CancelButton
+    └── ConfirmOverrideButton (disabled if reason < 10 characters)
+```
+
+**Data Fetching:**
+- `useManualOverride()` - Mutation hook for applying manual override
+- `useOverrideHistory(entityType, entityId)` - Fetch override history for entity
+
+**Override Types:**
+1. **Obligation Edit Override:** Edit obligation fields that are typically system-determined
+2. **Evidence Exemption Override:** Mark evidence as enforcement exempt
+3. **Deadline Adjustment Override:** Manually adjust deadline dates
+4. **Compliance Status Override:** Override compliance status (with restrictions)
+5. **Schedule Override:** Override monitoring schedule calculations
+
+**Audit Trail Requirements:**
+- All overrides require justification (minimum 10 characters)
+- All overrides logged with: user_id, timestamp, reason, previous_value, new_value
+- Override history visible in entity detail pages
+
+**Access Control:**
+- Admin/Owner roles only
+- Staff/Consultant roles cannot perform overrides
+- Override button/action only visible to Admin/Owner
+
+---
+
+## 3.26 Regulator Questions Routes
 
 **URL Pattern:** `/sites/:siteId/regulator-questions`  
 **File:** `app/(dashboard)/sites/[siteId]/regulator-questions/page.tsx`  
@@ -2112,19 +5082,46 @@ RegulatorQuestionDetailPage
 │   ├── QuestionTitle
 │   ├── QuestionStatusBadge
 │   └── QuestionActionsMenu
+├── StateMachineVisualization (NEW - v1.7)
+│   ├── StateMachineDiagram
+│   │   ├── StateNodes (OPEN, RESPONSE_SUBMITTED, RESPONSE_ACKNOWLEDGED, FOLLOW_UP_REQUIRED, CLOSED, RESPONSE_OVERDUE)
+│   │   ├── CurrentStateHighlight (highlighted)
+│   │   ├── TransitionArrows (showing possible transitions)
+│   │   └── StateDescriptions (tooltips for each state)
+│   ├── StateTransitionButtons
+│   │   ├── SubmitResponseButton (if OPEN)
+│   │   ├── AcknowledgeButton (if RESPONSE_SUBMITTED, Admin/Owner)
+│   │   ├── RequestFollowUpButton (if RESPONSE_ACKNOWLEDGED, Admin/Owner)
+│   │   └── CloseButton (if RESPONSE_ACKNOWLEDGED or FOLLOW_UP_REQUIRED)
+│   └── StateHistory
+│       └── StateTransitionRow (repeated)
+│           ├── FromState
+│           ├── ToState
+│           ├── TransitionedAt
+│           ├── TransitionedBy
+│           └── TransitionReason
 ├── QuestionDetails
 │   ├── QuestionText
 │   ├── QuestionType
 │   ├── RaisedDate
 │   ├── ResponseDeadline
+│   │   ├── DeadlineDate
+│   │   ├── DaysRemaining (with countdown)
+│   │   └── DeadlineStatusBadge (On Time/Approaching/Overdue)
 │   ├── AssignedTo
 │   └── RelatedObligation
 ├── ResponseSection
 │   ├── ResponseTextEditor
 │   ├── ResponseEvidenceSelector
+│   ├── ResponseDeadlineWarning (if approaching deadline)
 │   └── SubmitResponseButton
 └── QuestionHistory
     └── HistoryTimeline
+        └── HistoryEvent (repeated)
+            ├── EventType
+            ├── EventTimestamp
+            ├── EventActor
+            └── EventDetails
 ```
 
 **Data Fetching:**
@@ -2143,7 +5140,7 @@ RegulatorQuestionDetailPage
 
 ---
 
-## 3.15 Notification Center Routes
+## 3.26 Notification Center Routes
 
 ### Route: `/notifications`
 
@@ -2227,7 +5224,7 @@ NotificationCenterPage
 
 ---
 
-## 3.16 User Profile & Settings Routes
+## 3.27 User Profile & Settings Routes
 
 ### Route: `/profile`
 
@@ -2381,7 +5378,7 @@ NotificationSettingsPage
 
 ---
 
-## 3.17 Global Search Routes
+## 3.28 Global Search Routes
 
 ### Route: `/search`
 
@@ -2475,7 +5472,7 @@ GlobalSearchPage
 
 ---
 
-## 3.18 Reports Dashboard Routes
+## 3.29 Reports Dashboard Routes
 
 ### Route: `/reports`
 
@@ -2597,7 +5594,7 @@ ReportGenerationPage
 
 ---
 
-## 3.19 Help Center Routes
+## 3.31 Help Center Routes
 
 ### Route: `/help`
 
@@ -2670,6 +5667,508 @@ HelpArticlePage
 - `useHelpArticle(articleId)` - Fetch article content
 - `useRelatedArticles(articleId)` - Fetch related articles
 - `useSubmitArticleFeedback()` - Submit feedback
+
+---
+
+
+## 3.32 Module 1 Advanced Routes (Environmental Permits)
+
+### Route: `/dashboard/module-1/enforcement-notices`
+
+**Purpose:** List and manage enforcement notices from regulators (EA, SEPA, NRW)
+
+**Access:** Authenticated users with Module 1 access
+
+**Component Structure:**
+```
+EnforcementNoticesPage
+├── PageHeader
+│   ├── Title ("Enforcement Notices")
+│   └── CreateButton ("New Enforcement Notice")
+├── SearchAndFilterBar
+│   ├── SearchInput (notice number, subject, regulator)
+│   └── FilterControls
+│       ├── SiteFilter
+│       ├── StatusFilter (OPEN, RESPONDED, CLOSED, APPEALED)
+│       ├── NoticeTypeFilter (WARNING, NOTICE, VARIATION, SUSPENSION, REVOCATION, PROSECUTION)
+│       └── RegulatorFilter
+└── EnforcementNoticesTable
+    ├── TableHeader
+    ├── TableRows (notice number, subject, regulator, type, status, notice date, deadline)
+    └── CursorPagination
+```
+
+**Data Fetching:**
+- \`useEnforcementNotices(filters)\` - List enforcement notices with cursor pagination
+- Query: \`['module-1-enforcement-notices', filters, searchQuery, cursor]\`
+- API: \`GET /api/v1/module-1/enforcement-notices?site_id={}&status={}&notice_type={}&regulator={}&cursor={}&limit=20\`
+
+**Features:**
+- Search by notice number, subject, regulator, description
+- Filter by site, status, notice type, regulator
+- Color-coded status badges (OPEN = yellow, RESPONDED = blue, CLOSED = green, APPEALED = purple)
+- Color-coded notice type badges (WARNING = yellow, SUSPENSION/REVOCATION/PROSECUTION = red)
+- Overdue deadline highlighting (red text with "Overdue" label)
+- Cursor-based pagination (Load More button)
+
+---
+
+### Route: \`/dashboard/module-1/enforcement-notices/new\`
+
+**Purpose:** Create new enforcement notice
+
+**Access:** Authenticated users with Module 1 write access
+
+**Data Fetching:**
+- \`useCreateEnforcementNotice()\` - Create enforcement notice mutation
+- API: \`POST /api/v1/module-1/enforcement-notices\`
+
+---
+
+### Route: \`/dashboard/module-1/enforcement-notices/[noticeId]\`
+
+**Purpose:** View and manage enforcement notice details
+
+**Access:** Authenticated users with Module 1 access
+
+**Data Fetching:**
+- \`useEnforcementNotice(noticeId)\` - Fetch enforcement notice details
+- \`useSubmitNoticeResponse()\` - Submit response mutation
+- \`useCloseNotice()\` - Close notice mutation
+- \`useAppealNotice()\` - Appeal notice mutation
+- API: \`GET /api/v1/module-1/enforcement-notices/{noticeId}\`
+
+**State Transitions:** OPEN → RESPONDED → CLOSED → APPEALED
+
+---
+
+### Route: \`/dashboard/module-1/compliance-decisions\`
+
+**Purpose:** List and manage compliance decisions
+
+**Access:** Authenticated users with Module 1 access
+
+**Data Fetching:**
+- \`useComplianceDecisions(filters)\` - List compliance decisions
+- Query: \`['module-1-compliance-decisions', filters, searchQuery, cursor]\`
+- API: \`GET /api/v1/module-1/compliance-decisions?site_id={}&status={}&decision_type={}&regulator={}&cursor={}&limit=20\`
+
+**Features:**
+- Status badges (PENDING = yellow, APPROVED = green, REJECTED = red, UNDER_REVIEW = blue)
+- Decision type badges with icons
+- Evidence count indicator
+
+---
+
+### Route: \`/dashboard/module-1/compliance-decisions/new\`
+
+**Purpose:** Create new compliance decision
+
+**Access:** Authenticated users with Module 1 write access
+
+**Data Fetching:**
+- \`useCreateComplianceDecision()\` - Create compliance decision mutation
+- \`useEvidenceItems()\` - Fetch evidence items for linking
+- API: \`POST /api/v1/module-1/compliance-decisions\`
+
+---
+
+### Route: \`/dashboard/module-1/compliance-decisions/[decisionId]\`
+
+**Purpose:** View and manage compliance decision details
+
+**Access:** Authenticated users with Module 1 access
+
+**Data Fetching:**
+- \`useComplianceDecision(decisionId)\` - Fetch compliance decision details
+- \`useUpdateComplianceDecisionStatus()\` - Update status mutation
+- \`useLinkedEvidence(decisionId)\` - Fetch linked evidence items
+- API: \`GET /api/v1/module-1/compliance-decisions/{decisionId}\`
+
+**State Transitions:** PENDING → UNDER_REVIEW → APPROVED/REJECTED
+
+---
+
+### Route: \`/dashboard/module-1/condition-evidence-rules\`
+
+**Purpose:** Manage condition-level evidence mapping rules
+
+**Access:** Authenticated users with Module 1 access
+
+**Data Fetching:**
+- \`useConditionEvidenceRules(filters)\` - List evidence rules
+- Query: \`['module-1-condition-evidence-rules', filters, searchQuery, cursor]\`
+- API: \`GET /api/v1/module-1/condition-evidence-rules?site_id={}&condition_id={}&evidence_type={}&status={}&cursor={}&limit=20\`
+
+**Features:**
+- Frequency indicator (ONCE, DAILY, WEEKLY, MONTHLY, QUARTERLY, ANNUALLY, AD_HOC)
+- Status toggle (ACTIVE/INACTIVE)
+- Quick edit inline actions
+
+---
+
+### Route: \`/dashboard/module-1/condition-evidence-rules/new\`
+
+**Purpose:** Create new condition evidence rule
+
+**Access:** Authenticated users with Module 1 write access
+
+**Data Fetching:**
+- \`useCreateConditionEvidenceRule()\` - Create evidence rule mutation
+- \`useSitePermits(siteId)\` - Fetch permits for site
+- \`usePermitConditions(permitDocumentId)\` - Fetch conditions for permit
+- API: \`POST /api/v1/module-1/condition-evidence-rules\`
+
+---
+
+### Route: \`/dashboard/module-1/condition-evidence-rules/[ruleId]\`
+
+**Purpose:** View and manage condition evidence rule details
+
+**Access:** Authenticated users with Module 1 access
+
+**Data Fetching:**
+- \`useConditionEvidenceRule(ruleId)\` - Fetch evidence rule details
+- \`useUpdateConditionEvidenceRule()\` - Update evidence rule mutation
+- \`useDeleteConditionEvidenceRule()\` - Delete evidence rule mutation
+- \`useLinkedObligations(ruleId)\` - Fetch linked obligations
+- API: \`GET /api/v1/module-1/condition-evidence-rules/{ruleId}\`
+
+---
+
+### Route: \`/dashboard/module-1/condition-permissions\`
+
+**Purpose:** Manage permissions at condition level
+
+**Access:** Authenticated users with Module 1 access
+
+**Data Fetching:**
+- \`useConditionPermissions(filters)\` - List condition permissions
+- Query: \`['module-1-condition-permissions', filters, searchQuery, cursor]\`
+- API: \`GET /api/v1/module-1/condition-permissions?site_id={}&permit_id={}&condition_id={}&user_id={}&permission_level={}&cursor={}&limit=20\`
+
+**Features:**
+- Permission level badges (VIEW = blue, EDIT = yellow, MANAGE = green)
+- Quick revoke actions
+- Bulk permission assignment
+
+---
+
+### Route: \`/dashboard/module-1/condition-permissions/new\`
+
+**Purpose:** Create new condition permission
+
+**Access:** Authenticated users with Module 1 MANAGE permission
+
+**Data Fetching:**
+- \`useCreateConditionPermission()\` - Create condition permission mutation
+- \`useSitePermits(siteId)\` - Fetch permits for site
+- \`usePermitConditions(permitDocumentId)\` - Fetch conditions for permit
+- \`useCompanyUsers()\` - Fetch users for user select
+- \`useCompanyRoles()\` - Fetch roles for role select
+- API: \`POST /api/v1/module-1/condition-permissions\`
+
+---
+
+### Route: \`/dashboard/module-1/condition-permissions/[permissionId]\`
+
+**Purpose:** View and manage condition permission details
+
+**Access:** Authenticated users with Module 1 MANAGE permission
+
+**Data Fetching:**
+- \`useConditionPermission(permissionId)\` - Fetch condition permission details
+- \`useUpdateConditionPermission()\` - Update permission mutation
+- \`useRevokeConditionPermission()\` - Revoke permission mutation
+- API: \`GET /api/v1/module-1/condition-permissions/{permissionId}\`
+
+---
+
+### Route: \`/dashboard/module-1/evidence-completeness-scores\`
+
+**Purpose:** View automated evidence completeness scoring
+
+**Access:** Authenticated users with Module 1 access
+
+**Data Fetching:**
+- \`useEvidenceCompletenessScores(filters)\` - List completeness scores
+- \`useRecalculateScores()\` - Recalculate scores mutation
+- Query: \`['module-1-evidence-completeness-scores', filters, cursor]\`
+- API: \`GET /api/v1/module-1/evidence-completeness-scores?site_id={}&permit_id={}&score_min={}&score_max={}&status={}&cursor={}&limit=20\`
+
+**Features:**
+- Real-time score calculation (0-100 integer)
+- Color-coded score badges: 80-100 (Green/COMPLETE), 50-79 (Yellow/PARTIAL), 0-49 (Red/MISSING)
+- Missing evidence types list
+- Trend chart showing score improvement over time
+
+**Scoring Algorithm:**
+\`\`\`
+Score = (Evidence Submitted / Evidence Required) * 100
+- Evidence Required: Count of condition evidence rules where mandatory = true
+- Evidence Submitted: Count of linked evidence items that match requirements and are not expired
+\`\`\`
+
+---
+
+### Route: \`/dashboard/module-1/permit-versions\`
+
+**Purpose:** Manage permit document versions
+
+**Access:** Authenticated users with Module 1 access
+
+**Data Fetching:**
+- \`usePermitVersions(filters)\` - List permit versions
+- Query: \`['module-1-permit-versions', filters, searchQuery, cursor]\`
+- API: \`GET /api/v1/module-1/permit-versions?site_id={}&version_type={}&status={}&effective_date_from={}&effective_date_to={}&cursor={}&limit=20\`
+
+**Features:**
+- Version comparison (diff view)
+- Status badges (DRAFT = gray, ACTIVE = green, SUPERSEDED = yellow, SURRENDERED = red)
+- Version timeline visualization
+
+---
+
+### Route: \`/dashboard/module-1/permit-workflows\`
+
+**Purpose:** Manage permit workflows (applications, variations, transfers, surrenders)
+
+**Access:** Authenticated users with Module 1 access
+
+**Data Fetching:**
+- \`usePermitWorkflows(filters)\` - List permit workflows
+- Query: \`['module-1-permit-workflows', filters, searchQuery, cursor]\`
+- API: \`GET /api/v1/module-1/permit-workflows?site_id={}&workflow_type={}&status={}&regulator={}&cursor={}&limit=20\`
+
+**Features:**
+- Workflow type icons
+- Progress indicators (% complete)
+- SLA deadline tracking
+
+---
+
+## 3.33 Module 2 Advanced Routes (Trade Effluent)
+
+### Route: \`/dashboard/module-2/sampling-logistics\`
+
+**Purpose:** Manage lab sampling logistics workflow
+
+**Access:** Authenticated users with Module 2 access
+
+**Data Fetching:**
+- \`useSamplingLogistics(filters)\` - List sampling records
+- Query: \`['module-2-sampling-logistics', filters, searchQuery, cursor]\`
+- API: \`GET /api/v1/module-2/sampling-logistics?site_id={}&status={}&lab={}&sampling_date_from={}&sampling_date_to={}&cursor={}&limit=20\`
+
+**Features:**
+- Status flow: SCHEDULED → SAMPLE_COLLECTED → SUBMITTED_TO_LAB → RESULTS_RECEIVED → CERTIFICATE_LINKED
+- Lab accreditation status indicator
+- Turnaround time tracking
+
+---
+
+### Route: \`/dashboard/module-2/sampling-logistics/new\`
+
+**Purpose:** Create new sampling record
+
+**Access:** Authenticated users with Module 2 write access
+
+**Data Fetching:**
+- \`useCreateSamplingRecord()\` - Create sampling record mutation
+- \`useSiteConsents(siteId)\` - Fetch consents for site
+- \`useApprovedLabs()\` - Fetch approved labs
+- \`useConsentParameters(consentId)\` - Fetch parameters for consent
+- API: \`POST /api/v1/module-2/sampling-logistics\`
+
+---
+
+### Route: \`/dashboard/module-2/sampling-logistics/[recordId]\`
+
+**Purpose:** View and manage sampling record details
+
+**Access:** Authenticated users with Module 2 access
+
+**Data Fetching:**
+- \`useSamplingRecord(recordId)\` - Fetch sampling record details
+- \`useUpdateSamplingStatus()\` - Update status mutation
+- \`useLinkCertificate()\` - Link certificate mutation
+- \`useLinkedLabResults(recordId)\` - Fetch linked lab results
+- API: \`GET /api/v1/module-2/sampling-logistics/{recordId}\`
+
+**State Transitions:** SCHEDULED → SAMPLE_COLLECTED → SUBMITTED_TO_LAB → RESULTS_RECEIVED → CERTIFICATE_LINKED
+
+---
+
+### Route: \`/dashboard/module-2/monthly-statements\`
+
+**Purpose:** Manage monthly statements from water companies
+
+**Access:** Authenticated users with Module 2 access
+
+**Data Fetching:**
+- \`useMonthlyStatements(filters)\` - List monthly statements
+- Query: \`['module-2-monthly-statements', filters, searchQuery, cursor]\`
+- API: \`GET /api/v1/module-2/monthly-statements?site_id={}&water_company={}&month={}&year={}&reconciliation_status={}&cursor={}&limit=20\`
+
+**Features:**
+- Reconciliation status badges: PENDING (gray), MATCHED (green), DISCREPANCY (red), RESOLVED (blue)
+- Volume comparison indicator (billed vs discharged)
+- Auto-reconciliation on upload
+
+---
+
+### Route: \`/dashboard/module-2/monthly-statements/new\`
+
+**Purpose:** Upload new monthly statement
+
+**Access:** Authenticated users with Module 2 write access
+
+**Data Fetching:**
+- \`useUploadMonthlyStatement()\` - Upload statement mutation (triggers auto-reconciliation)
+- \`useSiteConsents(siteId)\` - Fetch consents for site
+- API: \`POST /api/v1/module-2/monthly-statements\`
+
+**Auto-Reconciliation:**
+Upon upload, system automatically:
+1. Fetches discharge volumes for the same month/year
+2. Calculates total volume discharged
+3. Compares billed vs discharged (tolerance ±5%)
+4. Sets reconciliation_status (MATCHED or DISCREPANCY)
+5. Creates reconciliation record
+
+---
+
+### Route: \`/dashboard/module-2/monthly-statements/[statementId]\`
+
+**Purpose:** View and manage monthly statement details
+
+**Access:** Authenticated users with Module 2 access
+
+**Data Fetching:**
+- \`useMonthlyStatement(statementId)\` - Fetch statement details
+- \`useReconciliation(statementId)\` - Fetch reconciliation details
+- \`useDischargeVolumesForMonth(siteId, month, year)\` - Fetch discharge volumes breakdown
+- \`useMarkReconciliationResolved()\` - Mark discrepancy resolved mutation
+- API: \`GET /api/v1/module-2/monthly-statements/{statementId}\`
+
+**Reconciliation Logic:**
+\`\`\`typescript
+const volumeBilled = statement.volume_billed_m3;
+const volumeDischargedTotal = sum(discharge_volumes.map(v => v.volume_m3));
+const variance = volumeBilled - volumeDischargedTotal;
+const variancePercentage = (variance / volumeBilled) * 100;
+const status = Math.abs(variancePercentage) <= 5 ? 'MATCHED' : 'DISCREPANCY';
+\`\`\`
+
+---
+
+### Route: \`/dashboard/module-2/consent-states\`
+
+**Purpose:** Track consent lifecycle state transitions
+
+**Access:** Authenticated users with Module 2 access
+
+**Data Fetching:**
+- \`useConsentStates(filters)\` - List consent state transitions
+- Query: \`['module-2-consent-states', filters, searchQuery, cursor]\`
+- API: \`GET /api/v1/module-2/consent-states?site_id={}&consent_id={}&state={}&transition_date_from={}&transition_date_to={}&cursor={}&limit=20\`
+
+**Features:**
+- State badges: DRAFT (gray), APPLICATION_SUBMITTED (blue), UNDER_REVIEW (yellow), APPROVED (light green), ACTIVE (green), SUSPENDED (orange), EXPIRED (red), RENEWED (teal), SURRENDERED (purple), REVOKED (dark red)
+- State transition flow visualization
+- Timeline view option
+
+---
+
+### Route: \`/dashboard/module-2/consent-states/new\`
+
+**Purpose:** Record new consent state transition
+
+**Access:** Authenticated users with Module 2 write access
+
+**Data Fetching:**
+- \`useRecordConsentStateTransition()\` - Record state transition mutation
+- \`useSiteConsents(siteId)\` - Fetch consents for site
+- \`useCurrentConsentState(consentId)\` - Fetch current consent state
+- \`useAllowedStateTransitions(currentState)\` - Fetch allowed next states
+- API: \`POST /api/v1/module-2/consent-states\`
+
+**State Machine Transitions:**
+- DRAFT → APPLICATION_SUBMITTED
+- APPLICATION_SUBMITTED → UNDER_REVIEW
+- UNDER_REVIEW → APPROVED, DRAFT
+- APPROVED → ACTIVE
+- ACTIVE → SUSPENDED, EXPIRED, RENEWED, SURRENDERED, REVOKED
+- SUSPENDED → ACTIVE, REVOKED
+- EXPIRED → RENEWED
+- RENEWED → ACTIVE
+
+---
+
+### Route: \`/dashboard/module-2/corrective-actions\`
+
+**Purpose:** Manage corrective actions for exceedances
+
+**Access:** Authenticated users with Module 2 access
+
+**Data Fetching:**
+- \`useCorrectiveActions(filters)\` - List corrective actions
+- Query: \`['module-2-corrective-actions', filters, searchQuery, cursor]\`
+- API: \`GET /api/v1/module-2/corrective-actions?site_id={}&exceedance_id={}&status={}&priority={}&due_date_from={}&due_date_to={}&cursor={}&limit=20\`
+
+**Features:**
+- Status badges with color coding
+- Priority badges (CRITICAL = red, HIGH = orange, MEDIUM = yellow, LOW = gray)
+- Overdue highlighting
+- Bulk actions (assign, update status)
+
+---
+
+## 3.34 Component Library Documentation
+
+### Template Components
+
+**CrudListPage Component**
+- Generic list page template used across all modules
+- Props: \`title\`, \`createButtonText\`, \`searchPlaceholder\`, \`filters\`, \`columns\`, \`data\`, \`onCreateClick\`
+- Features: Built-in search, filtering, pagination, empty states
+- Used by: All list pages (Enforcement Notices, Compliance Decisions, Sampling Logistics, etc.)
+
+**CrudDetailPage Component**
+- Generic detail page template for viewing/editing records
+- Props: \`title\`, \`breadcrumb\`, \`sections\`, \`actions\`, \`data\`, \`isLoading\`
+- Features: Section-based layout, action buttons, activity timeline
+- Used by: All detail pages across modules
+
+**FormWrapper Component**
+- Generic form wrapper with validation and submission handling
+- Props: \`title\`, \`onSubmit\`, \`onCancel\`, \`validationSchema\`, \`defaultValues\`
+- Features: React Hook Form integration, error handling, auto-save draft
+- Used by: All create/edit forms
+
+### Confidence Score Components
+
+**ConfidenceScoreBadge Component**
+- Displays confidence score (0-100) with color coding
+- Props: \`score\`, \`size\`, \`showLabel\`
+- Color coding: 80-100 (green), 60-79 (yellow), 0-59 (red)
+
+**ConfidenceScoreIndicator Component**
+- Linear progress bar showing confidence score
+- Props: \`score\`, \`label\`, \`showPercentage\`
+- Features: Animated progress bar, tooltip with details
+
+### State Machine Components
+
+**StateFlowVisualization Component**
+- Visualizes state machine transitions with current state highlighted
+- Props: \`states\`, \`currentState\`, \`allowedTransitions\`
+- Features: Interactive flow diagram, clickable states for transitions
+
+**StatusBadge Component**
+- Generic status badge with customizable colors and icons
+- Props: \`status\`, \`colorScheme\`, \`icon\`, \`size\`
+- Used by: All status fields across modules
 
 ---
 
@@ -3111,7 +6610,7 @@ interface TableProps<T> {
   columns: Column<T>[];
   onRowClick?: (row: T) => void;
   sortable?: boolean;
-  pagination?: PaginationProps;
+  pagination?: PaginationProps; // Cursor-based pagination
   loading?: boolean;
   emptyState?: React.ReactNode;
 }
@@ -3214,124 +6713,570 @@ function Table<T extends { id: string }>({
 - Responsive (horizontal scroll on mobile)
 - Accessibility (proper table semantics)
 
-### Pagination Component
+### Pagination Component (Cursor-Based)
+
+**Note:** The EcoComply platform uses **cursor-based pagination** (not page-based) to match the backend API implementation. This provides better performance for large datasets and ensures consistent results even when data changes.
 
 ```typescript
 interface PaginationProps {
-  currentPage: number;
-  totalPages: number;
-  pageSize: number;
-  totalItems: number;
-  onPageChange: (page: number) => void;
-  onPageSizeChange?: (size: number) => void;
-  showPageSizeSelector?: boolean;
+  hasMore: boolean;
+  nextCursor?: string;
+  onLoadMore: (cursor: string) => void;
+  isLoading?: boolean;
+  itemCount?: number; // Optional: current number of items loaded
+  limit?: number; // Optional: items per page (default 20)
 }
 
 function Pagination({
-  currentPage,
-  totalPages,
-  pageSize,
-  totalItems,
-  onPageChange,
-  onPageSizeChange,
-  showPageSizeSelector = false
+  hasMore,
+  nextCursor,
+  onLoadMore,
+  isLoading = false,
+  itemCount,
+  limit = 20
 }: PaginationProps) {
-  const getPageNumbers = () => {
-    const pages: (number | string)[] = [];
-    const maxVisible = 5;
-    
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
+  const handleLoadMore = () => {
+    if (nextCursor && !isLoading) {
+      onLoadMore(nextCursor);
       }
-    } else {
-      if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) pages.push(i);
-        pages.push('...');
-        pages.push(totalPages);
-      } else if (currentPage >= totalPages - 2) {
-        pages.push(1);
-        pages.push('...');
-        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
-      } else {
-        pages.push(1);
-        pages.push('...');
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
-        pages.push('...');
-        pages.push(totalPages);
-      }
-    }
-    
-    return pages;
   };
 
   return (
     <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
       <div className="flex items-center gap-2">
+        {itemCount !== undefined && (
         <span className="text-sm text-gray-700">
-          Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalItems)} of {totalItems}
+            Showing {itemCount} {hasMore ? '+' : ''} items
         </span>
-        {showPageSizeSelector && onPageSizeChange && (
-          <select
-            value={pageSize}
-            onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="ml-2 border border-gray-300 rounded-md px-2 py-1 text-sm"
-          >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
         )}
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Previous
-        </button>
-        {getPageNumbers().map((page, index) => (
-          <button
-            key={index}
-            onClick={() => typeof page === 'number' && onPageChange(page)}
-            disabled={page === '...'}
+          onClick={handleLoadMore}
+          disabled={!hasMore || !nextCursor || isLoading}
             className={cn(
-              "px-3 py-1 border border-gray-300 rounded-md text-sm",
-              page === currentPage && "bg-[#026A67] text-white border-[#026A67]",
-              page === '...' && "border-transparent cursor-default"
+            "px-4 py-2 bg-[#026A67] text-white rounded-md text-sm font-medium",
+            "hover:bg-[#014D4A] disabled:opacity-50 disabled:cursor-not-allowed",
+            "transition-colors duration-200"
             )}
           >
-            {page}
+          {isLoading ? (
+            <span className="flex items-center gap-2">
+              <Spinner className="w-4 h-4" />
+              Loading...
+            </span>
+          ) : (
+            'Load More'
+          )}
           </button>
-        ))}
-        <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Next
-        </button>
+        {!hasMore && itemCount !== undefined && itemCount > 0 && (
+          <span className="text-sm text-gray-500">
+            All items loaded
+          </span>
+        )}
       </div>
     </div>
   );
 }
 ```
 
+**Usage Example:**
+```typescript
+function ObligationsList() {
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  
+  const { data, isLoading } = useQuery({
+    queryKey: ['obligations', filters, cursor],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (cursor) params.append('cursor', cursor);
+      params.append('limit', '20');
+      return apiClient.get(`/obligations?${params.toString()}`);
+    },
+  });
+
+  const obligations = data?.data || [];
+  const hasMore = data?.pagination?.has_more || false;
+  const nextCursor = data?.pagination?.cursor;
+
+  return (
+    <div>
+      {/* Obligations list */}
+      {obligations.map(obligation => (
+        <ObligationCard key={obligation.id} obligation={obligation} />
+      ))}
+      
+      {/* Pagination */}
+      <Pagination
+        hasMore={hasMore}
+        nextCursor={nextCursor}
+        onLoadMore={(newCursor) => setCursor(newCursor)}
+        isLoading={isLoading}
+        itemCount={obligations.length}
+        limit={20}
+      />
+    </div>
+  );
+}
+```
+
 **Features:**
-- Page number display with ellipsis
-- Previous/Next buttons
-- Page size selector (optional)
-- Item count display
-- Disabled states
+- Cursor-based pagination (matches backend API)
+- "Load More" button pattern
+- Loading state support
+- Item count display (optional)
+- Disabled state when no more items
 - Keyboard accessible
+- Works seamlessly with React Query
+
+**Backend Response Format:**
+```json
+{
+  "data": [...],
+  "pagination": {
+    "cursor": "base64_encoded_cursor",
+    "limit": 20,
+    "has_more": true
+  }
+}
+```
 
 ---
 
 # 5. Data Fetching Logic
 
 ## 5.1 Data Fetching Strategy
+
+### 5.1.1 Health Check Integration
+
+**Health Check Hook:**
+```typescript
+interface HealthResponse {
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  timestamp: string;
+  version: string;
+  services: {
+    database: 'healthy' | 'unhealthy';
+    redis: 'healthy' | 'unhealthy';
+    storage: 'healthy' | 'unhealthy';
+  };
+}
+
+function useHealthCheck() {
+  return useQuery<HealthResponse>({
+    queryKey: ['health'],
+    queryFn: async () => {
+      const response = await fetch('/api/v1/health');
+      if (!response.ok) {
+        throw new Error('Health check failed');
+      }
+      return response.json();
+    },
+    refetchInterval: 30000, // Check every 30 seconds
+    retry: 1,
+    staleTime: 10000, // Consider fresh for 10 seconds
+  });
+}
+
+// Connection Status Component
+function ConnectionStatus() {
+  const { data, isLoading } = useHealthCheck();
+  
+  if (isLoading) return null;
+  
+  const isHealthy = data?.status === 'healthy';
+  
+  return (
+    <div className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm ${
+      isHealthy ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+    }`}>
+      <div className={`w-2 h-2 rounded-full ${isHealthy ? 'bg-green-500' : 'bg-red-500'}`} />
+      <span>{isHealthy ? 'Connected' : 'Connection Issues'}</span>
+    </div>
+  );
+}
+```
+
+### 5.1.2 Rate Limiting Handling
+
+**Rate Limit Interceptor:**
+```typescript
+interface RateLimitHeaders {
+  'X-Rate-Limit-Remaining'?: string;
+  'X-Rate-Limit-Reset'?: string;
+  'Retry-After'?: string;
+}
+
+function useRateLimit() {
+  const [rateLimitStatus, setRateLimitStatus] = useState<{
+    remaining: number;
+    reset: number;
+    isLimited: boolean;
+  } | null>(null);
+  
+  const checkRateLimit = useCallback((headers: Headers) => {
+    const remaining = parseInt(headers.get('X-Rate-Limit-Remaining') || '0', 10);
+    const reset = parseInt(headers.get('X-Rate-Limit-Reset') || '0', 10);
+    const retryAfter = headers.get('Retry-After');
+    
+    const isLimited = remaining === 0 || !!retryAfter;
+    
+    setRateLimitStatus({
+      remaining,
+      reset,
+      isLimited,
+    });
+    
+    // Show warning if low (less than 20% remaining)
+    if (remaining > 0 && remaining < 20) {
+      toast({
+        title: 'Rate Limit Warning',
+        description: `You have ${remaining} requests remaining. Limit resets in ${Math.ceil((reset * 1000 - Date.now()) / 60000)} minutes.`,
+        variant: 'warning',
+      });
+    }
+    
+    // Show error if rate limited
+    if (isLimited) {
+      const retrySeconds = retryAfter ? parseInt(retryAfter, 10) : Math.ceil((reset * 1000 - Date.now()) / 1000);
+      toast({
+        title: 'Rate Limit Exceeded',
+        description: `Too many requests. Please try again in ${Math.ceil(retrySeconds / 60)} minutes.`,
+        variant: 'error',
+      });
+    }
+  }, []);
+  
+  return { rateLimitStatus, checkRateLimit };
+}
+
+// Axios/Fetch interceptor example
+function createApiClient() {
+  const client = axios.create({
+    baseURL: '/api/v1',
+  });
+  
+  client.interceptors.response.use(
+    (response) => {
+      // Check rate limit headers
+      const { checkRateLimit } = useRateLimit();
+      checkRateLimit(response.headers);
+      return response;
+    },
+    (error) => {
+      if (error.response?.status === 429) {
+        const retryAfter = error.response.headers['retry-after'];
+        // Handle rate limit error
+      }
+      return Promise.reject(error);
+    }
+  );
+  
+  return client;
+}
+```
+
+### 5.1.3 Polling Strategy
+
+**Polling Hook for Long-Running Operations:**
+```typescript
+function usePolling<T>(
+  queryFn: () => Promise<T>,
+  options?: {
+    interval?: number;
+    enabled?: boolean;
+    until?: (data: T) => boolean; // Stop polling when condition is met
+  }
+) {
+  const { interval = 2000, enabled = true, until } = options || {};
+  
+  return useQuery({
+    queryKey: ['polling'],
+    queryFn,
+    enabled,
+    refetchInterval: (data) => {
+      // Stop polling if condition is met
+      if (until && data && until(data as T)) {
+        return false;
+      }
+      return interval;
+    },
+    refetchIntervalInBackground: true,
+  });
+}
+
+// Usage Examples:
+
+// Poll document extraction status
+function useDocumentExtractionStatus(documentId: string) {
+  return usePolling(
+    async () => {
+      const response = await fetch(`/api/v1/documents/${documentId}`);
+      return response.json();
+    },
+    {
+      interval: 3000, // Poll every 3 seconds
+      until: (data) => {
+        return data.extraction_status === 'COMPLETED' || 
+               data.extraction_status === 'FAILED';
+      },
+    }
+  );
+}
+
+## 5.6 Pack Generation Hooks
+
+### 5.6.1 useGeneratePack Hook
+
+**Purpose:** Generate standardized audit pack (all pack types, all modules)
+
+**Universal Pack Specification:**
+- **SLA:** < 2 minutes (< 120 seconds)
+- **Required Contents:** Compliance Score, Obligation list, Evidence (version-locked), Change justification, Compliance Clock summary, Pack provenance signature
+- **Regulator Access:** Secure link (no login required)
+
+**Hook:**
+```typescript
+interface GeneratePackParams {
+  siteId: string;
+  packType: 'AUDIT_PACK' | 'REGULATOR_INSPECTION' | 'TENDER_CLIENT_ASSURANCE' | 'BOARD_MULTI_SITE_RISK' | 'INSURER_BROKER';
+  dateRange: {
+    start: string; // ISO date
+    end: string; // ISO date
+  };
+  obligationIds?: string[];
+  includeArchived?: boolean;
+  recipientType?: 'REGULATOR' | 'CLIENT' | 'BOARD' | 'INSURER' | 'INTERNAL';
+  recipientName?: string;
+  purpose?: string;
+  moduleIds?: string[]; // Optional: filter by specific modules
+}
+
+interface PackGenerationStatus {
+  jobId: string;
+  status: 'QUEUED' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+  packId?: string;
+  estimatedCompletionTime?: string;
+  generationSlaSeconds?: number;
+  secureAccessToken?: string;
+  secureAccessUrl?: string;
+  error?: string;
+}
+
+function useGeneratePack() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  return useMutation({
+    mutationFn: async (params: GeneratePackParams) => {
+      const response = await fetch('/api/v1/audit-packs', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getAccessToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          site_id: params.siteId,
+          pack_type: params.packType,
+          date_range: params.dateRange,
+          obligation_ids: params.obligationIds,
+          include_archived: params.includeArchived ?? false,
+          recipient_type: params.recipientType,
+          recipient_name: params.recipientName,
+          purpose: params.purpose,
+          module_ids: params.moduleIds,
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'Failed to generate pack');
+      }
+      
+      return await response.json() as { data: PackGenerationStatus };
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Pack Generation Started',
+        description: `Pack generation queued. Estimated completion: ${formatTime(data.data.estimatedCompletionTime)}`,
+      });
+      
+      // Start polling for completion
+      if (data.data.jobId) {
+        pollPackGenerationStatus(data.data.jobId);
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: 'Pack Generation Failed',
+        description: error.message,
+        variant: 'error',
+      });
+    },
+  });
+}
+
+function pollPackGenerationStatus(jobId: string) {
+  const interval = setInterval(async () => {
+    const response = await fetch(`/api/v1/background-jobs/${jobId}`, {
+      headers: { 'Authorization': `Bearer ${getAccessToken()}` },
+    });
+    
+    if (!response.ok) return;
+    
+    const job = await response.json();
+    
+    if (job.data.status === 'COMPLETED') {
+      clearInterval(interval);
+      // Fetch pack details
+      const packResponse = await fetch(`/api/v1/audit-packs/${job.data.result.pack_id}`, {
+        headers: { 'Authorization': `Bearer ${getAccessToken()}` },
+      });
+      const pack = await packResponse.json();
+      
+      // Show success with pack details
+      toast({
+        title: 'Pack Generation Complete',
+        description: `Pack generated in ${pack.data.generation_sla_seconds}s. ${pack.data.generation_sla_seconds > 120 ? 'SLA exceeded.' : 'SLA met.'}`,
+      });
+      
+      // Invalidate packs list
+      queryClient.invalidateQueries(['auditPacks']);
+    } else if (job.data.status === 'FAILED') {
+      clearInterval(interval);
+      toast({
+        title: 'Pack Generation Failed',
+        description: job.data.error || 'Pack generation failed',
+        variant: 'error',
+      });
+    }
+  }, 2000); // Poll every 2 seconds
+  
+  // Stop polling after 5 minutes
+  setTimeout(() => clearInterval(interval), 5 * 60 * 1000);
+}
+```
+
+**Usage:**
+```typescript
+const generatePack = useGeneratePack();
+
+const handleGenerate = () => {
+  generatePack.mutate({
+    siteId: 'site-uuid',
+    packType: 'REGULATOR_INSPECTION',
+    dateRange: {
+      start: '2025-01-01',
+      end: '2025-12-31',
+    },
+    recipientType: 'REGULATOR',
+    recipientName: 'Environment Agency',
+    purpose: 'Annual compliance inspection',
+  });
+};
+```
+
+### 5.6.2 usePackDetails Hook
+
+**Purpose:** Fetch pack details including all standardized fields
+
+**Hook:**
+```typescript
+function usePackDetails(packId: string) {
+  return useQuery({
+    queryKey: ['auditPack', packId],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/audit-packs/${packId}`, {
+        headers: { 'Authorization': `Bearer ${getAccessToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch pack');
+      const result = await response.json();
+      return result.data as {
+        id: string;
+        pack_type: string;
+        compliance_score: number;
+        compliance_score_breakdown: any;
+        obligation_summary: any[];
+        evidence_summary: any[];
+        change_justification_history: any[];
+        compliance_clock_summary: any;
+        pack_provenance_signature: any;
+        generation_sla_seconds: number;
+        secure_access_token?: string;
+        secure_access_url?: string;
+        secure_access_expires_at?: string;
+        // ... other fields
+      };
+    },
+  });
+}
+```
+
+### 5.6.3 Pack Generation Component
+
+**Component:** `PackGenerationDialog`
+
+**Purpose:** UI component for generating standardized packs
+
+**Props:**
+```typescript
+interface PackGenerationDialogProps {
+  siteId: string;
+  open: boolean;
+  onClose: () => void;
+  onSuccess?: (packId: string) => void;
+}
+```
+
+**Features:**
+- Pack type selection (all 5 types)
+- Date range picker
+- Obligation filter (optional)
+- Module filter (optional)
+- Recipient information (for regulator packs)
+- Purpose field
+- SLA indicator (shows target: < 2 minutes)
+- Progress tracking during generation
+- Success message with secure link (if regulator pack)
+
+**Standardized Pack Display:**
+- Shows all 6 universal sections in preview
+- Compliance score badge (color-coded)
+- Obligation summary table
+- Evidence count
+- Compliance Clock summary
+- Pack provenance signature details
+
+---
+
+// Poll pack generation status
+function usePackGenerationStatus(packId: string) {
+  return usePolling(
+    async () => {
+      const response = await fetch(`/api/v1/packs/${packId}`);
+      return response.json();
+    },
+    {
+      interval: 5000, // Poll every 5 seconds
+      until: (data) => data.status === 'COMPLETED' || data.status === 'FAILED',
+    }
+  );
+}
+
+// Poll Excel import status
+function useExcelImportStatus(importId: string) {
+  return usePolling(
+    async () => {
+      const response = await fetch(`/api/v1/obligations/import/excel/${importId}`);
+      return response.json();
+    },
+    {
+      interval: 2000,
+      until: (data) => data.status === 'COMPLETED' || data.status === 'FAILED',
+    }
+  );
+}
+```
 
 **React Query (TanStack Query) Configuration:**
 ```typescript
@@ -3359,6 +7304,180 @@ const queryClient = new QueryClient({
 });
 ```
 
+---
+
+### 5.1.5 Cache Strategy & Invalidation
+
+**Cache Configuration by Data Type:**
+```typescript
+// Different stale times for different data types
+const cacheConfig = {
+  // Frequently changing data - short cache
+  notifications: {
+    staleTime: 30 * 1000, // 30 seconds
+    cacheTime: 2 * 60 * 1000, // 2 minutes
+  },
+  
+  // Moderately changing data
+  obligations: {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes
+  },
+  
+  // Rarely changing data - long cache
+  sites: {
+    staleTime: 15 * 60 * 1000, // 15 minutes
+    cacheTime: 30 * 60 * 1000, // 30 minutes
+  },
+  
+  // Static data - very long cache
+  modules: {
+    staleTime: 60 * 60 * 1000, // 1 hour
+    cacheTime: 24 * 60 * 60 * 1000, // 24 hours
+  },
+};
+```
+
+**Cache Invalidation Strategy:**
+```typescript
+// Invalidate related queries after mutation
+function useCreateObligation() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: createObligation,
+    onSuccess: (data) => {
+      // Invalidate related queries
+      queryClient.invalidateQueries(['obligations']);
+      queryClient.invalidateQueries(['sites', data.site_id, 'obligations']);
+      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries(['compliance-clocks']); // Compliance clocks may change
+    },
+  });
+}
+
+// Invalidate specific query
+function useUpdateObligation() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: updateObligation,
+    onSuccess: (data, variables) => {
+      // Invalidate specific obligation
+      queryClient.invalidateQueries(['obligation', variables.id]);
+      // Invalidate list queries
+      queryClient.invalidateQueries(['obligations']);
+    },
+  });
+}
+```
+
+**Backend Cache Headers:**
+```typescript
+// Frontend respects Cache-Control headers from backend
+// Example backend response:
+// Cache-Control: public, max-age=300, stale-while-revalidate=600
+
+// React Query automatically handles:
+// - max-age: Sets staleTime
+// - stale-while-revalidate: Allows serving stale data while fetching fresh
+```
+
+**Cache Synchronization:**
+```typescript
+// Update cache optimistically
+function useUpdateObligationOptimistic() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: updateObligation,
+    onMutate: async (newData) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries(['obligation', newData.id]);
+      
+      // Snapshot previous value
+      const previous = queryClient.getQueryData(['obligation', newData.id]);
+      
+      // Optimistically update
+      queryClient.setQueryData(['obligation', newData.id], (old: any) => ({
+        ...old,
+        ...newData,
+      }));
+      
+      return { previous };
+    },
+    onError: (err, newData, context) => {
+      // Rollback on error
+      queryClient.setQueryData(['obligation', newData.id], context?.previous);
+    },
+    onSettled: (data, error, variables) => {
+      // Refetch to ensure consistency
+      queryClient.invalidateQueries(['obligation', variables.id]);
+    },
+  });
+}
+```
+
+**Cache Refresh Strategy:**
+```typescript
+// Background refresh - update cache without showing loading
+function useObligationsWithBackgroundRefresh() {
+  return useQuery({
+    queryKey: ['obligations'],
+    queryFn: fetchObligations,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 2 * 60 * 1000, // Refresh every 2 minutes in background
+    refetchIntervalInBackground: true, // Continue refreshing when tab is inactive
+  });
+}
+```
+
+**Stale Data Indicators:**
+```typescript
+// Show indicator when data is stale
+function useStaleDataIndicator() {
+  const queryClient = useQueryClient();
+  const { data, dataUpdatedAt, isStale } = useQuery({
+    queryKey: ['obligations'],
+    queryFn: fetchObligations,
+    staleTime: 5 * 60 * 1000,
+  });
+  
+  const isDataStale = isStale || (Date.now() - dataUpdatedAt) > 5 * 60 * 1000;
+  
+  return { data, isDataStale };
+}
+
+// Component usage
+function ObligationsList() {
+  const { data, isDataStale } = useStaleDataIndicator();
+  
+  return (
+    <div>
+      {isDataStale && (
+        <div className="text-yellow-600 text-sm">
+          Data may be outdated. Refreshing...
+        </div>
+      )}
+      {/* List content */}
+    </div>
+  );
+}
+```
+
+**Cache Rules Summary:**
+| Data Type | Stale Time | Cache Time | Refresh Strategy |
+|-----------|------------|-----------|-----------------|
+| Notifications | 30s | 2min | Poll every 30s |
+| Obligations | 5min | 10min | Invalidate on mutation |
+| Documents | 2min | 5min | Invalidate on upload |
+| Sites | 15min | 30min | Invalidate on update |
+| Dashboard | 1min | 5min | Background refresh |
+| Compliance Clocks | 1min | 5min | Background refresh |
+| User Profile | 15min | 30min | Invalidate on update |
+
+---
+
 **Query Client Provider Setup:**
 ```typescript
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -3376,52 +7495,56 @@ function App({ children }: { children: React.ReactNode }) {
 
 ## 5.2 Custom Hooks - List Queries
 
-**Obligations List Hook:**
+**Obligations List Hook (Cursor-Based Pagination):**
 ```typescript
 interface UseObligationsParams {
-  siteId: string;
+  siteId?: string;
   filters?: {
-    status?: string[];
-    category?: string[];
-    deadline?: {
-      start?: string;
-      end?: string;
-    };
+    status?: string;
+    category?: string;
+    document_id?: string;
     search?: string;
   };
-  pagination?: {
-    page?: number;
-    limit?: number;
-    cursor?: string;
-  };
+  cursor?: string; // Cursor for pagination
+  limit?: number; // Items per page (default 20, max 100)
   sort?: {
     field: string;
     direction: 'asc' | 'desc';
   };
 }
 
+interface ObligationsResponse {
+  data: Obligation[];
+  pagination: {
+    cursor?: string;
+    limit: number;
+    has_more: boolean;
+  };
+}
+
 function useObligations({
   siteId,
   filters = {},
-  pagination = { page: 1, limit: 20 },
-  sort = { field: 'deadline', direction: 'asc' }
+  cursor,
+  limit = 20,
+  sort = { field: 'created_at', direction: 'desc' }
 }: UseObligationsParams) {
-  return useQuery({
-    queryKey: ['obligations', siteId, filters, pagination, sort],
+  return useQuery<ObligationsResponse>({
+    queryKey: ['obligations', siteId, filters, cursor, limit, sort],
     queryFn: async () => {
       const params = new URLSearchParams();
       
-      // Add filters
-      if (filters.status) params.append('filter[status]', filters.status.join(','));
-      if (filters.category) params.append('filter[category]', filters.category.join(','));
-      if (filters.search) params.append('filter[search]', filters.search);
+      // Add filters (map frontend filters to backend query parameters)
+      if (filters.status) params.append('status', filters.status);
+      if (filters.category) params.append('category', filters.category);
+      if (filters.document_id) params.append('document_id', filters.document_id);
+      if (filters.search) params.append('search', filters.search);
       
-      // Add pagination
-      if (pagination.page) params.append('page', pagination.page.toString());
-      if (pagination.limit) params.append('limit', pagination.limit.toString());
-      if (pagination.cursor) params.append('cursor', pagination.cursor);
+      // Add pagination (cursor-based)
+      if (cursor) params.append('cursor', cursor);
+      params.append('limit', limit.toString());
       
-      // Add sort
+      // Add sort (format: field or -field for descending)
       params.append('sort', `${sort.direction === 'desc' ? '-' : ''}${sort.field}`);
       
       const response = await fetch(`/api/v1/obligations?${params.toString()}`, {
@@ -3436,42 +7559,1361 @@ function useObligations({
       
       return response.json();
     },
-    enabled: !!siteId, // Only fetch if siteId is provided
+    enabled: true, // Can fetch without siteId (RLS will filter)
     staleTime: 2 * 60 * 1000, // 2 minutes for list data
     keepPreviousData: true, // Keep previous data while fetching new data
   });
 }
 ```
 
-**Documents List Hook:**
+**Usage Example:**
+```typescript
+function ObligationsPage() {
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [filters, setFilters] = useState({ status: '', category: '' });
+  
+  // Reset cursor when filters change
+  useEffect(() => {
+    setCursor(undefined);
+  }, [filters]);
+  
+  const { data, isLoading } = useObligations({
+    filters,
+    cursor,
+    limit: 20,
+  });
+  
+  const obligations = data?.data || [];
+  const hasMore = data?.pagination?.has_more || false;
+  const nextCursor = data?.pagination?.cursor;
+  
+  return (
+    <div>
+      {/* Filters */}
+      <Filters filters={filters} onChange={setFilters} />
+      
+      {/* Obligations list */}
+      {obligations.map(obligation => (
+        <ObligationCard key={obligation.id} obligation={obligation} />
+      ))}
+      
+      {/* Pagination */}
+      <Pagination
+        hasMore={hasMore}
+        nextCursor={nextCursor}
+        onLoadMore={(newCursor) => setCursor(newCursor)}
+        isLoading={isLoading}
+        itemCount={obligations.length}
+      />
+    </div>
+  );
+}
+```
+
+**Documents List Hook (Cursor-Based Pagination):**
 ```typescript
 interface UseDocumentsParams {
-  siteId: string;
+  siteId?: string;
   filters?: {
-    documentType?: string[];
-    status?: string[];
-    extractionStatus?: string[];
+    documentType?: string;
+    status?: string;
+    extractionStatus?: string;
     search?: string;
   };
-  pagination?: PaginationParams;
+  cursor?: string; // Cursor for pagination
+  limit?: number; // Items per page (default 20)
+  sort?: {
+    field: string;
+    direction: 'asc' | 'desc';
+  };
 }
 
-function useDocuments({ siteId, filters = {}, pagination }: UseDocumentsParams) {
-  return useQuery({
-    queryKey: ['documents', siteId, filters, pagination],
+interface DocumentsResponse {
+  data: Document[];
+  pagination: {
+    cursor?: string;
+    limit: number;
+    has_more: boolean;
+  };
+}
+
+function useDocuments({ 
+  siteId, 
+  filters = {}, 
+  cursor,
+  limit = 20,
+  sort = { field: 'created_at', direction: 'desc' }
+}: UseDocumentsParams) {
+  return useQuery<DocumentsResponse>({
+    queryKey: ['documents', siteId, filters, cursor, limit, sort],
     queryFn: async () => {
-      const params = buildQueryParams(filters, pagination);
-      const response = await fetch(`/api/v1/documents?${params}`, {
+      const params = new URLSearchParams();
+      
+      // Add filters (map frontend filters to backend query parameters)
+      if (filters.documentType) params.append('document_type', filters.documentType);
+      if (filters.status) params.append('status', filters.status);
+      if (filters.extractionStatus) params.append('extraction_status', filters.extractionStatus);
+      if (filters.search) params.append('search', filters.search);
+      
+      // Add pagination (cursor-based)
+      if (cursor) params.append('cursor', cursor);
+      params.append('limit', limit.toString());
+      
+      // Add sort (format: field or -field for descending)
+      params.append('sort', `${sort.direction === 'desc' ? '-' : ''}${sort.field}`);
+      
+      const response = await fetch(`/api/v1/documents?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${getAuthToken()}` },
       });
       if (!response.ok) throw new Error('Failed to fetch documents');
       return response.json();
     },
-    enabled: !!siteId,
+    enabled: true, // Can fetch without siteId (RLS will filter)
     staleTime: 3 * 60 * 1000, // 3 minutes
+    keepPreviousData: true,
   });
 }
 ```
+
+### 5.2.1 Filter & Sort Parameter Mapping Utilities
+
+**Filter Parameter Builder:**
+```typescript
+interface FilterParams {
+  [key: string]: string | string[] | number | boolean | undefined;
+}
+
+function buildFilterParams(filters: FilterParams): URLSearchParams {
+  const params = new URLSearchParams();
+  
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    
+    if (Array.isArray(value)) {
+      // For array values, join with comma or use multiple params
+      if (value.length > 0) {
+        params.append(key, value.join(','));
+      }
+    } else if (typeof value === 'boolean') {
+      params.append(key, value.toString());
+    } else {
+      params.append(key, value.toString());
+    }
+  });
+  
+  return params;
+}
+
+// Backend filter format examples:
+// Single value: ?status=OVERDUE
+// Multiple values: ?status=OVERDUE,PENDING (comma-separated)
+// Date range: ?deadline_date[gte]=2025-01-01&deadline_date[lte]=2025-12-31
+// Boolean: ?is_subjective=true
+```
+
+**Sort Parameter Builder:**
+```typescript
+interface SortConfig {
+  field: string;
+  direction: 'asc' | 'desc';
+}
+
+function buildSortParam(sort: SortConfig | SortConfig[]): string {
+  if (Array.isArray(sort)) {
+    // Multiple sort fields: "field1,-field2,field3"
+    return sort.map(s => 
+      `${s.direction === 'desc' ? '-' : ''}${s.field}`
+    ).join(',');
+  }
+  
+  // Single sort field: "field" or "-field"
+  return `${sort.direction === 'desc' ? '-' : ''}${sort.field}`;
+}
+
+// Backend sort format:
+// Ascending: ?sort=deadline_date
+// Descending: ?sort=-deadline_date (prefix with -)
+// Multiple: ?sort=deadline_date,-created_at
+```
+
+**Complete Query Parameter Builder:**
+```typescript
+interface QueryParams {
+  filters?: FilterParams;
+  sort?: SortConfig | SortConfig[];
+  cursor?: string;
+  limit?: number;
+  search?: string;
+}
+
+function buildQueryParams(params: QueryParams): URLSearchParams {
+  const urlParams = new URLSearchParams();
+  
+  // Add filters
+  if (params.filters) {
+    const filterParams = buildFilterParams(params.filters);
+    filterParams.forEach((value, key) => {
+      urlParams.append(key, value);
+    });
+  }
+  
+  // Add sort
+  if (params.sort) {
+    urlParams.append('sort', buildSortParam(params.sort));
+  }
+  
+  // Add pagination
+  if (params.cursor) {
+    urlParams.append('cursor', params.cursor);
+  }
+  if (params.limit) {
+    urlParams.append('limit', params.limit.toString());
+  }
+  
+  // Add search
+  if (params.search) {
+    urlParams.append('search', params.search);
+  }
+  
+  return urlParams;
+}
+
+// Usage example:
+const params = buildQueryParams({
+  filters: {
+    status: 'OVERDUE',
+    site_id: 'uuid-here',
+    'deadline_date[gte]': '2025-01-01',
+  },
+  sort: { field: 'deadline_date', direction: 'asc' },
+  cursor: 'base64-cursor',
+  limit: 20,
+  search: 'monitoring',
+});
+
+const url = `/api/v1/obligations?${params.toString()}`;
+```
+
+---
+
+### 5.2.2 Module 4 API Integration Hooks
+
+**Waste Streams Hook:**
+```typescript
+interface WasteStreamsResponse {
+  data: WasteStream[];
+  pagination: {
+    cursor?: string;
+    limit: number;
+    has_more: boolean;
+  };
+}
+
+function useWasteStreams(siteId: string, cursor?: string, limit = 20) {
+  return useQuery<WasteStreamsResponse>({
+    queryKey: ['waste-streams', siteId, cursor],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (cursor) params.append('cursor', cursor);
+      params.append('limit', limit.toString());
+      
+      const response = await fetch(`/api/v1/waste-streams?site_id=${siteId}&${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch waste streams');
+      return response.json();
+    },
+    enabled: !!siteId,
+  });
+}
+```
+
+**Consignment Notes Hook:**
+```typescript
+function useConsignmentNotes(siteId: string, cursor?: string, limit = 20) {
+  return useQuery({
+    queryKey: ['consignment-notes', siteId, cursor],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (cursor) params.append('cursor', cursor);
+      params.append('limit', limit.toString());
+      
+      const response = await fetch(`/api/v1/consignment-notes?site_id=${siteId}&${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch consignment notes');
+      return response.json();
+    },
+    enabled: !!siteId,
+  });
+}
+
+// Pre-submission validation hook
+function useConsignmentNoteValidation(consignmentNoteId: string) {
+  return useQuery({
+    queryKey: ['consignment-note-validation', consignmentNoteId],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/consignment-notes/${consignmentNoteId}/validate`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Validation failed');
+      return response.json();
+    },
+    enabled: !!consignmentNoteId,
+  });
+}
+```
+
+**Validation Rules Hook:**
+```typescript
+function useValidationRules(siteId: string) {
+  return useQuery({
+    queryKey: ['validation-rules', siteId],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/validation-rules?site_id=${siteId}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch validation rules');
+      return response.json();
+    },
+    enabled: !!siteId,
+  });
+}
+```
+
+**End-Point Proofs Hook:**
+```typescript
+function useEndPointProofs(siteId: string, cursor?: string, limit = 20) {
+  return useQuery({
+    queryKey: ['end-point-proofs', siteId, cursor],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (cursor) params.append('cursor', cursor);
+      params.append('limit', limit.toString());
+      
+      const response = await fetch(`/api/v1/end-point-proofs?site_id=${siteId}&${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch end-point proofs');
+      return response.json();
+    },
+    enabled: !!siteId,
+  });
+}
+```
+
+**Chain of Custody Hook:**
+```typescript
+function useChainOfCustody(chainId: string) {
+  return useQuery({
+    queryKey: ['chain-of-custody', chainId],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/chain-of-custody/${chainId}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch chain of custody');
+      return response.json();
+    },
+    enabled: !!chainId,
+  });
+}
+```
+
+---
+
+
+### 5.2.4 Notifications API Integration Hooks
+
+**Notifications List Hook:**
+```typescript
+interface NotificationsResponse {
+  data: Notification[];
+  pagination: {
+    cursor?: string;
+    limit: number;
+    has_more: boolean;
+  };
+}
+
+function useNotifications(cursor?: string, limit = 20) {
+  return useQuery<NotificationsResponse>({
+    queryKey: ['notifications', cursor],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (cursor) params.append('cursor', cursor);
+      params.append('limit', limit.toString());
+      
+      const response = await fetch(`/api/v1/notifications?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch notifications');
+      return response.json();
+    },
+    refetchInterval: 30000, // Poll every 30 seconds for new notifications
+  });
+}
+```
+
+**Unread Notification Count Hook:**
+```typescript
+function useUnreadNotificationCount() {
+  return useQuery({
+    queryKey: ['notifications-unread-count'],
+    queryFn: async () => {
+      const response = await fetch('/api/v1/notifications/unread-count', {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch unread count');
+      return response.json();
+    },
+    refetchInterval: 10000, // Poll every 10 seconds
+  });
+}
+```
+
+**Mark Notification as Read Mutation:**
+```typescript
+function useMarkNotificationRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (notificationId: string) => {
+      const response = await fetch(`/api/v1/notifications/${notificationId}/read`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to mark notification as read');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['notifications']);
+      queryClient.invalidateQueries(['notifications-unread-count']);
+    },
+  });
+}
+```
+
+**Notification Preferences Hook:**
+```typescript
+function useNotificationPreferences(userId: string) {
+  return useQuery({
+    queryKey: ['notification-preferences', userId],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/users/${userId}/notification-preferences`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch notification preferences');
+      return response.json();
+    },
+    enabled: !!userId,
+  });
+}
+
+function useUpdateNotificationPreferences() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, preferences }: { userId: string; preferences: NotificationPreferences }) => {
+      const response = await fetch(`/api/v1/users/${userId}/notification-preferences`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(preferences),
+      });
+      if (!response.ok) throw new Error('Failed to update notification preferences');
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries(['notification-preferences', variables.userId]);
+    },
+  });
+}
+```
+
+---
+
+### 5.2.5 Pack Generation API Integration Hooks
+
+**Pack Generation Hooks:**
+```typescript
+function useGenerateRegulatorPack() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: CreateRegulatorPackRequest) => {
+      const response = await fetch('/api/v1/packs/regulator', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to generate regulator pack');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['packs']);
+    },
+  });
+}
+
+function useGenerateTenderPack() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: CreateTenderPackRequest) => {
+      const response = await fetch('/api/v1/packs/tender', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to generate tender pack');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['packs']);
+    },
+  });
+}
+
+function useGenerateBoardPack() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: CreateBoardPackRequest) => {
+      const response = await fetch('/api/v1/packs/board', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to generate board pack');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['packs']);
+    },
+  });
+}
+
+function useGenerateInsurerPack() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: CreateInsurerPackRequest) => {
+      const response = await fetch('/api/v1/packs/insurer', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to generate insurer pack');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['packs']);
+    },
+  });
+}
+```
+
+**Pack Distribution Hook:**
+```typescript
+function useDistributePack() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ packId, config }: { packId: string; config: DistributePackRequest }) => {
+      const response = await fetch(`/api/v1/packs/${packId}/distribute`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(config),
+      });
+      if (!response.ok) throw new Error('Failed to distribute pack');
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries(['pack', variables.packId]);
+    },
+  });
+}
+```
+
+**Pack Share Link Hook:**
+```typescript
+function usePackShareLink(packId: string) {
+  return useQuery({
+    queryKey: ['pack-share-link', packId],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/packs/${packId}/share`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch share link');
+      return response.json();
+    },
+    enabled: !!packId,
+  });
+}
+```
+
+---
+
+### 5.2.6 Excel Import API Integration Hooks
+
+**Excel Import Hooks:**
+```typescript
+function useExcelImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ file, options }: { file: File; options: ExcelImportOptions }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (options.create_missing_sites) formData.append('create_missing_sites', 'true');
+      if (options.create_missing_permits) formData.append('create_missing_permits', 'true');
+      if (options.skip_duplicates) formData.append('skip_duplicates', 'true');
+      
+      const response = await fetch('/api/v1/obligations/import/excel', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+        body: formData,
+      });
+      if (!response.ok) throw new Error('Failed to upload Excel file');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['obligations']);
+    },
+  });
+}
+
+function useExcelImportPreview(importId: string) {
+  return useQuery({
+    queryKey: ['excel-import-preview', importId],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/obligations/import/excel/${importId}/preview`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch import preview');
+      return response.json();
+    },
+    enabled: !!importId,
+  });
+}
+
+function useExcelImportStatus(importId: string) {
+  return usePolling(
+    async () => {
+      const response = await fetch(`/api/v1/obligations/import/excel/${importId}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch import status');
+      return response.json();
+    },
+    {
+      interval: 2000,
+      until: (data) => data.status === 'COMPLETED' || data.status === 'FAILED',
+    }
+  );
+}
+
+function useConfirmExcelImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ importId, skipErrors }: { importId: string; skipErrors?: boolean }) => {
+      const response = await fetch(`/api/v1/obligations/import/excel/${importId}/confirm`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ skip_errors: skipErrors }),
+      });
+      if (!response.ok) throw new Error('Failed to confirm import');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['obligations']);
+    },
+  });
+}
+```
+
+---
+
+### 5.2.7 Review Queue API Integration Hooks
+
+**Review Queue Hooks:**
+```typescript
+function useReviewQueue(filters?: {
+  review_type?: string;
+  is_blocking?: boolean;
+  site_id?: string;
+}, cursor?: string, limit = 20) {
+  return useQuery({
+    queryKey: ['review-queue', filters, cursor],
+    queryFn: async () => {
+      const params = buildQueryParams({
+        filters,
+        cursor,
+        limit,
+      });
+      
+      const response = await fetch(`/api/v1/review-queue?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch review queue');
+      return response.json();
+    },
+  });
+}
+
+function useConfirmReviewItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (itemId: string) => {
+      const response = await fetch(`/api/v1/review-queue/${itemId}/confirm`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to confirm review item');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['review-queue']);
+    },
+  });
+}
+
+function useRejectReviewItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ itemId, reason }: { itemId: string; reason?: string }) => {
+      const response = await fetch(`/api/v1/review-queue/${itemId}/reject`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason }),
+      });
+      if (!response.ok) throw new Error('Failed to reject review item');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['review-queue']);
+    },
+  });
+}
+
+function useEditReviewItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ itemId, data }: { itemId: string; data: any }) => {
+      const response = await fetch(`/api/v1/review-queue/${itemId}/edit`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to edit review item');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['review-queue']);
+    },
+  });
+}
+```
+
+---
+
+### 5.2.8 Search API Integration Hooks
+
+**Search Strategy:**
+- **Current:** Client-side filtering via query parameters on existing endpoints
+- **Future:** Dedicated search endpoint (if needed for advanced features)
+
+**Current Implementation - Client-Side Search:**
+```typescript
+// Global search using multiple API calls with filtering
+function useGlobalSearch(query: string, filters?: SearchFilters) {
+  // Uses existing endpoints with search parameter
+  const { data: documents } = useDocuments({ search: query });
+  const { data: obligations } = useObligations({ search: query });
+  const { data: sites } = useSites({ search: query });
+  
+  return {
+    documents: documents?.data || [],
+    obligations: obligations?.data || [],
+    sites: sites?.data || [],
+    isLoading: documents?.isLoading || obligations?.isLoading || sites?.isLoading,
+  };
+}
+```
+
+**Server-Side Search via Query Parameters:**
+```typescript
+// Add search parameter to existing endpoints
+function useObligationsWithSearch(filters?: {
+  search?: string;
+  site_id?: string;
+  status?: string;
+}) {
+  return useQuery({
+    queryKey: ['obligations', filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters?.search) params.append('search', filters.search);
+      if (filters?.site_id) params.append('site_id', filters.site_id);
+      if (filters?.status) params.append('status', filters.status);
+      
+      const response = await fetch(`/api/v1/obligations?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      return response.json();
+    },
+  });
+}
+```
+
+**Dedicated Search Endpoint (If Available):**
+```typescript
+interface SearchResponse {
+  data: {
+    documents: Document[];
+    obligations: Obligation[];
+    sites: Site[];
+    evidence: Evidence[];
+  };
+  meta: {
+    total: number;
+    query: string;
+    took: number; // Search time in ms
+  };
+}
+
+function useGlobalSearch(query: string, filters?: {
+  types?: ('document' | 'obligation' | 'site' | 'evidence')[];
+  site_id?: string;
+}) {
+  return useQuery<SearchResponse>({
+    queryKey: ['global-search', query, filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append('q', query);
+      if (filters?.types) params.append('types', filters.types.join(','));
+      if (filters?.site_id) params.append('site_id', filters.site_id);
+      
+      const response = await fetch(`/api/v1/search?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Search failed');
+      return response.json();
+    },
+    enabled: query.length > 2,
+    staleTime: 30000, // 30 seconds
+  });
+}
+```
+
+**Search Suggestions Hook:**
+```typescript
+function useSearchSuggestions(query: string) {
+  return useQuery({
+    queryKey: ['search-suggestions', query],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/search/suggestions?q=${encodeURIComponent(query)}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Suggestions failed');
+      return response.json();
+    },
+    enabled: query.length > 1,
+    staleTime: 60000, // 1 minute
+  });
+}
+```
+
+**Search Component:**
+```typescript
+function GlobalSearch() {
+  const [query, setQuery] = useState('');
+  const debouncedQuery = useDebounce(query, 300);
+  const { data, isLoading } = useGlobalSearch(debouncedQuery);
+  const { data: suggestions } = useSearchSuggestions(debouncedQuery);
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search documents, obligations, sites..."
+        className="w-full px-4 py-2 border rounded-md"
+      />
+      {suggestions && suggestions.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg">
+          {suggestions.map((suggestion) => (
+            <div key={suggestion.id} onClick={() => setQuery(suggestion.text)}>
+              {suggestion.text}
+            </div>
+          ))}
+        </div>
+      )}
+      {isLoading && <div>Searching...</div>}
+      {data && (
+        <div>
+          {data.documents.length > 0 && (
+            <div>
+              <h3>Documents</h3>
+              {data.documents.map((doc) => (
+                <SearchResultItem key={doc.id} item={doc} type="document" />
+              ))}
+            </div>
+          )}
+          {data.obligations.length > 0 && (
+            <div>
+              <h3>Obligations</h3>
+              {data.obligations.map((ob) => (
+                <SearchResultItem key={ob.id} item={ob} type="obligation" />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+**Note:** If no dedicated search endpoint exists, document that search is performed via client-side filtering of existing endpoints using the `search` query parameter.
+
+---
+
+### 5.2.8 Search API Integration Hooks
+
+**Search Strategy:**
+- **Current:** Client-side filtering via query parameters on existing endpoints
+- **Future:** Dedicated search endpoint (if needed for advanced features)
+
+**Current Implementation - Client-Side Search:**
+```typescript
+// Global search using multiple API calls with filtering
+function useGlobalSearch(query: string, filters?: SearchFilters) {
+  // Uses existing endpoints with search parameter
+  const { data: documents } = useDocuments({ search: query });
+  const { data: obligations } = useObligations({ search: query });
+  const { data: sites } = useSites({ search: query });
+  
+  return {
+    documents: documents?.data || [],
+    obligations: obligations?.data || [],
+    sites: sites?.data || [],
+    isLoading: documents?.isLoading || obligations?.isLoading || sites?.isLoading,
+  };
+}
+```
+
+**Server-Side Search via Query Parameters:**
+```typescript
+// Add search parameter to existing endpoints
+function useObligationsWithSearch(filters?: {
+  search?: string;
+  site_id?: string;
+  status?: string;
+}) {
+  return useQuery({
+    queryKey: ['obligations', filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters?.search) params.append('search', filters.search);
+      if (filters?.site_id) params.append('site_id', filters.site_id);
+      if (filters?.status) params.append('status', filters.status);
+      
+      const response = await fetch(`/api/v1/obligations?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      return response.json();
+    },
+  });
+}
+```
+
+**Dedicated Search Endpoint (If Available):**
+```typescript
+interface SearchResponse {
+  data: {
+    documents: Document[];
+    obligations: Obligation[];
+    sites: Site[];
+    evidence: Evidence[];
+  };
+  meta: {
+    total: number;
+    query: string;
+    took: number; // Search time in ms
+  };
+}
+
+function useGlobalSearch(query: string, filters?: {
+  types?: ('document' | 'obligation' | 'site' | 'evidence')[];
+  site_id?: string;
+}) {
+  return useQuery<SearchResponse>({
+    queryKey: ['global-search', query, filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append('q', query);
+      if (filters?.types) params.append('types', filters.types.join(','));
+      if (filters?.site_id) params.append('site_id', filters.site_id);
+      
+      const response = await fetch(`/api/v1/search?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Search failed');
+      return response.json();
+    },
+    enabled: query.length > 2,
+    staleTime: 30000, // 30 seconds
+  });
+}
+```
+
+**Search Suggestions Hook:**
+```typescript
+function useSearchSuggestions(query: string) {
+  return useQuery({
+    queryKey: ['search-suggestions', query],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/search/suggestions?q=${encodeURIComponent(query)}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Suggestions failed');
+      return response.json();
+    },
+    enabled: query.length > 1,
+    staleTime: 60000, // 1 minute
+  });
+}
+```
+
+**Note:** If no dedicated search endpoint exists, document that search is performed via client-side filtering of existing endpoints using the `search` query parameter.
+
+---
+
+### 5.2.3 Compliance Clocks API Integration Hooks
+
+**Compliance Clocks List Hook:**
+```typescript
+interface ComplianceClocksResponse {
+  data: ComplianceClock[];
+  pagination: {
+    cursor?: string;
+    limit: number;
+    has_more: boolean;
+  };
+}
+
+function useComplianceClocks(filters?: {
+  status?: 'RED' | 'AMBER' | 'GREEN';
+  module_id?: string;
+  site_id?: string;
+}, cursor?: string, limit = 20) {
+  return useQuery<ComplianceClocksResponse>({
+    queryKey: ['compliance-clocks', filters, cursor],
+    queryFn: async () => {
+      const params = buildQueryParams({
+        filters,
+        cursor,
+        limit,
+      });
+      
+      const response = await fetch(`/api/v1/compliance-clocks?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch compliance clocks');
+      return response.json();
+    },
+  });
+}
+```
+
+**Compliance Clock Detail Hook:**
+```typescript
+function useComplianceClock(clockId: string) {
+  return useQuery({
+    queryKey: ['compliance-clock', clockId],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/compliance-clocks/${clockId}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch compliance clock');
+      return response.json();
+    },
+    enabled: !!clockId,
+  });
+}
+```
+
+**Compliance Clocks Dashboard Hook:**
+```typescript
+function useComplianceClocksDashboard() {
+  return useQuery({
+    queryKey: ['compliance-clocks-dashboard'],
+    queryFn: async () => {
+      const response = await fetch('/api/v1/compliance-clocks/dashboard', {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch dashboard');
+      return response.json();
+    },
+    staleTime: 60000, // 1 minute - dashboard data
+  }  );
+}
+```
+
+---
+
+### 5.7.2 Chunked Upload for Large Files
+
+**File Size Limits:**
+- Small files (<10MB): Direct upload
+- Large files (≥10MB): Chunked upload
+- Maximum file size: 50MB per file (as per backend spec)
+
+**Chunked Upload Hook:**
+```typescript
+const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
+
+function useChunkedUpload(file: File) {
+  const [progress, setProgress] = useState(0);
+  const [uploadId, setUploadId] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const upload = async () => {
+    setIsUploading(true);
+    setError(null);
+    setProgress(0);
+
+    try {
+      // Step 1: Initialize upload
+      const initResponse = await fetch('/api/v1/uploads/init', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filename: file.name,
+          size: file.size,
+          mime_type: file.type,
+        }),
+      });
+      
+      if (!initResponse.ok) {
+        throw new Error('Failed to initialize upload');
+      }
+      
+      const { upload_id } = await initResponse.json();
+      setUploadId(upload_id);
+
+      // Step 2: Upload chunks
+      const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+      
+      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        const start = chunkIndex * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, file.size);
+        const chunk = file.slice(start, end);
+
+        const formData = new FormData();
+        formData.append('chunk', chunk);
+        formData.append('upload_id', upload_id);
+        formData.append('chunk_index', chunkIndex.toString());
+        formData.append('total_chunks', totalChunks.toString());
+
+        const chunkResponse = await fetch('/api/v1/uploads/chunk', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${getAuthToken()}`,
+          },
+          body: formData,
+        });
+
+        if (!chunkResponse.ok) {
+          throw new Error(`Chunk ${chunkIndex} upload failed`);
+        }
+
+        // Update progress
+        const chunkProgress = ((chunkIndex + 1) / totalChunks) * 100;
+        setProgress(chunkProgress);
+      }
+
+      // Step 3: Complete upload
+      const completeResponse = await fetch(`/api/v1/uploads/${upload_id}/complete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+      });
+
+      if (!completeResponse.ok) {
+        throw new Error('Upload completion failed');
+      }
+
+      const result = await completeResponse.json();
+      return result;
+    } catch (err) {
+      setError(err as Error);
+      throw err;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return { upload, progress, isUploading, error, uploadId };
+}
+```
+
+**Resumable Upload Hook:**
+```typescript
+function useResumableUpload(file: File, uploadId?: string) {
+  const { upload, progress, isUploading, error } = useChunkedUpload(file);
+  const [resumeStatus, setResumeStatus] = useState<{
+    uploaded_chunks: number;
+    total_chunks: number;
+  } | null>(null);
+
+  // Check if upload can be resumed
+  const checkResume = async () => {
+    if (!uploadId) return null;
+    
+    const response = await fetch(`/api/v1/uploads/${uploadId}/status`, {
+      headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+    });
+    
+    if (response.ok) {
+      const status = await response.json();
+      setResumeStatus(status);
+      return status;
+    }
+    return null;
+  };
+
+  // Resume from last uploaded chunk
+  const resume = async () => {
+    const status = await checkResume();
+    if (!status) {
+      // Start new upload
+      return upload();
+    }
+
+    // Continue from last chunk
+    const { uploaded_chunks, total_chunks } = status;
+    // ... continue upload logic from chunk index: uploaded_chunks
+    return upload();
+  };
+
+  return { resume, checkResume, progress, isUploading, error, resumeStatus };
+}
+```
+
+**Upload Progress Tracking:**
+```typescript
+function useUploadProgress(uploadId: string) {
+  return useQuery({
+    queryKey: ['upload-progress', uploadId],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/uploads/${uploadId}/progress`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to get progress');
+      return response.json();
+    },
+    enabled: !!uploadId,
+    refetchInterval: 1000, // Poll every second
+  });
+}
+```
+
+**Usage in Component:**
+```typescript
+function LargeFileUpload() {
+  const [file, setFile] = useState<File | null>(null);
+  const { upload, progress, isUploading, error } = useChunkedUpload(file!);
+
+  const handleUpload = async () => {
+    if (!file) return;
+    
+    if (file.size >= 10 * 1024 * 1024) {
+      // Use chunked upload for large files
+      try {
+        await upload();
+        toast({ title: 'Success', description: 'File uploaded successfully' });
+      } catch (err) {
+        toast({ title: 'Error', description: 'Upload failed. Please try again.' });
+      }
+    } else {
+      // Use regular upload for small files
+      // ... regular upload logic
+    }
+  };
+
+  return (
+    <div>
+      <input 
+        type="file" 
+        onChange={(e) => setFile(e.target.files?.[0] || null)} 
+        accept=".pdf,.doc,.docx"
+      />
+      {file && file.size >= 10 * 1024 * 1024 && (
+        <div>
+          <p className="text-sm text-gray-600">
+            Large file detected ({(file.size / 1024 / 1024).toFixed(2)}MB). 
+            Will use chunked upload.
+          </p>
+          {isUploading && (
+            <div>
+              <ProgressBar value={progress} />
+              <span className="text-sm">{Math.round(progress)}%</span>
+            </div>
+          )}
+        </div>
+      )}
+      {error && (
+        <div className="text-red-600 text-sm">
+          {error.message}
+        </div>
+      )}
+      <button 
+        onClick={handleUpload} 
+        disabled={!file || isUploading}
+      >
+        {isUploading ? `Uploading... ${Math.round(progress)}%` : 'Upload'}
+      </button>
+    </div>
+  );
+}
+```
+
+**Backend Endpoints Required:**
+- `POST /api/v1/uploads/init` - Initialize upload, get upload_id
+- `POST /api/v1/uploads/chunk` - Upload a chunk
+- `POST /api/v1/uploads/{uploadId}/complete` - Complete upload
+- `GET /api/v1/uploads/{uploadId}/progress` - Get upload progress
+- `GET /api/v1/uploads/{uploadId}/status` - Get upload status (for resuming)
+
+**Note:** Backend spec mentions chunked upload support. Verify these endpoints exist before implementing frontend.
+
+---
 
 ## 5.3 Custom Hooks - Detail Queries
 
@@ -3533,7 +8975,437 @@ function useDocument(documentId: string | null) {
 }
 ```
 
-## 5.4 Custom Hooks - Mutations
+## 5.4 Error Handling & API Error Management
+
+### 5.4.1 Error Response Interface
+
+**Backend Error Format:**
+```typescript
+interface ApiErrorResponse {
+  error: {
+    code: string;
+    message: string;
+    details?: Record<string, string>; // Field-level validation errors
+    request_id?: string;
+    timestamp: string;
+  };
+}
+```
+
+### 5.4.2 Error Code Constants
+
+```typescript
+export const ErrorCodes = {
+  // Authentication
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  FORBIDDEN: 'FORBIDDEN',
+  TOKEN_EXPIRED: 'TOKEN_EXPIRED',
+  TOKEN_INVALID: 'TOKEN_INVALID',
+  
+  // Validation
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  MISSING_FIELD: 'MISSING_FIELD',
+  INVALID_FORMAT: 'INVALID_FORMAT',
+  BAD_REQUEST: 'BAD_REQUEST',
+  UNPROCESSABLE_ENTITY: 'UNPROCESSABLE_ENTITY',
+  
+  // Resources
+  NOT_FOUND: 'NOT_FOUND',
+  ALREADY_EXISTS: 'ALREADY_EXISTS',
+  CONFLICT: 'CONFLICT',
+  
+  // Server
+  INTERNAL_ERROR: 'INTERNAL_ERROR',
+  SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
+  
+  // Rate Limiting
+  RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
+  TOO_MANY_REQUESTS: 'TOO_MANY_REQUESTS',
+} as const;
+
+export type ErrorCode = typeof ErrorCodes[keyof typeof ErrorCodes];
+```
+
+### 5.4.3 Error Message Mapping
+
+```typescript
+const ERROR_MESSAGES: Record<string, string> = {
+  [ErrorCodes.UNAUTHORIZED]: 'You are not authenticated. Please log in.',
+  [ErrorCodes.FORBIDDEN]: 'You do not have permission to perform this action.',
+  [ErrorCodes.NOT_FOUND]: 'The requested resource was not found.',
+  [ErrorCodes.VALIDATION_ERROR]: 'Please check your input and try again.',
+  [ErrorCodes.RATE_LIMIT_EXCEEDED]: 'Too many requests. Please try again later.',
+  [ErrorCodes.INTERNAL_ERROR]: 'An unexpected error occurred. Please try again.',
+  [ErrorCodes.SERVICE_UNAVAILABLE]: 'The service is temporarily unavailable.',
+};
+
+function getErrorMessage(errorCode: string, defaultMessage?: string): string {
+  return ERROR_MESSAGES[errorCode] || defaultMessage || 'An error occurred';
+}
+```
+
+### 5.4.4 API Error Handling Hook
+
+```typescript
+function useApiError() {
+  const { toast } = useToast();
+  
+  const handleError = useCallback((error: unknown) => {
+    // Check if it's an API error response
+    if (error && typeof error === 'object' && 'error' in error) {
+      const apiError = error as ApiErrorResponse;
+      const errorCode = apiError.error.code;
+      const message = getErrorMessage(errorCode, apiError.error.message);
+      
+      // Show toast notification
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'error',
+      });
+      
+      // Log error details for debugging
+      console.error('API Error:', {
+        code: errorCode,
+        message: apiError.error.message,
+        details: apiError.error.details,
+        request_id: apiError.error.request_id,
+      });
+      
+      return {
+        code: errorCode,
+        message,
+        details: apiError.error.details,
+      };
+    }
+    
+    // Handle network errors
+    if (error instanceof Error) {
+      toast({
+        title: 'Network Error',
+        description: 'Unable to connect to the server. Please check your connection.',
+        variant: 'error',
+      });
+    }
+    
+    return null;
+  }, [toast]);
+  
+  return { handleError };
+}
+```
+
+### 5.4.5 Field-Level Validation Error Mapping
+
+```typescript
+function mapBackendErrorsToForm(
+  errors: Record<string, string> | undefined,
+  setError: (field: string, error: { message: string }) => void
+) {
+  if (!errors) return;
+  
+  Object.entries(errors).forEach(([field, message]) => {
+    setError(field, { message });
+  });
+}
+
+// Usage in form component
+function useFormWithBackendErrors<T extends Record<string, any>>() {
+  const form = useForm<T>();
+  const { handleError } = useApiError();
+  
+  const handleSubmit = async (onSubmit: (data: T) => Promise<any>) => {
+    try {
+      const result = await form.handleSubmit(async (data) => {
+        return await onSubmit(data);
+      })();
+      return result;
+    } catch (error) {
+      const apiError = handleError(error);
+      if (apiError?.details) {
+        mapBackendErrorsToForm(apiError.details, form.setError);
+      }
+      throw error;
+    }
+  };
+  
+  return { ...form, handleSubmit };
+}
+```
+
+### 5.4.6 Error Display Component
+
+```typescript
+interface FieldErrorProps {
+  field: string;
+  errors?: Record<string, string>;
+}
+
+function FieldError({ field, errors }: FieldErrorProps) {
+  if (!errors || !errors[field]) return null;
+  
+  return (
+    <p className="mt-1 text-sm text-[#B13434]" role="alert">
+      {errors[field]}
+    </p>
+  );
+}
+
+// Usage in form
+function ObligationForm() {
+  const [backendErrors, setBackendErrors] = useState<Record<string, string>>();
+  
+  return (
+    <form>
+      <input name="title" />
+      <FieldError field="title" errors={backendErrors} />
+    </form>
+  );
+}
+```
+
+### 5.4.7 Retry Logic for Specific Error Codes
+
+```typescript
+function useRetryableQuery<T>(
+  queryFn: () => Promise<T>,
+  options?: {
+    retryOn?: ErrorCode[];
+    maxRetries?: number;
+  }
+) {
+  const { retryOn = [ErrorCodes.INTERNAL_ERROR, ErrorCodes.SERVICE_UNAVAILABLE], maxRetries = 3 } = options || {};
+  
+  return useQuery({
+    queryFn,
+    retry: (failureCount, error) => {
+      if (failureCount >= maxRetries) return false;
+      
+      // Check if error is retryable
+      if (error && typeof error === 'object' && 'error' in error) {
+        const apiError = error as ApiErrorResponse;
+        return retryOn.includes(apiError.error.code as ErrorCode);
+      }
+      
+      return false;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+  });
+}
+```
+
+---
+
+## 5.4 Compliance Score Hooks
+
+### 5.4.1 useComplianceScore Hook
+
+**Purpose:** Fetch and subscribe to real-time compliance score updates for a site or module
+
+**Hook:**
+```typescript
+interface UseComplianceScoreParams {
+  siteId?: string;
+  moduleId?: string;
+  enableRealtime?: boolean; // Default: true
+}
+
+interface ComplianceScoreData {
+  score: number; // 0-100 integer
+  updatedAt: string; // ISO timestamp
+  totalObligations: number;
+  completedObligations: number;
+  overdueCount: number;
+  trend?: {
+    previousScore: number;
+    change: number; // Positive = improved, negative = declined
+    period: '7d' | '30d' | '90d';
+  };
+}
+
+function useComplianceScore(params: UseComplianceScoreParams) {
+  const { siteId, moduleId, enableRealtime = true } = params;
+  
+  // Determine endpoint based on params
+  const endpoint = moduleId 
+    ? `/api/v1/module-activations?filter[site_id]=${siteId}&filter[module_id]=${moduleId}`
+    : `/api/v1/sites/${siteId}`;
+  
+  // Fetch initial score
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['complianceScore', siteId, moduleId],
+    queryFn: async () => {
+      const response = await fetch(endpoint, {
+        headers: { Authorization: `Bearer ${getAccessToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch compliance score');
+      const result = await response.json();
+      return {
+        score: result.data.compliance_score,
+        updatedAt: result.data.compliance_score_updated_at,
+        // Additional data from site/module endpoint
+      } as ComplianceScoreData;
+    },
+    staleTime: 0, // Always refetch (scores change frequently)
+    refetchInterval: enableRealtime ? 30000 : false, // Poll every 30s if realtime enabled
+  });
+  
+  // Subscribe to real-time updates via Supabase Realtime
+  useEffect(() => {
+    if (!enableRealtime || !siteId) return;
+    
+    const channel = supabase
+      .channel(`compliance-score:${siteId}${moduleId ? `:${moduleId}` : ''}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: moduleId ? 'module_activations' : 'sites',
+          filter: moduleId 
+            ? `site_id=eq.${siteId},module_id=eq.${moduleId}`
+            : `id=eq.${siteId}`,
+        },
+        (payload) => {
+          // Invalidate and refetch when score updates
+          queryClient.invalidateQueries(['complianceScore', siteId, moduleId]);
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [siteId, moduleId, enableRealtime]);
+  
+  return {
+    score: data?.score ?? 100, // Default to 100 if no data
+    updatedAt: data?.updatedAt,
+    isLoading,
+    error,
+    refetch,
+  };
+}
+```
+
+**Usage:**
+```typescript
+// Site-level score
+const { score, updatedAt, isLoading } = useComplianceScore({ 
+  siteId: 'site-uuid' 
+});
+
+// Module-level score
+const { score, updatedAt } = useComplianceScore({ 
+  siteId: 'site-uuid',
+  moduleId: 'module-uuid' 
+});
+
+// Without real-time updates (for static displays)
+const { score } = useComplianceScore({ 
+  siteId: 'site-uuid',
+  enableRealtime: false 
+});
+```
+
+### 5.4.2 useComplianceScoreTrend Hook
+
+**Purpose:** Fetch compliance score trend data over time
+
+**Hook:**
+```typescript
+interface UseComplianceScoreTrendParams {
+  siteId: string;
+  moduleId?: string;
+  period?: '7d' | '30d' | '90d' | '1y';
+}
+
+interface ComplianceScoreTrendData {
+  scores: Array<{
+    date: string; // ISO date
+    score: number; // 0-100 integer
+    totalObligations: number;
+    completedObligations: number;
+  }>;
+  averageScore: number;
+  trend: 'improving' | 'declining' | 'stable';
+}
+
+function useComplianceScoreTrend(params: UseComplianceScoreTrendParams) {
+  const { siteId, moduleId, period = '30d' } = params;
+  
+  return useQuery({
+    queryKey: ['complianceScoreTrend', siteId, moduleId, period],
+    queryFn: async () => {
+      // This would be a new endpoint: GET /api/v1/sites/{siteId}/compliance-score/trend
+      const response = await fetch(
+        `/api/v1/sites/${siteId}/compliance-score/trend?period=${period}${moduleId ? `&module_id=${moduleId}` : ''}`,
+        {
+          headers: { Authorization: `Bearer ${getAccessToken()}` },
+        }
+      );
+      if (!response.ok) throw new Error('Failed to fetch trend');
+      return await response.json() as ComplianceScoreTrendData;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+```
+
+**Usage:**
+```typescript
+const { data: trendData, isLoading } = useComplianceScoreTrend({
+  siteId: 'site-uuid',
+  period: '90d',
+});
+
+// Render trend chart
+<ComplianceScoreTrendChart scores={trendData?.scores ?? []} />
+```
+
+### 5.4.3 Compliance Score Update Trigger
+
+**Purpose:** Automatically invalidate compliance score queries when obligations are updated
+
+**Implementation:**
+```typescript
+// In obligation mutation hooks (useCompleteObligation, useLinkEvidence, etc.)
+function useCompleteObligation() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (obligationId: string) => {
+      // Complete obligation API call
+      const response = await fetch(`/api/v1/obligations/${obligationId}/complete`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getAccessToken()}` },
+      });
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      // Get site_id and module_id from obligation
+      const { site_id, module_id } = data.data;
+      
+      // Invalidate compliance score queries
+      queryClient.invalidateQueries(['complianceScore', site_id]);
+      queryClient.invalidateQueries(['complianceScore', site_id, module_id]);
+      
+      // Invalidate obligations list (score affects display)
+      queryClient.invalidateQueries(['obligations', site_id]);
+    },
+  });
+}
+```
+
+**Automatic Updates:**
+- When obligation is completed → Score recalculated → Query invalidated → UI updates
+- When evidence is linked → Score recalculated → Query invalidated → UI updates
+- When obligation becomes overdue → Score recalculated → Query invalidated → UI updates
+- When compliance clock item becomes overdue → Score recalculated → Query invalidated → UI updates
+
+---
+
+## 5.5 Custom Hooks - Mutations
 
 **Obligation Update Mutation:**
 ```typescript
@@ -3646,7 +9518,651 @@ function useDocumentUpload() {
 }
 ```
 
-## 5.5 Optimistic Updates
+### 5.5.1 Escalation Workflows Hooks
+
+**Escalation Workflows List Hook:**
+```typescript
+function useEscalationWorkflows(companyId?: string, cursor?: string, limit = 20) {
+  return useQuery({
+    queryKey: ['escalation-workflows', companyId, cursor],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (companyId) params.append('company_id', companyId);
+      if (cursor) params.append('cursor', cursor);
+      params.append('limit', limit.toString());
+      
+      const response = await fetch(`/api/v1/escalation-workflows?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch escalation workflows');
+      return response.json();
+    },
+  });
+}
+```
+
+**Escalation Workflow Detail Hook:**
+```typescript
+function useEscalationWorkflow(workflowId: string) {
+  return useQuery({
+    queryKey: ['escalation-workflow', workflowId],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/escalation-workflows/${workflowId}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch escalation workflow');
+      return response.json();
+    },
+    enabled: !!workflowId,
+  });
+}
+```
+
+**Escalation Workflow Mutations:**
+```typescript
+function useCreateEscalationWorkflow() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: CreateEscalationWorkflowRequest) => {
+      const response = await fetch('/api/v1/escalation-workflows', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to create escalation workflow');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['escalation-workflows']);
+    },
+  });
+}
+
+function useUpdateEscalationWorkflow() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<EscalationWorkflow> }) => {
+      const response = await fetch(`/api/v1/escalation-workflows/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to update escalation workflow');
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries(['escalation-workflow', variables.id]);
+      queryClient.invalidateQueries(['escalation-workflows']);
+    },
+  });
+}
+
+function useDeleteEscalationWorkflow() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/v1/escalation-workflows/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to delete escalation workflow');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['escalation-workflows']);
+    },
+  });
+}
+```
+
+---
+
+### 5.5.2 Permit Workflows Hooks
+
+**Permit Workflows List Hook:**
+```typescript
+function usePermitWorkflows(permitId: string) {
+  return useQuery({
+    queryKey: ['permit-workflows', permitId],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/permits/${permitId}/workflows`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch permit workflows');
+      return response.json();
+    },
+    enabled: !!permitId,
+  });
+}
+```
+
+**Permit Workflow Detail Hook:**
+```typescript
+function usePermitWorkflow(workflowId: string) {
+  return useQuery({
+    queryKey: ['permit-workflow', workflowId],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/workflows/${workflowId}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch permit workflow');
+      return response.json();
+    },
+    enabled: !!workflowId,
+  });
+}
+```
+
+**Permit Workflow Variation Hook:**
+```typescript
+function usePermitWorkflowVariation(workflowId: string) {
+  return useQuery({
+    queryKey: ['permit-workflow-variation', workflowId],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/workflows/${workflowId}/variation`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch variation');
+      return response.json();
+    },
+    enabled: !!workflowId,
+  });
+}
+```
+
+**Permit Workflow Surrender Hook:**
+```typescript
+function usePermitWorkflowSurrender(workflowId: string) {
+  return useQuery({
+    queryKey: ['permit-workflow-surrender', workflowId],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/workflows/${workflowId}/surrender`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch surrender');
+      return response.json();
+    },
+    enabled: !!workflowId,
+  });
+}
+```
+
+**Recurrence Trigger Executions Hook:**
+```typescript
+function useRecurrenceTriggerExecutions(triggerId: string, cursor?: string, limit = 20) {
+  return useQuery({
+    queryKey: ['trigger-executions', triggerId, cursor],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (cursor) params.append('cursor', cursor);
+      params.append('limit', limit.toString());
+      
+      const response = await fetch(`/api/v1/triggers/${triggerId}/executions?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch trigger executions');
+      return response.json();
+    },
+    enabled: !!triggerId,
+  });
+}
+```
+
+**Permit Workflow Mutations:**
+```typescript
+function useCreatePermitWorkflow() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ permitId, data }: { permitId: string; data: CreateWorkflowRequest }) => {
+      const response = await fetch(`/api/v1/permits/${permitId}/workflows`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to create workflow');
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries(['permit-workflows', variables.permitId]);
+    },
+  });
+}
+
+function useSubmitWorkflow() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (workflowId: string) => {
+      const response = await fetch(`/api/v1/workflows/${workflowId}/submit`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to submit workflow');
+      return response.json();
+    },
+    onSuccess: (_, workflowId) => {
+      queryClient.invalidateQueries(['permit-workflow', workflowId]);
+    },
+  });
+}
+
+function useApproveWorkflow() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (workflowId: string) => {
+      const response = await fetch(`/api/v1/workflows/${workflowId}/approve`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to approve workflow');
+      return response.json();
+    },
+    onSuccess: (_, workflowId) => {
+      queryClient.invalidateQueries(['permit-workflow', workflowId]);
+    },
+  });
+}
+
+function useRejectWorkflow() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ workflowId, reason }: { workflowId: string; reason: string }) => {
+      const response = await fetch(`/api/v1/workflows/${workflowId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason }),
+      });
+      if (!response.ok) throw new Error('Failed to reject workflow');
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries(['permit-workflow', variables.workflowId]);
+    },
+  });
+}
+
+function useCompleteWorkflow() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (workflowId: string) => {
+      const response = await fetch(`/api/v1/workflows/${workflowId}/complete`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to complete workflow');
+      return response.json();
+    },
+    onSuccess: (_, workflowId) => {
+      queryClient.invalidateQueries(['permit-workflow', workflowId]);
+    },
+  });
+}
+```
+
+---
+
+### 5.5.3 Background Jobs Hooks
+
+**Background Jobs List Hook:**
+```typescript
+function useBackgroundJobs(filters?: {
+  status?: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+  job_type?: string;
+}, cursor?: string, limit = 20) {
+  return useQuery({
+    queryKey: ['background-jobs', filters, cursor],
+    queryFn: async () => {
+      const params = buildQueryParams({
+        filters,
+        cursor,
+        limit,
+      });
+      
+      const response = await fetch(`/api/v1/jobs?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch background jobs');
+      return response.json();
+    },
+  });
+}
+```
+
+**Background Job Detail Hook:**
+```typescript
+function useBackgroundJob(jobId: string) {
+  return useQuery({
+    queryKey: ['background-job', jobId],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/jobs/${jobId}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch background job');
+      return response.json();
+    },
+    enabled: !!jobId,
+    refetchInterval: (data) => {
+      // Poll if job is still running
+      return data?.status === 'RUNNING' ? 2000 : false;
+    },
+  });
+}
+```
+
+**Job Logs Hook:**
+```typescript
+function useJobLogs(jobId: string, cursor?: string, limit = 100) {
+  return useQuery({
+    queryKey: ['job-logs', jobId, cursor],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (cursor) params.append('cursor', cursor);
+      params.append('limit', limit.toString());
+      
+      const response = await fetch(`/api/v1/jobs/${jobId}/logs?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch job logs');
+      return response.json();
+    },
+    enabled: !!jobId,
+  });
+}
+```
+
+**Retry Job Mutation:**
+```typescript
+function useRetryJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (jobId: string) => {
+      const response = await fetch(`/api/v1/jobs/${jobId}/retry`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Failed to retry job');
+      return response.json();
+    },
+    onSuccess: (_, jobId) => {
+      queryClient.invalidateQueries(['background-job', jobId]);
+      queryClient.invalidateQueries(['background-jobs']);
+    },
+  });
+}
+```
+
+---
+
+## 5.6 Role-Based Access Control
+
+### 5.6.1 Permission Checking Hooks
+
+```typescript
+type UserRole = 'OWNER' | 'ADMIN' | 'STAFF' | 'CONSULTANT' | 'VIEWER';
+type Operation = 'CREATE' | 'READ' | 'UPDATE' | 'DELETE';
+
+interface Permission {
+  resource: string;
+  operation: Operation;
+}
+
+function usePermission(resource: string, operation: Operation) {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['permission', user?.id, resource, operation],
+    queryFn: async () => {
+      // Check permission based on user role
+      const role = user?.role;
+      if (!role) return false;
+      
+      // Permission matrix (from Product Logic Spec)
+      const permissionMatrix: Record<UserRole, Record<string, Record<Operation, boolean>>> = {
+        OWNER: {
+          '*': { CREATE: true, READ: true, UPDATE: true, DELETE: true },
+        },
+        ADMIN: {
+          '*': { CREATE: true, READ: true, UPDATE: true, DELETE: true },
+        },
+        STAFF: {
+          '*': { CREATE: true, READ: true, UPDATE: true, DELETE: false },
+        },
+        CONSULTANT: {
+          '*': { CREATE: false, READ: true, UPDATE: true, DELETE: false },
+        },
+        VIEWER: {
+          '*': { CREATE: false, READ: true, UPDATE: false, DELETE: false },
+        },
+      };
+      
+      const permissions = permissionMatrix[role]?.[resource] || permissionMatrix[role]?.['*'];
+      return permissions?.[operation] || false;
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+}
+
+// Convenience hooks
+function useCanCreate(resource: string) {
+  const { data: canCreate } = usePermission(resource, 'CREATE');
+  return canCreate || false;
+}
+
+function useCanRead(resource: string) {
+  const { data: canRead } = usePermission(resource, 'READ');
+  return canRead || false;
+}
+
+function useCanUpdate(resource: string) {
+  const { data: canUpdate } = usePermission(resource, 'UPDATE');
+  return canUpdate || false;
+}
+
+function useCanDelete(resource: string) {
+  const { data: canDelete } = usePermission(resource, 'DELETE');
+  return canDelete || false;
+}
+```
+
+### 5.6.2 Route Guard Component
+
+```typescript
+interface ProtectedRouteProps {
+  requiredRole?: UserRole | UserRole[];
+  requiredPermission?: Permission;
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}
+
+function ProtectedRoute({
+  requiredRole,
+  requiredPermission,
+  children,
+  fallback = <div>Access Denied</div>
+}: ProtectedRouteProps) {
+  const { user } = useAuth();
+  const { data: hasPermission } = usePermission(
+    requiredPermission?.resource || '*',
+    requiredPermission?.operation || 'READ'
+  );
+  
+  // Check role
+  if (requiredRole) {
+    const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+    if (!user || !roles.includes(user.role)) {
+      return <>{fallback}</>;
+    }
+  }
+  
+  // Check permission
+  if (requiredPermission && !hasPermission) {
+    return <>{fallback}</>;
+  }
+  
+  return <>{children}</>;
+}
+
+// Usage
+function AdminPage() {
+  return (
+    <ProtectedRoute requiredRole={['OWNER', 'ADMIN']}>
+      <AdminContent />
+    </ProtectedRoute>
+  );
+}
+
+function EditObligationPage() {
+  return (
+    <ProtectedRoute requiredPermission={{ resource: 'obligations', operation: 'UPDATE' }}>
+      <EditObligationForm />
+    </ProtectedRoute>
+  );
+}
+```
+
+### 5.6.3 UI Component Permission Checks
+
+```typescript
+function useCanEdit() {
+  return useCanUpdate('obligations');
+}
+
+function useCanDelete() {
+  return useCanDelete('obligations');
+}
+
+// Usage in component
+function ObligationActions({ obligationId }: { obligationId: string }) {
+  const canEdit = useCanEdit();
+  const canDelete = useCanDelete();
+  
+  return (
+    <div>
+      {canEdit && <EditButton />}
+      {canDelete && <DeleteButton />}
+    </div>
+  );
+}
+```
+
+---
+
+## 5.7 Upload Progress Tracking
+
+### 5.7.1 Upload Progress Hook
+
+```typescript
+function useUploadProgress(file: File, uploadFn: (file: File, onProgress: (progress: number) => void) => Promise<any>) {
+  const [progress, setProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  
+  const upload = useCallback(async () => {
+    setIsUploading(true);
+    setProgress(0);
+    setError(null);
+    
+    try {
+      const result = await uploadFn(file, (progressValue) => {
+        setProgress(progressValue);
+      });
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Upload failed'));
+      throw err;
+    } finally {
+      setIsUploading(false);
+    }
+  }, [file, uploadFn]);
+  
+  return { progress, isUploading, error, upload };
+}
+
+// Usage with XMLHttpRequest for progress tracking
+function uploadDocumentWithProgress(file: File, onProgress: (progress: number) => void) {
+  return new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('document_type', 'PERMIT');
+    
+    const xhr = new XMLHttpRequest();
+    
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        const percentComplete = (e.loaded / e.total) * 100;
+        onProgress(percentComplete);
+      }
+    });
+    
+    xhr.addEventListener('load', () => {
+      if (xhr.status === 200 || xhr.status === 201) {
+        resolve(JSON.parse(xhr.responseText));
+      } else {
+        reject(new Error(`Upload failed: ${xhr.statusText}`));
+      }
+    });
+    
+    xhr.addEventListener('error', () => {
+      reject(new Error('Upload failed'));
+    });
+    
+    xhr.open('POST', '/api/v1/documents');
+    xhr.setRequestHeader('Authorization', `Bearer ${getAuthToken()}`);
+    xhr.send(formData);
+  });
+}
+
+// Usage in component
+function DocumentUpload() {
+  const [file, setFile] = useState<File | null>(null);
+  const { progress, isUploading, error, upload } = useUploadProgress(
+    file!,
+    uploadDocumentWithProgress
+  );
+  
+  const handleUpload = async () => {
+    if (!file) return;
+    try {
+      await upload();
+      toast({ title: 'Success', description: 'Document uploaded successfully' });
+    } catch (err) {
+      // Error already set in hook
+    }
+  };
+  
+  return (
+    <div>
+      <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+      {isUploading && (
+        <div>
+          <ProgressBar value={progress} />
+          <span>{Math.round(progress)}%</span>
+        </div>
+      )}
+      {error && <ErrorMessage>{error.message}</ErrorMessage>}
+      <button onClick={handleUpload} disabled={!file || isUploading}>
+        Upload
+      </button>
+    </div>
+  );
+}
+```
+
+---
+
+## 5.9 Optimistic Updates
 
 **Obligation Status Update with Optimistic Update:**
 ```typescript
@@ -3725,7 +10241,7 @@ function useObligationStatusUpdate() {
 }
 ```
 
-## 5.6 Infinite Queries (for Infinite Scroll)
+## 5.10 Infinite Queries (for Infinite Scroll)
 
 **Infinite Obligations List:**
 ```typescript
@@ -3750,7 +10266,7 @@ function useInfiniteObligations(siteId: string, filters: Filters) {
 }
 ```
 
-## 5.7 Parallel Queries
+## 5.11 Parallel Queries
 
 **Fetch Multiple Related Data:**
 ```typescript
@@ -3769,7 +10285,7 @@ function useSiteDashboard(siteId: string) {
 }
 ```
 
-## 5.8 Dependent Queries
+## 5.12 Dependent Queries
 
 **Fetch Data Based on Previous Query:**
 ```typescript
@@ -3796,7 +10312,7 @@ function useObligationWithEvidence(obligationId: string) {
 }
 ```
 
-## 5.9 Prefetching
+## 5.13 Prefetching
 
 **Prefetch on Hover:**
 ```typescript
@@ -3819,7 +10335,7 @@ function ObligationRow({ obligation }: { obligation: Obligation }) {
 }
 ```
 
-## 5.10 Error Handling
+## 5.14 Error Handling (Legacy - See Section 5.4 for Complete Error Handling)
 
 **Global Error Handler:**
 ```typescript
@@ -4245,32 +10761,18 @@ function useObligationsFilters() {
 }
 ```
 
-### Pagination State (URL Query Parameters)
+### Pagination State (URL Query Parameters - Cursor-Based)
 
-**Pagination Hook:**
+**Pagination Hook (Cursor-Based):**
 ```typescript
-function usePagination(defaultPageSize = 20) {
+function usePagination(defaultLimit = 20) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const page = parseInt(searchParams.get('page') || '1', 10);
-  const limit = parseInt(searchParams.get('limit') || defaultPageSize.toString(), 10);
-  const cursor = searchParams.get('cursor') || null;
+  const limit = parseInt(searchParams.get('limit') || defaultLimit.toString(), 10);
+  const cursor = searchParams.get('cursor') || undefined;
 
-  const setPage = (newPage: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('page', newPage.toString());
-    router.push({ pathname: router.pathname, query: params.toString() });
-  };
-
-  const setLimit = (newLimit: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('limit', newLimit.toString());
-    params.delete('page'); // Reset to first page
-    router.push({ pathname: router.pathname, query: params.toString() });
-  };
-
-  const setCursor = (newCursor: string | null) => {
+  const setCursor = (newCursor: string | undefined) => {
     const params = new URLSearchParams(searchParams.toString());
     if (newCursor) {
       params.set('cursor', newCursor);
@@ -4280,14 +10782,59 @@ function usePagination(defaultPageSize = 20) {
     router.push({ pathname: router.pathname, query: params.toString() });
   };
 
+  const setLimit = (newLimit: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('limit', newLimit.toString());
+    params.delete('cursor'); // Reset cursor when limit changes
+    router.push({ pathname: router.pathname, query: params.toString() });
+  };
+
+  const resetPagination = () => {
+    const params = new URLSearchParams(searchParams.toString());
+      params.delete('cursor');
+    router.push({ pathname: router.pathname, query: params.toString() });
+  };
+
   return {
-    page,
     limit,
     cursor,
-    setPage,
-    setLimit,
     setCursor,
+    setLimit,
+    resetPagination,
   };
+}
+```
+
+**Usage Example:**
+```typescript
+function ObligationsPage() {
+  const { limit, cursor, setCursor, resetPagination } = usePagination(20);
+  const [filters, setFilters] = useState({});
+  
+  // Reset cursor when filters change
+  useEffect(() => {
+    resetPagination();
+  }, [filters]);
+  
+  const { data } = useObligations({
+    filters,
+    cursor,
+    limit,
+  });
+  
+  const hasMore = data?.pagination?.has_more || false;
+  const nextCursor = data?.pagination?.cursor;
+  
+  return (
+    <div>
+      <ObligationsList obligations={data?.data || []} />
+      <Pagination
+        hasMore={hasMore}
+        nextCursor={nextCursor}
+        onLoadMore={setCursor}
+      />
+    </div>
+  );
 }
 ```
 
@@ -7389,15 +13936,140 @@ interface EvidenceUploadPageProps {
 
 ```typescript
 interface UseObligationsParams {
-  siteId: string;
+  siteId?: string;
   filters?: ObligationFilters;
-  pagination?: PaginationParams;
+  cursor?: string; // Cursor for pagination
+  limit?: number; // Items per page (default 20)
+  sort?: {
+    field: string;
+    direction: 'asc' | 'desc';
+  };
 }
 
 interface UseDocumentParams {
   documentId: string;
 }
 ```
+
+## 25.4 Shared Type Definitions with Backend
+
+**Type Generation Strategy:**
+- Types are generated from OpenAPI specification (`docs/openapi.yaml`)
+- Shared types are located in `lib/types/api.ts`
+- Types are automatically synced via CI/CD pipeline
+
+**Type Generation Command:**
+```bash
+npm run generate-types
+```
+
+**Setup:**
+1. Install type generation tool:
+   ```bash
+   npm install -D openapi-typescript
+   ```
+
+2. Add script to `package.json`:
+   ```json
+   {
+     "scripts": {
+       "generate-types": "openapi-typescript docs/openapi.yaml -o lib/types/api.ts"
+     }
+   }
+   ```
+
+3. Run generation:
+   ```bash
+   npm run generate-types
+   ```
+
+**Shared Type Interfaces:**
+```typescript
+// Generated from OpenAPI spec - DO NOT EDIT MANUALLY
+// Run 'npm run generate-types' to regenerate
+
+export interface Obligation {
+  id: string;
+  document_id: string;
+  company_id: string;
+  site_id: string;
+  module_id: string;
+  original_text: string;
+  summary?: string;
+  category: 'MONITORING' | 'REPORTING' | 'RECORD_KEEPING' | 'OPERATIONAL' | 'MAINTENANCE';
+  frequency?: string;
+  deadline_date?: string;
+  is_subjective: boolean;
+  confidence_score: number;
+  review_status: 'PENDING' | 'CONFIRMED' | 'EDITED' | 'REJECTED' | 'PENDING_INTERPRETATION' | 'INTERPRETED' | 'NOT_APPLICABLE';
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE' | 'INCOMPLETE' | 'LATE_COMPLETE' | 'NOT_APPLICABLE' | 'REJECTED';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Document {
+  id: string;
+  site_id: string;
+  company_id: string;
+  document_type: 'PERMIT' | 'CONSENT' | 'MCPD_REGISTRATION';
+  title: string;
+  reference_number?: string;
+  status: 'UPLOADED' | 'PROCESSING' | 'PROCESSED' | 'FAILED';
+  extraction_status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+  file_url: string;
+  file_size: number;
+  page_count?: number;
+  obligation_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// ... all other types generated from OpenAPI spec
+```
+
+**Type Safety:**
+- All API hooks use generated types
+- Type mismatches are caught at compile time
+- Backend API changes require type regeneration
+- CI/CD pipeline fails if types are out of sync
+
+**Manual Type Overrides:**
+If frontend needs additional computed properties:
+```typescript
+// Frontend-only extension
+interface ObligationWithComputed extends Obligation {
+  daysUntilDeadline: number; // Computed on frontend
+  isOverdue: boolean; // Computed on frontend
+}
+
+// Usage in component
+function useObligationWithComputed(obligationId: string) {
+  const { data: obligation } = useObligation(obligationId);
+  
+  return useMemo(() => {
+    if (!obligation) return null;
+    
+    return {
+      ...obligation,
+      daysUntilDeadline: calculateDaysUntil(obligation.deadline_date),
+      isOverdue: isDateOverdue(obligation.deadline_date),
+    } as ObligationWithComputed;
+  }, [obligation]);
+}
+```
+
+**Type Sync Process:**
+1. Backend API changes → Update OpenAPI spec
+2. Run `npm run generate-types` → Regenerate TypeScript types
+3. Frontend code automatically uses new types
+4. TypeScript compiler catches any breaking changes
+5. Fix type errors before deploying
+
+**Canonical Dictionary Alignment:**
+- Canonical Dictionary (`docs/specs/22_Database_Canonical_Dictionary.md`) defines database schema
+- OpenAPI spec defines API contracts
+- Generated TypeScript types ensure frontend matches both
+- Single source of truth: Database → OpenAPI → TypeScript
 
 ---
 

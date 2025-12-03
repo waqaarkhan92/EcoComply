@@ -34,7 +34,7 @@ export default function SchedulesPage() {
 
   const { data: schedulesData, isLoading, error } = useQuery<SchedulesResponse>({
     queryKey: ['schedules', siteId, cursor],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       params.append('filter[site_id]', siteId);
       if (cursor) params.append('cursor', cursor);

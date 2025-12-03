@@ -8,9 +8,9 @@ import Link from 'next/link';
 export default function ConsultantClientsPage() {
   const { data: clientsData, isLoading } = useQuery({
     queryKey: ['consultant-clients'],
-    queryFn: async () => {
+    queryFn: async (): Promise<{ data: Array<any> }> => {
       const response = await apiClient.get('/consultant/clients');
-      return response.data;
+      return response.data as { data: Array<any> };
     },
   });
 

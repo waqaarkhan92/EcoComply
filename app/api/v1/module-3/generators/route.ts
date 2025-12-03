@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
         query = query.in('document_id', docIds);
       } else {
         // No documents for this site, return empty result
-        const emptyResponse = paginatedResponse([], null, { request_id: requestId });
+        const emptyResponse = paginatedResponse([], undefined, 20, false, { request_id: requestId });
         return await addRateLimitHeaders(request, user.id, emptyResponse);
       }
     }
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
           : 0;
         const percentageOfMonthly = generator.monthly_run_hour_limit && generator.monthly_run_hour_limit > 0
           ? (generator.current_month_hours / generator.monthly_run_hour_limit) * 100
-          : null;
+          : undefined;
 
         return {
           ...generator,
@@ -156,9 +156,9 @@ export async function GET(request: NextRequest) {
     // Check if there are more results
     const hasMore = (generatorsWithStats || []).length > limit;
     const data = hasMore ? (generatorsWithStats || []).slice(0, limit) : (generatorsWithStats || []);
-    const nextCursor = hasMore && data.length > 0 ? createCursor(data[data.length - 1].created_at) : null;
+    const nextCursor = hasMore && data.length > 0 ? createCursor(data[data.length - 1].id, data[data.length - 1].created_at) : undefined;
 
-    const response = paginatedResponse(data, nextCursor, { request_id: requestId });
+    const response = paginatedResponse(data, nextCursor, limit, hasMore, { request_id: requestId });
     return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Error in GET /api/v1/module-3/generators:', error);

@@ -28,7 +28,7 @@ export default function DeadlineDetailPage() {
 
   const { data: deadlineData, isLoading, error } = useQuery<{ data: Deadline }>({
     queryKey: ['deadline', deadlineId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Deadline }>(`/deadlines/${deadlineId}`);
     },
     enabled: !!deadlineId,

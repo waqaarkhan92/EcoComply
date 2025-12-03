@@ -11,8 +11,7 @@ import { requireModule } from '@/lib/api/module-check';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { registrationId: string } }
+  request: NextRequest, props: { params: Promise<{ registrationId: string } }
 ) {
   const requestId = getRequestId(request);
   const { registrationId } = params;
@@ -114,7 +113,7 @@ export async function GET(
         : 0;
       const percentageOfMonthly = gen.monthly_run_hour_limit && gen.monthly_run_hour_limit > 0
         ? (gen.current_month_hours / gen.monthly_run_hour_limit) * 100
-        : null;
+        : undefined;
 
       return {
         ...gen,

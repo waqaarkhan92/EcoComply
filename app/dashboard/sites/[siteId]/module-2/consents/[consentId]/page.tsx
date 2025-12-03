@@ -43,7 +43,7 @@ export default function ConsentDetailPage() {
 
   const { data, isLoading, error } = useQuery<ConsentResponse>({
     queryKey: ['module-2-consent', consentId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<ConsentResponse>(`/module-2/consents/${consentId}`);
     },
     enabled: !!consentId,

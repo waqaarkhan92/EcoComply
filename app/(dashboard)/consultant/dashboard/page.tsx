@@ -6,11 +6,24 @@ import { Building2, AlertCircle, CheckCircle2, Calendar, TrendingUp } from 'luci
 import Link from 'next/link';
 
 export default function ConsultantDashboardPage() {
+  interface DashboardData {
+    total_clients: number;
+    total_sites: number;
+    compliance_overview: {
+      overdue_count: number;
+      avg_compliance_score: number;
+      total_obligations: number;
+      approaching_deadline_count: number;
+    };
+    recent_activity: Array<any>;
+    upcoming_deadlines: Array<any>;
+  }
+
   const { data: dashboardData, isLoading } = useQuery({
     queryKey: ['consultant-dashboard'],
-    queryFn: async () => {
+    queryFn: async (): Promise<DashboardData> => {
       const response = await apiClient.get('/consultant/dashboard');
-      return response.data;
+      return response.data as DashboardData;
     },
   });
 

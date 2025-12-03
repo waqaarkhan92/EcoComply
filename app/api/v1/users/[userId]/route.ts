@@ -12,8 +12,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { userId: string } }
+  request: NextRequest, props: { params: Promise<{ userId: string } }
 ) {
   const requestId = getRequestId(request);
 
@@ -70,13 +69,13 @@ export async function GET(
     const { data: roles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
-      .eq('user_id', userId);
+      .eq('user_id', user.id);
 
     // Get user's assigned sites
     const { data: siteAssignments } = await supabaseAdmin
       .from('user_site_assignments')
       .select('site_id')
-      .eq('user_id', userId);
+      .eq('user_id', user.id);
 
     const response = successResponse(
       {
@@ -101,8 +100,7 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest,
-  { params }: { params: { userId: string } }
+  request: NextRequest, props: { params: Promise<{ userId: string } }
 ) {
   const requestId = getRequestId(request);
 
@@ -203,8 +201,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { userId: string } }
+  request: NextRequest, props: { params: Promise<{ userId: string } }
 ) {
   const requestId = getRequestId(request);
 

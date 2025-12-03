@@ -54,6 +54,51 @@ export async function scheduleRecurringJobs(): Promise<void> {
   // Weekly Digest Job (Monday at 8 AM)
   await scheduleJob('WEEKLY_DIGEST_DELIVERY', QUEUE_NAMES.DEADLINE_ALERTS, '0 8 * * 1', { digest_type: 'WEEKLY' });
 
+  // Compliance Clock Update Job (every hour)
+  await scheduleJob('update-compliance-clocks', QUEUE_NAMES.COMPLIANCE_CLOCK_UPDATE, '0 * * * *', {});
+
+  // Recurring Task Generation Job (daily at 2:00 AM)
+  await scheduleJob('generate-recurring-tasks', QUEUE_NAMES.RECURRING_TASK_GENERATION, '0 2 * * *', {});
+
+  // Evidence Expiry Tracking Job (daily at 3:00 AM)
+  await scheduleJob('update-evidence-expiry-tracking', QUEUE_NAMES.EVIDENCE_EXPIRY_TRACKING, '0 3 * * *', {});
+
+  // SLA Breach Timers Job (hourly)
+  await scheduleJob('UPDATE_SLA_BREACH_TIMERS', QUEUE_NAMES.SLA_BREACH_ALERTS, '0 * * * *', {});
+
+  // Compliance Clock Update Job (daily at 00:01 UTC)
+  await scheduleJob('UPDATE_COMPLIANCE_CLOCKS', QUEUE_NAMES.COMPLIANCE_CLOCK_UPDATE, '1 0 * * *', {});
+
+  // Process Escalations Job (daily at 00:30 UTC)
+  await scheduleJob('PROCESS_ESCALATIONS', QUEUE_NAMES.DEADLINE_ALERTS, '30 0 * * *', {});
+
+  // Auto-Create Renewal Workflows Job (daily at 01:00 UTC)
+  await scheduleJob('AUTO_CREATE_RENEWAL_WORKFLOWS', QUEUE_NAMES.PERMIT_WORKFLOWS, '0 1 * * *', {});
+
+  // Check Regulator Response Deadlines Job (daily at 09:00 UTC)
+  await scheduleJob('CHECK_REGULATOR_RESPONSE_DEADLINES', QUEUE_NAMES.PERMIT_WORKFLOWS, '0 9 * * *', {});
+
+  // Monitor Corrective Action Items Job (daily at 08:00 UTC)
+  await scheduleJob('MONITOR_CORRECTIVE_ACTION_ITEMS', QUEUE_NAMES.CORRECTIVE_ACTIONS, '0 8 * * *', {});
+
+  // Auto-Transition Corrective Actions Job (hourly)
+  await scheduleJob('AUTO_TRANSITION_CORRECTIVE_ACTIONS', QUEUE_NAMES.CORRECTIVE_ACTIONS, '0 * * * *', {});
+
+  // Auto-Validate Consignment Notes Job (every 5 minutes)
+  await scheduleJob('AUTO_VALIDATE_CONSIGNMENT_NOTES', QUEUE_NAMES.VALIDATION_PROCESSING, '*/5 * * * *', {});
+
+  // Flag Pending Runtime Validations Job (daily at 10:00 UTC)
+  await scheduleJob('FLAG_PENDING_RUNTIME_VALIDATIONS', QUEUE_NAMES.RUNTIME_MONITORING, '0 10 * * *', {});
+
+  // Execute Pending Recurrence Triggers Job (hourly)
+  await scheduleJob('EXECUTE_PENDING_RECURRENCE_TRIGGERS', QUEUE_NAMES.TRIGGER_EXECUTION, '0 * * * *', {});
+
+  // Refresh Compliance Dashboard Job (every 15 minutes)
+  await scheduleJob('REFRESH_COMPLIANCE_DASHBOARD', QUEUE_NAMES.DASHBOARD_REFRESH, '*/15 * * * *', {});
+
+  // Detect Breaches and Trigger Alerts Job (every 15 minutes) - HIGH PRIORITY
+  await scheduleJob('DETECT_BREACHES_AND_ALERTS', QUEUE_NAMES.SLA_BREACH_ALERTS, '*/15 * * * *', {});
+
   console.log('All recurring jobs scheduled');
 }
 

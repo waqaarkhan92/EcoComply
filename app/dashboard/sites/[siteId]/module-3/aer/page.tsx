@@ -45,7 +45,7 @@ export default function AERPage() {
 
   const { data: aerData, isLoading, error } = useQuery<AERResponse>({
     queryKey: ['module-3-aer', siteId, cursor],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       if (cursor) params.append('cursor', cursor);
       params.append('limit', '50');

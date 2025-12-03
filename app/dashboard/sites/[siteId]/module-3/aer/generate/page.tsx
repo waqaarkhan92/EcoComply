@@ -37,7 +37,7 @@ export default function GenerateAERPage() {
   // Fetch MCPD registrations for this site
   const { data: registrationsData } = useQuery<RegistrationsResponse>({
     queryKey: ['module-3-registrations', siteId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       params.append('filter[site_id]', siteId);
       params.append('limit', '100');

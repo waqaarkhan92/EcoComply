@@ -30,7 +30,7 @@ export default function LabResultDetailPage() {
 
   const { data, isLoading, error } = useQuery<LabResultResponse>({
     queryKey: ['module-2-lab-result', resultId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<LabResultResponse>(`/module-2/lab-results/${resultId}`);
     },
     enabled: !!resultId,

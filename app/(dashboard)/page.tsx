@@ -26,7 +26,7 @@ export default function DashboardPage() {
   // Fetch dashboard stats
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ['dashboard-stats'],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       // TODO: Create dedicated dashboard stats endpoint
       // For now, return mock data
       return {
@@ -41,7 +41,7 @@ export default function DashboardPage() {
   // Fetch upcoming deadlines
   const { data: deadlines, isLoading: deadlinesLoading } = useQuery<Deadline[]>({
     queryKey: ['upcoming-deadlines'],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       // TODO: Create dedicated deadlines endpoint
       // For now, return empty array
       return [];

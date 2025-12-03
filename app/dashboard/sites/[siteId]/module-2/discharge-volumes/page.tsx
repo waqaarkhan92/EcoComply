@@ -43,7 +43,7 @@ export default function DischargeVolumesPage() {
 
   const { data, isLoading, error } = useQuery<DischargeVolumesResponse>({
     queryKey: ['module-2-discharge-volumes', siteId, filters, cursor],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       params.append('filter[site_id]', siteId);
       if (filters.document_id) params.append('filter[document_id]', filters.document_id);

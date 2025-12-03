@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     // Verify parameter exists and user has access
     const { data: parameter, error: paramError } = await supabaseAdmin
       .from('parameters')
-      .select('id, limit_value, unit, company_id, site_id, warning_threshold_percent, parameter_type')
+      .select('id, limit_value, unit, company_id, site_id, warning_threshold_percent, parameter_type, document_id')
       .eq('id', parameter_id)
       .eq('is_active', true)
       .single();
@@ -154,6 +154,14 @@ export async function POST(request: NextRequest) {
           .eq('id', parameter.company_id)
           .single();
 
+        // Get user IDs with OWNER or ADMIN roles
+        const { data: adminUserRoles } = await supabaseAdmin
+          .from('user_roles')
+          .select('user_id')
+          .in('role', ['OWNER', 'ADMIN']);
+
+        const adminUserIds = adminUserRoles?.map(r => r.user_id) || [];
+
         // Get recipients (site owners and admins)
         const { data: recipients } = await supabaseAdmin
           .from('users')
@@ -161,11 +169,7 @@ export async function POST(request: NextRequest) {
           .eq('company_id', parameter.company_id)
           .is('deleted_at', null)
           .eq('is_active', true)
-          .in('id', supabaseAdmin
-            .from('user_roles')
-            .select('user_id')
-            .in('role', ['OWNER', 'ADMIN'])
-          );
+          .in('id', adminUserIds);
 
         // Determine which threshold was reached
         const threshold = threshold100 ? 100 : threshold90 ? 90 : 80;
@@ -323,9 +327,9 @@ export async function GET(request: NextRequest) {
     // Check if there are more results
     const hasMore = (labResults || []).length > limit;
     const data = hasMore ? (labResults || []).slice(0, limit) : (labResults || []);
-    const nextCursor = hasMore && data.length > 0 ? createCursor(data[data.length - 1].created_at) : null;
+    const nextCursor = hasMore && data.length > 0 ? createCursor(data[data.length - 1].id, data[data.length - 1].created_at) : undefined;
 
-    const response = paginatedResponse(data, nextCursor, { request_id: requestId });
+    const response = paginatedResponse(data, nextCursor, limit, hasMore, { request_id: requestId });
     return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Error in GET /api/v1/module-2/lab-results:', error);

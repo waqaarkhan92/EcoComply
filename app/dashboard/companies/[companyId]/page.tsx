@@ -22,7 +22,7 @@ export default function CompanyDetailPage() {
 
   const { data: companyData, isLoading } = useQuery<{ data: Company }>({
     queryKey: ['company', companyId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Company }>(`/companies/${companyId}`);
     },
   });

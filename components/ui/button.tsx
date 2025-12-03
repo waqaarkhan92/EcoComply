@@ -32,21 +32,21 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseClasses = cn(
-      'inline-flex items-center justify-center rounded-md font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98]',
-      'leading-normal',
+      'inline-flex items-center justify-center rounded-md font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] transform',
+      'leading-normal relative overflow-hidden',
       {
-        'bg-primary text-white hover:bg-primary-dark': variant === 'primary',
+        'bg-primary text-white hover:bg-primary-dark hover:shadow-primary-glow hover:scale-[1.02]': variant === 'primary',
         'bg-transparent border-2 border-charcoal text-charcoal hover:bg-charcoal hover:text-white':
           variant === 'secondary',
-        'border border-primary text-primary hover:bg-primary/10':
+        'border border-primary text-primary hover:bg-primary/10 hover:border-primary-dark':
           variant === 'outline',
         'text-text-primary hover:bg-background-secondary': variant === 'ghost',
-        'bg-danger text-white hover:bg-red-700': variant === 'danger',
+        'bg-danger text-white hover:bg-red-700 hover:shadow-lg': variant === 'danger',
         'bg-transparent text-primary hover:text-primary-dark underline-offset-4 hover:underline':
           variant === 'link',
-        'h-8 px-4 py-2 text-sm': size === 'sm',      // 32px height, 8px 16px padding
-        'h-10 px-6 py-3 text-base': size === 'md',    // 40px height, 12px 24px padding
-        'h-12 px-8 py-4 text-lg': size === 'lg',      // 48px height, 16px 32px padding
+        'h-8 px-4 py-2 text-sm': size === 'sm',
+        'h-10 px-6 py-3 text-base': size === 'md',
+        'h-12 px-8 py-4 text-lg': size === 'lg',
         'w-full': fullWidth,
       },
       className

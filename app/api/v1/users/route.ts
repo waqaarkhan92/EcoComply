@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, paginatedResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 import { parsePaginationParams, parseFilterParams, parseSortParams, createCursor } from '@/lib/api/pagination';
 import { sendEmail } from '@/lib/services/email-service';
 import { userInvitationEmail } from '@/lib/templates/email-templates';
@@ -151,6 +152,13 @@ export async function POST(request: NextRequest) {
       .eq('id', companyId)
       .single();
 
+    // Get inviter's full name
+    const { data: inviter } = await supabaseAdmin
+      .from('users')
+      .select('full_name')
+      .eq('id', user.id)
+      .single();
+
     // Verify user has access to this company
     if (body.company_id && body.company_id !== user.company_id && !user.is_consultant) {
       return errorResponse(
@@ -243,7 +251,7 @@ export async function POST(request: NextRequest) {
         
         const emailTemplate = userInvitationEmail({
           recipient_email: newUser.email,
-          inviter_name: user.full_name || undefined,
+          inviter_name: inviter?.full_name || undefined,
           company_name: company?.name || 'Your Company',
           invitation_url: invitationUrl,
           expires_in_days: 7,

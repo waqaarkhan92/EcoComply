@@ -25,7 +25,7 @@ export default function ClientPacksPage() {
 
   const { data: packsData, isLoading } = useQuery<PacksResponse>({
     queryKey: ['consultant-client-packs', clientId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<PacksResponse>(`/consultant/clients/${clientId}/packs`);
     },
   });

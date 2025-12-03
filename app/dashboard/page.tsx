@@ -5,45 +5,30 @@ import { apiClient } from '@/lib/api/client';
 import { useAuthStore } from '@/lib/store/auth-store';
 
 interface DashboardStats {
-  total_obligations: number;
-  overdue_count: number;
-  evidence_gaps: number;
-  upcoming_deadlines: number;
-}
-
-interface Deadline {
-  id: string;
-  obligation_title: string;
-  due_date: string;
-  days_remaining: number;
-  status: string;
+  totals: {
+    obligations: number;
+    overdue: number;
+    due_soon: number;
+    completed_this_month: number;
+    documents: number;
+    evidence: number;
+    packs: number;
+  };
+  recent_activity: any[];
+  upcoming_deadlines: any[];
 }
 
 export default function DashboardPage() {
   const { company } = useAuthStore();
 
-  // Fetch dashboard stats
+  // Fetch dashboard stats (real data from API)
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ['dashboard-stats'],
-    queryFn: async () => {
-      // TODO: Create dedicated dashboard stats endpoint
-      // For now, return mock data
-      return {
-        total_obligations: 0,
-        overdue_count: 0,
-        evidence_gaps: 0,
-        upcoming_deadlines: 0,
-      };
-    },
-  });
-
-  // Fetch upcoming deadlines
-  const { data: deadlines, isLoading: deadlinesLoading } = useQuery<Deadline[]>({
-    queryKey: ['upcoming-deadlines'],
-    queryFn: async () => {
-      // TODO: Create dedicated deadlines endpoint
-      // For now, return empty array
-      return [];
+    queryFn: async (): Promise<any> => {
+      const response = await fetch('/api/v1/dashboard/stats');
+      if (!response.ok) throw new Error('Failed to fetch stats');
+      const result = await response.json();
+      return result.data;
     },
   });
 
@@ -60,24 +45,43 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Obligations"
-          value={stats?.total_obligations || 0}
+          value={stats?.totals.obligations || 0}
           loading={statsLoading}
         />
         <StatCard
           title="Overdue"
-          value={stats?.overdue_count || 0}
+          value={stats?.totals.overdue || 0}
           loading={statsLoading}
           variant="danger"
         />
         <StatCard
-          title="Evidence Gaps"
-          value={stats?.evidence_gaps || 0}
+          title="Due Soon (7 days)"
+          value={stats?.totals.due_soon || 0}
           loading={statsLoading}
           variant="warning"
         />
         <StatCard
-          title="Upcoming Deadlines"
-          value={stats?.upcoming_deadlines || 0}
+          title="Completed This Month"
+          value={stats?.totals.completed_this_month || 0}
+          loading={statsLoading}
+        />
+      </div>
+
+      {/* Additional Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatCard
+          title="Documents"
+          value={stats?.totals.documents || 0}
+          loading={statsLoading}
+        />
+        <StatCard
+          title="Evidence Items"
+          value={stats?.totals.evidence || 0}
+          loading={statsLoading}
+        />
+        <StatCard
+          title="Audit Packs"
+          value={stats?.totals.packs || 0}
           loading={statsLoading}
         />
       </div>
@@ -85,11 +89,11 @@ export default function DashboardPage() {
       {/* Upcoming Deadlines Table */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold text-text-primary mb-4">
-          Upcoming Deadlines (Next 7 Days)
+          Upcoming Deadlines (Next 10)
         </h2>
-        {deadlinesLoading ? (
+        {statsLoading ? (
           <div className="text-center py-8 text-text-secondary">Loading...</div>
-        ) : deadlines && deadlines.length > 0 ? (
+        ) : stats?.upcoming_deadlines && stats.upcoming_deadlines.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -98,30 +102,32 @@ export default function DashboardPage() {
                     Obligation
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">
+                    Site
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">
                     Due Date
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">
-                    Days Remaining
-                  </th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">
-                    Status
+                    Category
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {deadlines.map((deadline) => (
-                  <tr key={deadline.id} className="border-b border-gray-100">
+                {stats.upcoming_deadlines.map((deadline: any) => (
+                  <tr key={deadline.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 text-sm text-text-primary">
-                      {deadline.obligation_title}
+                      {deadline.obligations?.title || 'N/A'}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-text-secondary">
+                      {deadline.sites?.site_name || 'N/A'}
                     </td>
                     <td className="py-3 px-4 text-sm text-text-secondary">
                       {new Date(deadline.due_date).toLocaleDateString()}
                     </td>
-                    <td className="py-3 px-4 text-sm text-text-secondary">
-                      {deadline.days_remaining} days
-                    </td>
                     <td className="py-3 px-4">
-                      <StatusBadge status={deadline.status} />
+                      <span className="px-2 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-800">
+                        {deadline.obligations?.category || 'N/A'}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -130,7 +136,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="text-center py-8 text-text-secondary">
-            No upcoming deadlines in the next 7 days
+            No upcoming deadlines
           </div>
         )}
       </div>
@@ -177,8 +183,8 @@ function StatCard({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <p className="text-sm font-medium text-text-secondary mb-2">{title}</p>
+    <div className="bg-white rounded-lg shadow-card hover:shadow-card-hover transition-all duration-200 p-8">
+      <p className="text-sm font-medium text-text-secondary mb-3">{title}</p>
       {loading ? (
         <div className="h-8 w-16 bg-gray-200 rounded animate-pulse" />
       ) : (

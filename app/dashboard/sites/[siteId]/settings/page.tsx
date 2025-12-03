@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import BusinessDayAdjustment from '@/components/sites/BusinessDayAdjustment';
 
 interface Site {
   id: string;
@@ -42,7 +43,7 @@ export default function SiteSettingsPage() {
 
   const { data: siteData, isLoading } = useQuery<{ data: Site }>({
     queryKey: ['site', siteId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Site }>(`/sites/${siteId}`);
     },
   });
@@ -202,18 +203,6 @@ export default function SiteSettingsPage() {
           />
         </div>
 
-        <div>
-          <Label htmlFor="grace_period_days">Grace Period (Days)</Label>
-          <Input
-            id="grace_period_days"
-            type="number"
-            min="0"
-            value={gracePeriodDays}
-            onChange={(e) => setGracePeriodDays(parseInt(e.target.value) || 0)}
-            className="mt-1"
-          />
-        </div>
-
         <div className="flex items-center">
           <input
             id="is_active"
@@ -236,6 +225,19 @@ export default function SiteSettingsPage() {
           </Button>
         </div>
       </form>
+
+      {/* Business Day Adjustment Section */}
+      <BusinessDayAdjustment
+        siteId={siteId}
+        currentGracePeriod={gracePeriodDays}
+        onUpdate={(newGracePeriod, businessDayRules) => {
+          setGracePeriodDays(newGracePeriod);
+          updateSite.mutate({
+            grace_period_days: newGracePeriod,
+            business_day_rules: businessDayRules,
+          });
+        }}
+      />
     </div>
   );
 }

@@ -1,18 +1,26 @@
 # EcoComply Background Jobs Specification
 
-**EcoComply v1.0 — Launch-Ready / Last updated: 2024-12-27**
+**EcoComply v1.0 — Launch-Ready / Last updated: 2025-12-01**
 
-**Document Version:** 1.0  
-**Status:** Complete  
-**Created by:** Claude  
+**Document Version:** 1.4
+**Status:** Complete - Updated to Match Production Implementation
+**Created by:** Claude
 **Depends on:**
 - ✅ Product Logic Specification (1.1) - Complete
-- ✅ Database Schema (2.2) - Complete
+- ✅ Database Schema (2.2 → 1.6) - Complete
 - ✅ Technical Architecture (2.1) - Complete
+- ✅ Backend API Specification (1.6) - Complete
 
 **Purpose:** Defines all background job types, their triggers, execution logic, error handling, retry mechanisms, and integration points for the EcoComply platform.
 
-> [v1 UPDATE – Version Header – 2024-12-27]
+> [v1.4 UPDATE – Added 6 Missing Production Jobs – 2025-02-03]
+> - Added Evidence Expiry Tracking Job
+> - Added Recurring Task Generation Job
+> - Added Report Generation Job
+> - Added Notification Delivery Job
+> - Added Digest Delivery Job
+> - Added Evidence Retention Job
+> [v1.3 UPDATE – Added 12 New Jobs for Database Schema v1.3 Features – 2025-12-01]
 
 
 
@@ -26,9 +34,17 @@
 4. [Module 2 Jobs (Trade Effluent)](#4-module-2-jobs-trade-effluent)
 5. [Module 3 Jobs (MCPD/Generators)](#5-module-3-jobs-mcpdgenerators)
 6. [System Jobs](#6-system-jobs)
-7. [Job Infrastructure Details](#7-job-infrastructure-details)
-8. [Integration Points](#8-integration-points)
-9. [Error Handling & Logging](#9-error-handling--logging)
+7. [Universal Compliance Clock Jobs](#7-universal-compliance-clock-jobs)
+8. [Escalation Workflow Jobs](#8-escalation-workflow-jobs)
+9. [Permit Workflow Jobs](#9-permit-workflow-jobs)
+10. [Corrective Action Jobs](#10-corrective-action-jobs)
+11. [Validation Jobs (Module 4)](#11-validation-jobs-module-4)
+12. [Runtime Monitoring Jobs (Module 3)](#12-runtime-monitoring-jobs-module-3)
+13. [SLA Timer Jobs](#13-sla-timer-jobs)
+14. [Trigger Execution Jobs](#14-trigger-execution-jobs)
+15. [Job Infrastructure Details](#15-job-infrastructure-details)
+16. [Integration Points](#16-integration-points)
+17. [Error Handling & Logging](#17-error-handling--logging)
 
 ---
 
@@ -66,18 +82,27 @@ Jobs are organized into dedicated queues based on function and priority:
 ├─────────────────────────────────────────────────────────────┤
 │  HIGH PRIORITY                                              │
 │  ├── deadline-alerts                                        │
-│  └── evidence-reminders                                     │
+│  ├── evidence-reminders                                     │
+│  ├── escalation-processing                                  │
+│  └── sla-breach-alerts                                      │
 │                                                             │
 │  NORMAL PRIORITY                                            │
 │  ├── document-processing                                    │
 │  ├── monitoring-schedule                                    │
+│  ├── compliance-clocks                                      │
+│  ├── permit-workflows                                       │
+│  ├── corrective-actions                                     │
+│  ├── validation-processing                                  │
+│  ├── trigger-execution                                      │
+│  ├── runtime-monitoring                                     │
 │  ├── module-2-sampling                                      │
 │  ├── module-3-run-hours                                     │
 │  ├── aer-generation                                         │
 │  └── audit-pack-generation                                  │
 │                                                             │
 │  LOW PRIORITY                                               │
-│  └── cross-sell-triggers                                    │
+│  ├── cross-sell-triggers                                    │
+│  └── dashboard-refresh                                      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -94,16 +119,17 @@ Jobs are organized into dedicated queues based on function and priority:
 
 ## 1.2 Job Types Overview
 
-The EcoComply platform defines **11 job types** across three categories:
+The EcoComply platform defines **32 job types** across multiple categories:
 
 ### Complete Job Type Registry
 
 | # | Job Type | Queue | Priority | Trigger | Description |
 |---|----------|-------|----------|---------|-------------|
+| **Core Monitoring (Sections 2-6)** |
 | 1 | Monitoring Schedule | `monitoring-schedule` | NORMAL | Cron (hourly) | Recurring obligation checks, deadline calculations |
 | 2 | Deadline Alert | `deadline-alerts` | HIGH | Cron (6-hourly) | 7/3/1 day warnings for upcoming deadlines |
 | 3 | Evidence Reminder | `evidence-reminders` | HIGH | Cron (daily) | Notifications for obligations requiring evidence |
-| 4 | Document Processing | `document-processing` | NORMAL | API trigger | PDF upload → OCR → text extraction → LLM parsing |
+| 4 | Document Processing | `document-processing` | NORMAL | API trigger | PDF upload → text extraction (pdf-parse) → OCR (if needed) → LLM parsing |
 | 5 | Excel Import Processing | `document-processing` | NORMAL | API trigger | Excel upload → validation → preview → bulk obligation creation |
 | 6 | Module 2: Sampling Schedule | `module-2-sampling` | NORMAL | Cron (daily) | Daily/weekly/monthly triggers for lab sampling |
 | 7 | Module 3: Run-Hour Monitoring | `module-3-run-hours` | NORMAL | Cron (daily) | 80%/90%/100% threshold checks |
@@ -113,6 +139,27 @@ The EcoComply platform defines **11 job types** across three categories:
 | 11 | Audit Pack Generation | `audit-pack-generation` | NORMAL | API trigger | Evidence compilation into PDFs (all pack types) |
 | 12 | Pack Distribution | `pack-distribution` | NORMAL | API trigger | Distribute packs via email/shared link |
 | 13 | Consultant Client Sync | `consultant-sync` | LOW | Scheduled/Manual | Sync consultant assignments and dashboard |
+| **v1.3 Database Schema Features (Sections 7-14)** |
+| 14 | Update Compliance Clocks | `compliance-clocks` | NORMAL | Cron (daily 00:01) | Recalculate days_remaining and criticality for all clocks |
+| 15 | Refresh Compliance Dashboard | `dashboard-refresh` | LOW | Cron (every 15min) | Refresh materialized view for dashboard |
+| 16 | Process Escalations | `escalation-processing` | HIGH | Cron (daily 00:30) | Auto-escalate overdue obligations |
+| 17 | Auto-Create Renewal Workflows | `permit-workflows` | NORMAL | Cron (daily 01:00) | Create renewal workflows 90 days before expiry |
+| 18 | Check Regulator Response Deadlines | `permit-workflows` | NORMAL | Cron (daily 09:00) | Alert on overdue regulator responses |
+| 19 | Monitor Corrective Action Items | `corrective-actions` | NORMAL | Cron (daily 08:00) | Send reminders for action item due dates |
+| 20 | Auto-Transition Corrective Actions | `corrective-actions` | NORMAL | Cron (hourly) | Transition actions when all items complete |
+| 21 | Auto-Validate Consignment Notes | `validation-processing` | NORMAL | Cron (every 5min) | Run validation on new consignments |
+| 22 | Flag Pending Runtime Validations | `runtime-monitoring` | NORMAL | Cron (daily 10:00) | Alert on manual entries pending validation |
+| 23 | Update SLA Breach Timers | `sla-breach-alerts` | HIGH | Cron (hourly) | Track SLA breach duration |
+| 24 | Detect Breaches and Trigger Alerts | `sla-breach-alerts` | HIGH | Cron (every 15min) | Detect breaches/SLA misses, trigger critical notifications |
+| 25 | Execute Pending Recurrence Triggers | `trigger-execution` | NORMAL | Cron (hourly) | Execute event-based triggers |
+| 26 | Process Trigger Conditions | `trigger-execution` | NORMAL | Event-driven | Evaluate conditional triggers on events |
+| **v1.4 New Production Jobs (Section 18)** |
+| 27 | Evidence Expiry Tracking | `evidence-tracking` | NORMAL | Cron (daily 02:00) | Track evidence expiration dates and send reminders |
+| 28 | Recurring Task Generation | `recurring-tasks` | NORMAL | Cron (daily 03:00) | Generate task instances from recurring task definitions |
+| 29 | Report Generation | `report-generation` | NORMAL | API trigger | Generate compliance reports (PDF/Excel) |
+| 30 | Notification Delivery | `notification-delivery` | HIGH | Event-driven | Deliver queued notifications via email/SMS/push |
+| 31 | Digest Delivery | `digest-delivery` | NORMAL | Cron (daily 07:00) | Send daily/weekly digest emails to users |
+| 32 | Evidence Retention | `evidence-retention` | LOW | Cron (monthly) | Archive/delete evidence past retention period |
 
 ### Queue Assignments by Priority
 
@@ -605,7 +652,14 @@ function determineRecipient(obligation: Obligation): UUID {
 
 ## 3.1 Document Processing Job
 
-**Purpose:** Process uploaded PDF documents through OCR, text extraction, and LLM parsing to extract obligations.
+**Purpose:** Process uploaded PDF documents through text extraction, OCR (if needed), and LLM parsing to extract obligations.
+
+**Implementation Details:**
+- Uses `pdf-parse` v2 API (`PDFParse` class) for primary text extraction
+- Attempts direct text extraction first (efficient for native PDFs)
+- Falls back to Tesseract.js OCR only if extracted text < 100 characters
+- OCR timeout: 60 seconds per document
+- Large document threshold: ≥50 pages AND ≥10MB (both conditions required)
 
 **Reference:** PLS Section A.9 (AI Extraction Processing), Technical Architecture Section 5 (AI Service Integration)
 
@@ -667,39 +721,86 @@ Step 4: Load File from Storage
 │  Validate file exists and is accessible                    │
 └─────────────────────────────────────────────────────────────┘
 
-Step 5: OCR Processing (if needed)
+Step 5: Text Extraction (Primary Method)
 ┌─────────────────────────────────────────────────────────────┐
-│  5a. Check if native PDF:                                  │
-│      IF documents.is_native_pdf = false OR                 │
-│         documents.ocr_confidence < 0.8 THEN                │
+│  Implementation: lib/ai/document-processor.ts              │
 │                                                             │
-│  5b. Run OCR:                                              │
-│      - Use OpenAI Vision API (preferred) or Tesseract      │
-│      - Process each page                                   │
-│      - Extract text content                                │
+│  5a. Attempt direct text extraction using pdf-parse v2:    │
+│      - Use PDFParse class from pdf-parse library          │
+│      - Initialize: new PDFParse({ data: fileBuffer })      │
+│      - Extract text: await parser.getText()                │
+│      - Get metadata: pageCount, fileSizeBytes              │
 │                                                             │
-│  5c. Store OCR results:                                    │
-│      UPDATE documents                                       │
-│      SET extracted_text = :ocr_text,                       │
-│          ocr_confidence = :confidence,                     │
-│          updated_at = NOW()                                │
-│      WHERE id = :document_id                               │
+│  5b. Check extraction success:                            │
+│      IF extracted_text.trim().length < 100 THEN            │
+│        - Likely scanned document (insufficient text)       │
+│        - Set needsOCR = true                               │
+│        - Proceed to Step 6 (OCR Processing)               │
+│      ELSE                                                   │
+│        - Native PDF with extractable text                  │
+│        - Set is_native_pdf = true                          │
+│        - Proceed to Step 5c (Store text)                  │
+│      END IF                                                │
 │                                                             │
-│  5d. If OCR confidence < 0.8:                              │
-│      Log warning, continue with extracted text             │
-│      Flag for review: create review_queue_items record     │
-└─────────────────────────────────────────────────────────────┘
-
-Step 6: Text Extraction
-┌─────────────────────────────────────────────────────────────┐
-│  6a. If native PDF (no OCR needed):                        │
-│      Extract text directly from PDF                        │
-│                                                             │
-│  6b. Store extracted text:                                 │
+│  5c. Store extracted text (if native PDF):                 │
 │      UPDATE documents                                       │
 │      SET extracted_text = :text,                           │
+│          page_count = :page_count,                          │
+│          file_size_bytes = :file_size_bytes,                │
+│          is_native_pdf = true,                              │
 │          updated_at = NOW()                                │
 │      WHERE id = :document_id                               │
+│                                                             │
+│  5d. Detect large document:                               │
+│      IF page_count >= 50 AND file_size_bytes >= 10_000_000 │
+│         (10MB) THEN                                        │
+│        - Set is_large_document = true                      │
+│        - Apply extended timeout (300 seconds)               │
+│      END IF                                                │
+└─────────────────────────────────────────────────────────────┘
+
+Step 6: OCR Processing (Fallback for Scanned PDFs)
+┌─────────────────────────────────────────────────────────────┐
+│  Implementation: lib/ai/document-processor.ts              │
+│  Only executed if Step 5 detected scanned PDF              │
+│  (extracted_text.trim().length < 100)                      │
+│                                                             │
+│  6a. Initialize Tesseract.js OCR worker:                   │
+│      - Create worker: createWorker('eng')                   │
+│      - Language: English ('eng')                            │
+│                                                             │
+│  6b. Run OCR with timeout protection:                      │
+│      - Set 60-second timeout per document                  │
+│      - Use Promise.race pattern for timeout handling       │
+│      - Process document buffer: worker.recognize()        │
+│      - Extract text from OCR result: data.text              │
+│                                                             │
+│  6c. Store OCR results:                                    │
+│      UPDATE documents                                       │
+│      SET extracted_text = :ocr_text,                        │
+│          ocr_confidence = :confidence,                      │
+│          is_native_pdf = false,                              │
+│          updated_at = NOW()                                │
+│      WHERE id = :document_id                               │
+│                                                             │
+│  6d. Cleanup:                                              │
+│      - Terminate worker in finally block                   │
+│      - Prevents memory leaks                                │
+│                                                             │
+│  6e. Validate extracted text:                              │
+│      IF extracted_text.trim().length < 50 THEN             │
+│        - Throw error: "Extracted text is too short"         │
+│        - Set status = 'OCR_FAILED'                         │
+│        - Flag for manual review                             │
+│      END IF                                                │
+│                                                             │
+│  6f. Handle OCR timeout (60 seconds):                      │
+│      IF OCR processing exceeds 60 seconds THEN             │
+│        - Reject with error: "OCR timeout after 60 seconds" │
+│        - Set status = 'OCR_FAILED'                         │
+│        - Create review_queue_item                           │
+│        - Do not retry (non-retryable error)                │
+│      END IF                                                │
 └─────────────────────────────────────────────────────────────┘
 
 Step 7: Rules Library Check (Cost Optimization)
@@ -811,7 +912,9 @@ Step 11: Create Extraction Log
 | Error Type | Handling Strategy | Status | Retry |
 |------------|-------------------|--------|-------|
 | File not found | Set status = 'FAILED', error_message = 'File not found' | FAILED | No |
-| OCR failure | Set status = 'OCR_FAILED', create review_queue_item | OCR_FAILED | Yes |
+| OCR failure | Set status = 'OCR_FAILED', create review_queue_item | OCR_FAILED | No |
+| OCR timeout (60s) | Set status = 'OCR_FAILED', error_message = 'OCR timeout after 60 seconds' | OCR_FAILED | No |
+| Extracted text too short (<50 chars) | Set status = 'OCR_FAILED', error_message = 'Extracted text is too short. Document may be corrupted or require OCR.' | OCR_FAILED | No |
 | LLM timeout | Retry twice (3 total attempts) with same document (per PLS A.9.1: 30s standard, 5min large) | PROCESSING | Yes |
 | LLM error | Set status = 'EXTRACTION_FAILED', create review_queue_item | EXTRACTION_FAILED | Yes |
 | Validation errors | Set status = 'REVIEW_REQUIRED', create review_queue_item | REVIEW_REQUIRED | No |
@@ -2157,9 +2260,9 @@ function getRunHourAlertMessage(
 
 ## 5.2 AER Generation Job
 
-**Purpose:** Compiles Annual Emissions Report data and generates EA-format PDF/CSV for submission.
+**Purpose:** Compiles Annual Emissions Report data and generates EA-format PDF/CSV for submission. Includes fuel usage logs and sulphur content reports aggregation.
 
-**Reference:** PLS Section C.3.8 (Annual Return - AER Logic)
+**Reference:** PLS Section C.3.8 (Annual Return - AER Logic), PLS Section C.3.9 (Fuel Usage Logging Logic), PLS Section C.3.10 (Sulphur Content Reporting Logic)
 
 ### Job Configuration
 
@@ -2218,6 +2321,32 @@ Step 2: Aggregate Run-Hour Data
 │  WHERE generator_id = :generator_id                         │
 │    AND recording_date BETWEEN :period_start AND :period_end│
 │  GROUP BY generator_id                                      │
+└─────────────────────────────────────────────────────────────┘
+
+Step 2b: Aggregate Fuel Usage Logs
+┌─────────────────────────────────────────────────────────────┐
+│  For each generator:                                        │
+│                                                             │
+│  SELECT                                                     │
+│    generator_id,                                            │
+│    fuel_type,                                               │
+│    SUM(quantity) AS total_quantity,                        │
+│    unit,                                                     │
+│    AVG(sulphur_content_percentage) AS avg_sulphur_pct,     │
+│    AVG(sulphur_content_mg_per_kg) AS avg_sulphur_mg_kg    │
+│  FROM fuel_usage_logs                                       │
+│  WHERE generator_id = :generator_id                         │
+│    AND log_date BETWEEN :period_start AND :period_end      │
+│  GROUP BY generator_id, fuel_type, unit                    │
+└─────────────────────────────────────────────────────────────┘
+
+Step 2c: Retrieve Sulphur Content Reports
+┌─────────────────────────────────────────────────────────────┐
+│  SELECT scr.*                                               │
+│  FROM sulphur_content_reports scr                          │
+│  WHERE scr.generator_id IN (:generator_ids)                │
+│    AND scr.test_date BETWEEN :period_start AND :period_end │
+│  ORDER BY scr.test_date DESC                               │
 └─────────────────────────────────────────────────────────────┘
 
 Step 3: Aggregate Stack Test Results
@@ -2309,6 +2438,9 @@ Step 7: Create AER Database Record
 │    :storage_path, NOW(), :created_by                        │
 │  )                                                          │
 │  RETURNING id                                               │
+│                                                             │
+│  Note: fuel_consumption_data is populated from aggregated  │
+│  fuel_usage_logs (replaces legacy JSONB field)              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -2361,6 +2493,8 @@ interface AERData {
 |------------|--------|
 | Missing generator data | Add validation error, continue |
 | Missing stack test | Add validation error, continue |
+| Missing fuel usage logs | Add validation warning (can be estimated), continue |
+| Missing sulphur content reports | Add validation warning (optional for AER), continue |
 | PDF generation failure | Retry once, then fail job |
 | Storage upload failure | Retry with backoff |
 | Database error | Retry with backoff |
@@ -2390,6 +2524,65 @@ interface AERData {
 
 - Create notification: "AER generation failed"
 - Include error details and validation errors
+
+### 5.4 AER Generation Job (Module 3)
+
+**Purpose:** Generate Annual Emissions Report (AER) for MCPD registrations
+
+**Queue:** `aer-generation`
+
+**Priority:** NORMAL
+
+**Trigger:** 
+- API trigger: User requests AER generation via `/api/v1/module-3/aer/generate`
+- Scheduled: Annual cron job (1st January each year) for all active MCPD registrations
+
+**Job Data:**
+```typescript
+interface AERGenerationJobData {
+  mcpd_registration_id: string;
+  reporting_period_start: string; // ISO date
+  reporting_period_end: string; // ISO date
+  generator_ids?: string[]; // Optional: specific generators, otherwise all
+  company_id: string;
+  site_id: string;
+  requested_by: string; // User ID
+}
+```
+
+**Execution Logic:**
+1. Fetch generator data for registration
+2. Aggregate run-hour records for reporting period
+3. Aggregate fuel usage logs by fuel type for reporting period
+4. Retrieve sulphur content reports for fuel batches used during period
+5. Retrieve most recent stack test results per generator
+6. Calculate emissions (run-hours × emission rates)
+7. Compile fuel consumption data from fuel_usage_logs (replaces legacy JSONB field)
+8. Include sulphur content compliance verification from sulphur_content_reports
+9. Generate AER PDF document
+10. Store AER document in `aer_documents` table
+11. Update AER status to READY
+12. Notify user when generation complete
+
+**Data Sources:**
+- `generators` table
+- `run_hour_records` table (aggregated)
+- `fuel_usage_logs` table (aggregated by fuel type)
+- `sulphur_content_reports` table (for compliance verification)
+- `stack_tests` table (most recent per generator)
+- `runtime_monitoring` table (if used)
+
+**Output:**
+- AER PDF document stored in Supabase Storage
+- `aer_documents` record with status = READY
+- File path stored in `generated_file_path`
+
+**Error Handling:**
+- Retry up to 3 times on transient failures
+- Log errors to `extraction_logs` table
+- Notify user on final failure
+
+**Reference:** PLS Section C.3.8 (Annual Return Logic), High Level Product Plan Module 3 - Fuel usage logs + sulphur content reporting
 
 ---
 
@@ -3153,7 +3346,7 @@ interface PackDistributionJobInput {
 1. Load pack from `audit_packs` table
 2. Download PDF from storage
 3. Send email with PDF attachment to recipients
-4. Create `pack_distributions` record
+4. Create `pack_sharing` record with `distribution_method = 'EMAIL'` and `distributed_to` set
 5. Send notification to requester
 
 **For SHARED_LINK Distribution:**
@@ -3161,7 +3354,7 @@ interface PackDistributionJobInput {
 2. Generate unique token (`shared_link_token`)
 3. Set expiration (`shared_link_expires_at`)
 4. Update `audit_packs` record with token and expiration
-5. Create `pack_distributions` record
+5. Create `pack_sharing` record with `distribution_method = 'SHARED_LINK'` and `distributed_to` set
 6. Send email with shareable link to recipients (if provided)
 7. Send notification to requester
 
@@ -3246,9 +3439,2187 @@ interface ConsultantClientSyncJobInput {
 
 ---
 
-# 8. Integration Points
+# 7. Universal Compliance Clock Jobs
 
-## 8.1 Database Integration
+**Reference:** Database Schema v1.3 - compliance_clocks_universal table
+
+These jobs manage the Universal Compliance Clock system that provides Red/Amber/Green criticality tracking across all modules.
+
+## 7.1 Update Compliance Clocks Job
+
+**Purpose:** Recalculate days_remaining and criticality for all active compliance clocks daily.
+
+### Job Configuration
+
+| Property | Value |
+|----------|-------|
+| Job Type | `UPDATE_COMPLIANCE_CLOCKS` |
+| Queue | `compliance-clocks` |
+| Priority | NORMAL |
+| Trigger | Cron: `1 0 * * *` (daily at 00:01 UTC) |
+| Timeout | 600 seconds (10 minutes) |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
+
+### Input Parameters
+
+```typescript
+interface UpdateComplianceClocksJobInput {
+  company_id?: UUID;    // Optional: Process specific company
+  site_id?: UUID;       // Optional: Process specific site
+  module_id?: UUID;     // Optional: Process specific module
+  batch_size?: number;  // Default: 1000
+}
+```
+
+### Execution Steps
+
+```
+Step 1: Query Active Compliance Clocks
+┌─────────────────────────────────────────────────────────────┐
+│  SELECT id, company_id, site_id, entity_type, entity_id,   │
+│         target_date, reminder_days, reminders_sent          │
+│  FROM compliance_clocks_universal                           │
+│  WHERE status = 'ACTIVE'                                    │
+│    AND (company_id = :company_id OR :company_id IS NULL)   │
+│    AND (site_id = :site_id OR :site_id IS NULL)            │
+│    AND (module_id = :module_id OR :module_id IS NULL)      │
+│  ORDER BY target_date ASC                                   │
+│  LIMIT :batch_size                                          │
+└─────────────────────────────────────────────────────────────┘
+
+Step 2: For Each Clock (Batch Processing)
+┌─────────────────────────────────────────────────────────────┐
+│  2a. Calculate days_remaining:                             │
+│      days_remaining = target_date - CURRENT_DATE           │
+│                                                             │
+│  2b. Determine criticality:                                │
+│      IF days_remaining < 0 THEN                            │
+│        criticality = 'RED' (overdue)                       │
+│      ELSIF days_remaining <= 7 THEN                        │
+│        criticality = 'RED' (critical)                      │
+│      ELSIF days_remaining <= 30 THEN                       │
+│        criticality = 'AMBER' (warning)                     │
+│      ELSE                                                   │
+│        criticality = 'GREEN' (on track)                    │
+│                                                             │
+│  2c. Check if overdue:                                     │
+│      IF target_date < CURRENT_DATE THEN                    │
+│        status = 'OVERDUE'                                  │
+│                                                             │
+│  2d. Generate reminders if needed:                         │
+│      FOR EACH day IN reminder_days                         │
+│        IF days_remaining = day AND                         │
+│           day NOT IN reminders_sent THEN                   │
+│          -- Create notification                            │
+│          INSERT INTO notifications (...)                   │
+│          -- Update reminders_sent array                    │
+│          UPDATE compliance_clocks_universal                │
+│          SET reminders_sent = array_append(                │
+│              reminders_sent, :day)                         │
+│          WHERE id = :clock_id                              │
+└─────────────────────────────────────────────────────────────┘
+
+Step 3: Batch Update Clocks
+┌─────────────────────────────────────────────────────────────┐
+│  -- Use temporary table for batch update                   │
+│  CREATE TEMP TABLE clock_updates AS                        │
+│  SELECT id, days_remaining, criticality, status            │
+│  FROM (calculated_values);                                 │
+│                                                             │
+│  UPDATE compliance_clocks_universal c                      │
+│  SET days_remaining = u.days_remaining,                    │
+│      criticality = u.criticality,                          │
+│      status = u.status,                                    │
+│      updated_at = NOW()                                    │
+│  FROM clock_updates u                                      │
+│  WHERE c.id = u.id;                                        │
+└─────────────────────────────────────────────────────────────┘
+
+Step 4: Process Next Batch (if exists)
+┌─────────────────────────────────────────────────────────────┐
+│  IF more clocks exist with status = 'ACTIVE' THEN          │
+│    Schedule immediate follow-up job                        │
+│  ELSE                                                       │
+│    Complete job                                            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Criticality Rules
+
+```typescript
+function calculateCriticality(daysRemaining: number): 'RED' | 'AMBER' | 'GREEN' {
+  if (daysRemaining < 0) return 'RED';      // Overdue
+  if (daysRemaining <= 7) return 'RED';     // Critical (≤ 7 days)
+  if (daysRemaining <= 30) return 'AMBER';  // Warning (8-30 days)
+  return 'GREEN';                           // On track (> 30 days)
+}
+```
+
+### Reminder Logic
+
+```typescript
+// Default reminder_days: [90, 30, 7]
+// Send notifications at 90, 30, and 7 days before target_date
+// Track sent reminders to avoid duplicates
+
+function shouldSendReminder(
+  daysRemaining: number,
+  reminderDays: number[],
+  remindersSent: number[]
+): boolean {
+  return reminderDays.includes(daysRemaining) &&
+         !remindersSent.includes(daysRemaining);
+}
+```
+
+### Performance Requirements
+
+| Metric | Target |
+|--------|--------|
+| Processing Rate | 1000 clocks per batch |
+| Job Duration | < 10 minutes for 10,000 clocks |
+| Database Load | < 100 queries per second |
+
+### Error Handling
+
+| Error Type | Handling Strategy | Retry |
+|------------|-------------------|-------|
+| Database connection error | Retry with exponential backoff | Yes |
+| Individual clock error | Log error, continue with next clock | No |
+| Batch timeout | Process partial batch, schedule continuation | Yes |
+
+### Monitoring Metrics
+
+- Total clocks processed
+- Clocks by criticality (RED/AMBER/GREEN)
+- Clocks transitioned to OVERDUE
+- Reminders generated
+- Processing duration
+
+---
+
+## 7.2 Refresh Compliance Clock Dashboard Job
+
+**Purpose:** Refresh materialized view for compliance clock dashboard.
+
+> [v1.6 UPDATE – Materialized View Optimization – 2025-01-01]
+> - Materialized view should be tested against regular view first
+> - Only use materialized view if queries are slow (>500ms)
+> - For V1 scale, regular view may be sufficient
+> - If materialized view is not needed, this job can be removed
+
+### Job Configuration
+
+| Property | Value |
+|----------|-------|
+| Job Type | `REFRESH_COMPLIANCE_DASHBOARD` |
+| Queue | `dashboard-refresh` |
+| Priority | LOW |
+| Trigger | Cron: `*/15 * * * *` (every 15 minutes) |
+| Timeout | 60 seconds |
+| Max Retries | 1 retry attempt (2 total attempts: 1 initial + 1 retry) |
+
+### Input Parameters
+
+```typescript
+interface RefreshComplianceDashboardJobInput {
+  refresh_mode?: 'CONCURRENT' | 'FULL';  // Default: CONCURRENT
+}
+```
+
+### Execution Steps
+
+```
+Step 1: Refresh Materialized View
+┌─────────────────────────────────────────────────────────────┐
+│  -- Use CONCURRENTLY to avoid locking                      │
+│  REFRESH MATERIALIZED VIEW CONCURRENTLY                     │
+│    compliance_clock_dashboard;                             │
+│                                                             │
+│  -- View aggregates:                                       │
+│  --   - Total clocks by company/site/module                │
+│  --   - Count by criticality (RED/AMBER/GREEN)             │
+│  --   - Count by status (ACTIVE/OVERDUE/COMPLETED)         │
+│  --   - Upcoming target dates                              │
+└─────────────────────────────────────────────────────────────┘
+
+Step 2: Verify Refresh Completion
+┌─────────────────────────────────────────────────────────────┐
+│  SELECT COUNT(*) FROM compliance_clock_dashboard;          │
+│  -- Ensure view has data                                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Performance Requirements
+
+| Metric | Target |
+|--------|--------|
+| Refresh Duration | < 30 seconds |
+| Lock Duration | None (CONCURRENT mode) |
+
+### Error Handling
+
+| Error Type | Handling Strategy | Retry |
+|------------|-------------------|-------|
+| View locked | Retry with backoff | Yes |
+| Refresh timeout | Alert admins, skip refresh | No |
+
+---
+
+# 8. Escalation Workflow Jobs
+
+**Reference:** Database Schema v1.3 - escalation_workflows table
+
+These jobs manage automated escalation of overdue obligations based on configurable company-specific workflows.
+
+> **⚠️ IMPLEMENTATION STATUS (2025-02-01):**
+> - **Current Implementation:** Hardcoded escalation logic exists in `lib/services/escalation-service.ts` and `lib/jobs/escalation-check-job.ts` using role-based escalation (Level 1 = ADMIN/OWNER, Level 2 = ADMIN/OWNER, Level 3 = OWNER) with time-based progression (24 hours, 48 hours).
+> - **Specification Requirements:** This section describes the full configurable escalation workflow system using `escalation_workflows` table, which is **NOT YET IMPLEMENTED**.
+> - **Missing Features:**
+>   - ❌ Days-overdue-based escalation matching (currently time-based)
+>   - ❌ Escalation workflow matching logic (obligation_category + company_id)
+>   - ❌ Configurable recipients per level from `escalation_workflows.level_N_recipients`
+>   - ❌ Sequential level progression based on threshold days
+>   - ❌ Integration with `escalations` table for escalation record tracking
+> - **Action Required:** Implement full escalation workflow job per this specification, replacing hardcoded logic with configurable workflow system.
+
+## 8.1 Process Escalations Job
+
+**Purpose:** Auto-escalate overdue obligations based on escalation workflows.
+
+### Job Configuration
+
+| Property | Value |
+|----------|-------|
+| Job Type | `PROCESS_ESCALATIONS` |
+| Queue | `escalation-processing` |
+| Priority | HIGH |
+| Trigger | Cron: `30 0 * * *` (daily at 00:30 UTC, after clock update) |
+| Timeout | 600 seconds (10 minutes) |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
+
+### Input Parameters
+
+```typescript
+interface ProcessEscalationsJobInput {
+  company_id?: UUID;    // Optional: Process specific company
+  obligation_category?: string;  // Optional: Process specific category
+  batch_size?: number;  // Default: 500
+}
+```
+
+### Execution Steps
+
+```
+Step 1: Query Overdue Obligations and Deadlines
+┌─────────────────────────────────────────────────────────────┐
+│  -- Find all overdue obligations                           │
+│  SELECT o.id, o.company_id, o.obligation_category,         │
+│         o.due_date, o.assigned_to,                         │
+│         CURRENT_DATE - o.due_date AS days_overdue          │
+│  FROM obligations o                                        │
+│  WHERE o.status = 'OVERDUE'                                │
+│    AND (o.company_id = :company_id OR :company_id IS NULL)│
+│    AND (o.obligation_category = :obligation_category       │
+│         OR :obligation_category IS NULL)                   │
+│                                                             │
+│  UNION ALL                                                 │
+│                                                             │
+│  -- Find all overdue deadlines                             │
+│  SELECT d.id, d.company_id, o.obligation_category,         │
+│         d.due_date, o.assigned_to,                         │
+│         CURRENT_DATE - d.due_date AS days_overdue          │
+│  FROM deadlines d                                          │
+│  JOIN obligations o ON o.id = d.obligation_id              │
+│  WHERE d.status = 'OVERDUE'                                │
+│    AND (d.company_id = :company_id OR :company_id IS NULL)│
+│  ORDER BY days_overdue DESC                                │
+│  LIMIT :batch_size                                         │
+└─────────────────────────────────────────────────────────────┘
+
+Step 2: Match to Escalation Workflows
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH overdue_item                                     │
+│    -- Find applicable escalation workflow                  │
+│    SELECT * FROM escalation_workflows                      │
+│    WHERE company_id = :overdue_item.company_id             │
+│      AND is_active = true                                  │
+│      AND (obligation_category = :overdue_item.category     │
+│           OR obligation_category IS NULL)                  │
+│    ORDER BY obligation_category NULLS LAST                 │
+│    LIMIT 1;                                                │
+│                                                             │
+│    -- Category-specific workflow takes precedence          │
+│    -- NULL category = fallback for all categories          │
+└─────────────────────────────────────────────────────────────┘
+
+Step 3: Determine Escalation Level
+┌─────────────────────────────────────────────────────────────┐
+│  3a. Compare days_overdue to level thresholds:             │
+│      IF days_overdue >= level_4_days THEN                  │
+│        escalation_level = 4                                │
+│      ELSIF days_overdue >= level_3_days THEN               │
+│        escalation_level = 3                                │
+│      ELSIF days_overdue >= level_2_days THEN               │
+│        escalation_level = 2                                │
+│      ELSIF days_overdue >= level_1_days THEN               │
+│        escalation_level = 1                                │
+│      ELSE                                                   │
+│        escalation_level = 0 (no escalation yet)            │
+│                                                             │
+│  3b. Check existing escalation record:                     │
+│      SELECT current_level FROM escalations                 │
+│      WHERE entity_id = :overdue_item.id                    │
+│        AND entity_type = 'OBLIGATION' OR 'DEADLINE'        │
+│      ORDER BY created_at DESC LIMIT 1;                     │
+│                                                             │
+│  3c. Enforce sequential escalation:                        │
+│      -- Cannot skip levels                                 │
+│      IF new_level > current_level + 1 THEN                 │
+│        new_level = current_level + 1                       │
+└─────────────────────────────────────────────────────────────┘
+
+Step 4: Create/Update Escalation Record
+┌─────────────────────────────────────────────────────────────┐
+│  IF escalation_level > current_level THEN                  │
+│    -- Create new escalation record                         │
+│    INSERT INTO escalations (                               │
+│      company_id, entity_type, entity_id,                   │
+│      escalation_level, escalated_at,                       │
+│      escalated_to, escalation_reason                       │
+│    ) VALUES (                                              │
+│      :company_id, :entity_type, :entity_id,                │
+│      :escalation_level, NOW(),                             │
+│      :level_N_recipients, -- From workflow config          │
+│      :reason                                               │
+│    );                                                      │
+└─────────────────────────────────────────────────────────────┘
+
+Step 5: Send Notifications to Recipients
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH recipient IN level_N_recipients                  │
+│    INSERT INTO notifications (                             │
+│      user_id, recipient_email, notification_type,         │
+│      priority, subject, body_text,                         │
+│      entity_type, entity_id, metadata                      │
+│    ) VALUES (                                              │
+│      :recipient_id, :recipient_email,                      │
+│      'ESCALATION_ALERT', 'URGENT',                         │
+│      'Level :level Escalation: :obligation_summary',       │
+│      :body_text,                                           │
+│      :entity_type, :entity_id,                             │
+│      jsonb_build_object(                                   │
+│        'escalation_level', :level,                         │
+│        'days_overdue', :days_overdue,                      │
+│        'workflow_id', :workflow_id                         │
+│      )                                                     │
+│    );                                                      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Escalation Level Logic
+
+```typescript
+function determineEscalationLevel(
+  daysOverdue: number,
+  workflow: EscalationWorkflow
+): number {
+  if (daysOverdue >= workflow.level_4_days) return 4;
+  if (daysOverdue >= workflow.level_3_days) return 3;
+  if (daysOverdue >= workflow.level_2_days) return 2;
+  if (daysOverdue >= workflow.level_1_days) return 1;
+  return 0; // Not yet eligible for escalation
+}
+
+function canEscalateToLevel(
+  currentLevel: number,
+  targetLevel: number
+): boolean {
+  // Enforce sequential escalation - cannot skip levels
+  return targetLevel === currentLevel + 1;
+}
+```
+
+### Default Escalation Thresholds
+
+```typescript
+// Default thresholds (configurable per company)
+const DEFAULT_ESCALATION_CONFIG = {
+  level_1_days: 7,   // Escalate to Level 1 after 7 days overdue
+  level_2_days: 14,  // Escalate to Level 2 after 14 days overdue
+  level_3_days: 21,  // Escalate to Level 3 after 21 days overdue
+  level_4_days: 30,  // Escalate to Level 4 after 30 days overdue
+};
+```
+
+### Performance Requirements
+
+| Metric | Target |
+|--------|--------|
+| Processing Rate | 500 obligations per batch |
+| Job Duration | < 10 minutes for 5000 obligations |
+| Notification Rate | < 50 notifications per second |
+
+### Error Handling
+
+| Error Type | Handling Strategy | Retry |
+|------------|-------------------|-------|
+| Missing workflow | Use company default or skip | No |
+| Invalid recipients | Log warning, skip recipient | No |
+| Notification failure | Log error, continue processing | No |
+| Database error | Retry with exponential backoff | Yes |
+
+### Monitoring Metrics
+
+- Total escalations processed
+- Escalations by level (1-4)
+- Notifications sent
+- Processing duration
+- Escalation creation rate
+
+---
+
+# 9. Permit Workflow Jobs
+
+**Reference:** Database Schema v1.3 - permit_workflows table
+
+These jobs manage automated permit lifecycle workflows including renewals, variations, and regulatory response tracking.
+
+## 9.1 Auto-Create Renewal Workflows Job
+
+**Purpose:** Auto-create renewal workflows 90 days before permit expiry.
+
+### Job Configuration
+
+| Property | Value |
+|----------|-------|
+| Job Type | `AUTO_CREATE_RENEWAL_WORKFLOWS` |
+| Queue | `permit-workflows` |
+| Priority | NORMAL |
+| Trigger | Cron: `0 1 * * *` (daily at 01:00 UTC) |
+| Timeout | 300 seconds (5 minutes) |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
+
+### Input Parameters
+
+```typescript
+interface AutoCreateRenewalWorkflowsJobInput {
+  company_id?: UUID;           // Optional: Process specific company
+  advance_notice_days?: number; // Default: 90
+}
+```
+
+### Execution Steps
+
+```
+Step 1: Query Expiring Permits
+┌─────────────────────────────────────────────────────────────┐
+│  SELECT d.id AS document_id, d.company_id, d.site_id,      │
+│         d.document_type, d.expiry_date,                     │
+│         u.id AS owner_id, u.email AS owner_email            │
+│  FROM documents d                                           │
+│  JOIN users u ON u.id = d.assigned_to                      │
+│  WHERE d.document_type IN ('PERMIT', 'CONSENT',            │
+│                            'REGISTRATION', 'LICENCE')       │
+│    AND d.expiry_date = CURRENT_DATE + INTERVAL             │
+│        ':advance_notice_days days'                         │
+│    AND d.status = 'ACTIVE'                                 │
+│    AND (d.company_id = :company_id                         │
+│         OR :company_id IS NULL)                            │
+└─────────────────────────────────────────────────────────────┘
+
+Step 2: Check for Existing Renewal Workflows
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH permit                                           │
+│    -- Avoid creating duplicate workflows                   │
+│    SELECT COUNT(*) FROM permit_workflows                   │
+│    WHERE document_id = :permit.document_id                 │
+│      AND workflow_type = 'RENEWAL'                         │
+│      AND status NOT IN ('COMPLETED', 'CANCELLED');         │
+│                                                             │
+│    IF count = 0 THEN                                       │
+│      -- No active renewal workflow exists                  │
+│      proceed_to_step_3 = true                              │
+└─────────────────────────────────────────────────────────────┘
+
+Step 3: Create Renewal Workflow
+┌─────────────────────────────────────────────────────────────┐
+│  INSERT INTO permit_workflows (                            │
+│    document_id, workflow_type, status,                     │
+│    regulator_response_deadline,                            │
+│    workflow_notes, created_by                              │
+│  ) VALUES (                                                │
+│    :document_id, 'RENEWAL', 'DRAFT',                       │
+│    :expiry_date - INTERVAL '30 days',  -- Expected        │
+│    'Auto-created renewal workflow - permit expires in 90   │
+│     days', :system_user_id                                │
+│  );                                                        │
+└─────────────────────────────────────────────────────────────┘
+
+Step 4: Create Notification
+┌─────────────────────────────────────────────────────────────┐
+│  INSERT INTO notifications (                               │
+│    user_id, recipient_email, notification_type,           │
+│    priority, subject, body_text,                           │
+│    entity_type, entity_id, action_url                      │
+│  ) VALUES (                                                │
+│    :owner_id, :owner_email,                                │
+│    'PERMIT_RENEWAL_REQUIRED', 'HIGH',                      │
+│    'Permit Renewal Required: Expires in 90 Days',          │
+│    'Your :document_type (:document_name) expires on        │
+│     :expiry_date. A renewal workflow has been created.     │
+│     Please start the renewal process.',                    │
+│    'permit_workflow', :workflow_id,                        │
+│    '/permits/:document_id/workflows/:workflow_id'          │
+│  );                                                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Renewal Timeline
+
+```typescript
+// Default timeline for permit renewals
+const RENEWAL_TIMELINE = {
+  advance_notice_days: 90,          // Create workflow 90 days before expiry
+  regulator_response_days: 60,      // Expected regulator response time
+  submission_deadline_days: 30,     // Submit application 30 days before expiry
+};
+```
+
+### Performance Requirements
+
+| Metric | Target |
+|--------|--------|
+| Processing Rate | 100+ permits per day |
+| Job Duration | < 5 minutes |
+
+### Error Handling
+
+| Error Type | Handling Strategy | Retry |
+|------------|-------------------|-------|
+| Duplicate workflow | Skip permit, continue | No |
+| Missing owner | Assign to admin, continue | No |
+| Notification failure | Log error, continue | No |
+
+### Monitoring Metrics
+
+- Renewal workflows created
+- Permits expiring in next 90 days
+- Processing duration
+
+---
+
+## 9.2 Check Regulator Response Deadlines Job
+
+**Purpose:** Alert when regulator hasn't responded by deadline.
+
+### Job Configuration
+
+| Property | Value |
+|----------|-------|
+| Job Type | `CHECK_REGULATOR_RESPONSE_DEADLINES` |
+| Queue | `permit-workflows` |
+| Priority | NORMAL |
+| Trigger | Cron: `0 9 * * *` (daily at 09:00 UTC, business hours) |
+| Timeout | 120 seconds (2 minutes) |
+| Max Retries | 1 retry attempt (2 total attempts: 1 initial + 1 retry) |
+
+### Input Parameters
+
+```typescript
+interface CheckRegulatorResponseDeadlinesJobInput {
+  company_id?: UUID;    // Optional: Process specific company
+}
+```
+
+### Execution Steps
+
+```
+Step 1: Query Workflows Awaiting Regulator Response
+┌─────────────────────────────────────────────────────────────┐
+│  SELECT pw.id AS workflow_id, pw.document_id,              │
+│         pw.workflow_type, pw.submitted_date,                │
+│         pw.regulator_response_deadline,                     │
+│         d.document_name, u.id AS owner_id,                 │
+│         u.email AS owner_email                              │
+│  FROM permit_workflows pw                                  │
+│  JOIN documents d ON d.id = pw.document_id                 │
+│  JOIN users u ON u.id = d.assigned_to                      │
+│  WHERE pw.status = 'UNDER_REVIEW'                          │
+│    AND pw.regulator_response_deadline < CURRENT_DATE       │
+│    AND pw.regulator_response_date IS NULL                  │
+│    AND (pw.company_id = :company_id                        │
+│         OR :company_id IS NULL)                            │
+└─────────────────────────────────────────────────────────────┘
+
+Step 2: Calculate Days Overdue
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH workflow                                         │
+│    days_overdue = CURRENT_DATE -                           │
+│                   regulator_response_deadline              │
+└─────────────────────────────────────────────────────────────┘
+
+Step 3: Create Alert Notifications
+┌─────────────────────────────────────────────────────────────┐
+│  -- Notify permit owner                                    │
+│  INSERT INTO notifications (                               │
+│    user_id, recipient_email, notification_type,           │
+│    priority, subject, body_text,                           │
+│    entity_type, entity_id                                  │
+│  ) VALUES (                                                │
+│    :owner_id, :owner_email,                                │
+│    'REGULATOR_RESPONSE_OVERDUE', 'URGENT',                 │
+│    'Regulator Response Overdue: :workflow_type',           │
+│    'The regulator response for your :workflow_type         │
+│     workflow was due on :deadline and is now :days_overdue │
+│     days overdue. Consider following up with the           │
+│     regulator.', 'permit_workflow', :workflow_id           │
+│  );                                                        │
+│                                                             │
+│  -- Escalate to admins if > 7 days overdue                │
+│  IF days_overdue > 7 THEN                                  │
+│    -- Send to all admins                                   │
+│    INSERT INTO notifications (...)                         │
+│    SELECT ... FROM users WHERE role = 'ADMIN'              │
+└─────────────────────────────────────────────────────────────┘
+
+Step 4: Update Workflow Metadata
+┌─────────────────────────────────────────────────────────────┐
+│  UPDATE permit_workflows                                   │
+│  SET workflow_notes = COALESCE(workflow_notes, '') ||      │
+│      E'\n[' || CURRENT_DATE || '] Regulator response       │
+│      overdue - alert sent',                                │
+│      updated_at = NOW()                                    │
+│  WHERE id = :workflow_id;                                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Alert Escalation Rules
+
+```typescript
+function determineAlertPriority(daysOverdue: number): 'HIGH' | 'URGENT' {
+  return daysOverdue > 7 ? 'URGENT' : 'HIGH';
+}
+
+function shouldEscalateToAdmins(daysOverdue: number): boolean {
+  return daysOverdue > 7;
+}
+```
+
+### Performance Requirements
+
+| Metric | Target |
+|--------|--------|
+| Job Duration | < 2 minutes |
+| Query Time | < 5 seconds |
+
+### Error Handling
+
+| Error Type | Handling Strategy | Retry |
+|------------|-------------------|-------|
+| Missing permit owner | Escalate to admins | No |
+| Notification failure | Log error, continue | No |
+
+---
+
+# 10. Corrective Action Jobs
+
+**Reference:** Database Schema v1.3 - corrective_action_items table
+
+These jobs manage automated tracking and reminders for corrective action items.
+
+## 10.1 Monitor Corrective Action Items Job
+
+**Purpose:** Send reminders for upcoming action item due dates.
+
+### Job Configuration
+
+| Property | Value |
+|----------|-------|
+| Job Type | `MONITOR_CORRECTIVE_ACTION_ITEMS` |
+| Queue | `corrective-actions` |
+| Priority | NORMAL |
+| Trigger | Cron: `0 8 * * *` (daily at 08:00 UTC, business hours) |
+| Timeout | 300 seconds (5 minutes) |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
+
+### Input Parameters
+
+```typescript
+interface MonitorCorrectiveActionItemsJobInput {
+  company_id?: UUID;    // Optional: Process specific company
+  batch_size?: number;  // Default: 200
+}
+```
+
+### Execution Steps
+
+```
+Step 1: Query Action Items Needing Reminders
+┌─────────────────────────────────────────────────────────────┐
+│  -- Items due in 3 days OR already overdue                 │
+│  SELECT cai.id AS item_id, cai.item_title,                 │
+│         cai.due_date, cai.assigned_to,                      │
+│         ca.id AS corrective_action_id,                      │
+│         ca.corrective_action_name,                          │
+│         u.email AS assignee_email,                          │
+│         CURRENT_DATE - cai.due_date AS days_overdue        │
+│  FROM corrective_action_items cai                          │
+│  JOIN corrective_actions ca                                │
+│    ON ca.id = cai.corrective_action_id                     │
+│  JOIN users u ON u.id = cai.assigned_to                    │
+│  WHERE cai.status IN ('PENDING', 'IN_PROGRESS')            │
+│    AND (                                                    │
+│      cai.due_date = CURRENT_DATE + INTERVAL '3 days'       │
+│      OR cai.due_date <= CURRENT_DATE                       │
+│    )                                                        │
+│    AND (ca.company_id = :company_id                        │
+│         OR :company_id IS NULL)                            │
+│  ORDER BY cai.due_date ASC                                 │
+│  LIMIT :batch_size                                         │
+└─────────────────────────────────────────────────────────────┘
+
+Step 2: Send Reminders to Assigned Users
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH item                                             │
+│    -- Determine notification priority                      │
+│    priority = (days_overdue > 0) ? 'URGENT' : 'HIGH'       │
+│                                                             │
+│    -- Create notification                                  │
+│    INSERT INTO notifications (                             │
+│      user_id, recipient_email, notification_type,         │
+│      priority, subject, body_text,                         │
+│      entity_type, entity_id, action_url                    │
+│    ) VALUES (                                              │
+│      :assigned_to, :assignee_email,                        │
+│      CASE WHEN :days_overdue > 0                           │
+│           THEN 'CORRECTIVE_ACTION_OVERDUE'                 │
+│           ELSE 'CORRECTIVE_ACTION_DUE_SOON' END,           │
+│      :priority,                                            │
+│      CASE WHEN :days_overdue > 0                           │
+│           THEN 'Corrective Action Item Overdue'            │
+│           ELSE 'Corrective Action Item Due in 3 Days' END, │
+│      :body_text, 'corrective_action_item', :item_id,       │
+│      '/corrective-actions/:corrective_action_id/           │
+│       items/:item_id'                                      │
+│    );                                                      │
+└─────────────────────────────────────────────────────────────┘
+
+Step 3: Escalate Severely Overdue Items (> 7 days)
+┌─────────────────────────────────────────────────────────────┐
+│  -- Find items overdue by more than 7 days                 │
+│  FOR EACH item WHERE days_overdue > 7                      │
+│    -- Notify managers and admins                           │
+│    INSERT INTO notifications (...)                         │
+│    SELECT u.id, u.email FROM users u                       │
+│    WHERE u.company_id = :company_id                        │
+│      AND u.role IN ('MANAGER', 'ADMIN');                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Reminder Rules
+
+```typescript
+// Reminder schedule
+const REMINDER_RULES = {
+  advance_notice_days: 3,        // Remind 3 days before due date
+  overdue_reminder_frequency: 1, // Daily reminders when overdue
+  escalation_threshold_days: 7,  // Escalate to managers after 7 days overdue
+};
+
+function determineNotificationPriority(daysOverdue: number): 'HIGH' | 'URGENT' {
+  return daysOverdue > 0 ? 'URGENT' : 'HIGH';
+}
+
+function shouldEscalateToManagers(daysOverdue: number): boolean {
+  return daysOverdue > 7;
+}
+```
+
+### Performance Requirements
+
+| Metric | Target |
+|--------|--------|
+| Processing Rate | 200 items per batch |
+| Job Duration | < 5 minutes |
+
+### Error Handling
+
+| Error Type | Handling Strategy | Retry |
+|------------|-------------------|-------|
+| Missing assignee | Escalate to manager | No |
+| Notification failure | Log error, continue | No |
+
+### Monitoring Metrics
+
+- Total items monitored
+- Reminders sent
+- Overdue items
+- Escalations to managers
+
+---
+
+## 10.2 Auto-Transition Corrective Actions Job
+
+**Purpose:** Auto-transition corrective actions when all items complete.
+
+### Job Configuration
+
+| Property | Value |
+|----------|-------|
+| Job Type | `AUTO_TRANSITION_CORRECTIVE_ACTIONS` |
+| Queue | `corrective-actions` |
+| Priority | NORMAL |
+| Trigger | Cron: `0 * * * *` (every hour) |
+| Timeout | 120 seconds (2 minutes) |
+| Max Retries | 1 retry attempt (2 total attempts: 1 initial + 1 retry) |
+
+### Input Parameters
+
+```typescript
+interface AutoTransitionCorrectiveActionsJobInput {
+  company_id?: UUID;    // Optional: Process specific company
+}
+```
+
+### Execution Steps
+
+```
+Step 1: Find Corrective Actions Ready for Transition
+┌─────────────────────────────────────────────────────────────┐
+│  -- Actions in ACTION phase with all items completed       │
+│  SELECT ca.id AS corrective_action_id,                     │
+│         ca.corrective_action_name,                          │
+│         ca.created_by,                                      │
+│         COUNT(cai.id) AS total_items,                      │
+│         COUNT(cai.id) FILTER (                             │
+│           WHERE cai.status = 'COMPLETED'                   │
+│         ) AS completed_items                                │
+│  FROM corrective_actions ca                                │
+│  LEFT JOIN corrective_action_items cai                     │
+│    ON cai.corrective_action_id = ca.id                     │
+│  WHERE ca.lifecycle_phase = 'ACTION'                       │
+│    AND ca.status = 'IN_PROGRESS'                           │
+│    AND (ca.company_id = :company_id                        │
+│         OR :company_id IS NULL)                            │
+│  GROUP BY ca.id                                            │
+│  HAVING COUNT(cai.id) > 0                                  │
+│    AND COUNT(cai.id) FILTER (                              │
+│         WHERE cai.status = 'COMPLETED') = COUNT(cai.id)    │
+└─────────────────────────────────────────────────────────────┘
+
+Step 2: Transition to RESOLUTION Phase
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH corrective_action                                │
+│    UPDATE corrective_actions                               │
+│    SET lifecycle_phase = 'RESOLUTION',                     │
+│        updated_at = NOW()                                  │
+│    WHERE id = :corrective_action_id;                       │
+└─────────────────────────────────────────────────────────────┘
+
+Step 3: Notify Action Owner
+┌─────────────────────────────────────────────────────────────┐
+│  INSERT INTO notifications (                               │
+│    user_id, recipient_email, notification_type,           │
+│    priority, subject, body_text,                           │
+│    entity_type, entity_id, action_url                      │
+│  ) VALUES (                                                │
+│    :created_by, (SELECT email FROM users                   │
+│                  WHERE id = :created_by),                  │
+│    'CORRECTIVE_ACTION_READY_FOR_RESOLUTION', 'NORMAL',     │
+│    'Corrective Action Ready for Resolution',               │
+│    'All action items for :corrective_action_name have been │
+│     completed. The corrective action is now ready for      │
+│     resolution verification.', 'corrective_action',        │
+│    :corrective_action_id,                                  │
+│    '/corrective-actions/:corrective_action_id'             │
+│  );                                                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Lifecycle Phase Transition
+
+```typescript
+// Corrective action lifecycle phases
+enum LifecyclePhase {
+  IDENTIFICATION = 'IDENTIFICATION',  // Initial identification
+  ACTION = 'ACTION',                  // Implementing actions
+  RESOLUTION = 'RESOLUTION',          // Verifying resolution
+  CLOSED = 'CLOSED'                   // Completed and closed
+}
+
+// Auto-transition rule
+function canAutoTransition(
+  currentPhase: LifecyclePhase,
+  allItemsCompleted: boolean
+): boolean {
+  return currentPhase === LifecyclePhase.ACTION && allItemsCompleted;
+}
+```
+
+### Performance Requirements
+
+| Metric | Target |
+|--------|--------|
+| Job Duration | < 2 minutes |
+| Query Time | < 5 seconds |
+
+### Error Handling
+
+| Error Type | Handling Strategy | Retry |
+|------------|-------------------|-------|
+| Transition failure | Log error, retry | Yes |
+| Missing owner | Skip notification | No |
+
+---
+
+# 11. Validation Jobs (Module 4)
+
+**Reference:** Database Schema v1.3 - validation_rules and validation_executions tables
+
+These jobs manage automated pre-validation of consignment notes for hazardous waste tracking.
+
+## 11.1 Auto-Validate Consignment Notes Job
+
+**Purpose:** Auto-run validation on newly created/updated consignments.
+
+### Job Configuration
+
+| Property | Value |
+|----------|-------|
+| Job Type | `AUTO_VALIDATE_CONSIGNMENT_NOTES` |
+| Queue | `validation-processing` |
+| Priority | NORMAL |
+| Trigger | Cron: `*/5 * * * *` (every 5 minutes) |
+| Timeout | 300 seconds (5 minutes) |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
+
+### Input Parameters
+
+```typescript
+interface AutoValidateConsignmentNotesJobInput {
+  company_id?: UUID;    // Optional: Process specific company
+  batch_size?: number;  // Default: 50
+}
+```
+
+### Execution Steps
+
+```
+Step 1: Query Unvalidated Consignment Notes
+┌─────────────────────────────────────────────────────────────┐
+│  SELECT cn.id AS consignment_note_id, cn.company_id,       │
+│         cn.waste_stream_id, cn.carrier_id,                  │
+│         cn.consignment_date, cn.quantity, cn.unit,          │
+│         cn.ewc_code, cn.destination_site_id                 │
+│  FROM consignment_notes cn                                 │
+│  WHERE cn.pre_validation_status = 'NOT_VALIDATED'          │
+│    AND (cn.company_id = :company_id                        │
+│         OR :company_id IS NULL)                            │
+│  ORDER BY cn.created_at ASC                                │
+│  LIMIT :batch_size                                         │
+└─────────────────────────────────────────────────────────────┘
+
+Step 2: Fetch Applicable Validation Rules
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH consignment_note                                 │
+│    SELECT vr.* FROM validation_rules vr                    │
+│    WHERE vr.company_id = :consignment_note.company_id      │
+│      AND vr.is_active = true                               │
+│      AND (                                                  │
+│        vr.waste_stream_id = :consignment_note.             │
+│                              waste_stream_id               │
+│        OR vr.waste_stream_id IS NULL                       │
+│      )                                                      │
+│    ORDER BY vr.waste_stream_id NULLS LAST;                 │
+│                                                             │
+│    -- Waste-stream-specific rules take precedence          │
+└─────────────────────────────────────────────────────────────┘
+
+Step 3: Execute Each Validation Rule
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH validation_rule                                  │
+│    3a. Execute rule based on rule_type:                    │
+│                                                             │
+│    CARRIER_LICENCE:                                        │
+│      -- Check if carrier has valid waste carrier licence   │
+│      SELECT licence_number, expiry_date                    │
+│      FROM contractors                                      │
+│      WHERE id = :carrier_id                                │
+│        AND licence_expiry_date >= CURRENT_DATE;            │
+│      result = (licence_number IS NOT NULL AND              │
+│                expiry_date >= consignment_date)            │
+│                ? 'PASS' : 'FAIL'                           │
+│                                                             │
+│    VOLUME_LIMIT:                                           │
+│      -- Check if quantity within allowed limit             │
+│      max_volume = rule_config->>'max_volume'               │
+│      result = (quantity <= max_volume) ? 'PASS' : 'FAIL'   │
+│                                                             │
+│    STORAGE_DURATION:                                       │
+│      -- Check storage duration limits                      │
+│      max_days = rule_config->>'max_storage_days'           │
+│      storage_days = CURRENT_DATE - consignment_date        │
+│      result = (storage_days <= max_days) ? 'PASS' : 'FAIL' │
+│                                                             │
+│    EWC_CODE:                                               │
+│      -- Validate EWC code format and approval              │
+│      result = validate_ewc_code(ewc_code, rule_config)     │
+│                                                             │
+│    DESTINATION:                                            │
+│      -- Validate destination site                          │
+│      result = validate_destination_site(                   │
+│                 destination_site_id, rule_config)          │
+│                                                             │
+│    CUSTOM:                                                 │
+│      -- Execute custom validation logic                    │
+│      result = execute_custom_validation(                   │
+│                 consignment_note, rule_config)             │
+│                                                             │
+│    3b. Record execution result:                            │
+│    INSERT INTO validation_executions (                     │
+│      validation_rule_id, entity_type, entity_id,          │
+│      execution_date, result, error_message                 │
+│    ) VALUES (                                              │
+│      :validation_rule_id, 'CONSIGNMENT_NOTE',              │
+│      :consignment_note_id, NOW(), :result,                 │
+│      :error_message                                        │
+│    );                                                      │
+└─────────────────────────────────────────────────────────────┘
+
+Step 4: Aggregate Validation Results
+┌─────────────────────────────────────────────────────────────┐
+│  4a. Determine overall validation status:                  │
+│      IF any ERROR severity rule failed THEN                │
+│        pre_validation_status = 'FAILED'                    │
+│      ELSIF all rules passed THEN                           │
+│        pre_validation_status = 'PASSED'                    │
+│      ELSE                                                   │
+│        pre_validation_status = 'PASSED_WITH_WARNINGS'      │
+│                                                             │
+│  4b. Collect error messages:                               │
+│      pre_validation_errors = ARRAY_AGG(                    │
+│        error_message WHERE result = 'FAIL'                 │
+│      )                                                      │
+│                                                             │
+│  4c. Update consignment note:                              │
+│      UPDATE consignment_notes                              │
+│      SET pre_validation_status = :status,                  │
+│          pre_validation_errors = :errors,                  │
+│          pre_validated_at = NOW(),                         │
+│          updated_at = NOW()                                │
+│      WHERE id = :consignment_note_id;                      │
+└─────────────────────────────────────────────────────────────┘
+
+Step 5: Notify on Validation Failure
+┌─────────────────────────────────────────────────────────────┐
+│  IF pre_validation_status = 'FAILED' THEN                  │
+│    INSERT INTO notifications (                             │
+│      user_id, notification_type, priority,                 │
+│      subject, body_text, entity_type, entity_id            │
+│    ) VALUES (                                              │
+│      :created_by, 'VALIDATION_FAILED', 'HIGH',             │
+│      'Consignment Note Validation Failed',                 │
+│      :error_details, 'consignment_note',                   │
+│      :consignment_note_id                                  │
+│    );                                                      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Validation Rule Types
+
+```typescript
+enum ValidationRuleType {
+  CARRIER_LICENCE = 'CARRIER_LICENCE',    // Verify carrier has valid licence
+  VOLUME_LIMIT = 'VOLUME_LIMIT',          // Check quantity limits
+  STORAGE_DURATION = 'STORAGE_DURATION',  // Check storage time limits
+  EWC_CODE = 'EWC_CODE',                  // Validate waste code
+  DESTINATION = 'DESTINATION',            // Validate destination site
+  CUSTOM = 'CUSTOM'                       // Custom validation logic
+}
+
+enum ValidationSeverity {
+  ERROR = 'ERROR',      // Blocks submission
+  WARNING = 'WARNING',  // Warns user but allows submission
+  INFO = 'INFO'         // Informational only
+}
+```
+
+### Example Rule Configurations
+
+```typescript
+// VOLUME_LIMIT rule config
+{
+  "max_volume": 100,
+  "unit": "TONNES",
+  "error_message": "Quantity exceeds maximum allowed volume of 100 tonnes"
+}
+
+// STORAGE_DURATION rule config
+{
+  "max_storage_days": 30,
+  "error_message": "Waste storage duration exceeds 30-day limit"
+}
+
+// CARRIER_LICENCE rule config
+{
+  "require_upper_tier": true,
+  "error_message": "Carrier must have valid upper-tier waste carrier licence"
+}
+```
+
+### Performance Requirements
+
+| Metric | Target |
+|--------|--------|
+| Processing Rate | 50 consignments per batch |
+| Validation Time | < 2 seconds per consignment |
+| Job Duration | < 5 minutes |
+
+### Error Handling
+
+| Error Type | Handling Strategy | Retry |
+|------------|-------------------|-------|
+| Rule execution error | Log error, mark as FAILED | No |
+| Missing rule config | Skip rule, log warning | No |
+| Database error | Retry with backoff | Yes |
+
+### Monitoring Metrics
+
+- Total consignments validated
+- Validation status (PASSED/FAILED/WARNINGS)
+- Failed validations by rule type
+- Processing duration
+
+---
+
+# 12. Runtime Monitoring Jobs (Module 3)
+
+**Reference:** Database Schema v1.3 - runtime_monitoring table enhancements with run_date, run_duration, reason_code, evidence_linkage_id, and job_escalation flags
+
+These jobs manage alerts for manual runtime entries pending validation and check for threshold exceedances.
+
+## 12.1 Flag Pending Runtime Validations Job
+
+**Purpose:** Alert managers about manual runtime entries pending validation.
+
+### Job Configuration
+
+| Property | Value |
+|----------|-------|
+| Job Type | `FLAG_PENDING_RUNTIME_VALIDATIONS` |
+| Queue | `runtime-monitoring` |
+| Priority | NORMAL |
+| Trigger | Cron: `0 10 * * *` (daily at 10:00 UTC, business hours) |
+| Timeout | 120 seconds (2 minutes) |
+| Max Retries | 1 retry attempt (2 total attempts: 1 initial + 1 retry) |
+
+### Input Parameters
+
+```typescript
+interface FlagPendingRuntimeValidationsJobInput {
+  company_id?: UUID;         // Optional: Process specific company
+  pending_threshold_hours?: number;  // Default: 24
+}
+```
+
+### Execution Steps
+
+```
+Step 1: Query Pending Manual Entries
+┌─────────────────────────────────────────────────────────────┐
+│  SELECT rm.id AS runtime_id, rm.generator_id,              │
+│         rm.run_date, rm.runtime_hours,                      │
+│         rm.reason_code, rm.entry_reason_notes,               │
+│         g.generator_identifier, g.site_id,                  │
+│         COUNT(*) OVER (PARTITION BY rm.generator_id)         │
+│           AS pending_count                                   │
+│  FROM runtime_monitoring rm                                │
+│  JOIN generators g ON g.id = rm.generator_id               │
+│  WHERE rm.validation_status = 'PENDING'                    │
+│    AND rm.data_source = 'MANUAL'                           │
+│    AND rm.created_at < NOW() -                             │
+│        INTERVAL ':pending_threshold_hours hours'           │
+│    AND (g.company_id = :company_id                         │
+│         OR :company_id IS NULL)                            │
+│  ORDER BY g.id, rm.run_date DESC                           │
+└─────────────────────────────────────────────────────────────┘
+
+Step 2: Group by Generator
+┌─────────────────────────────────────────────────────────────┐
+│  -- Aggregate pending entries by generator                 │
+│  SELECT generator_id, generator_identifier, site_id,      │
+│         ARRAY_AGG(runtime_id) AS pending_entries,            │
+│         COUNT(*) AS pending_count,                          │
+│         MIN(run_date) AS oldest_entry_date                  │
+│  FROM pending_entries                                      │
+│  GROUP BY generator_id, generator_identifier, site_id       │
+│  HAVING COUNT(*) > 0                                       │
+└─────────────────────────────────────────────────────────────┘
+
+Step 3: Send Manager Notifications
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH generator_group                                  │
+│    -- Find managers for site                               │
+│    SELECT u.id, u.email FROM users u                       │
+│    JOIN sites s ON s.company_id = u.company_id             │
+│    WHERE s.id = :site_id                                   │
+│      AND u.role IN ('MANAGER', 'ADMIN');                   │
+│                                                             │
+│    FOR EACH manager                                        │
+│      INSERT INTO notifications (                           │
+│        user_id, recipient_email, notification_type,       │
+│        priority, subject, body_text,                       │
+│        entity_type, entity_id, metadata                    │
+│      ) VALUES (                                            │
+│        :manager_id, :manager_email,                        │
+│        'RUNTIME_VALIDATION_PENDING', 'NORMAL',             │
+│        ':pending_count Manual Runtime Entries Pending      │
+│         Validation', 'Generator :generator_identifier has  │
+│         :pending_count manual runtime entries pending       │
+│         validation. Oldest entry: :oldest_entry_date.     │
+│         Please review and validate.', 'generator',         │
+│        :generator_id,                                      │
+│        jsonb_build_object(                                 │
+│          'pending_count', :pending_count,                  │
+│          'oldest_entry_date', :oldest_entry_date,          │
+│          'pending_entry_ids', :pending_entries             │
+│        )                                                   │
+│      );                                                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Validation Status Flow
+
+```typescript
+enum ValidationStatus {
+  PENDING = 'PENDING',            // Manual entry awaiting validation
+  APPROVED = 'APPROVED',           // Manager approved
+  REJECTED = 'REJECTED'           // Manager rejected
+}
+
+// Entry requires validation if:
+// - data_source = 'MANUAL'
+// - validation_status = 'PENDING'
+// - created_at > 24 hours ago
+```
+
+### Performance Requirements
+
+| Metric | Target |
+|--------|--------|
+| Job Duration | < 2 minutes |
+| Query Time | < 5 seconds |
+
+### Error Handling
+
+| Error Type | Handling Strategy | Retry |
+|------------|-------------------|-------|
+| No managers found | Log warning, skip site | No |
+| Notification failure | Log error, continue | No |
+
+### Monitoring Metrics
+
+- Total pending entries flagged
+- Generators with pending validations
+- Notifications sent to managers
+
+---
+
+## 12.2 Check Runtime Exceedances Job
+
+**Purpose:** Check runtime monitoring entries for threshold exceedances, set escalation flags, update Compliance Clock, and send notifications.
+
+### Job Configuration
+
+| Property | Value |
+|----------|-------|
+| Job Type | `CHECK_RUNTIME_EXCEEDANCES` |
+| Queue | `runtime-monitoring` |
+| Priority | HIGH |
+| Trigger | Cron: `0 * * * *` (every hour) |
+| Timeout | 300 seconds (5 minutes) |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
+
+### Input Parameters
+
+```typescript
+interface CheckRuntimeExceedancesJobInput {
+  company_id?: UUID;         // Optional: Process specific company
+  generator_id?: UUID;       // Optional: Process specific generator
+  batch_size?: number;       // Default: 100
+}
+```
+
+### Execution Steps
+
+```
+Step 1: Query Recent Runtime Entries (Not Yet Checked)
+┌─────────────────────────────────────────────────────────────┐
+│  SELECT rm.id AS runtime_id, rm.generator_id,              │
+│         rm.run_date, rm.runtime_hours,                      │
+│         rm.reason_code, rm.company_id, rm.site_id,          │
+│         g.generator_identifier, g.annual_run_hour_limit,    │
+│         g.monthly_run_hour_limit,                           │
+│         g.current_year_hours, g.current_month_hours,        │
+│         g.anniversary_date                                   │
+│  FROM runtime_monitoring rm                                │
+│  JOIN generators g ON g.id = rm.generator_id               │
+│  WHERE rm.validation_status = 'APPROVED'                   │
+│    AND (rm.job_escalation_notification_sent = false         │
+│         OR rm.job_escalation_notification_sent IS NULL)     │
+│    AND rm.created_at >= NOW() - INTERVAL '7 days'          │
+│    AND (g.company_id = :company_id                          │
+│         OR :company_id IS NULL)                             │
+│    AND (rm.generator_id = :generator_id                     │
+│         OR :generator_id IS NULL)                           │
+│  ORDER BY rm.run_date DESC                                  │
+│  LIMIT :batch_size                                         │
+└─────────────────────────────────────────────────────────────┘
+
+Step 2: Calculate Exceedances for Each Entry
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH runtime_entry                                    │
+│    -- Calculate annual percentage                           │
+│    annual_percentage = (current_year_hours /                │
+│                        annual_run_hour_limit) * 100         │
+│                                                             │
+│    -- Calculate monthly percentage                          │
+│    IF monthly_run_hour_limit IS NOT NULL THEN              │
+│      monthly_percentage = (current_month_hours /            │
+│                           monthly_run_hour_limit) * 100     │
+│    END IF                                                   │
+│                                                             │
+│    -- Check threshold exceedances                           │
+│    threshold_exceeded = (annual_percentage >= 90 OR        │
+│                          (monthly_percentage IS NOT NULL    │
+│                           AND monthly_percentage >= 90))    │
+│                                                             │
+│    annual_limit_exceeded = (annual_percentage >= 100)       │
+│                                                             │
+│    monthly_limit_exceeded = (monthly_percentage IS NOT NULL │
+│                              AND monthly_percentage >= 100)  │
+└─────────────────────────────────────────────────────────────┘
+
+Step 3: Update Escalation Flags
+┌─────────────────────────────────────────────────────────────┐
+│  UPDATE runtime_monitoring                                  │
+│  SET job_escalation_threshold_exceeded = :threshold_exceeded,
+│      job_escalation_annual_limit_exceeded = :annual_limit_exceeded,
+│      job_escalation_monthly_limit_exceeded = :monthly_limit_exceeded,
+│      updated_at = NOW()                                    │
+│  WHERE id = :runtime_id                                     │
+└─────────────────────────────────────────────────────────────┘
+
+Step 4: Update Compliance Clock for Exceedances
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH exceedance                                       │
+│    -- Find or create compliance clock for generator         │
+│    INSERT INTO compliance_clocks_universal (                │
+│      company_id, site_id, module_id,                        │
+│      entity_type, entity_id,                                │
+│      clock_type, target_date,                               │
+│      days_remaining, status, criticality,                   │
+│      metadata                                                │
+│    ) VALUES (                                               │
+│      :company_id, :site_id, 'MODULE_3',                     │
+│      'generator', :generator_id,                            │
+│      CASE                                                    │
+│        WHEN :annual_limit_exceeded THEN 'ANNUAL_LIMIT_EXCEEDED'
+│        WHEN :monthly_limit_exceeded THEN 'MONTHLY_LIMIT_EXCEEDED'
+│        ELSE 'THRESHOLD_EXCEEDED'                            │
+│      END,                                                   │
+│      CURRENT_DATE,                                          │
+│      0, -- Days remaining (0 = overdue)                     │
+│      'ACTIVE',                                               │
+│      'RED', -- Criticality                                   │
+│      jsonb_build_object(                                    │
+│        'runtime_entry_id', :runtime_id,                     │
+│        'run_date', :run_date,                               │
+│        'runtime_hours', :runtime_hours,                     │
+│        'annual_percentage', :annual_percentage,            │
+│        'monthly_percentage', :monthly_percentage           │
+│      )                                                      │
+│    )                                                        │
+│    ON CONFLICT (entity_type, entity_id, clock_type)         │
+│    DO UPDATE SET                                            │
+│      days_remaining = 0,                                    │
+│      status = 'ACTIVE',                                     │
+│      criticality = 'RED',                                   │
+│      metadata = EXCLUDED.metadata,                         │
+│      updated_at = NOW()                                    │
+└─────────────────────────────────────────────────────────────┘
+
+Step 5: Send Exceedance Notifications
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH exceedance WHERE notification not sent           │
+│    -- Find managers and admins for site                     │
+│    SELECT u.id, u.email FROM users u                       │
+│    JOIN sites s ON s.company_id = u.company_id             │
+│    WHERE s.id = :site_id                                   │
+│      AND u.role IN ('MANAGER', 'ADMIN', 'OWNER')           │
+│                                                             │
+│    FOR EACH recipient                                       │
+│      INSERT INTO notifications (                           │
+│        user_id, recipient_email, notification_type,         │
+│        priority, subject, body_text,                       │
+│        entity_type, entity_id, metadata                    │
+│      ) VALUES (                                            │
+│        :user_id, :email,                                   │
+│        'RUNTIME_EXCEEDANCE', 'HIGH',                       │
+│        'Generator Runtime Limit Exceeded: :generator_identifier',
+│        'Generator :generator_identifier has exceeded its   │
+│         runtime limit. Run date: :run_date.                 │
+│         Annual: :annual_percentage% of limit.               │
+│         Monthly: :monthly_percentage% of limit.            │
+│         Please review and take corrective action.',        │
+│        'generator', :generator_id,                         │
+│        jsonb_build_object(                                 │
+│          'runtime_entry_id', :runtime_id,                   │
+│          'exceedance_type', :exceedance_type,               │
+│          'annual_percentage', :annual_percentage,          │
+│          'monthly_percentage', :monthly_percentage          │
+│        )                                                   │
+│      );                                                    │
+│                                                             │
+│    -- Mark notification as sent                             │
+│    UPDATE runtime_monitoring                                │
+│    SET job_escalation_notification_sent = true,            │
+│        updated_at = NOW()                                  │
+│    WHERE id = :runtime_id                                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Exceedance Types
+
+```typescript
+enum ExceedanceType {
+  THRESHOLD_EXCEEDED = 'THRESHOLD_EXCEEDED',        // >= 90% of limit
+  ANNUAL_LIMIT_EXCEEDED = 'ANNUAL_LIMIT_EXCEEDED',  // >= 100% of annual limit
+  MONTHLY_LIMIT_EXCEEDED = 'MONTHLY_LIMIT_EXCEEDED' // >= 100% of monthly limit
+}
+```
+
+### Performance Requirements
+
+| Metric | Target |
+|--------|--------|
+| Job Duration | < 5 minutes |
+| Query Time | < 10 seconds |
+| Batch Processing | 100 entries per batch |
+
+### Error Handling
+
+| Error Type | Handling Strategy | Retry |
+|------------|-------------------|-------|
+| Generator not found | Log error, skip entry | No |
+| Compliance clock update failure | Log error, continue | Yes |
+| Notification failure | Log error, continue | No |
+
+### Monitoring Metrics
+
+- Total runtime entries checked
+- Exceedances detected (by type)
+- Compliance clocks updated
+- Notifications sent
+- Escalation flags set
+
+---
+
+# 13. SLA Timer Jobs
+
+**Reference:** Database Schema v1.3 - deadlines table SLA tracking fields
+
+These jobs track SLA breach duration for overdue deadlines.
+
+## 13.1 Update SLA Breach Timers Job
+
+**Purpose:** Track SLA breach duration for overdue deadlines.
+
+### Job Configuration
+
+| Property | Value |
+|----------|-------|
+| Job Type | `UPDATE_SLA_BREACH_TIMERS` |
+| Queue | `sla-breach-alerts` |
+| Priority | HIGH |
+| Trigger | Cron: `0 * * * *` (every hour) |
+| Timeout | 300 seconds (5 minutes) |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
+
+### Input Parameters
+
+```typescript
+interface UpdateSLABreachTimersJobInput {
+  company_id?: UUID;    // Optional: Process specific company
+  batch_size?: number;  // Default: 500
+}
+```
+
+### Execution Steps
+
+```
+Step 1: Query Overdue Deadlines with SLA Breach
+┌─────────────────────────────────────────────────────────────┐
+│  SELECT d.id AS deadline_id, d.obligation_id,              │
+│         d.due_date, d.sla_target_date,                      │
+│         d.sla_breached_at, d.sla_breach_duration_hours,     │
+│         o.summary AS obligation_summary,                    │
+│         o.assigned_to                                       │
+│  FROM deadlines d                                          │
+│  JOIN obligations o ON o.id = d.obligation_id              │
+│  WHERE d.sla_breached_at IS NOT NULL                       │
+│    AND d.status = 'OVERDUE'                                │
+│    AND (d.company_id = :company_id                         │
+│         OR :company_id IS NULL)                            │
+│  ORDER BY d.sla_breached_at ASC                            │
+│  LIMIT :batch_size                                         │
+└─────────────────────────────────────────────────────────────┘
+
+Step 2: Calculate Breach Duration
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH deadline                                         │
+│    -- Calculate hours since SLA breach                     │
+│    sla_breach_duration_hours =                             │
+│      EXTRACT(EPOCH FROM (NOW() - sla_breached_at)) / 3600  │
+└─────────────────────────────────────────────────────────────┘
+
+Step 3: Batch Update Breach Durations
+┌─────────────────────────────────────────────────────────────┐
+│  UPDATE deadlines d                                        │
+│  SET sla_breach_duration_hours =                           │
+│      EXTRACT(EPOCH FROM (NOW() - d.sla_breached_at)) /     │
+│      3600,                                                  │
+│      updated_at = NOW()                                    │
+│  WHERE d.sla_breached_at IS NOT NULL                       │
+│    AND d.status = 'OVERDUE'                                │
+│    AND (d.company_id = :company_id                         │
+│         OR :company_id IS NULL)                            │
+└─────────────────────────────────────────────────────────────┘
+
+Step 4: Escalate Long-Running Breaches
+┌─────────────────────────────────────────────────────────────┐
+│  -- Find breaches > 24 hours                               │
+│  SELECT d.id, d.obligation_id,                             │
+│         d.sla_breach_duration_hours,                        │
+│         o.assigned_to, o.company_id                         │
+│  FROM deadlines d                                          │
+│  JOIN obligations o ON o.id = d.obligation_id              │
+│  WHERE d.sla_breach_duration_hours > 24                    │
+│    AND d.status = 'OVERDUE';                               │
+│                                                             │
+│  FOR EACH breach                                           │
+│    -- Escalate to managers                                 │
+│    INSERT INTO notifications (                             │
+│      user_id, notification_type, priority,                 │
+│      subject, body_text, entity_type, entity_id            │
+│    )                                                        │
+│    SELECT u.id, 'SLA_BREACH_ESCALATION', 'URGENT',         │
+│           'SLA Breach Exceeds 24 Hours',                   │
+│           'Obligation ":obligation_summary" has been in    │
+│            SLA breach for :breach_hours hours.',           │
+│           'deadline', :deadline_id                         │
+│    FROM users u                                            │
+│    WHERE u.company_id = :company_id                        │
+│      AND u.role IN ('MANAGER', 'ADMIN');                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### SLA Breach Tracking
+
+```typescript
+// When a deadline becomes overdue
+function markSLABreach(deadline: Deadline): void {
+  if (deadline.sla_target_date &&
+      currentDate > deadline.sla_target_date &&
+      !deadline.sla_breached_at) {
+    deadline.sla_breached_at = currentDate;
+    deadline.sla_breach_duration_hours = 0;
+  }
+}
+
+// Calculate breach duration
+function calculateBreachDuration(breachedAt: Date): number {
+  const now = new Date();
+  const durationMs = now.getTime() - breachedAt.getTime();
+  return durationMs / (1000 * 60 * 60); // Convert to hours
+}
+
+// Escalation thresholds
+const SLA_ESCALATION_THRESHOLDS = {
+  warning: 12,   // Warn at 12 hours
+  urgent: 24,    // Escalate to managers at 24 hours
+  critical: 48   // Escalate to admins at 48 hours
+};
+```
+
+### Performance Requirements
+
+| Metric | Target |
+|--------|--------|
+| Processing Rate | 500 deadlines per batch |
+| Job Duration | < 5 minutes |
+| Update Speed | < 1 second per batch update |
+
+### Error Handling
+
+| Error Type | Handling Strategy | Retry |
+|------------|-------------------|-------|
+| Calculation error | Log error, continue | No |
+| Database error | Retry with backoff | Yes |
+| Notification failure | Log error, continue | No |
+
+### Monitoring Metrics
+
+- Total breached deadlines tracked
+- Average breach duration
+- Breaches by duration bucket (<24h, 24-48h, >48h)
+- Escalations sent
+
+---
+
+## 13.2 Detect Breaches and Trigger Alerts Job
+
+**Purpose:** Detect compliance breaches (deadlines passed without completion) and SLA misses, then trigger critical notifications with deep links.
+
+### Job Configuration
+
+| Property | Value |
+|----------|-------|
+| Job Type | `DETECT_BREACHES_AND_ALERTS` |
+| Queue | `sla-breach-alerts` |
+| Priority | HIGH |
+| Trigger | Cron: `*/15 * * * *` (every 15 minutes) |
+| Timeout | 300 seconds (5 minutes) |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
+
+### Input Parameters
+
+```typescript
+interface DetectBreachesAndAlertsJobInput {
+  company_id?: UUID;    // Optional: Process specific company
+  batch_size?: number;  // Default: 500
+}
+```
+
+### Execution Steps
+
+```
+Step 1: Query Breached Deadlines (Regulatory Deadline Passed)
+┌─────────────────────────────────────────────────────────────┐
+│  SELECT d.id AS deadline_id, d.obligation_id,              │
+│         d.due_date, d.status,                               │
+│         o.id AS obligation_id, o.summary AS obligation_title,│
+│         o.assigned_to, o.site_id, o.company_id,            │
+│         s.name AS site_name, c.name AS company_name,        │
+│         d.sla_target_date, d.sla_breached_at,               │
+│         EXTRACT(EPOCH FROM (NOW() - d.due_date)) / 86400    │
+│           AS days_overdue                                    │
+│  FROM deadlines d                                          │
+│  JOIN obligations o ON o.id = d.obligation_id              │
+│  JOIN sites s ON s.id = o.site_id                          │
+│  JOIN companies c ON c.id = o.company_id                     │
+│  WHERE d.status = 'OVERDUE'                                │
+│    AND d.due_date < NOW()                                  │
+│    AND d.breach_notification_sent = false                  │
+│    AND (d.company_id = :company_id                         │
+│         OR :company_id IS NULL)                            │
+│  ORDER BY d.due_date ASC                                   │
+│  LIMIT :batch_size                                         │
+└─────────────────────────────────────────────────────────────┘
+
+Step 2: Check for Missing Evidence
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH breached deadline                                │
+│    -- Check if obligation has required evidence            │
+│    evidence_count = SELECT COUNT(*)                        │
+│      FROM obligation_evidence_links oel                    │
+│      JOIN evidence_items ei ON ei.id = oel.evidence_id     │
+│      WHERE oel.obligation_id = :obligation_id              │
+│        AND ei.is_archived = false                          │
+│        AND ei.validation_status = 'APPROVED'               │
+│                                                             │
+│    -- Check if evidence is required                        │
+│    evidence_required = SELECT evidence_required            │
+│      FROM obligations                                       │
+│      WHERE id = :obligation_id                             │
+│                                                             │
+│    IF evidence_required = true AND evidence_count = 0      │
+│      THEN notification_type = 'REGULATORY_DEADLINE_BREACH' │
+│      ELSE notification_type = 'COMPLIANCE_BREACH_DETECTED'  │
+└─────────────────────────────────────────────────────────────┘
+
+Step 3: Create Breach Notifications
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH breached deadline                                │
+│    -- Get recipients (assignee + managers + admins)         │
+│    recipients = SELECT u.id, u.email, u.phone, ur.role      │
+│      FROM users u                                           │
+│      JOIN user_roles ur ON ur.user_id = u.id                │
+│      WHERE (u.id = :assigned_to                            │
+│             OR u.company_id = :company_id                  │
+│                AND ur.role IN ('ADMIN', 'OWNER'))          │
+│                                                             │
+│    -- Create notification for each recipient               │
+│    FOR EACH recipient                                       │
+│      INSERT INTO notifications (                            │
+│        user_id, company_id, site_id,                        │
+│        recipient_email, recipient_phone,                    │
+│        notification_type, channel, priority, severity,      │
+│        subject, body_html, body_text,                       │
+│        variables, entity_type, entity_id,                   │
+│        obligation_id, action_url,                           │
+│        status, scheduled_for                                │
+│      ) VALUES (                                             │
+│        :user_id, :company_id, :site_id,                     │
+│        :email, :phone,                                      │
+│        :notification_type,                                  │
+│        CASE WHEN :severity = 'CRITICAL'                     │
+│          THEN 'EMAIL, SMS, IN_APP'                          │
+│          ELSE 'EMAIL, IN_APP' END,                          │
+│        'CRITICAL', 'CRITICAL',                              │
+│        :subject, :body_html, :body_text,                    │
+│        :variables::JSONB,                                   │
+│        'deadline', :deadline_id,                            │
+│        :obligation_id,                                      │
+│        'https://app.epcompliance.com/sites/' ||            │
+│          :site_id || '/obligations/' || :obligation_id,    │
+│        'PENDING', NOW()                                     │
+│      )                                                       │
+└─────────────────────────────────────────────────────────────┘
+
+Step 4: Mark Notification as Sent
+┌─────────────────────────────────────────────────────────────┐
+│  UPDATE deadlines                                           │
+│  SET breach_notification_sent = true,                       │
+│      breach_detected_at = NOW()                            │
+│  WHERE id = :deadline_id                                    │
+└─────────────────────────────────────────────────────────────┘
+
+Step 5: Detect SLA Misses (SLA Target Date Passed)
+┌─────────────────────────────────────────────────────────────┐
+│  SELECT d.id AS deadline_id, d.obligation_id,              │
+│         d.sla_target_date, d.sla_breached_at,                │
+│         o.summary AS obligation_title,                      │
+│         o.site_id, o.company_id,                           │
+│         EXTRACT(EPOCH FROM (NOW() - d.sla_target_date)) /   │
+│           3600 AS sla_breach_hours                          │
+│  FROM deadlines d                                          │
+│  JOIN obligations o ON o.id = d.obligation_id              │
+│  WHERE d.sla_target_date IS NOT NULL                       │
+│    AND d.sla_target_date < NOW()                           │
+│    AND d.sla_breached_at IS NULL                           │
+│    AND d.status != 'COMPLETED'                             │
+│    AND (d.company_id = :company_id                         │
+│         OR :company_id IS NULL)                            │
+│  ORDER BY d.sla_target_date ASC                            │
+│  LIMIT :batch_size                                         │
+└─────────────────────────────────────────────────────────────┘
+
+Step 6: Create SLA Breach Notifications
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH SLA miss                                          │
+│    -- Mark SLA as breached                                 │
+│    UPDATE deadlines                                        │
+│    SET sla_breached_at = NOW(),                            │
+│        sla_breach_duration_hours = 0                       │
+│    WHERE id = :deadline_id                                 │
+│                                                             │
+│    -- Create SLA_BREACH_DETECTED notification              │
+│    (Same notification creation logic as Step 3,            │
+│     but with notification_type = 'SLA_BREACH_DETECTED')   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Notification Variables
+
+```typescript
+interface BreachNotificationVariables {
+  obligation_title: string;
+  obligation_id: UUID;
+  deadline_id: UUID;
+  deadline_date: string; // Formatted date
+  days_overdue: number;
+  site_name: string;
+  company_name: string;
+  regulator_name?: string;
+  action_url: string; // REQUIRED: Deep link to obligation
+  evidence_upload_url?: string;
+  unsubscribe_url: string;
+}
+
+interface SLABreachNotificationVariables {
+  deadline_title: string;
+  deadline_id: UUID;
+  obligation_id: UUID;
+  site_name: string;
+  company_name: string;
+  sla_target_date: string;
+  due_date: string;
+  days_to_due_date: number;
+  sla_breach_hours: number;
+  action_url: string; // REQUIRED: Deep link to obligation
+  unsubscribe_url: string;
+}
+```
+
+### Severity Level Assignment
+
+```typescript
+function determineSeverity(deadline: Deadline, daysOverdue: number): 'INFO' | 'WARNING' | 'CRITICAL' {
+  // Regulatory deadline breach is always CRITICAL
+  if (deadline.due_date < NOW()) {
+    return 'CRITICAL';
+  }
+  
+  // SLA breach severity based on duration
+  if (deadline.sla_breach_duration_hours > 48) {
+    return 'CRITICAL';
+  } else if (deadline.sla_breach_duration_hours > 24) {
+    return 'WARNING';
+  } else {
+    return 'INFO';
+  }
+}
+```
+
+### Deep Link Generation
+
+```typescript
+function generateActionUrl(siteId: UUID, obligationId: UUID, evidenceId?: UUID): string {
+  const baseUrl = process.env.APP_URL || 'https://app.epcompliance.com';
+  
+  if (evidenceId) {
+    return `${baseUrl}/sites/${siteId}/obligations/${obligationId}/evidence/${evidenceId}`;
+  }
+  
+  return `${baseUrl}/sites/${siteId}/obligations/${obligationId}`;
+}
+```
+
+### Performance Requirements
+
+| Metric | Target |
+|--------|--------|
+| Processing Rate | 500 deadlines per batch |
+| Job Duration | < 5 minutes |
+| Notification Creation | < 100ms per notification |
+| Breach Detection Accuracy | 100% (all breaches detected) |
+
+### Error Handling
+
+| Error Type | Handling Strategy | Retry |
+|------------|-------------------|-------|
+| Database query error | Retry with backoff | Yes |
+| Notification creation failure | Log error, continue with next | No |
+| Missing obligation data | Skip deadline, log warning | No |
+| Missing action_url | Generate default URL, log warning | No |
+
+### Monitoring Metrics
+
+- Total breaches detected
+- Breaches by type (regulatory deadline vs SLA)
+- Notifications sent per breach
+- Average time to breach detection
+- Breaches resolved after notification
+
+### Integration with Notification System
+
+This job MUST trigger notifications for:
+- **All regulatory deadline breaches** (deadline passed without completion)
+- **All SLA misses** (SLA target date passed without completion)
+
+Notifications MUST include:
+- **Severity level:** CRITICAL for breaches, WARNING/CRITICAL for SLA misses
+- **Deep links:** `action_url` pointing to obligation detail page
+- **Obligation reference:** `obligation_id` for linking
+- **Evidence reference:** `evidence_id` if evidence is missing
+
+**Reference:** Notification Specification Section 2.19 (Breach Detection Templates)
+
+---
+
+# 14. Trigger Execution Jobs
+
+**Reference:** Database Schema v1.3 - recurrence_trigger_rules and recurrence_trigger_executions tables
+
+These jobs execute event-based and conditional triggers for automated schedule/deadline creation.
+
+## 14.1 Execute Pending Recurrence Triggers Job
+
+**Purpose:** Execute scheduled recurrence triggers based on next_execution_date.
+
+### Job Configuration
+
+| Property | Value |
+|----------|-------|
+| Job Type | `EXECUTE_PENDING_RECURRENCE_TRIGGERS` |
+| Queue | `trigger-execution` |
+| Priority | NORMAL |
+| Trigger | Cron: `0 * * * *` (every hour) |
+| Timeout | 300 seconds (5 minutes) |
+| Max Retries | 2 retry attempts (3 total attempts: 1 initial + 2 retries) |
+
+### Input Parameters
+
+```typescript
+interface ExecutePendingRecurrenceTriggersJobInput {
+  company_id?: UUID;    // Optional: Process specific company
+  batch_size?: number;  // Default: 100
+}
+```
+
+### Execution Steps
+
+```
+Step 1: Query Triggers Ready for Execution
+┌─────────────────────────────────────────────────────────────┐
+│  SELECT rtr.id AS trigger_rule_id, rtr.company_id,         │
+│         rtr.rule_name, rtr.trigger_type,                    │
+│         rtr.trigger_expression, rtr.rule_config,            │
+│         rtr.target_entity_type, rtr.template_data,          │
+│         rtr.execution_count, rtr.last_executed_at           │
+│  FROM recurrence_trigger_rules rtr                         │
+│  WHERE rtr.is_active = true                                │
+│    AND rtr.next_execution_date <= CURRENT_DATE             │
+│    AND (rtr.company_id = :company_id                       │
+│         OR :company_id IS NULL)                            │
+│  ORDER BY rtr.next_execution_date ASC                      │
+│  LIMIT :batch_size                                         │
+└─────────────────────────────────────────────────────────────┘
+
+Step 2: Evaluate Trigger Expression
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH trigger_rule                                     │
+│    2a. Evaluate trigger based on trigger_type:             │
+│                                                             │
+│    SCHEDULED:                                              │
+│      -- Check if current date matches schedule             │
+│      should_fire = (CURRENT_DATE >= next_execution_date)   │
+│                                                             │
+│    EVENT_BASED:                                            │
+│      -- Check for triggering events                        │
+│      SELECT * FROM recurrence_events                       │
+│      WHERE event_type = :trigger_expression                │
+│        AND occurred_at >= :last_executed_at                │
+│        AND occurred_at <= NOW();                           │
+│      should_fire = (event_count > 0)                       │
+│                                                             │
+│    CONDITIONAL:                                            │
+│      -- Evaluate condition from rule_config                │
+│      should_fire = evaluate_condition(                     │
+│        trigger_expression, rule_config)                    │
+│                                                             │
+│    2b. If should_fire = true, proceed to Step 3            │
+└─────────────────────────────────────────────────────────────┘
+
+Step 3: Create Target Entity
+┌─────────────────────────────────────────────────────────────┐
+│  3a. Determine target entity type:                         │
+│      IF target_entity_type = 'SCHEDULE' THEN               │
+│        -- Create schedule record                           │
+│        INSERT INTO schedules (                             │
+│          obligation_id, frequency, base_date,              │
+│          next_due_date, status                             │
+│        ) VALUES (...template_data...)                      │
+│        RETURNING id INTO new_schedule_id;                  │
+│                                                             │
+│      ELSIF target_entity_type = 'DEADLINE' THEN            │
+│        -- Create deadline record                           │
+│        INSERT INTO deadlines (                             │
+│          obligation_id, schedule_id, due_date,             │
+│          status, compliance_period_start,                  │
+│          compliance_period_end                             │
+│        ) VALUES (...template_data...)                      │
+│        RETURNING id INTO new_deadline_id;                  │
+│                                                             │
+│  3b. Calculate next_due_date from template_data            │
+└─────────────────────────────────────────────────────────────┘
+
+Step 4: Record Trigger Execution
+┌─────────────────────────────────────────────────────────────┐
+│  INSERT INTO recurrence_trigger_executions (               │
+│    trigger_rule_id, event_id, schedule_id,                 │
+│    execution_date, next_due_date,                          │
+│    execution_result, execution_data                        │
+│  ) VALUES (                                                │
+│    :trigger_rule_id,                                       │
+│    :event_id,  -- NULL if not event-based                 │
+│    :new_schedule_id OR :new_deadline_id,                   │
+│    NOW(), :calculated_next_due_date,                       │
+│    CASE WHEN successful THEN 'SUCCESS'                     │
+│         WHEN skipped THEN 'SKIPPED'                        │
+│         ELSE 'FAILED' END,                                 │
+│    jsonb_build_object(                                     │
+│      'created_entity_type', :target_entity_type,           │
+│      'created_entity_id', :new_entity_id,                  │
+│      'execution_context', :context                         │
+│    )                                                       │
+│  );                                                        │
+└─────────────────────────────────────────────────────────────┘
+
+Step 5: Update Trigger Rule
+┌─────────────────────────────────────────────────────────────┐
+│  UPDATE recurrence_trigger_rules                           │
+│  SET last_executed_at = NOW(),                             │
+│      execution_count = execution_count + 1,                │
+│      next_execution_date = calculate_next_execution_date(  │
+│        rule_config, CURRENT_DATE),                         │
+│      updated_at = NOW()                                    │
+│  WHERE id = :trigger_rule_id;                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Trigger Types
+
+```typescript
+enum TriggerType {
+  SCHEDULED = 'SCHEDULED',      // Time-based trigger (e.g., monthly)
+  EVENT_BASED = 'EVENT_BASED',  // Triggered by system events
+  CONDITIONAL = 'CONDITIONAL'   // Triggered when condition is met
+}
+
+// Example trigger expressions
+const TRIGGER_EXPRESSIONS = {
+  SCHEDULED: 'MONTHLY_ON_DAY_1',
+  EVENT_BASED: 'PERMIT_APPROVED',
+  CONDITIONAL: 'VOLUME_EXCEEDS_THRESHOLD'
+};
+```
+
+### Rule Configuration Examples
+
+```typescript
+// SCHEDULED trigger config
+{
+  "frequency": "MONTHLY",
+  "day_of_month": 1,
+  "create_advance_days": 7,  // Create 7 days before due date
+  "template_data": {
+    "obligation_id": "uuid",
+    "frequency": "MONTHLY"
+  }
+}
+
+// EVENT_BASED trigger config
+{
+  "event_types": ["PERMIT_APPROVED", "VARIATION_APPROVED"],
+  "delay_days": 30,  // Create deadline 30 days after event
+  "template_data": {
+    "obligation_id": "uuid",
+    "relative_to_event": true
+  }
+}
+
+// CONDITIONAL trigger config
+{
+  "condition": "waste_volume > threshold",
+  "threshold_value": 1000,
+  "check_frequency": "DAILY",
+  "template_data": {
+    "obligation_id": "uuid",
+    "triggered_by_condition": true
+  }
+}
+```
+
+### Performance Requirements
+
+| Metric | Target |
+|--------|--------|
+| Processing Rate | 100 triggers per batch |
+| Evaluation Time | < 1 second per trigger |
+| Job Duration | < 5 minutes |
+
+### Error Handling
+
+| Error Type | Handling Strategy | Retry |
+|------------|-------------------|-------|
+| Trigger evaluation error | Log error, mark as FAILED | No |
+| Entity creation error | Log error, mark as FAILED, retry | Yes |
+| Missing template data | Skip trigger, log warning | No |
+
+### Monitoring Metrics
+
+- Total triggers executed
+- Triggers by type (SCHEDULED/EVENT_BASED/CONDITIONAL)
+- Success/failure rate
+- Entities created (schedules/deadlines)
+- Processing duration
+
+---
+
+## 14.2 Process Trigger Conditions Job
+
+**Purpose:** Evaluate conditional triggers on relevant events (event-driven).
+
+### Job Configuration
+
+| Property | Value |
+|----------|-------|
+| Job Type | `PROCESS_TRIGGER_CONDITIONS` |
+| Queue | `trigger-execution` |
+| Priority | NORMAL |
+| Trigger | Event-driven (API trigger on relevant events) |
+| Timeout | 60 seconds |
+| Max Retries | 1 retry attempt (2 total attempts: 1 initial + 1 retry) |
+
+### Input Parameters
+
+```typescript
+interface ProcessTriggerConditionsJobInput {
+  event_type: string;           // Required: Event that occurred
+  event_data: Record<string, any>;  // Required: Event context data
+  company_id: UUID;             // Required: Company context
+}
+```
+
+### Execution Steps
+
+```
+Step 1: Find Applicable Conditional Triggers
+┌─────────────────────────────────────────────────────────────┐
+│  SELECT rtr.* FROM recurrence_trigger_rules rtr            │
+│  WHERE rtr.trigger_type = 'CONDITIONAL'                    │
+│    AND rtr.is_active = true                                │
+│    AND rtr.company_id = :company_id                        │
+│    AND rtr.trigger_expression LIKE '%:event_type%';        │
+└─────────────────────────────────────────────────────────────┘
+
+Step 2: Evaluate Each Trigger Condition
+┌─────────────────────────────────────────────────────────────┐
+│  FOR EACH trigger                                          │
+│    -- Evaluate condition against event data                │
+│    condition_met = evaluate_condition(                     │
+│      trigger.trigger_expression,                           │
+│      trigger.rule_config,                                  │
+│      :event_data                                           │
+│    );                                                      │
+│                                                             │
+│    IF condition_met THEN                                   │
+│      -- Queue trigger for execution                        │
+│      -- (Reuse Step 3-5 from Job 14.1)                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Example Event Types
+
+```typescript
+// Events that can trigger conditional rules
+const TRIGGER_EVENTS = {
+  VOLUME_THRESHOLD: 'waste_volume_threshold_exceeded',
+  PERMIT_STATUS: 'permit_status_changed',
+  BREACH_DETECTED: 'compliance_breach_detected',
+  PARAMETER_LIMIT: 'parameter_limit_exceeded',
+  GENERATOR_RUNTIME: 'generator_runtime_threshold',
+};
+```
+
+---
+
+# 15. Job Infrastructure Details
+
+## 15.1 Database Integration
 
 **Reference:** Technical Architecture Section 2.4 (Integration Points)
 
@@ -3296,7 +5667,7 @@ async function executeWithTransaction<T>(
 }
 ```
 
-## 8.2 Notification Integration
+## 15.2 Notification Integration
 
 **Reference:** Technical Architecture Section 2.4 (Notification Triggering)
 
@@ -3409,7 +5780,7 @@ VALUES (
 - `'ERROR'` → `'CRITICAL'`
 - `'CRITICAL'` → `'URGENT'`
 
-## 8.3 AI Service Integration
+## 15.3 AI Service Integration
 
 **Reference:** Technical Architecture Section 5 (AI Service Integration)
 
@@ -3470,7 +5841,7 @@ interface AIExtractionResponse {
 }
 ```
 
-## 8.4 Storage Integration
+## 15.4 Storage Integration
 
 **Reference:** Technical Architecture Section 1.5 (Storage)
 
@@ -3543,7 +5914,7 @@ async function fileExists(
 }
 ```
 
-## 8.5 Real-Time Integration
+## 15.5 Real-Time Integration
 
 **Reference:** Technical Architecture Section 1.6 (Real-time Features)
 
@@ -3587,9 +5958,416 @@ const channel = supabase
 
 ---
 
-# 9. Error Handling & Logging
+# 16. Integration Points
 
-## 9.1 Structured Logging
+Covered in Section 15 (Job Infrastructure Details) above.
+
+---
+
+# 18. Additional Production Jobs (v1.4)
+
+This section documents 6 additional jobs discovered in production that were not previously documented.
+
+## 18.1 Evidence Expiry Tracking Job
+
+**Job Type:** `evidence-expiry-tracking-job`
+**Queue:** `evidence-tracking`
+**Priority:** NORMAL
+**Trigger:** Cron (daily at 02:00 UTC)
+
+### Purpose
+
+Track evidence items approaching expiration and send reminders to users to renew/replace evidence before it expires.
+
+### Execution Logic
+
+```typescript
+async function executeEvidenceExpiryTracking() {
+  const thresholds = [30, 14, 7, 1]; // days before expiry
+
+  for (const threshold of thresholds) {
+    const expiringEvidence = await db.query(`
+      SELECT e.*, s.site_name, c.company_name
+      FROM evidence_items e
+      JOIN sites s ON e.site_id = s.id
+      JOIN companies c ON e.company_id = c.id
+      WHERE e.expiry_date IS NOT NULL
+        AND e.expiry_date = CURRENT_DATE + INTERVAL '${threshold} days'
+        AND e.deleted_at IS NULL
+    `);
+
+    for (const evidence of expiringEvidence) {
+      await createNotification({
+        type: 'EVIDENCE_EXPIRING',
+        severity: threshold <= 7 ? 'HIGH' : 'MEDIUM',
+        message: `Evidence "${evidence.file_name}" expires in ${threshold} days`,
+        evidence_id: evidence.id,
+        site_id: evidence.site_id,
+        company_id: evidence.company_id
+      });
+    }
+  }
+}
+```
+
+### Business Rules
+
+- Sends reminders at 30, 14, 7, and 1 day before expiry
+- Higher urgency (HIGH priority) for evidence expiring within 7 days
+- Only tracks evidence with `expiry_date` set
+- Skips soft-deleted evidence
+
+### Performance
+
+- Expected execution time: 5-30 seconds
+- Scales with number of evidence items with expiry dates
+- Uses indexed query on `expiry_date`
+
+---
+
+## 18.2 Recurring Task Generation Job
+
+**Job Type:** `recurring-task-generation-job`
+**Queue:** `recurring-tasks`
+**Priority:** NORMAL
+**Trigger:** Cron (daily at 03:00 UTC)
+
+### Purpose
+
+Generate task instances from recurring task definitions based on frequency rules.
+
+### Execution Logic
+
+```typescript
+async function executeRecurringTaskGeneration() {
+  const recurringTasks = await db.query(`
+    SELECT * FROM recurring_tasks
+    WHERE is_active = true
+      AND (next_due_date IS NULL OR next_due_date <= CURRENT_DATE)
+  `);
+
+  for (const task of recurringTasks) {
+    // Generate task instance
+    await db.insert('tasks', {
+      recurring_task_id: task.id,
+      title: task.title,
+      description: task.description,
+      due_date: calculateDueDate(task.frequency, task.next_due_date),
+      assigned_to: task.default_assignee_id,
+      company_id: task.company_id,
+      site_id: task.site_id
+    });
+
+    // Update next due date
+    await db.update('recurring_tasks', task.id, {
+      next_due_date: calculateNextDueDate(task.frequency, task.next_due_date),
+      last_generated_at: new Date()
+    });
+  }
+}
+```
+
+### Business Rules
+
+- Generates task instances based on frequency (DAILY, WEEKLY, MONTHLY, QUARTERLY, ANNUAL)
+- Updates `next_due_date` after generating instance
+- Only processes active recurring tasks
+- Assigns tasks to default assignee if specified
+
+### Performance
+
+- Expected execution time: 10-60 seconds
+- Scales with number of active recurring tasks
+- Batches task creation for efficiency
+
+---
+
+## 18.3 Report Generation Job
+
+**Job Type:** `report-generation-job`
+**Queue:** `report-generation`
+**Priority:** NORMAL
+**Trigger:** API trigger (user-initiated)
+
+### Purpose
+
+Generate compliance reports (PDF/Excel) on demand with data compilation and formatting.
+
+### Execution Logic
+
+```typescript
+async function executeReportGeneration(reportId: string) {
+  const report = await db.findOne('reports', reportId);
+
+  // Compile data based on report type
+  const data = await compileReportData(report.report_type, report.filters);
+
+  // Generate report file
+  let fileUrl: string;
+  if (report.format === 'PDF') {
+    fileUrl = await generatePDFReport(data, report.template);
+  } else if (report.format === 'EXCEL') {
+    fileUrl = await generateExcelReport(data, report.template);
+  }
+
+  // Update report record
+  await db.update('reports', reportId, {
+    status: 'COMPLETED',
+    file_url: fileUrl,
+    generated_at: new Date(),
+    row_count: data.length
+  });
+
+  // Notify user
+  await createNotification({
+    type: 'REPORT_READY',
+    message: `Your ${report.report_type} report is ready`,
+    report_id: reportId,
+    user_id: report.requested_by
+  });
+}
+```
+
+### Report Types
+
+- **Obligations Report** - List of all obligations with status
+- **Compliance Summary** - Compliance scores and trends
+- **Evidence Register** - Complete evidence inventory
+- **Deadline Calendar** - Upcoming deadlines
+- **Module-Specific Reports** - Lab results, run hours, etc.
+
+### Performance
+
+- Expected execution time: 30 seconds - 5 minutes
+- Depends on report complexity and data volume
+- Large reports (>10,000 rows) streamed to prevent memory issues
+
+---
+
+## 18.4 Notification Delivery Job
+
+**Job Type:** `notification-delivery-job`
+**Queue:** `notification-delivery`
+**Priority:** HIGH
+**Trigger:** Event-driven (queued notifications)
+
+### Purpose
+
+Deliver queued notifications via configured channels (email, SMS, in-app, push).
+
+### Execution Logic
+
+```typescript
+async function executeNotificationDelivery(notificationId: string) {
+  const notification = await db.findOne('notifications', notificationId);
+  const user = await db.findOne('users', notification.user_id);
+  const preferences = await db.findOne('notification_preferences', {
+    user_id: user.id,
+    notification_type: notification.notification_type
+  });
+
+  // Determine delivery channels based on preferences
+  const channels = determineChannels(preferences, notification.severity);
+
+  for (const channel of channels) {
+    try {
+      if (channel === 'EMAIL') {
+        await sendEmail({
+          to: user.email,
+          subject: notification.subject,
+          body: notification.message,
+          template: notification.template_id
+        });
+      } else if (channel === 'SMS') {
+        await sendSMS({
+          to: user.phone_number,
+          message: notification.message
+        });
+      } else if (channel === 'PUSH') {
+        await sendPushNotification({
+          user_id: user.id,
+          title: notification.subject,
+          body: notification.message
+        });
+      }
+
+      await db.update('notifications', notificationId, {
+        status: 'DELIVERED',
+        delivered_at: new Date(),
+        channel: channel
+      });
+    } catch (error) {
+      await db.update('notifications', notificationId, {
+        status: 'FAILED',
+        error_message: error.message,
+        retry_count: notification.retry_count + 1
+      });
+      throw error; // Will trigger retry via BullMQ
+    }
+  }
+}
+```
+
+### Business Rules
+
+- Respects user notification preferences
+- HIGH severity notifications ignore "digest only" preferences
+- Retries up to 3 times with exponential backoff
+- Falls back to in-app notification if email/SMS fails
+
+### Performance
+
+- Expected execution time: 1-5 seconds per notification
+- Rate limited by email/SMS provider
+- Processes notifications in order of creation
+
+---
+
+## 18.5 Digest Delivery Job
+
+**Job Type:** `digest-delivery-job`
+**Queue:** `digest-delivery`
+**Priority:** NORMAL
+**Trigger:** Cron (daily at 07:00 UTC, weekly Monday 07:00)
+
+### Purpose
+
+Send daily or weekly digest emails summarizing notifications and activity for users who prefer batched notifications.
+
+### Execution Logic
+
+```typescript
+async function executeDigestDelivery(frequency: 'DAILY' | 'WEEKLY') {
+  const users = await db.query(`
+    SELECT DISTINCT u.*
+    FROM users u
+    JOIN notification_preferences np ON u.id = np.user_id
+    WHERE np.frequency_preference = '${frequency}_DIGEST'
+      AND u.is_active = true
+  `);
+
+  for (const user of users) {
+    const startDate = frequency === 'DAILY'
+      ? subDays(new Date(), 1)
+      : subDays(new Date(), 7);
+
+    const notifications = await db.query(`
+      SELECT * FROM notifications
+      WHERE user_id = $1
+        AND created_at >= $2
+        AND status IN ('PENDING', 'QUEUED')
+        AND severity != 'CRITICAL'
+      ORDER BY created_at DESC
+    `, [user.id, startDate]);
+
+    if (notifications.length > 0) {
+      await sendDigestEmail({
+        to: user.email,
+        frequency: frequency,
+        notifications: notifications,
+        summary: {
+          total_count: notifications.length,
+          by_type: groupBy(notifications, 'notification_type')
+        }
+      });
+
+      // Mark notifications as delivered
+      await db.update('notifications',
+        { id: { in: notifications.map(n => n.id) } },
+        { status: 'DELIVERED', delivered_at: new Date() }
+      );
+    }
+  }
+}
+```
+
+### Business Rules
+
+- Only includes non-CRITICAL notifications (critical bypass digest)
+- Groups notifications by type for easy scanning
+- Includes summary statistics (total count, breakdown by type)
+- Weekly digests sent on Monday mornings
+
+### Performance
+
+- Expected execution time: 5-30 minutes
+- Scales with number of users preferring digest delivery
+- Batches email sending for efficiency
+
+---
+
+## 18.6 Evidence Retention Job
+
+**Job Type:** `evidence-retention-job`
+**Queue:** `evidence-retention`
+**Priority:** LOW
+**Trigger:** Cron (monthly on 1st at 04:00 UTC)
+
+### Purpose
+
+Archive or delete evidence items past their retention period according to company retention policies.
+
+### Execution Logic
+
+```typescript
+async function executeEvidenceRetention() {
+  const companies = await db.query(`
+    SELECT id, evidence_retention_years FROM companies
+    WHERE evidence_retention_years IS NOT NULL
+  `);
+
+  for (const company of companies) {
+    const cutoffDate = subYears(new Date(), company.evidence_retention_years);
+
+    const expiredEvidence = await db.query(`
+      SELECT * FROM evidence_items
+      WHERE company_id = $1
+        AND created_at < $2
+        AND deleted_at IS NULL
+        AND is_archived = false
+    `, [company.id, cutoffDate]);
+
+    for (const evidence of expiredEvidence) {
+      // Check if evidence is still linked to active obligations
+      const activeLinks = await db.count('obligation_evidence_links', {
+        evidence_id: evidence.id,
+        deleted_at: null
+      });
+
+      if (activeLinks === 0) {
+        // Archive evidence (soft delete + move to cold storage)
+        await archiveEvidence(evidence.id);
+
+        await db.update('evidence_items', evidence.id, {
+          is_archived: true,
+          archived_at: new Date(),
+          archived_reason: 'RETENTION_POLICY'
+        });
+      }
+    }
+  }
+}
+```
+
+### Business Rules
+
+- Only archives evidence past retention period
+- Never archives evidence linked to active obligations
+- Soft deletes evidence (keeps metadata)
+- Moves files to cold storage (cheaper storage tier)
+- Creates audit log of all archiving actions
+
+### Performance
+
+- Expected execution time: 5-60 minutes
+- Scales with total evidence volume and retention periods
+- Runs monthly during low-traffic hours
+
+---
+
+# 17. Error Handling & Logging
+
+## 17.1 Structured Logging
 
 **Reference:** Technical Architecture Section 2.4 (Error Handling and Logging)
 
@@ -3658,7 +6436,7 @@ logJobOperation({
 });
 ```
 
-## 9.2 Error Logging
+## 17.2 Error Logging
 
 ### Audit Log Error Records
 
@@ -3747,7 +6525,7 @@ async function captureJobError(
 }
 ```
 
-## 9.3 Alerting
+## 17.3 Alerting
 
 ### Critical Job Failure Alerts
 
@@ -3805,7 +6583,7 @@ async function alertJobFailure(
 | CROSS_SELL_TRIGGER | INFO | None (low priority) |
 | AUDIT_PACK_GENERATION | ERROR | User who requested |
 
-## 9.4 Monitoring
+## 17.4 Monitoring
 
 ### Job Metrics
 
@@ -3905,39 +6683,93 @@ async function getJobSystemHealth(): Promise<{
 
 # Summary
 
-This complete specification defines all 10 background job types for the EcoComply platform:
+This complete specification defines all **25 background job types** for the EcoComply platform:
 
 ## Complete Job Type Registry
 
+### Core Jobs (v1.0 - Sections 2-6)
 | # | Job Type | Section | Description |
 |---|----------|---------|-------------|
 | 1 | Monitoring Schedule | Section 2.1 | Recurring obligation checks, deadline calculations |
 | 2 | Deadline Alert | Section 2.2 | 7/3/1 day warnings for upcoming deadlines |
 | 3 | Evidence Reminder | Section 2.3 | Notifications for obligations requiring evidence |
-| 4 | Document Processing | Section 3.1 | PDF upload → OCR → text extraction → LLM parsing |
-| 5 | Sampling Schedule (Module 2) | Section 4.1 | Daily/weekly/monthly triggers for lab sampling |
-| 6 | Run-Hour Monitoring (Module 3) | Section 5.1 | 80%/90%/100% threshold checks |
-| 7 | AER Generation | Section 5.2 | Annual return compilation and generation |
-| 8 | Permit Renewal Reminder | Section 6.1 | Notifications for approaching permit renewals |
-| 9 | Cross-Sell Trigger Detection | Section 6.2 | Keyword-based module suggestions |
-| 10 | Audit Pack Generation | Section 6.3 | Evidence compilation into inspector-ready PDFs |
+| 4 | Document Processing | Section 3.1 | PDF upload → text extraction (pdf-parse) → OCR (if needed) → LLM parsing |
+| 5 | Excel Import Processing | Section 3.2 | Excel upload → validation → preview → bulk creation |
+| 6 | Sampling Schedule (Module 2) | Section 4.1 | Daily/weekly/monthly triggers for lab sampling |
+| 7 | Run-Hour Monitoring (Module 3) | Section 5.1 | 80%/90%/100% threshold checks |
+| 8 | AER Generation | Section 5.2 | Annual return compilation and generation |
+| 9 | Permit Renewal Reminder | Section 6.1 | Notifications for approaching permit renewals |
+| 10 | Cross-Sell Trigger Detection | Section 6.2 | Keyword-based module suggestions |
+| 11 | Audit Pack Generation | Section 6.3 | Evidence compilation into inspector-ready PDFs |
+| 12 | Pack Distribution | Section 6.4 | Distribute packs via email/shared link |
+| 13 | Consultant Client Sync | Section 6.5 | Sync consultant assignments and dashboard |
+
+### v1.3 Enhancement Jobs (Sections 7-14)
+| # | Job Type | Section | Description |
+|---|----------|---------|-------------|
+| 14 | Update Compliance Clocks | Section 7.1 | Recalculate days_remaining and criticality for all clocks |
+| 15 | Refresh Compliance Dashboard | Section 7.2 | Refresh materialized view for dashboard |
+| 16 | Process Escalations | Section 8.1 | Auto-escalate overdue obligations based on workflows |
+| 17 | Auto-Create Renewal Workflows | Section 9.1 | Create renewal workflows 90 days before expiry |
+| 18 | Check Regulator Response Deadlines | Section 9.2 | Alert on overdue regulator responses |
+| 19 | Monitor Corrective Action Items | Section 10.1 | Send reminders for action item due dates |
+| 20 | Auto-Transition Corrective Actions | Section 10.2 | Transition actions when all items complete |
+| 21 | Auto-Validate Consignment Notes | Section 11.1 | Run validation on new consignments |
+| 22 | Flag Pending Runtime Validations | Section 12.1 | Alert on manual entries pending validation |
+| 23 | Update SLA Breach Timers | Section 13.1 | Track SLA breach duration for overdue deadlines |
+| 24 | Execute Pending Recurrence Triggers | Section 14.1 | Execute scheduled recurrence triggers |
+| 25 | Process Trigger Conditions | Section 14.2 | Evaluate conditional triggers on events |
 
 ## Document Structure
 
-This specification is organized into 9 main sections:
+This specification is organized into **17 main sections**:
 
 1. **Document Overview & Framework** - Job execution framework, queue structure, worker architecture
 2. **Core Monitoring Jobs** - Monitoring Schedule, Deadline Alert, Evidence Reminder
-3. **Document Processing Jobs** - Complete PDF processing pipeline
+3. **Document Processing Jobs** - PDF processing, Excel import
 4. **Module 2 Jobs (Trade Effluent)** - Sampling Schedule
 5. **Module 3 Jobs (MCPD/Generators)** - Run-Hour Monitoring, AER Generation
-6. **System Jobs** - Permit Renewal Reminder, Cross-Sell Trigger Detection, Audit Pack Generation
-7. **Job Infrastructure Details** - Retry strategy, DLQ rules, health monitoring, status transitions
-8. **Integration Points** - Database, notifications, AI service, storage, real-time integration
-9. **Error Handling & Logging** - Structured logging, error capture, alerting, monitoring
+6. **System Jobs** - Permit Renewal Reminder, Cross-Sell, Audit Pack, Consultant Sync
+7. **Universal Compliance Clock Jobs** - Clock updates, dashboard refresh
+8. **Escalation Workflow Jobs** - Automated escalation processing
+9. **Permit Workflow Jobs** - Renewal workflows, regulator response tracking
+10. **Corrective Action Jobs** - Action item monitoring, auto-transitions
+11. **Validation Jobs (Module 4)** - Consignment note validation
+12. **Runtime Monitoring Jobs (Module 3)** - Manual entry validation alerts
+13. **SLA Timer Jobs** - SLA breach tracking and escalation
+14. **Trigger Execution Jobs** - Recurrence trigger execution
+15. **Job Infrastructure Details** - Retry strategy, DLQ rules, health monitoring, status transitions, integration points
+16. **Integration Points** - See Section 15
+17. **Error Handling & Logging** - Structured logging, error capture, alerting, monitoring
+
+## Version History
+
+### Version 1.3 (2025-12-01)
+**Major Enhancement: Database Schema v1.3 Features**
+
+Added 12 new background jobs for features from Database Schema v1.3:
+
+**Cross-Cutting Features:**
+- Universal Compliance Clock jobs (2 jobs) - Red/Amber/Green criticality tracking
+- Escalation Workflow jobs (1 job) - Automated escalation processing
+
+**Module 1 Enhancements:**
+- Permit Workflow jobs (2 jobs) - Renewal workflows and regulator response tracking
+- SLA Timer jobs (1 job) - SLA breach tracking
+- Trigger Execution jobs (2 jobs) - Event-based and conditional triggers
+
+**Module 2 & 4 Enhancements:**
+- Corrective Action jobs (2 jobs) - Action item monitoring and auto-transitions
+- Validation jobs (1 job) - Consignment note pre-validation
+
+**Module 3 Enhancements:**
+- Runtime Monitoring jobs (1 job) - Manual entry validation alerts
+
+### Version 1.0 (2025-01-01)
+Initial release with 13 core background jobs.
 
 ---
 
-**Document Status:** Complete  
-**Last Updated:** 2025-01-01  
-**Version:** 1.0
+**Document Status:** Complete - Enhanced with v1.3 Features
+**Last Updated:** 2025-12-01
+**Version:** 1.3

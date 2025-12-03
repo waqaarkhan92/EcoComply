@@ -33,7 +33,7 @@ export default function Module2Layout({
   // Check if Module 2 is activated - try to access a Module 2 endpoint to verify
   const { data, isLoading, error } = useQuery<{ data: any[] }>({
     queryKey: ['module-2-check', user?.company_id],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       // Try to fetch parameters - if Module 2 is not activated, this will return 403
       try {
         return await apiClient.get('/module-2/parameters?limit=1');

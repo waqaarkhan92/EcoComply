@@ -2,18 +2,116 @@
 
 **EcoComply v1.0 — Launch-Ready / Last updated: 2025-01-01**
 
-**Document Version:** 1.0  
-**Status:** Complete  
-**Created by:** Cursor  
+**Document Version:** 1.6
+**Status:** Complete - Updated to Match Production Implementation
+**Created by:** Cursor
 **Depends on:**
-- ✅ Product Logic Specification (1.1) - Complete
-- ✅ Database Schema (2.2) - Complete
+- ✅ Product Logic Specification (1.3) - Complete
+- ✅ Database Schema (1.3) - Complete
 - ✅ Background Jobs (2.3) - Complete
 - ✅ Notification & Messaging (2.4) - Complete
 
 **Purpose:** Defines the complete REST API specification for the EcoComply platform, including all endpoints, request/response schemas, authentication, authorization, error handling, and integration points.
 
+> [v1.6 UPDATE - Added 77+ Missing Production Endpoints - 2025-02-03]
+> - Added Module 1 Advanced Endpoints (enforcement notices, compliance decisions, condition rules/permissions, evidence completeness)
+> - Added Module 2 Advanced Endpoints (sampling logistics, reconciliation, consent states, predictive analytics)
+> - Added Module 3 Advanced Endpoints (fuel usage logs, sulphur content reports, runtime monitoring enhancements)
+> - Added Pack Sharing Endpoints (secure tokens, access logs, pack contents)
+> - Added Dashboard Endpoints (enhanced statistics)
+> - Added Initialization Endpoints (system setup)
+> [v1.3 UPDATE - Added API endpoints for Database Schema v1.3 features - 2025-12-01]
 > [v1 UPDATE – Version Header – 2024-12-27]
+
+---
+
+## Version History
+
+### Version 1.6 (2025-02-03)
+**Major Update: Production Implementation Alignment**
+
+This version documents all endpoints actually implemented in production that were missing from previous spec versions:
+
+**Module 1 Advanced Endpoints (25+ endpoints added):**
+- Enforcement Notices API - Complete lifecycle management (ISSUED → IN_RESPONSE → CLOSED → APPEALED)
+- Compliance Decisions API - Decision tracking with evidence and reasoning
+- Condition Evidence Rules API - Condition-level evidence mapping rules
+- Condition Permissions API - Permission tracking per condition
+- Evidence Completeness Scores API - Automated evidence completeness calculation
+
+**Module 2 Advanced Endpoints (15+ endpoints added):**
+- Sampling Logistics API - Lab sample workflow (SCHEDULED → SAMPLED → SUBMITTED → RECEIVED → COMPLETED)
+- Monthly Statements API - Water company billing statement reconciliation
+- Reconciliation API - Volume/concentration reconciliation with discrepancy tracking
+- Consent States API - Consent lifecycle state machine (DRAFT → IN_FORCE → SUPERSEDED → EXPIRED)
+- Predictive Analytics API - Breach likelihood scoring and early warning alerts
+
+**Module 3 Advanced Endpoints (8+ endpoints added):**
+- Fuel Usage Logs API - Daily/monthly fuel consumption tracking
+- Sulphur Content Reports API - Sulphur compliance verification
+- Runtime Monitoring Enhancements API - Enhanced runtime tracking with validation workflows
+
+**Cross-Cutting Endpoints (10+ endpoints added):**
+- Pack Sharing API - Secure sharing links with access tokens and expiry
+- Pack Contents API - Version-locked pack contents listing
+- Pack Access Logs API - Regulator access tracking (email, IP, timestamp, views, downloads)
+- Dashboard Statistics API - Enhanced dashboard metrics
+- Initialization API - System initialization and setup
+- Recurring Events API - Recurrence event management
+
+**Infrastructure Endpoints (5+ endpoints added):**
+- Worker Health API - Background worker monitoring
+- System Health Detailed API - Detailed service health checks
+
+### Version 1.4 (2025-01-01)
+**Major Update: Compliance Score System**
+
+This version adds compliance score fields to all relevant API endpoints:
+
+**Compliance Score Fields:**
+- Added `compliance_score` (INTEGER 0-100) to all site endpoints
+- Added `compliance_score_updated_at` timestamp to site endpoints
+- Added `compliance_score` (INTEGER 0-100) to module activation endpoints
+- Added `compliance_score_updated_at` timestamp to module activation endpoints
+- Updated dashboard endpoints to include compliance scores
+- Changed decimal scores (0.0-1.0) to integer scores (0-100) for consistency
+
+**Real-Time Updates:**
+- Compliance scores update automatically when obligations are completed, evidenced, or become overdue
+- Scores are recalculated in real-time via database triggers and background jobs
+- API responses include current compliance score and last update timestamp
+
+### Version 1.3 (2025-12-01)
+**Major Update: API Endpoints for Database Schema v1.3**
+
+This version adds REST API endpoints for all new features from Database Schema v1.3:
+
+**Cross-Cutting Endpoints:**
+- Compliance Clocks API - Universal compliance monitoring across all modules
+- Escalation Workflows API - Configurable escalation rules per company
+
+**Module 1 Enhancements (Environmental Permits):**
+- Permit Workflows API - Track variation/renewal/surrender workflows
+- Permit Variations API - Manage permit variation requests
+- Permit Surrenders API - Manage permit surrender process
+- Recurrence Trigger Executions API - Audit trail for trigger executions
+- Enhanced Deadlines API with SLA tracking
+
+**Module 2 & 4 Enhancements (Trade Effluent & Hazardous Waste):**
+- Enhanced Corrective Actions API with lifecycle support
+- Corrective Action Items API - Track individual action items
+
+**Module 3 Enhancements (MCPD/Generators):**
+- Enhanced Runtime Monitoring API with reason codes and validation
+- Fuel Usage Logs API - Track daily/monthly fuel consumption with sulphur content
+- Sulphur Content Reports API - Store and verify sulphur content test results
+
+**Module 4 New Endpoints (Hazardous Waste):**
+- Validation Rules API - Configurable validation for consignment notes
+- Enhanced Consignment Notes API with pre-submission validation
+
+### Version 1.0 (2025-01-01)
+Initial API specification covering core features and Modules 1-3.
 
 ---
 
@@ -38,21 +136,32 @@
 17. [Audit Pack Generator Endpoints](#16-audit-pack-generator-endpoints)
 18. [v1.0 Pack-Specific Endpoints](#16-v10-pack-specific-endpoints)
 19. [Pack Distribution Endpoints](#16-pack-distribution-endpoints)
-20. [Module 2 Endpoints](#17-module-2-endpoints)
-21. [Module 3 Endpoints](#18-module-3-endpoints)
-22. [Users Endpoints](#19-users-endpoints)
-23. [Companies Endpoints](#20-companies-endpoints)
-24. [Multi-Site Endpoints](#21-multi-site-endpoints)
-25. [Module Activation Endpoints](#22-module-activation-endpoints)
-26. [Admin Endpoints](#23-admin-endpoints)
-27. [Pattern Library Management Endpoints](#235-pattern-library-management-endpoints)
-28. [Regulator Questions Endpoints](#24-regulator-questions-endpoints)
-29. [Background Jobs Endpoints](#25-background-jobs-endpoints)
-30. [Consultant Control Centre Endpoints](#26-consultant-control-centre-endpoints)
-31. [File Upload Specifications](#27-file-upload-specifications)
-32. [Webhook Endpoints](#28-webhook-endpoints)
-33. [OpenAPI Specification](#29-openapi-specification)
-34. [TypeScript Interfaces](#30-typescript-interfaces)
+20. [Compliance Clocks Endpoints](#17-compliance-clocks-endpoints)
+21. [Escalation Workflows Endpoints](#18-escalation-workflows-endpoints)
+22. [Permit Workflows Endpoints](#19-permit-workflows-endpoints)
+23. [Module 2 Endpoints](#20-module-2-endpoints)
+24. [Module 3 Endpoints](#21-module-3-endpoints)
+25. [Module 4 Endpoints](#22-module-4-endpoints)
+26. [Users Endpoints](#23-users-endpoints)
+27. [Companies Endpoints](#24-companies-endpoints)
+28. [Multi-Site Endpoints](#25-multi-site-endpoints)
+29. [Module Activation Endpoints](#26-module-activation-endpoints)
+30. [Admin Endpoints](#27-admin-endpoints)
+31. [Pattern Library Management Endpoints](#28-pattern-library-management-endpoints)
+32. [Regulator Questions Endpoints](#29-regulator-questions-endpoints)
+33. [Background Jobs Endpoints](#30-background-jobs-endpoints)
+34. [Consultant Control Centre Endpoints](#31-consultant-control-centre-endpoints)
+35. [File Upload Specifications](#32-file-upload-specifications)
+36. [Webhook Endpoints](#33-webhook-endpoints)
+37. [**NEW:** Module 1 Advanced Endpoints](#37-module-1-advanced-endpoints)
+38. [**NEW:** Module 2 Advanced Endpoints](#38-module-2-advanced-endpoints)
+39. [**NEW:** Module 3 Advanced Endpoints](#39-module-3-advanced-endpoints)
+40. [**NEW:** Pack Sharing & Access Endpoints](#40-pack-sharing--access-endpoints)
+41. [**NEW:** Dashboard & Statistics Endpoints](#41-dashboard--statistics-endpoints)
+42. [**NEW:** Initialization & System Setup Endpoints](#42-initialization--system-setup-endpoints)
+43. [**NEW:** Recurring Events Endpoints](#43-recurring-events-endpoints)
+44. [OpenAPI Specification](#44-openapi-specification)
+45. [TypeScript Interfaces](#45-typescript-interfaces)
 
 ---
 
@@ -2025,11 +2134,19 @@ interface UpdateReviewRequest {
     "completed_by": null,
     "completion_notes": null,
     "is_late": false,
+    "sla_target_date": "2025-01-10",
+    "sla_breached_at": null,
+    "sla_breach_duration_hours": null,
     "created_at": "2025-01-01T12:00:00Z",
     "updated_at": "2025-01-01T12:00:00Z"
   }
 }
 ```
+
+**Note:** SLA fields added in v1.3:
+- `sla_target_date` - Internal SLA target (typically before external due_date)
+- `sla_breached_at` - Timestamp when SLA was breached (if applicable)
+- `sla_breach_duration_hours` - Duration in hours between SLA target and actual completion
 
 **Error Codes:**
 - `404 NOT_FOUND` - Deadline not found
@@ -2132,7 +2249,7 @@ interface UpdateReviewRequest {
 - **Body:**
   - `file` (File, required) - Evidence file
   - `obligation_id` (UUID, required) - Obligation identifier
-  - `evidence_type` (enum, required) - Evidence type
+  - `evidence_type` (string, optional) - Business evidence type (PHOTO, DOCUMENT, CERTIFICATE, etc.) - stored in metadata.evidence_type. Note: This is different from `file_type` which indicates file format (PDF, IMAGE, CSV, etc.)
   - `metadata` (JSON, optional) - Additional metadata
 
 **Request Schema:**
@@ -2140,10 +2257,11 @@ interface UpdateReviewRequest {
 interface EvidenceUploadRequest {
   file: File;
   obligation_id: string;
-  evidence_type: string;
+  evidence_type?: string; // Optional: Business evidence type (PHOTO, DOCUMENT, CERTIFICATE, etc.) - stored in metadata.evidence_type if provided
   metadata?: {
     description?: string;
     date?: string;
+    evidence_type?: string; // Business evidence type (PHOTO, DOCUMENT, CERTIFICATE, etc.) - different from file_type which is file format (PDF, IMAGE, CSV, etc.)
     [key: string]: any;
   };
 }
@@ -2317,6 +2435,111 @@ interface EvidenceUploadRequest {
 - **Path Parameters:**
   - `obligationId` (UUID, required) - Obligation identifier
   - `evidenceId` (UUID, required) - Evidence identifier
+
+---
+
+## 12.6 PATCH /api/v1/evidence/{evidenceId}/approve
+
+**Purpose:** Approve evidence item (required before pack generation)
+
+**Authentication:** Required (Owner, Admin, Manager roles only)
+
+**Request:**
+- **Method:** PATCH
+- **Path Parameters:**
+  - `evidenceId` (UUID, required) - Evidence identifier
+- **Body:**
+```json
+{
+  "approved": true,
+  "review_notes": "string (optional)"
+}
+```
+
+**Request Schema:**
+```typescript
+interface EvidenceApprovalRequest {
+  approved: boolean; // true to approve, false to reject
+  review_notes?: string; // Optional review notes
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "is_approved": true,
+    "reviewer_id": "uuid",
+    "approved_at": "2025-01-01T12:00:00Z",
+    "review_notes": "string",
+    "updated_at": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Validation Rules:**
+- `reviewer_id` MUST be set to current user ID (automatically set by system)
+- `approved_at` MUST be set to current timestamp when `approved = true` (automatically set by system)
+- If `approved = false`, `is_approved` remains `false`, `reviewer_id` and `approved_at` are NOT set
+- Only Owner, Admin, or Manager roles can approve evidence
+
+**Error Codes:**
+- `404 NOT_FOUND` - Evidence not found
+- `403 FORBIDDEN` - Insufficient permissions (not Owner/Admin/Manager)
+- `400 BAD_REQUEST` - Invalid request body
+- `422 UNPROCESSABLE_ENTITY` - Validation error
+
+**Rate Limiting:** 100 approvals/minute per user
+
+---
+
+## 12.7 GET /api/v1/evidence/{evidenceId}/approval-status
+
+**Purpose:** Get evidence approval status
+
+**Authentication:** Required (all roles, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `evidenceId` (UUID, required) - Evidence identifier
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "is_approved": true,
+    "reviewer_id": "uuid",
+    "reviewer_name": "string",
+    "approved_at": "2025-01-01T12:00:00Z",
+    "review_notes": "string",
+    "can_be_used_in_packs": true
+  }
+}
+```
+
+**Response Schema:**
+```typescript
+interface EvidenceApprovalStatus {
+  id: string;
+  is_approved: boolean;
+  reviewer_id: string | null;
+  reviewer_name: string | null;
+  approved_at: string | null;
+  review_notes: string | null;
+  can_be_used_in_packs: boolean; // true if is_approved && reviewer_id && approved_at
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Evidence not found
+- `403 FORBIDDEN` - Insufficient permissions (RLS)
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
 
 **Response:** 200 OK
 ```json
@@ -3194,8 +3417,19 @@ interface CreateAuditPackRequest {
 - **Else**:
   - Validates `site_id` is provided
   - Validates user has access to site
+- **Evidence Approval Validation (REQUIRED):**
+  - For ALL obligations in the pack date range:
+    - Queries all evidence items linked to each obligation
+    - Validates each evidence item has:
+      - `is_approved = true`
+      - `reviewer_id IS NOT NULL`
+      - `approved_at IS NOT NULL`
+    - **If ANY evidence item lacks approval**, returns `422 UNPROCESSABLE_ENTITY` with error details
 - Returns `403 FORBIDDEN` if pack type not available for user's plan
-- Returns `422 UNPROCESSABLE_ENTITY` if validation fails (missing company_id for Board Pack, missing site_id for other packs)
+- Returns `422 UNPROCESSABLE_ENTITY` if validation fails:
+  - Missing company_id for Board Pack
+  - Missing site_id for other packs
+  - **Unapproved evidence items (see error response below)**
 
 **Response:** 202 Accepted
 ```json
@@ -3266,6 +3500,41 @@ interface PackGenerationResponse {
 }
 ```
 
+**422 Unprocessable Entity (Evidence Approval Error):**
+```json
+{
+  "error": {
+    "code": "UNPROCESSABLE_ENTITY",
+    "message": "Cannot generate pack: Unapproved evidence items found",
+    "details": {
+      "validation_type": "EVIDENCE_APPROVAL",
+      "errors": [
+        {
+          "evidence_id": "uuid",
+          "evidence_file_name": "lab_certificate_2025-01-15.pdf",
+          "obligation_id": "uuid",
+          "obligation_title": "Monthly BOD Monitoring",
+          "issue": "Evidence not approved",
+          "missing_fields": ["reviewer_id", "approved_at"]
+        },
+        {
+          "evidence_id": "uuid",
+          "evidence_file_name": "photo_evidence.jpg",
+          "obligation_id": "uuid",
+          "obligation_title": "Site Inspection",
+          "issue": "Evidence missing approval timestamp",
+          "missing_fields": ["approved_at"]
+        }
+      ],
+      "total_unapproved": 2,
+      "action_required": "Please approve all evidence items before generating pack"
+    },
+    "request_id": "uuid",
+    "timestamp": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
 **Example cURL Request:**
 ```bash
 curl -X POST https://api.epcompliance.com/api/v1/audit-packs \
@@ -3288,7 +3557,321 @@ curl -X POST https://api.epcompliance.com/api/v1/audit-packs \
 
 **Integration:** Creates background job (Audit Pack Generation Job - see Background Jobs 2.3)
 
+**Evidence Approval Validation (REQUIRED for ALL Pack Types):**
+- **Before pack generation**, system validates ALL evidence items:
+  - Queries all obligations in pack date range
+  - For each obligation, queries all linked evidence items
+  - Validates each evidence item has:
+    - `is_approved = true`
+    - `reviewer_id IS NOT NULL`
+    - `approved_at IS NOT NULL`
+  - **If ANY evidence item lacks approval**, returns `422 UNPROCESSABLE_ENTITY` with detailed error list
+  - Error response includes: evidence_id, file_name, obligation_id, obligation_title, missing_fields
+  - Pack generation is BLOCKED until all evidence is approved
+
+**Module 2 (Trade Effluent) Pre-Generation Validation:**
+- **If** pack includes Module 2 data, **then** system performs additional validation:
+  - Validates all sampling periods have lab results
+  - Validates all lab results have approved evidence (same approval requirements as above)
+  - **If** validation fails, **then** returns `422 UNPROCESSABLE_ENTITY` with validation errors
+  - See Section 16.2.1 for Module 2 validation endpoint
+
+**Standardized Pack Response Fields:**
+When pack generation completes, response includes all universal fields:
+```json
+{
+  "data": {
+    "id": "uuid",
+    "pack_type": "REGULATOR_INSPECTION",
+    "status": "COMPLETED",
+    "compliance_score": 85,
+    "compliance_score_breakdown": {
+      "total_obligations": 120,
+      "completed_obligations": 102,
+      "overdue_count": 3,
+      "module_scores": [
+        {"module_id": "uuid", "module_name": "Environmental Permits", "score": 88},
+        {"module_id": "uuid", "module_name": "Trade Effluent", "score": 82}
+      ]
+    },
+    "obligation_summary": [...],
+    "evidence_summary": [...],
+    "change_justification_history": [...],
+    "compliance_clock_summary": {
+      "overdue": [...],
+      "upcoming": [...],
+      "total_active": 45
+    },
+    "pack_provenance_signature": {
+      "timestamp": "2025-01-01T12:01:45Z",
+      "signer_id": "uuid",
+      "signer_name": "John Doe",
+      "content_hash": "sha256:...",
+      "version": 1
+    },
+    "generation_sla_seconds": 95,
+    "secure_access_token": "uuid-token",
+    "secure_access_url": "https://app.epcompliance.com/packs/uuid-token",
+    "secure_access_expires_at": "2025-12-31T23:59:59Z"
+  }
+}
+```
+
+---
+
+## 16.3 GET /api/v1/audit-packs/{packId}/secure/{accessToken}
+
+**Purpose:** Access audit pack via secure link (no login required - for regulators)
+
+**Authentication:** None (secure token-based access)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `packId` (UUID, required) - Pack identifier
+  - `accessToken` (TEXT, required) - Secure access token from `audit_packs.secure_access_token`
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "pack": {
+      "id": "uuid",
+      "title": "Q1 2025 Compliance Pack - Manchester Plant",
+      "pack_type": "REGULATOR_INSPECTION",
+      "compliance_score": 85,
+      "compliance_score_breakdown": {...},
+      "obligation_summary": [...],
+      "evidence_summary": [...],
+      "change_justification_history": [...],
+      "compliance_clock_summary": {...},
+      "pack_provenance_signature": {...},
+      "generated_at": "2025-01-01T12:01:45Z",
+      "generated_by": "John Doe"
+    },
+    "access_log": {
+      "first_accessed_at": "2025-01-01T14:30:00Z",
+      "view_count": 1
+    }
+  }
+}
+```
+
+**Access Logging:**
+- Creates or updates `pack_access_logs` entry:
+  - Records IP address (required)
+  - Records email if provided via query parameter `?email=regulator@example.com` (optional)
+  - Records user agent from request headers
+  - Increments view_count
+  - Updates last_accessed_at
+
+**Error Codes:**
+- `404 NOT_FOUND` - Pack not found or access token invalid
+- `410 GONE` - Secure access link has expired (`secure_access_expires_at` passed)
+- `403 FORBIDDEN` - Access token does not match pack
+
+**Rate Limiting:** 100 requests/minute per IP address
+
+---
+
+## 16.4 GET /api/v1/audit-packs/{packId}/download
+
+**Purpose:** Download audit pack PDF (requires authentication OR secure access token)
+
+**Authentication:** Required (JWT token) OR secure access token (for regulators)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `packId` (UUID, required) - Pack identifier
+- **Query Parameters:**
+  - `access_token` (optional) - Secure access token (for regulator access without login)
+
+**Response:** 200 OK
+- **Content-Type:** `application/pdf`
+- **Content-Disposition:** `attachment; filename="audit-pack-{packId}.pdf"`
+- **Body:** PDF file binary
+
+**Access Logging:**
+- If accessed via secure token, increments `download_count` in `pack_access_logs`
+- Records download timestamp
+
+**Error Codes:**
+- `404 NOT_FOUND` - Pack not found
+- `403 FORBIDDEN` - Insufficient permissions or invalid access token
+- `410 GONE` - Secure access link has expired
+
+**Rate Limiting:** 10 downloads/minute per user/IP
+
 **Reference Integrity:** Validates evidence/obligation references (see PLS Section B.8.3)
+
+---
+
+## 16.2.1 POST /api/v1/audit-packs/validate-module-2
+
+**Purpose:** Validate Module 2 (Trade Effluent) pack generation requirements before generation
+
+**Authentication:** Required (Owner, Admin, Staff, Module 2 active)
+
+**Request:**
+- **Method:** POST
+- **Body:**
+```json
+{
+  "site_id": "uuid",
+  "date_range": {
+    "start": "2025-01-01",
+    "end": "2025-12-31"
+  },
+  "consent_ids": ["uuid1", "uuid2"]
+}
+```
+
+**Request Schema:**
+```typescript
+interface ValidateModule2PackRequest {
+  site_id: string; // UUID, required
+  date_range: {
+    start: string; // ISO date (YYYY-MM-DD), required
+    end: string; // ISO date (YYYY-MM-DD), required
+  };
+  consent_ids?: string[]; // Optional: Validate specific consents only
+}
+```
+
+**Response:** 200 OK (Validation Passed)
+```json
+{
+  "data": {
+    "validation_status": "PASSED",
+    "site_id": "uuid",
+    "date_range": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+    },
+    "consents_validated": 2,
+    "parameters_validated": 8,
+    "sampling_periods_checked": 48,
+    "lab_results_checked": 48,
+    "evidence_items_checked": 48,
+    "message": "All Module 2 pack generation requirements met"
+  }
+}
+```
+
+**Response:** 422 Unprocessable Entity (Validation Failed)
+```json
+{
+  "error": {
+    "code": "UNPROCESSABLE_ENTITY",
+    "message": "Module 2 pack generation requirements not met",
+    "details": {
+      "validation_status": "FAILED",
+      "missing_sampling_periods": [
+        {
+          "parameter_id": "uuid",
+          "parameter_name": "BOD",
+          "period_start": "2025-01-01",
+          "period_end": "2025-01-07",
+          "frequency": "WEEKLY",
+          "consent_id": "uuid",
+          "consent_reference": "TE-2024-001"
+        }
+      ],
+      "missing_evidence": [
+        {
+          "lab_result_id": "uuid",
+          "sample_id": "LAB-2025-001",
+          "parameter_name": "COD",
+          "sample_date": "2025-01-15",
+          "issue": "NO_EVIDENCE",
+          "consent_id": "uuid"
+        }
+      ],
+      "unapproved_evidence": [
+        {
+          "lab_result_id": "uuid",
+          "sample_id": "LAB-2025-002",
+          "parameter_name": "SS",
+          "sample_date": "2025-01-22",
+          "evidence_id": "uuid",
+          "evidence_name": "lab-certificate-2025-01-22.pdf",
+          "is_approved": false,
+          "reviewer_id": null,
+          "approved_at": null,
+          "issue": "NOT_APPROVED",
+          "consent_id": "uuid"
+        },
+        {
+          "lab_result_id": "uuid",
+          "sample_id": "LAB-2025-003",
+          "parameter_name": "pH",
+          "sample_date": "2025-01-29",
+          "evidence_id": "uuid",
+          "evidence_name": "lab-certificate-2025-01-29.pdf",
+          "is_approved": true,
+          "reviewer_id": "uuid",
+          "approved_at": null,
+          "issue": "MISSING_APPROVAL_TIMESTAMP",
+          "consent_id": "uuid"
+        }
+      ],
+      "summary": {
+        "total_consents": 2,
+        "total_parameters": 8,
+        "total_sampling_periods": 48,
+        "missing_periods_count": 1,
+        "missing_evidence_count": 1,
+        "unapproved_evidence_count": 2
+      }
+    },
+    "request_id": "uuid",
+    "timestamp": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Validation Rules:**
+1. **All Sampling Periods Have Results:**
+   - For each active consent parameter in date range:
+     - Calculate all sampling periods based on parameter frequency
+     - Check if each period has at least one lab result
+     - Missing periods are reported in `missing_sampling_periods`
+
+2. **All Results Have Approved Evidence:**
+   - For each lab result in date range:
+     - Check if at least one evidence item is linked
+     - Check if evidence has `is_approved = true`, `reviewer_id IS NOT NULL`, and `approved_at IS NOT NULL`
+     - Missing evidence reported in `missing_evidence`
+     - Unapproved evidence reported in `unapproved_evidence` (with details: is_approved, reviewer_id, approved_at status)
+
+**Error Codes:**
+- `400 BAD_REQUEST` - Invalid request (missing site_id or date_range)
+- `403 FORBIDDEN` - Module 2 not active or insufficient permissions
+- `404 NOT_FOUND` - Site not found
+- `422 UNPROCESSABLE_ENTITY` - Validation failed (see response details)
+
+**Rate Limiting:** 20 validations/minute per user
+
+**Business Logic:**
+- Validation is performed synchronously (no background job)
+- Results are cached for 5 minutes to avoid duplicate validations
+- Validation can be called before pack generation to check readiness
+- Validation errors provide actionable information for users to fix issues
+
+**Example Request:**
+```bash
+curl -X POST https://api.epcompliance.com/api/v1/audit-packs/validate-module-2 \
+  -H "Authorization: Bearer {jwt_token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "site_id": "550e8400-e29b-41d4-a716-446655440000",
+    "date_range": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+    }
+  }'
+```
 
 **Error Codes:**
 - `404 NOT_FOUND` - Site/Company not found
@@ -3991,9 +4574,1295 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-# 17. Module 2 Endpoints
+# 17. Compliance Clocks Endpoints
 
-## 17.1 GET /api/v1/module-2/consents
+## 17.1 GET /api/v1/compliance-clocks
+
+**Purpose:** List all compliance clocks with filtering
+
+**Authentication:** Required (all roles, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Query Parameters:**
+  - `filter[module_id]` (optional) - Filter by module (UUID)
+  - `filter[criticality]` (optional) - Filter by criticality (RED, AMBER, GREEN)
+  - `filter[status]` (optional) - Filter by status (ACTIVE, COMPLETED, OVERDUE, CANCELLED)
+  - `filter[site_id]` (optional) - Filter by site
+  - `filter[days_remaining][lte]` (optional) - Filter by days remaining (e.g., <=7 for urgent)
+  - `sort` (optional) - Sort field (e.g., `days_remaining`, `-created_at`)
+  - `cursor` (optional) - Cursor for pagination
+  - `limit` (optional) - Page size (default: 20, max: 100)
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "company_id": "uuid",
+      "site_id": "uuid",
+      "module_id": "uuid",
+      "entity_type": "DEADLINE",
+      "entity_id": "uuid",
+      "clock_name": "Emissions Report Submission",
+      "description": "Annual emissions report due",
+      "target_date": "2025-06-30",
+      "days_remaining": 45,
+      "criticality": "AMBER",
+      "status": "ACTIVE",
+      "created_at": "2025-01-01T12:00:00Z",
+      "updated_at": "2025-05-15T12:00:00Z"
+    }
+  ],
+  "pagination": {
+    "cursor": "base64_encoded_cursor",
+    "has_more": true,
+    "total": 150
+  }
+}
+```
+
+**Response Schema:**
+```typescript
+interface ComplianceClock {
+  id: string;
+  company_id: string;
+  site_id: string;
+  module_id: string;
+  entity_type: 'OBLIGATION' | 'DEADLINE' | 'PARAMETER' | 'GENERATOR' | 'CONSENT' | 'WASTE_STREAM' | 'CONTRACTOR_LICENCE';
+  entity_id: string;
+  clock_name: string;
+  target_date: string;
+  days_remaining: number;
+  criticality: 'RED' | 'AMBER' | 'GREEN';
+  status: 'ACTIVE' | 'COMPLETED' | 'OVERDUE' | 'CANCELLED';
+  completed_by?: string | null;
+  completed_at?: string | null;
+  evidence_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+**Filterable Fields:**
+- `module_id` (UUID)
+- `criticality` (enum: RED, AMBER, GREEN)
+- `status` (enum: ACTIVE, COMPLETED, OVERDUE, CANCELLED)
+- `site_id` (UUID)
+- `days_remaining` (number, range filters supported)
+- `entity_type` (enum)
+
+**Sortable Fields:**
+- `days_remaining`, `target_date`, `criticality`, `created_at`, `clock_name`
+
+**Error Codes:**
+- `400 BAD_REQUEST` - Invalid filter/sort parameters
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 17.2 GET /api/v1/compliance-clocks/{id}
+
+**Purpose:** Get single compliance clock details
+
+**Authentication:** Required (all roles, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `id` (UUID, required) - Compliance clock identifier
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "company_id": "uuid",
+    "site_id": "uuid",
+    "module_id": "uuid",
+    "entity_type": "DEADLINE",
+    "entity_id": "uuid",
+    "clock_name": "Emissions Report Submission",
+    "target_date": "2025-06-30",
+    "days_remaining": 45,
+    "criticality": "AMBER",
+    "status": "ACTIVE",
+    "completed_by": null,
+    "completed_at": null,
+    "evidence_id": null,
+    "created_at": "2025-01-01T12:00:00Z",
+    "updated_at": "2025-05-15T12:00:00Z",
+    "entity_details": {
+      "type": "deadline",
+      "obligation_name": "Annual Emissions Report",
+      "site_name": "Manchester Plant"
+    }
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Compliance clock not found
+- `403 FORBIDDEN` - Insufficient permissions (RLS)
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 17.3 GET /api/v1/compliance-clocks/dashboard
+
+**Purpose:** Get aggregated compliance clock dashboard metrics
+
+**Authentication:** Required (all roles, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Query Parameters:**
+  - `filter[site_id]` (optional) - Filter by site
+  - `filter[module_id]` (optional) - Filter by module
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "summary": {
+      "total_active_clocks": 250,
+      "red_clocks": 15,
+      "amber_clocks": 45,
+      "green_clocks": 190
+    },
+    "by_module": [
+      {
+        "module_id": "uuid",
+        "module_name": "Environmental Permits",
+        "compliance_score": 88,
+        "total": 120,
+        "red": 5,
+        "amber": 20,
+        "green": 95
+      }
+    ],
+    "by_site": [
+      {
+        "site_id": "uuid",
+        "site_name": "Manchester Plant",
+        "compliance_score": 85,
+        "total": 80,
+        "red": 3,
+        "amber": 12,
+        "green": 65
+      }
+    ],
+    "urgent_items": [
+      {
+        "id": "uuid",
+        "clock_name": "Emissions Report Submission",
+        "days_remaining": 2,
+        "criticality": "RED",
+        "target_date": "2025-05-17"
+      }
+    ]
+  }
+}
+```
+
+**Error Codes:**
+- `400 BAD_REQUEST` - Invalid filter parameters
+
+**Rate Limiting:** 50 requests/minute per user
+
+---
+
+## 17.4 PATCH /api/v1/compliance-clocks/{id}
+
+**Purpose:** Update compliance clock (System use only - updates days_remaining, status)
+
+**Authentication:** Required (System/Admin only)
+
+**Request:**
+- **Method:** PATCH
+- **Path Parameters:**
+  - `id` (UUID, required) - Compliance clock identifier
+- **Body:**
+```json
+{
+  "days_remaining": 45,
+  "status": "ACTIVE",
+  "criticality": "AMBER"
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "days_remaining": 45,
+    "status": "ACTIVE",
+    "criticality": "AMBER",
+    "updated_at": "2025-05-15T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Compliance clock not found
+- `403 FORBIDDEN` - Insufficient permissions (Admin only)
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 17.5 POST /api/v1/compliance-clocks/refresh
+
+**Purpose:** Manually trigger compliance clock recalculation
+
+**Authentication:** Required (Admin, Owner)
+
+**Request:**
+- **Method:** POST
+- **Body (optional):**
+```json
+{
+  "site_id": "uuid",
+  "module_id": "uuid"
+}
+```
+
+**Response:** 202 Accepted
+```json
+{
+  "data": {
+    "job_id": "uuid",
+    "status": "QUEUED",
+    "message": "Compliance clocks recalculation queued",
+    "estimated_completion_time": "2025-05-15T12:05:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `400 BAD_REQUEST` - Invalid parameters
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 10 requests/minute per user
+
+---
+
+# 18. Escalation Workflows Endpoints
+
+> **⚠️ IMPLEMENTATION STATUS (2025-02-01):**
+> - **Status:** ❌ **NOT IMPLEMENTED** - Escalation workflows API endpoints are not yet implemented in the codebase.
+> - **Current State:** Escalation logic exists but uses hardcoded role-based escalation in `lib/services/escalation-service.ts`.
+> - **Action Required:** Implement escalation workflows API endpoints per this specification to enable company-specific escalation configuration.
+
+## 18.1 GET /api/v1/escalation-workflows
+
+**Purpose:** List escalation workflows for company
+
+**Authentication:** Required (all roles, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Query Parameters:**
+  - `filter[is_active]` (optional) - Filter by active status (true/false)
+  - `filter[module_id]` (optional) - Filter by module
+  - `sort` (optional) - Sort field
+  - `cursor` (optional) - Cursor for pagination
+  - `limit` (optional) - Page size (default: 20, max: 100)
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "company_id": "uuid",
+      "workflow_name": "Environmental Permit Deadline Escalation",
+      "module_id": "uuid",
+      "trigger_condition": "DEADLINE_APPROACHING",
+      "trigger_threshold_days": 7,
+      "escalation_levels": [
+        {
+          "level": 1,
+          "delay_hours": 0,
+          "notify_roles": ["STAFF"],
+          "notification_channels": ["EMAIL", "IN_APP"]
+        },
+        {
+          "level": 2,
+          "delay_hours": 24,
+          "notify_roles": ["ADMIN"],
+          "notification_channels": ["EMAIL", "SMS"]
+        }
+      ],
+      "is_active": true,
+      "created_at": "2025-01-01T12:00:00Z"
+    }
+  ],
+  "pagination": {
+    "cursor": "base64_encoded_cursor",
+    "has_more": true,
+    "total": 25
+  }
+}
+```
+
+**Response Schema:**
+```typescript
+interface EscalationWorkflow {
+  id: string;
+  company_id: string;
+  workflow_name: string;
+  module_id?: string;
+  trigger_condition: 'DEADLINE_APPROACHING' | 'SLA_BREACH' | 'PARAMETER_EXCEEDANCE' | 'COMPLIANCE_CLOCK_RED';
+  trigger_threshold_days?: number;
+  escalation_levels: EscalationLevel[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface EscalationLevel {
+  level: number;
+  delay_hours: number;
+  notify_roles: string[];
+  notification_channels: ('EMAIL' | 'SMS' | 'IN_APP')[];
+}
+```
+
+**Error Codes:**
+- `400 BAD_REQUEST` - Invalid filter/sort parameters
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 18.2 GET /api/v1/escalation-workflows/{id}
+
+**Purpose:** Get escalation workflow details
+
+**Authentication:** Required (all roles, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `id` (UUID, required) - Escalation workflow identifier
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "company_id": "uuid",
+    "workflow_name": "Environmental Permit Deadline Escalation",
+    "module_id": "uuid",
+    "trigger_condition": "DEADLINE_APPROACHING",
+    "trigger_threshold_days": 7,
+    "escalation_levels": [
+      {
+        "level": 1,
+        "delay_hours": 0,
+        "notify_roles": ["STAFF"],
+        "notification_channels": ["EMAIL", "IN_APP"]
+      }
+    ],
+    "is_active": true,
+    "created_at": "2025-01-01T12:00:00Z",
+    "updated_at": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Escalation workflow not found
+- `403 FORBIDDEN` - Insufficient permissions (RLS)
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 18.3 POST /api/v1/escalation-workflows
+
+**Purpose:** Create new escalation workflow
+
+**Authentication:** Required (Admin only)
+
+**Request:**
+- **Method:** POST
+- **Body:**
+```json
+{
+  "workflow_name": "Environmental Permit Deadline Escalation",
+  "module_id": "uuid",
+  "trigger_condition": "DEADLINE_APPROACHING",
+  "trigger_threshold_days": 7,
+  "escalation_levels": [
+    {
+      "level": 1,
+      "delay_hours": 0,
+      "notify_roles": ["STAFF"],
+      "notification_channels": ["EMAIL", "IN_APP"]
+    },
+    {
+      "level": 2,
+      "delay_hours": 24,
+      "notify_roles": ["ADMIN"],
+      "notification_channels": ["EMAIL", "SMS"]
+    }
+  ],
+  "is_active": true
+}
+```
+
+**Validation Rules:**
+- `workflow_name` is required
+- `trigger_condition` must be valid enum value
+- `escalation_levels` must have at least one level
+- `escalation_levels` must have sequential level numbers starting from 1
+- `notify_roles` must contain valid role names
+
+**Response:** 201 Created
+```json
+{
+  "data": {
+    "id": "uuid",
+    "company_id": "uuid",
+    "workflow_name": "Environmental Permit Deadline Escalation",
+    "created_at": "2025-05-15T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `400 BAD_REQUEST` - Invalid workflow configuration
+- `403 FORBIDDEN` - Insufficient permissions (Admin only)
+- `409 CONFLICT` - Workflow with same name already exists
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+## 18.4 PATCH /api/v1/escalation-workflows/{id}
+
+**Purpose:** Update escalation workflow
+
+**Authentication:** Required (Admin only)
+
+**Request:**
+- **Method:** PATCH
+- **Path Parameters:**
+  - `id` (UUID, required) - Escalation workflow identifier
+- **Body:**
+```json
+{
+  "workflow_name": "Updated Workflow Name",
+  "trigger_threshold_days": 10,
+  "escalation_levels": [
+    {
+      "level": 1,
+      "delay_hours": 0,
+      "notify_roles": ["STAFF"],
+      "notification_channels": ["EMAIL"]
+    }
+  ],
+  "is_active": false
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "workflow_name": "Updated Workflow Name",
+    "updated_at": "2025-05-15T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Escalation workflow not found
+- `400 BAD_REQUEST` - Invalid update data
+- `403 FORBIDDEN` - Insufficient permissions (Admin only)
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+## 18.5 DELETE /api/v1/escalation-workflows/{id}
+
+**Purpose:** Delete escalation workflow
+
+**Authentication:** Required (Owner only)
+
+**Request:**
+- **Method:** DELETE
+- **Path Parameters:**
+  - `id` (UUID, required) - Escalation workflow identifier
+
+**Response:** 204 No Content
+
+**Error Codes:**
+- `404 NOT_FOUND` - Escalation workflow not found
+- `403 FORBIDDEN` - Insufficient permissions (Owner only)
+- `409 CONFLICT` - Workflow is currently in use by active escalations
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+# 19. Permit Workflows Endpoints
+
+## 33.1 GET /api/v1/permits/{permitId}/workflows
+
+**Purpose:** List workflows for permit (variations, renewals, surrenders)
+
+**Authentication:** Required (all roles, Module 1 active, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `permitId` (UUID, required) - Permit (document) identifier
+- **Query Parameters:**
+  - `filter[workflow_type]` (optional) - Filter by type (VARIATION, RENEWAL, SURRENDER)
+  - `filter[status]` (optional) - Filter by status
+  - `sort` (optional) - Sort field (e.g., `-created_at`)
+  - `cursor` (optional) - Cursor for pagination
+  - `limit` (optional) - Page size
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "permit_id": "uuid",
+      "workflow_type": "VARIATION",
+      "status": "IN_PROGRESS",
+      "initiated_date": "2025-05-01",
+      "submitted_to_regulator_date": "2025-05-15",
+      "regulator_response_due_date": "2025-06-15",
+      "created_at": "2025-05-01T12:00:00Z"
+    }
+  ],
+  "pagination": {...}
+}
+```
+
+**Response Schema:**
+```typescript
+interface PermitWorkflow {
+  id: string;
+  permit_id: string;
+  workflow_type: 'VARIATION' | 'RENEWAL' | 'SURRENDER';
+  status: 'DRAFT' | 'IN_PROGRESS' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'COMPLETED' | 'CANCELLED';
+  initiated_date: string;
+  submitted_to_regulator_date?: string;
+  regulator_response_due_date?: string;
+  completed_date?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Permit not found
+- `403 FORBIDDEN` - Module 1 not active or insufficient permissions
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 33.2 GET /api/v1/workflows/{id}
+
+**Purpose:** Get workflow details
+
+**Authentication:** Required (all roles, Module 1 active, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `id` (UUID, required) - Workflow identifier
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "permit_id": "uuid",
+    "workflow_type": "VARIATION",
+    "status": "IN_PROGRESS",
+    "initiated_date": "2025-05-01",
+    "submitted_to_regulator_date": "2025-05-15",
+    "regulator_response_due_date": "2025-06-15",
+    "completed_date": null,
+    "created_by": "uuid",
+    "created_at": "2025-05-01T12:00:00Z",
+    "updated_at": "2025-05-15T12:00:00Z",
+    "variation_details": {
+      "variation_type": "MINOR",
+      "proposed_changes": "Increase stack height from 15m to 20m",
+      "impact_assessment": "Improved dispersion of emissions"
+    }
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Workflow not found
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 33.3 POST /api/v1/permits/{permitId}/workflows
+
+**Purpose:** Create new workflow (variation, renewal, or surrender)
+
+**Authentication:** Required (Owner, Admin, Staff, Module 1 active)
+
+**Request:**
+- **Method:** POST
+- **Path Parameters:**
+  - `permitId` (UUID, required) - Permit identifier
+- **Body:**
+```json
+{
+  "workflow_type": "VARIATION",
+  "initiated_date": "2025-05-01",
+  "regulator_response_due_date": "2025-06-15"
+}
+```
+
+**Validation Rules:**
+- `workflow_type` is required (VARIATION, RENEWAL, SURRENDER)
+- `initiated_date` is required
+- Permit must exist and be active
+
+**Response:** 201 Created
+```json
+{
+  "data": {
+    "id": "uuid",
+    "permit_id": "uuid",
+    "workflow_type": "VARIATION",
+    "status": "DRAFT",
+    "initiated_date": "2025-05-01",
+    "created_at": "2025-05-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Permit not found
+- `400 BAD_REQUEST` - Invalid workflow data
+- `403 FORBIDDEN` - Module 1 not active or insufficient permissions
+- `409 CONFLICT` - Active workflow of same type already exists for this permit
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+## 33.4 PATCH /api/v1/workflows/{id}
+
+**Purpose:** Update workflow
+
+**Authentication:** Required (Owner, Admin, Staff, Module 1 active)
+
+**Request:**
+- **Method:** PATCH
+- **Path Parameters:**
+  - `id` (UUID, required) - Workflow identifier
+- **Body:**
+```json
+{
+  "submitted_to_regulator_date": "2025-05-15",
+  "regulator_response_due_date": "2025-06-15"
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "submitted_to_regulator_date": "2025-05-15",
+    "updated_at": "2025-05-15T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Workflow not found
+- `400 BAD_REQUEST` - Invalid update data
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 50 requests/minute per user
+
+---
+
+## 33.5 POST /api/v1/workflows/{id}/submit
+
+**Purpose:** Submit workflow to regulator
+
+**Authentication:** Required (Owner, Admin, Staff, Module 1 active)
+
+**Request:**
+- **Method:** POST
+- **Path Parameters:**
+  - `id` (UUID, required) - Workflow identifier
+- **Body:**
+```json
+{
+  "submitted_to_regulator_date": "2025-05-15",
+  "regulator_response_due_date": "2025-06-15",
+  "submission_notes": "Submitted via regulator portal"
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "status": "SUBMITTED",
+    "submitted_to_regulator_date": "2025-05-15",
+    "updated_at": "2025-05-15T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Workflow not found
+- `400 BAD_REQUEST` - Workflow not ready for submission
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+## 33.6 POST /api/v1/workflows/{id}/approve
+
+**Purpose:** Approve workflow (Admins only)
+
+**Authentication:** Required (Admin only, Module 1 active)
+
+**Request:**
+- **Method:** POST
+- **Path Parameters:**
+  - `id` (UUID, required) - Workflow identifier
+- **Body:**
+```json
+{
+  "approval_notes": "Approved by regulator",
+  "approved_date": "2025-06-01"
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "status": "APPROVED",
+    "updated_at": "2025-06-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Workflow not found
+- `400 BAD_REQUEST` - Workflow not in SUBMITTED status
+- `403 FORBIDDEN` - Insufficient permissions (Admin only)
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+## 33.7 POST /api/v1/workflows/{id}/reject
+
+**Purpose:** Reject workflow (Admins only)
+
+**Authentication:** Required (Admin only, Module 1 active)
+
+**Request:**
+- **Method:** POST
+- **Path Parameters:**
+  - `id` (UUID, required) - Workflow identifier
+- **Body:**
+```json
+{
+  "rejection_reason": "Insufficient justification for variation",
+  "rejected_date": "2025-06-01"
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "status": "REJECTED",
+    "updated_at": "2025-06-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Workflow not found
+- `400 BAD_REQUEST` - Workflow not in SUBMITTED status
+- `403 FORBIDDEN` - Insufficient permissions (Admin only)
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+## 33.8 POST /api/v1/workflows/{id}/complete
+
+**Purpose:** Complete workflow
+
+**Authentication:** Required (Owner, Admin, Module 1 active)
+
+**Request:**
+- **Method:** POST
+- **Path Parameters:**
+  - `id` (UUID, required) - Workflow identifier
+- **Body:**
+```json
+{
+  "completed_date": "2025-06-15",
+  "completion_notes": "New permit version issued"
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "status": "COMPLETED",
+    "completed_date": "2025-06-15",
+    "updated_at": "2025-06-15T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Workflow not found
+- `400 BAD_REQUEST` - Workflow not in APPROVED status
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+## 33.9 DELETE /api/v1/workflows/{id}
+
+**Purpose:** Delete draft workflow
+
+**Authentication:** Required (Owner, Admin, Module 1 active)
+
+**Request:**
+- **Method:** DELETE
+- **Path Parameters:**
+  - `id` (UUID, required) - Workflow identifier
+
+**Response:** 204 No Content
+
+**Error Codes:**
+- `404 NOT_FOUND` - Workflow not found
+- `400 BAD_REQUEST` - Workflow not in DRAFT status (cannot delete submitted workflows)
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+## 33.10 GET /api/v1/workflows/{workflowId}/variation
+
+**Purpose:** Get permit variation details
+
+**Authentication:** Required (all roles, Module 1 active, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `workflowId` (UUID, required) - Workflow identifier
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "workflow_id": "uuid",
+    "variation_type": "MINOR",
+    "proposed_changes": "Increase stack height from 15m to 20m",
+    "impact_assessment": "Improved dispersion of emissions",
+    "regulator_consultation_required": false,
+    "public_consultation_required": false,
+    "created_at": "2025-05-01T12:00:00Z"
+  }
+}
+```
+
+**Response Schema:**
+```typescript
+interface PermitVariation {
+  id: string;
+  workflow_id: string;
+  variation_type: 'MINOR' | 'SUBSTANTIAL' | 'MAJOR';
+  proposed_changes: string;
+  impact_assessment?: string;
+  regulator_consultation_required: boolean;
+  public_consultation_required: boolean;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Workflow or variation not found
+- `400 BAD_REQUEST` - Workflow is not a VARIATION type
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 33.11 POST /api/v1/workflows/{workflowId}/variation
+
+**Purpose:** Create variation details for workflow
+
+**Authentication:** Required (Owner, Admin, Staff, Module 1 active)
+
+**Request:**
+- **Method:** POST
+- **Path Parameters:**
+  - `workflowId` (UUID, required) - Workflow identifier
+- **Body:**
+```json
+{
+  "variation_type": "MINOR",
+  "proposed_changes": "Increase stack height from 15m to 20m",
+  "impact_assessment": "Improved dispersion of emissions",
+  "regulator_consultation_required": false,
+  "public_consultation_required": false
+}
+```
+
+**Validation Rules:**
+- `variation_type` is required
+- `proposed_changes` is required
+- Workflow must be of type VARIATION
+- Variation details cannot already exist for this workflow
+
+**Response:** 201 Created
+```json
+{
+  "data": {
+    "id": "uuid",
+    "workflow_id": "uuid",
+    "variation_type": "MINOR",
+    "created_at": "2025-05-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Workflow not found
+- `400 BAD_REQUEST` - Invalid data or workflow is not VARIATION type
+- `403 FORBIDDEN` - Insufficient permissions
+- `409 CONFLICT` - Variation details already exist for this workflow
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+## 33.12 PATCH /api/v1/variations/{id}
+
+**Purpose:** Update variation details
+
+**Authentication:** Required (Owner, Admin, Staff, Module 1 active)
+
+**Request:**
+- **Method:** PATCH
+- **Path Parameters:**
+  - `id` (UUID, required) - Variation identifier
+- **Body:**
+```json
+{
+  "variation_type": "SUBSTANTIAL",
+  "proposed_changes": "Updated proposal",
+  "impact_assessment": "Updated assessment"
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "variation_type": "SUBSTANTIAL",
+    "updated_at": "2025-05-15T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Variation not found
+- `400 BAD_REQUEST` - Invalid update data
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 50 requests/minute per user
+
+---
+
+## 33.13 GET /api/v1/workflows/{workflowId}/surrender
+
+**Purpose:** Get permit surrender details
+
+**Authentication:** Required (all roles, Module 1 active, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `workflowId` (UUID, required) - Workflow identifier
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "workflow_id": "uuid",
+    "surrender_reason": "Site closure",
+    "final_site_condition_report_submitted": true,
+    "site_closure_date": "2025-12-31",
+    "regulator_sign_off_required": true,
+    "regulator_sign_off_received": false,
+    "created_at": "2025-05-01T12:00:00Z"
+  }
+}
+```
+
+**Response Schema:**
+```typescript
+interface PermitSurrender {
+  id: string;
+  workflow_id: string;
+  surrender_reason: string;
+  final_site_condition_report_submitted: boolean;
+  site_closure_date: string;
+  regulator_sign_off_required: boolean;
+  regulator_sign_off_received: boolean;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Workflow or surrender not found
+- `400 BAD_REQUEST` - Workflow is not a SURRENDER type
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 33.14 POST /api/v1/workflows/{workflowId}/surrender
+
+**Purpose:** Create surrender details for workflow
+
+**Authentication:** Required (Owner, Admin, Staff, Module 1 active)
+
+**Request:**
+- **Method:** POST
+- **Path Parameters:**
+  - `workflowId` (UUID, required) - Workflow identifier
+- **Body:**
+```json
+{
+  "surrender_reason": "Site closure",
+  "final_site_condition_report_submitted": true,
+  "site_closure_date": "2025-12-31",
+  "regulator_sign_off_required": true
+}
+```
+
+**Validation Rules:**
+- `surrender_reason` is required
+- `site_closure_date` is required
+- Workflow must be of type SURRENDER
+- Surrender details cannot already exist for this workflow
+
+**Response:** 201 Created
+```json
+{
+  "data": {
+    "id": "uuid",
+    "workflow_id": "uuid",
+    "surrender_reason": "Site closure",
+    "created_at": "2025-05-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Workflow not found
+- `400 BAD_REQUEST` - Invalid data or workflow is not SURRENDER type
+- `403 FORBIDDEN` - Insufficient permissions
+- `409 CONFLICT` - Surrender details already exist for this workflow
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+## 33.15 PATCH /api/v1/surrenders/{id}
+
+**Purpose:** Update surrender details
+
+**Authentication:** Required (Owner, Admin, Staff, Module 1 active)
+
+**Request:**
+- **Method:** PATCH
+- **Path Parameters:**
+  - `id` (UUID, required) - Surrender identifier
+- **Body:**
+```json
+{
+  "final_site_condition_report_submitted": true,
+  "regulator_sign_off_received": true
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "final_site_condition_report_submitted": true,
+    "regulator_sign_off_received": true,
+    "updated_at": "2025-06-15T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Surrender not found
+- `400 BAD_REQUEST` - Invalid update data
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 50 requests/minute per user
+
+---
+
+## 33.16 GET /api/v1/triggers/{triggerId}/executions
+
+**Purpose:** List executions for recurrence trigger (audit log)
+
+**Authentication:** Required (all roles, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `triggerId` (UUID, required) - Recurrence trigger rule identifier
+- **Query Parameters:**
+  - `filter[execution_status]` (optional) - Filter by status (SUCCESS, FAILURE)
+  - `sort` (optional) - Sort field (default: `-executed_at`)
+  - `cursor` (optional) - Cursor for pagination
+  - `limit` (optional) - Page size (default: 20, max: 100)
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "trigger_id": "uuid",
+      "executed_at": "2025-05-15T12:00:00Z",
+      "execution_status": "SUCCESS",
+      "deadlines_created_count": 1,
+      "error_message": null
+    }
+  ],
+  "pagination": {...}
+}
+```
+
+**Response Schema:**
+```typescript
+interface RecurrenceTriggerExecution {
+  id: string;
+  trigger_id: string;
+  executed_at: string;
+  execution_status: 'SUCCESS' | 'FAILURE';
+  deadlines_created_count: number;
+  error_message?: string;
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Trigger not found
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 33.17 GET /api/v1/schedules/{scheduleId}/trigger-history
+
+**Purpose:** Get trigger execution history for schedule
+
+**Authentication:** Required (all roles, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `scheduleId` (UUID, required) - Schedule identifier
+- **Query Parameters:**
+  - `limit` (optional) - Page size (default: 20, max: 100)
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "schedule_id": "uuid",
+    "trigger_id": "uuid",
+    "total_executions": 48,
+    "successful_executions": 47,
+    "failed_executions": 1,
+    "last_execution": {
+      "executed_at": "2025-05-15T12:00:00Z",
+      "execution_status": "SUCCESS",
+      "deadlines_created_count": 1
+    },
+    "recent_executions": [
+      {
+        "id": "uuid",
+        "executed_at": "2025-05-15T12:00:00Z",
+        "execution_status": "SUCCESS",
+        "deadlines_created_count": 1
+      }
+    ]
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Schedule not found
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+# 20. Module 2 Endpoints
+
+## 35.1 GET /api/v1/module-2/consents
 
 **Purpose:** List consents
 
@@ -4030,7 +5899,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 17.2 GET /api/v1/module-2/consents/{consentId}
+## 35.2 GET /api/v1/module-2/consents/{consentId}
 
 **Purpose:** Get consent details
 
@@ -4068,7 +5937,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 17.3 POST /api/v1/module-2/consents
+## 35.3 POST /api/v1/module-2/consents
 
 **Purpose:** Upload consent document
 
@@ -4103,7 +5972,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 17.4 POST /api/v1/module-2/lab-results
+## 35.4 POST /api/v1/module-2/lab-results
 
 **Purpose:** Import lab results (CSV/PDF)
 
@@ -4137,7 +6006,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 17.5 GET /api/v1/module-2/lab-results/{resultId}
+## 35.5 GET /api/v1/module-2/lab-results/{resultId}
 
 **Purpose:** Get lab result details
 
@@ -4175,7 +6044,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 17.6 GET /api/v1/module-2/parameters
+## 35.6 GET /api/v1/module-2/parameters
 
 **Purpose:** Retrieve parameter tracking data
 
@@ -4218,7 +6087,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 17.7 GET /api/v1/module-2/exceedances
+## 35.7 GET /api/v1/module-2/exceedances
 
 **Purpose:** Retrieve exceedance alerts
 
@@ -4259,7 +6128,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 17.8 POST /api/v1/module-2/water-company-reports
+## 35.8 POST /api/v1/module-2/water-company-reports
 
 **Purpose:** Generate water company report
 
@@ -4299,7 +6168,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 17.9 GET /api/v1/module-2/water-company-reports/{reportId}
+## 35.9 GET /api/v1/module-2/water-company-reports/{reportId}
 
 **Purpose:** Get water company report details/download
 
@@ -4331,7 +6200,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 17.10 GET /api/v1/module-2/discharge-volumes
+## 35.10 GET /api/v1/module-2/discharge-volumes
 
 **Purpose:** List discharge volume records
 
@@ -4370,7 +6239,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 17.11 POST /api/v1/module-2/discharge-volumes
+## 35.11 POST /api/v1/module-2/discharge-volumes
 
 **Purpose:** Create discharge volume record
 
@@ -4411,7 +6280,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 17.12 GET /api/v1/module-2/discharge-volumes/{volumeId}
+## 35.12 GET /api/v1/module-2/discharge-volumes/{volumeId}
 
 **Purpose:** Get discharge volume record details
 
@@ -4444,9 +6313,593 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-# 18. Module 3 Endpoints
+## 35.13 GET /api/v1/corrective-actions
 
-## 18.1 GET /api/v1/module-3/mcpd-registrations
+**Purpose:** List corrective actions (Enhanced with lifecycle support)
+
+**Authentication:** Required (all roles, Modules 2/4 active, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Query Parameters:**
+  - `filter[site_id]` (optional) - Filter by site
+  - `filter[lifecycle_phase]` (optional) - Filter by phase (IDENTIFICATION, ROOT_CAUSE_ANALYSIS, ACTION_PLANNING, IMPLEMENTATION, VERIFICATION, CLOSURE)
+  - `filter[status]` (optional) - Filter by status
+  - `filter[module_id]` (optional) - Filter by module
+  - `sort` (optional) - Sort field
+  - `cursor` (optional) - Cursor for pagination
+  - `limit` (optional) - Page size (default: 20, max: 100)
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "site_id": "uuid",
+      "module_id": "uuid",
+      "title": "Reduce BOD levels in discharge",
+      "description": "BOD levels exceeded consent limit",
+      "lifecycle_phase": "IMPLEMENTATION",
+      "status": "IN_PROGRESS",
+      "root_cause_analysis": "Inadequate biological treatment capacity",
+      "impact_assessment": "Potential consent breach if not resolved",
+      "regulator_notification_required": true,
+      "regulator_notified_date": "2025-05-15",
+      "target_completion_date": "2025-06-30",
+      "created_at": "2025-05-01T12:00:00Z"
+    }
+  ],
+  "pagination": {...}
+}
+```
+
+**Response Schema:**
+```typescript
+interface CorrectiveAction {
+  id: string;
+  site_id: string;
+  module_id: string;
+  title: string;
+  description: string;
+  lifecycle_phase: 'IDENTIFICATION' | 'ROOT_CAUSE_ANALYSIS' | 'ACTION_PLANNING' | 'IMPLEMENTATION' | 'VERIFICATION' | 'CLOSURE';
+  status: 'OPEN' | 'IN_PROGRESS' | 'PENDING_VERIFICATION' | 'CLOSED' | 'CANCELLED';
+  root_cause_analysis?: string;
+  impact_assessment?: string;
+  regulator_notification_required: boolean;
+  regulator_notified_date?: string;
+  target_completion_date?: string;
+  closure_approved_by?: string;
+  closure_approved_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+**Filterable Fields:**
+- `site_id`, `module_id`, `lifecycle_phase`, `status`
+
+**Error Codes:**
+- `400 BAD_REQUEST` - Invalid filter/sort parameters
+- `403 FORBIDDEN` - Module not active
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 35.14 GET /api/v1/corrective-actions/{id}
+
+**Purpose:** Get corrective action details
+
+**Authentication:** Required (all roles, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `id` (UUID, required) - Corrective action identifier
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "site_id": "uuid",
+    "module_id": "uuid",
+    "title": "Reduce BOD levels in discharge",
+    "description": "BOD levels exceeded consent limit",
+    "lifecycle_phase": "IMPLEMENTATION",
+    "status": "IN_PROGRESS",
+    "root_cause_analysis": "Inadequate biological treatment capacity",
+    "impact_assessment": "Potential consent breach if not resolved",
+    "regulator_notification_required": true,
+    "regulator_notified_date": "2025-05-15",
+    "target_completion_date": "2025-06-30",
+    "action_items": [
+      {
+        "id": "uuid",
+        "item_description": "Install additional aeration equipment",
+        "status": "IN_PROGRESS",
+        "assigned_to": "uuid",
+        "target_date": "2025-06-15"
+      }
+    ],
+    "created_at": "2025-05-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Corrective action not found
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 35.15 POST /api/v1/corrective-actions
+
+**Purpose:** Create corrective action
+
+**Authentication:** Required (Owner, Admin, Staff, Modules 2/4 active)
+
+**Request:**
+- **Method:** POST
+- **Body:**
+```json
+{
+  "site_id": "uuid",
+  "module_id": "uuid",
+  "title": "Reduce BOD levels in discharge",
+  "description": "BOD levels exceeded consent limit",
+  "lifecycle_phase": "IDENTIFICATION",
+  "status": "OPEN",
+  "regulator_notification_required": true,
+  "target_completion_date": "2025-06-30"
+}
+```
+
+**Validation Rules:**
+- `site_id`, `module_id`, `title`, `description` are required
+- `lifecycle_phase` defaults to "IDENTIFICATION"
+- `status` defaults to "OPEN"
+
+**Response:** 201 Created
+```json
+{
+  "data": {
+    "id": "uuid",
+    "site_id": "uuid",
+    "title": "Reduce BOD levels in discharge",
+    "lifecycle_phase": "IDENTIFICATION",
+    "status": "OPEN",
+    "created_at": "2025-05-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `400 BAD_REQUEST` - Invalid data
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+## 35.16 PATCH /api/v1/corrective-actions/{id}
+
+**Purpose:** Update corrective action
+
+**Authentication:** Required (Owner, Admin, Staff)
+
+**Request:**
+- **Method:** PATCH
+- **Path Parameters:**
+  - `id` (UUID, required) - Corrective action identifier
+- **Body:**
+```json
+{
+  "root_cause_analysis": "Inadequate biological treatment capacity",
+  "impact_assessment": "Potential consent breach if not resolved",
+  "regulator_notified_date": "2025-05-15",
+  "target_completion_date": "2025-06-30"
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "root_cause_analysis": "Inadequate biological treatment capacity",
+    "updated_at": "2025-05-15T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Corrective action not found
+- `400 BAD_REQUEST` - Invalid update data
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 50 requests/minute per user
+
+---
+
+## 35.17 PATCH /api/v1/corrective-actions/{id}/phase
+
+**Purpose:** Transition corrective action to next lifecycle phase
+
+**Authentication:** Required (Owner, Admin, Staff)
+
+**Request:**
+- **Method:** PATCH
+- **Path Parameters:**
+  - `id` (UUID, required) - Corrective action identifier
+- **Body:**
+```json
+{
+  "lifecycle_phase": "ROOT_CAUSE_ANALYSIS",
+  "transition_notes": "Completed initial investigation"
+}
+```
+
+**Validation Rules:**
+- Phase transitions must follow sequence: IDENTIFICATION → ROOT_CAUSE_ANALYSIS → ACTION_PLANNING → IMPLEMENTATION → VERIFICATION → CLOSURE
+- Cannot skip phases
+- Certain phases may require mandatory fields (e.g., root_cause_analysis before moving to ACTION_PLANNING)
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "lifecycle_phase": "ROOT_CAUSE_ANALYSIS",
+    "updated_at": "2025-05-15T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Corrective action not found
+- `400 BAD_REQUEST` - Invalid phase transition or missing required fields
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 50 requests/minute per user
+
+---
+
+## 35.18 POST /api/v1/corrective-actions/{id}/close
+
+**Purpose:** Close corrective action with regulator justification
+
+**Authentication:** Required (Owner, Admin, Staff)
+
+**Request:**
+- **Method:** POST
+- **Path Parameters:**
+  - `id` (UUID, required) - Corrective action identifier
+- **Body:**
+```json
+{
+  "closure_justification": "All action items completed, verification successful",
+  "closure_evidence_url": "https://...",
+  "regulator_sign_off_required": true
+}
+```
+
+**Validation Rules:**
+- `closure_justification` is required
+- Corrective action must be in VERIFICATION phase
+- All action items must be completed
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "status": "PENDING_APPROVAL",
+    "lifecycle_phase": "CLOSURE",
+    "updated_at": "2025-06-30T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Corrective action not found
+- `400 BAD_REQUEST` - Action not ready for closure or incomplete action items
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+## 35.19 POST /api/v1/corrective-actions/{id}/approve-closure
+
+**Purpose:** Approve closure of corrective action (Managers only)
+
+**Authentication:** Required (Admin, Owner only)
+
+**Request:**
+- **Method:** POST
+- **Path Parameters:**
+  - `id` (UUID, required) - Corrective action identifier
+- **Body:**
+```json
+{
+  "approval_notes": "Closure approved after review"
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "status": "CLOSED",
+    "closure_approved_by": "uuid",
+    "closure_approved_at": "2025-06-30T12:00:00Z",
+    "updated_at": "2025-06-30T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Corrective action not found
+- `400 BAD_REQUEST` - Action not in PENDING_APPROVAL status
+- `403 FORBIDDEN` - Insufficient permissions (Admin/Owner only)
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+## 35.20 GET /api/v1/corrective-actions/{actionId}/items
+
+**Purpose:** List action items for corrective action
+
+**Authentication:** Required (all roles, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `actionId` (UUID, required) - Corrective action identifier
+- **Query Parameters:**
+  - `filter[status]` (optional) - Filter by status
+  - `filter[assigned_to]` (optional) - Filter by assigned user
+  - `sort` (optional) - Sort field
+  - `cursor` (optional) - Cursor for pagination
+  - `limit` (optional) - Page size
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "corrective_action_id": "uuid",
+      "item_description": "Install additional aeration equipment",
+      "status": "IN_PROGRESS",
+      "assigned_to": "uuid",
+      "target_date": "2025-06-15",
+      "completion_date": null,
+      "completion_evidence": null,
+      "created_at": "2025-05-01T12:00:00Z"
+    }
+  ],
+  "pagination": {...}
+}
+```
+
+**Response Schema:**
+```typescript
+interface CorrectiveActionItem {
+  id: string;
+  corrective_action_id: string;
+  item_description: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  assigned_to?: string;
+  target_date?: string;
+  completion_date?: string;
+  completion_evidence?: string;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Corrective action not found
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 35.21 GET /api/v1/corrective-action-items/{id}
+
+**Purpose:** Get action item details
+
+**Authentication:** Required (all roles, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `id` (UUID, required) - Action item identifier
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "corrective_action_id": "uuid",
+    "item_description": "Install additional aeration equipment",
+    "status": "IN_PROGRESS",
+    "assigned_to": "uuid",
+    "target_date": "2025-06-15",
+    "completion_date": null,
+    "completion_evidence": null,
+    "created_at": "2025-05-01T12:00:00Z",
+    "updated_at": "2025-05-15T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Action item not found
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 35.22 POST /api/v1/corrective-actions/{actionId}/items
+
+**Purpose:** Create action item
+
+**Authentication:** Required (Owner, Admin, Staff)
+
+**Request:**
+- **Method:** POST
+- **Path Parameters:**
+  - `actionId` (UUID, required) - Corrective action identifier
+- **Body:**
+```json
+{
+  "item_description": "Install additional aeration equipment",
+  "assigned_to": "uuid",
+  "target_date": "2025-06-15"
+}
+```
+
+**Validation Rules:**
+- `item_description` is required
+- `target_date` should be before parent corrective action's target_completion_date
+
+**Response:** 201 Created
+```json
+{
+  "data": {
+    "id": "uuid",
+    "corrective_action_id": "uuid",
+    "item_description": "Install additional aeration equipment",
+    "status": "PENDING",
+    "created_at": "2025-05-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Corrective action not found
+- `400 BAD_REQUEST` - Invalid data
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+## 35.23 PATCH /api/v1/corrective-action-items/{id}
+
+**Purpose:** Update action item
+
+**Authentication:** Required (Owner, Admin, Staff)
+
+**Request:**
+- **Method:** PATCH
+- **Path Parameters:**
+  - `id` (UUID, required) - Action item identifier
+- **Body:**
+```json
+{
+  "item_description": "Updated description",
+  "assigned_to": "uuid",
+  "target_date": "2025-06-20",
+  "status": "IN_PROGRESS"
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "item_description": "Updated description",
+    "updated_at": "2025-05-15T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Action item not found
+- `400 BAD_REQUEST` - Invalid update data
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 50 requests/minute per user
+
+---
+
+## 35.24 POST /api/v1/corrective-action-items/{id}/complete
+
+**Purpose:** Mark action item as complete with evidence
+
+**Authentication:** Required (Owner, Admin, Staff)
+
+**Request:**
+- **Method:** POST
+- **Path Parameters:**
+  - `id` (UUID, required) - Action item identifier
+- **Body:**
+```json
+{
+  "completion_evidence": "Equipment installed and tested successfully",
+  "completion_date": "2025-06-15"
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "status": "COMPLETED",
+    "completion_date": "2025-06-15",
+    "completion_evidence": "Equipment installed and tested successfully",
+    "updated_at": "2025-06-15T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Action item not found
+- `400 BAD_REQUEST` - Item already completed
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 50 requests/minute per user
+
+---
+
+## 35.25 DELETE /api/v1/corrective-action-items/{id}
+
+**Purpose:** Delete action item
+
+**Authentication:** Required (Owner, Admin)
+
+**Request:**
+- **Method:** DELETE
+- **Path Parameters:**
+  - `id` (UUID, required) - Action item identifier
+
+**Response:** 204 No Content
+
+**Error Codes:**
+- `404 NOT_FOUND` - Action item not found
+- `400 BAD_REQUEST` - Cannot delete completed items
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+# 21. Module 3 Endpoints
+
+## 30.1 GET /api/v1/module-3/mcpd-registrations
 
 **Purpose:** List MCPD registrations
 
@@ -4482,7 +6935,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 18.2 GET /api/v1/module-3/mcpd-registrations/{registrationId}
+## 30.2 GET /api/v1/module-3/mcpd-registrations/{registrationId}
 
 **Purpose:** Get MCPD registration details
 
@@ -4520,7 +6973,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 18.3 POST /api/v1/module-3/mcpd-registrations
+## 30.3 POST /api/v1/module-3/mcpd-registrations
 
 **Purpose:** Upload MCPD registration document
 
@@ -4555,7 +7008,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 18.4 GET /api/v1/module-3/generators
+## 30.4 GET /api/v1/module-3/generators
 
 **Purpose:** List generators
 
@@ -4594,7 +7047,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 18.5 GET /api/v1/module-3/generators/{generatorId}
+## 30.5 GET /api/v1/module-3/generators/{generatorId}
 
 **Purpose:** Get generator details
 
@@ -4630,7 +7083,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 18.6 GET /api/v1/module-3/run-hours
+## 30.6 GET /api/v1/module-3/run-hours
 
 **Purpose:** List run-hour records
 
@@ -4670,7 +7123,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 18.7 GET /api/v1/module-3/run-hours/{recordId}
+## 30.7 GET /api/v1/module-3/run-hours/{recordId}
 
 **Purpose:** Get run-hour record details
 
@@ -4704,7 +7157,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 18.8 PUT /api/v1/module-3/run-hours/{recordId}
+## 30.8 PUT /api/v1/module-3/run-hours/{recordId}
 
 **Purpose:** Update run-hour record
 
@@ -4743,7 +7196,7 @@ curl -X POST https://api.epcompliance.com/api/v1/packs/770e8400-e29b-41d4-a716-4
 
 ---
 
-## 18.9 POST /api/v1/module-3/run-hours
+## 30.9 POST /api/v1/module-3/run-hours
 
 ## 15.1 POST /api/v1/module-3/run-hours
 
@@ -4798,7 +7251,319 @@ interface CreateRunHourRequest {
 
 ---
 
-## 18.10 GET /api/v1/module-3/aer/{aerId}
+## 30.10 GET /api/v1/module-3/runtime-monitoring
+
+**Purpose:** List runtime monitoring entries
+
+**Authentication:** Required (all roles, Module 3 active, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Query Parameters:**
+  - `filter[generator_id]` (optional) - Filter by generator
+  - `filter[site_id]` (optional) - Filter by site
+  - `filter[run_date][gte]` (optional) - Filter by run date range (start)
+  - `filter[run_date][lte]` (optional) - Filter by run date range (end)
+  - `filter[reason_code]` (optional) - Filter by reason code (Test, Emergency, Maintenance, Normal)
+  - `filter[data_source]` (optional) - Filter by data source
+  - `filter[job_escalation_threshold_exceeded]` (optional) - Filter by threshold exceedance flag
+  - `filter[job_escalation_annual_limit_exceeded]` (optional) - Filter by annual limit exceedance flag
+  - `filter[job_escalation_monthly_limit_exceeded]` (optional) - Filter by monthly limit exceedance flag
+  - `sort` (optional) - Sort field (e.g., `-run_date`)
+  - `cursor` (optional) - Cursor for pagination
+  - `limit` (optional) - Page size
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "generator_id": "uuid",
+      "site_id": "uuid",
+      "run_date": "2025-01-01",
+      "runtime_hours": 150.5,
+      "run_duration": 8.5,
+      "reason_code": "Normal",
+      "data_source": "MANUAL",
+      "evidence_linkage_id": "uuid",
+      "validation_status": "APPROVED",
+      "job_escalation_threshold_exceeded": false,
+      "job_escalation_annual_limit_exceeded": false,
+      "job_escalation_monthly_limit_exceeded": false,
+      "created_at": "2025-01-01T12:00:00Z"
+    }
+  ],
+  "pagination": {...}
+}
+```
+
+**Error Codes:**
+- `403 FORBIDDEN` - Module 3 not active
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 30.11 GET /api/v1/module-3/runtime-monitoring/{entryId}
+
+**Purpose:** Get runtime monitoring entry details
+
+**Authentication:** Required (all roles, Module 3 active, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `entryId` (UUID, required) - Runtime monitoring entry identifier
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "generator_id": "uuid",
+    "site_id": "uuid",
+    "run_date": "2025-01-01",
+    "runtime_hours": 150.5,
+    "run_duration": 8.5,
+    "reason_code": "Normal",
+    "data_source": "MANUAL",
+    "integration_system": null,
+    "integration_reference": null,
+    "raw_data": null,
+    "evidence_linkage_id": "uuid",
+    "is_verified": true,
+    "verified_by": "uuid",
+    "verified_at": "2025-01-01T12:00:00Z",
+    "notes": "string",
+    "entry_reason_notes": "string",
+    "validation_status": "APPROVED",
+    "validated_by": "uuid",
+    "csv_import_id": null,
+    "csv_row_number": null,
+    "job_escalation_threshold_exceeded": false,
+    "job_escalation_annual_limit_exceeded": false,
+    "job_escalation_monthly_limit_exceeded": false,
+    "job_escalation_notification_sent": false,
+    "created_at": "2025-01-01T12:00:00Z",
+    "updated_at": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Entry not found
+- `403 FORBIDDEN` - Module 3 not active
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 30.12 POST /api/v1/module-3/runtime-monitoring
+
+**Purpose:** Create runtime monitoring entry
+
+**Authentication:** Required (Owner, Admin, Staff, Module 3 active)
+
+**Request:**
+- **Method:** POST
+- **Body:**
+```json
+{
+  "generator_id": "uuid",
+  "run_date": "2025-01-01",
+  "runtime_hours": 150.5,
+  "run_duration": 8.5,
+  "reason_code": "Normal",
+  "data_source": "MANUAL",
+  "evidence_linkage_id": "uuid",
+  "notes": "string",
+  "entry_reason_notes": "string"
+}
+```
+
+**Request Schema:**
+```typescript
+interface CreateRuntimeMonitoringRequest {
+  generator_id: string; // UUID, required
+  run_date: string; // ISO date (YYYY-MM-DD), required
+  runtime_hours: number; // Decimal, required, >= 0
+  run_duration: number; // Decimal, required, >= 0
+  reason_code: 'Test' | 'Emergency' | 'Maintenance' | 'Normal'; // Required, must be one of these values
+  data_source: 'AUTOMATED' | 'MANUAL' | 'MAINTENANCE_RECORD' | 'INTEGRATION'; // Required
+  evidence_linkage_id?: string; // UUID, optional
+  integration_system?: string; // Optional, required if data_source is INTEGRATION
+  integration_reference?: string; // Optional
+  raw_data?: object; // Optional JSONB
+  notes?: string; // Optional
+  entry_reason_notes?: string; // Optional
+}
+```
+
+**Validation Rules:**
+- `generator_id`: Must be valid UUID, generator must exist and belong to user's company
+- `run_date`: Must be valid ISO date, cannot be in the future
+- `runtime_hours`: Must be >= 0, decimal precision 2
+- `run_duration`: Must be >= 0, decimal precision 2
+- `reason_code`: Required, must be exactly one of: 'Test', 'Emergency', 'Maintenance', 'Normal' (case-sensitive)
+- `data_source`: Required, must be one of the allowed values
+- `evidence_linkage_id`: If provided, must be valid UUID and evidence item must exist
+- If `data_source` is 'INTEGRATION', `integration_system` is required
+
+**Response:** 201 Created
+```json
+{
+  "data": {
+    "id": "uuid",
+    "generator_id": "uuid",
+    "site_id": "uuid",
+    "run_date": "2025-01-01",
+    "runtime_hours": 150.5,
+    "run_duration": 8.5,
+    "reason_code": "Normal",
+    "data_source": "MANUAL",
+    "validation_status": "PENDING",
+    "job_escalation_threshold_exceeded": false,
+    "job_escalation_annual_limit_exceeded": false,
+    "job_escalation_monthly_limit_exceeded": false,
+    "created_at": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Business Logic:**
+- If `data_source` is 'MANUAL', `validation_status` is set to 'PENDING'
+- Background job checks for threshold exceedances and sets escalation flags
+- Compliance Clock is updated if limits are exceeded
+- Notifications are sent if exceedances are detected
+
+**Error Codes:**
+- `404 NOT_FOUND` - Generator not found
+- `422 UNPROCESSABLE_ENTITY` - Validation error (invalid reason_code, missing required fields, etc.)
+- `403 FORBIDDEN` - Module 3 not active
+
+**Rate Limiting:** 100 entries/minute per user
+
+---
+
+## 30.13 PUT /api/v1/module-3/runtime-monitoring/{entryId}
+
+**Purpose:** Update runtime monitoring entry
+
+**Authentication:** Required (Owner, Admin, Staff, Module 3 active)
+
+**Request:**
+- **Method:** PUT
+- **Path Parameters:**
+  - `entryId` (UUID, required) - Runtime monitoring entry identifier
+- **Body:**
+```json
+{
+  "run_date": "2025-01-01",
+  "runtime_hours": 155.0,
+  "run_duration": 9.0,
+  "reason_code": "Maintenance",
+  "evidence_linkage_id": "uuid",
+  "notes": "Updated notes"
+}
+```
+
+**Request Schema:**
+```typescript
+interface UpdateRuntimeMonitoringRequest {
+  run_date?: string; // ISO date
+  runtime_hours?: number; // Decimal, >= 0
+  run_duration?: number; // Decimal, >= 0
+  reason_code?: 'Test' | 'Emergency' | 'Maintenance' | 'Normal';
+  evidence_linkage_id?: string | null; // UUID or null to unlink
+  notes?: string;
+  entry_reason_notes?: string;
+}
+```
+
+**Validation Rules:**
+- Same validation rules as POST endpoint
+- Cannot update if `validation_status` is 'APPROVED' (requires rejection first)
+- If `reason_code` is changed, `validation_status` may be reset to 'PENDING' if entry was previously approved
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "run_date": "2025-01-01",
+    "runtime_hours": 155.0,
+    "run_duration": 9.0,
+    "reason_code": "Maintenance",
+    "updated_at": "2025-01-01T12:30:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Entry not found
+- `422 UNPROCESSABLE_ENTITY` - Validation error
+- `403 FORBIDDEN` - Module 3 not active
+- `409 CONFLICT` - Cannot update approved entry
+
+**Rate Limiting:** 100 updates/minute per user
+
+---
+
+## 30.14 PATCH /api/v1/module-3/runtime-monitoring/{entryId}/validate
+
+**Purpose:** Validate or reject runtime monitoring entry (Manager/Admin only)
+
+**Authentication:** Required (Owner, Admin, Manager roles, Module 3 active)
+
+**Request:**
+- **Method:** PATCH
+- **Path Parameters:**
+  - `entryId` (UUID, required) - Runtime monitoring entry identifier
+- **Body:**
+```json
+{
+  "validation_status": "APPROVED",
+  "validation_notes": "Entry verified and approved"
+}
+```
+
+**Request Schema:**
+```typescript
+interface ValidateRuntimeMonitoringRequest {
+  validation_status: 'APPROVED' | 'REJECTED'; // Required
+  validation_notes?: string; // Optional notes for rejection
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "validation_status": "APPROVED",
+    "validated_by": "uuid",
+    "validated_at": "2025-01-01T12:30:00Z"
+  }
+}
+```
+
+**Business Logic:**
+- Only entries with `validation_status` = 'PENDING' can be validated
+- If approved, entry is considered verified and can be used in compliance calculations
+- If rejected, notification is sent to entry creator
+- Background job recalculates generator runtime totals after approval
+
+**Error Codes:**
+- `404 NOT_FOUND` - Entry not found
+- `422 UNPROCESSABLE_ENTITY` - Entry already validated or invalid status
+- `403 FORBIDDEN` - Insufficient permissions or Module 3 not active
+
+**Rate Limiting:** 50 validations/minute per user
+
+---
+
+## 30.15 GET /api/v1/module-3/aer/{aerId}
 
 **Purpose:** Get AER details/download
 
@@ -4831,7 +7596,7 @@ interface CreateRunHourRequest {
 
 ---
 
-## 18.11 POST /api/v1/module-3/aer/generate
+## 30.11 POST /api/v1/module-3/aer/generate
 
 **Purpose:** Trigger AER generation
 
@@ -4870,7 +7635,7 @@ interface CreateRunHourRequest {
 
 ---
 
-## 18.12 GET /api/v1/module-3/stack-tests
+## 30.12 GET /api/v1/module-3/stack-tests
 
 **Purpose:** List stack tests
 
@@ -4908,7 +7673,7 @@ interface CreateRunHourRequest {
 
 ---
 
-## 18.13 GET /api/v1/module-3/stack-tests/{testId}
+## 30.13 GET /api/v1/module-3/stack-tests/{testId}
 
 **Purpose:** Get stack test details
 
@@ -4941,7 +7706,7 @@ interface CreateRunHourRequest {
 
 ---
 
-## 18.14 POST /api/v1/module-3/stack-tests
+## 30.14 POST /api/v1/module-3/stack-tests
 
 **Purpose:** Create stack test schedule
 
@@ -4980,7 +7745,7 @@ interface CreateRunHourRequest {
 
 ---
 
-## 18.15 GET /api/v1/module-3/maintenance-records
+## 30.15 GET /api/v1/module-3/maintenance-records
 
 **Purpose:** List maintenance records
 
@@ -5018,7 +7783,7 @@ interface CreateRunHourRequest {
 
 ---
 
-## 18.16 GET /api/v1/module-3/maintenance-records/{recordId}
+## 30.16 GET /api/v1/module-3/maintenance-records/{recordId}
 
 **Purpose:** Get maintenance record details
 
@@ -5052,7 +7817,7 @@ interface CreateRunHourRequest {
 
 ---
 
-## 18.17 POST /api/v1/module-3/maintenance-records
+## 30.17 POST /api/v1/module-3/maintenance-records
 
 **Purpose:** Create maintenance record
 
@@ -5092,9 +7857,923 @@ interface CreateRunHourRequest {
 
 ---
 
-# 19. Users Endpoints
+## 30.16 GET /api/v1/module-3/fuel-usage-logs
 
-## 19.1 GET /api/v1/users/{userId}
+**Purpose:** List fuel usage logs
+
+**Authentication:** Required (all roles, Module 3 active, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Query Parameters:**
+  - `filter[generator_id]` (optional) - Filter by generator
+  - `filter[site_id]` (optional) - Filter by site
+  - `filter[log_date][gte]` (optional) - Filter by date range start
+  - `filter[log_date][lte]` (optional) - Filter by date range end
+  - `filter[fuel_type]` (optional) - Filter by fuel type
+  - `sort` (optional) - Sort field (e.g., `-log_date`)
+  - `cursor` (optional) - Cursor for pagination
+  - `limit` (optional) - Page size
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "generator_id": "uuid",
+      "company_id": "uuid",
+      "site_id": "uuid",
+      "log_date": "2025-01-01",
+      "fuel_type": "DIESEL",
+      "quantity": 5000.0,
+      "unit": "LITRES",
+      "sulphur_content_percentage": 0.0010,
+      "sulphur_content_mg_per_kg": 10.0,
+      "entry_method": "MANUAL",
+      "evidence_id": "uuid",
+      "notes": "string",
+      "created_at": "2025-01-01T12:00:00Z"
+    }
+  ],
+  "pagination": {...}
+}
+```
+
+**Error Codes:**
+- `403 FORBIDDEN` - Module 3 not active
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 30.17 POST /api/v1/module-3/fuel-usage-logs
+
+**Purpose:** Create fuel usage log entry
+
+**Authentication:** Required (Owner, Admin, Staff, Module 3 active)
+
+**Request:**
+- **Method:** POST
+- **Body:**
+```json
+{
+  "generator_id": "uuid",
+  "site_id": "uuid",
+  "log_date": "2025-01-01",
+  "fuel_type": "DIESEL",
+  "quantity": 5000.0,
+  "unit": "LITRES",
+  "sulphur_content_percentage": 0.0010,
+  "sulphur_content_mg_per_kg": 10.0,
+  "entry_method": "MANUAL",
+  "source_maintenance_record_id": "uuid",
+  "evidence_id": "uuid",
+  "notes": "string"
+}
+```
+
+**Response:** 201 Created
+```json
+{
+  "data": {
+    "id": "uuid",
+    "generator_id": "uuid",
+    "log_date": "2025-01-01",
+    "fuel_type": "DIESEL",
+    "quantity": 5000.0,
+    "unit": "LITRES",
+    "sulphur_content_percentage": 0.0010,
+    "created_at": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Generator not found
+- `422 UNPROCESSABLE_ENTITY` - Validation error
+- `403 FORBIDDEN` - Module 3 not active
+
+**Rate Limiting:** 100 entries/minute per user
+
+---
+
+## 30.18 GET /api/v1/module-3/fuel-usage-logs/{logId}
+
+**Purpose:** Get fuel usage log details
+
+**Authentication:** Required (all roles, Module 3 active, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `logId` (UUID, required) - Fuel usage log identifier
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "generator_id": "uuid",
+    "log_date": "2025-01-01",
+    "fuel_type": "DIESEL",
+    "quantity": 5000.0,
+    "unit": "LITRES",
+    "sulphur_content_percentage": 0.0010,
+    "sulphur_content_mg_per_kg": 10.0,
+    "entry_method": "MANUAL",
+    "evidence_id": "uuid",
+    "created_at": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Log not found
+- `403 FORBIDDEN` - Module 3 not active
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 30.19 PUT /api/v1/module-3/fuel-usage-logs/{logId}
+
+**Purpose:** Update fuel usage log entry
+
+**Authentication:** Required (Owner, Admin, Staff, Module 3 active)
+
+**Request:**
+- **Method:** PUT
+- **Path Parameters:**
+  - `logId` (UUID, required) - Fuel usage log identifier
+- **Body:**
+```json
+{
+  "quantity": 5100.0,
+  "sulphur_content_percentage": 0.0012,
+  "notes": "Updated quantity"
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "quantity": 5100.0,
+    "updated_at": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Log not found
+- `422 UNPROCESSABLE_ENTITY` - Validation error
+- `403 FORBIDDEN` - Module 3 not active
+
+**Rate Limiting:** 100 updates/minute per user
+
+---
+
+## 30.20 DELETE /api/v1/module-3/fuel-usage-logs/{logId}
+
+**Purpose:** Delete fuel usage log entry
+
+**Authentication:** Required (Owner, Admin, Staff, Module 3 active)
+
+**Request:**
+- **Method:** DELETE
+- **Path Parameters:**
+  - `logId` (UUID, required) - Fuel usage log identifier
+
+**Response:** 204 No Content
+
+**Error Codes:**
+- `404 NOT_FOUND` - Log not found
+- `403 FORBIDDEN` - Module 3 not active
+
+**Rate Limiting:** 50 deletions/minute per user
+
+---
+
+## 30.21 GET /api/v1/module-3/sulphur-content-reports
+
+**Purpose:** List sulphur content reports
+
+**Authentication:** Required (all roles, Module 3 active, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Query Parameters:**
+  - `filter[generator_id]` (optional) - Filter by generator
+  - `filter[site_id]` (optional) - Filter by site
+  - `filter[test_date][gte]` (optional) - Filter by test date range start
+  - `filter[test_date][lte]` (optional) - Filter by test date range end
+  - `filter[fuel_type]` (optional) - Filter by fuel type
+  - `filter[compliance_status]` (optional) - Filter by compliance status
+  - `sort` (optional) - Sort field (e.g., `-test_date`)
+  - `cursor` (optional) - Cursor for pagination
+  - `limit` (optional) - Page size
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "generator_id": "uuid",
+      "company_id": "uuid",
+      "site_id": "uuid",
+      "fuel_type": "DIESEL",
+      "test_date": "2025-01-01",
+      "batch_reference": "BATCH-2025-001",
+      "supplier_name": "Fuel Supplier Ltd",
+      "sulphur_content_percentage": 0.0010,
+      "sulphur_content_mg_per_kg": 10.0,
+      "test_method": "ASTM D5453",
+      "test_laboratory": "Test Lab Ltd",
+      "test_certificate_reference": "CERT-2025-001",
+      "regulatory_limit_percentage": 0.0010,
+      "regulatory_limit_mg_per_kg": 10.0,
+      "compliance_status": "COMPLIANT",
+      "evidence_id": "uuid",
+      "created_at": "2025-01-01T12:00:00Z"
+    }
+  ],
+  "pagination": {...}
+}
+```
+
+**Error Codes:**
+- `403 FORBIDDEN` - Module 3 not active
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 30.22 POST /api/v1/module-3/sulphur-content-reports
+
+**Purpose:** Create sulphur content report
+
+**Authentication:** Required (Owner, Admin, Staff, Module 3 active)
+
+**Request:**
+- **Method:** POST
+- **Body:**
+```json
+{
+  "generator_id": "uuid",
+  "site_id": "uuid",
+  "fuel_type": "DIESEL",
+  "test_date": "2025-01-01",
+  "batch_reference": "BATCH-2025-001",
+  "supplier_name": "Fuel Supplier Ltd",
+  "sulphur_content_percentage": 0.0010,
+  "sulphur_content_mg_per_kg": 10.0,
+  "test_method": "ASTM D5453",
+  "test_standard": "EN 24260",
+  "test_laboratory": "Test Lab Ltd",
+  "test_certificate_reference": "CERT-2025-001",
+  "regulatory_limit_percentage": 0.0010,
+  "regulatory_limit_mg_per_kg": 10.0,
+  "compliance_status": "COMPLIANT",
+  "evidence_id": "uuid",
+  "notes": "string"
+}
+```
+
+**Response:** 201 Created
+```json
+{
+  "data": {
+    "id": "uuid",
+    "test_date": "2025-01-01",
+    "fuel_type": "DIESEL",
+    "sulphur_content_percentage": 0.0010,
+    "compliance_status": "COMPLIANT",
+    "created_at": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `422 UNPROCESSABLE_ENTITY` - Validation error
+- `403 FORBIDDEN` - Module 3 not active
+
+**Rate Limiting:** 50 reports/minute per user
+
+---
+
+## 30.23 GET /api/v1/module-3/sulphur-content-reports/{reportId}
+
+**Purpose:** Get sulphur content report details
+
+**Authentication:** Required (all roles, Module 3 active, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `reportId` (UUID, required) - Sulphur content report identifier
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "generator_id": "uuid",
+    "fuel_type": "DIESEL",
+    "test_date": "2025-01-01",
+    "batch_reference": "BATCH-2025-001",
+    "sulphur_content_percentage": 0.0010,
+    "sulphur_content_mg_per_kg": 10.0,
+    "compliance_status": "COMPLIANT",
+    "regulatory_limit_percentage": 0.0010,
+    "evidence_id": "uuid",
+    "created_at": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Report not found
+- `403 FORBIDDEN` - Module 3 not active
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 30.24 PUT /api/v1/module-3/sulphur-content-reports/{reportId}
+
+**Purpose:** Update sulphur content report
+
+**Authentication:** Required (Owner, Admin, Staff, Module 3 active)
+
+**Request:**
+- **Method:** PUT
+- **Path Parameters:**
+  - `reportId` (UUID, required) - Sulphur content report identifier
+- **Body:**
+```json
+{
+  "compliance_status": "NON_COMPLIANT",
+  "exceedance_details": "Sulphur content exceeds regulatory limit"
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "compliance_status": "NON_COMPLIANT",
+    "updated_at": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Report not found
+- `422 UNPROCESSABLE_ENTITY` - Validation error
+- `403 FORBIDDEN` - Module 3 not active
+
+**Rate Limiting:** 50 updates/minute per user
+
+---
+
+## 30.25 DELETE /api/v1/module-3/sulphur-content-reports/{reportId}
+
+**Purpose:** Delete sulphur content report
+
+**Authentication:** Required (Owner, Admin, Staff, Module 3 active)
+
+**Request:**
+- **Method:** DELETE
+- **Path Parameters:**
+  - `reportId` (UUID, required) - Sulphur content report identifier
+
+**Response:** 204 No Content
+
+**Error Codes:**
+- `404 NOT_FOUND` - Report not found
+- `403 FORBIDDEN` - Module 3 not active
+
+**Rate Limiting:** 50 deletions/minute per user
+
+---
+
+# 22. Module 4 Endpoints
+
+## 31.1 GET /api/v1/validation-rules
+
+**Purpose:** List validation rules for company
+
+**Authentication:** Required (all roles, Module 4 active, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Query Parameters:**
+  - `filter[is_active]` (optional) - Filter by active status (true/false)
+  - `filter[rule_type]` (optional) - Filter by rule type
+  - `sort` (optional) - Sort field
+  - `cursor` (optional) - Cursor for pagination
+  - `limit` (optional) - Page size (default: 20, max: 100)
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "company_id": "uuid",
+      "rule_name": "Waste Code Validation",
+      "rule_type": "WASTE_CODE_CHECK",
+      "rule_logic": {
+        "allowed_codes": ["01 01 01", "01 01 02"],
+        "require_description": true
+      },
+      "error_message": "Invalid waste code or missing description",
+      "is_active": true,
+      "created_at": "2025-01-01T12:00:00Z"
+    }
+  ],
+  "pagination": {...}
+}
+```
+
+**Response Schema:**
+```typescript
+interface ValidationRule {
+  id: string;
+  company_id: string;
+  rule_name: string;
+  rule_type: 'WASTE_CODE_CHECK' | 'QUANTITY_LIMIT' | 'CONTRACTOR_LICENCE_CHECK' | 'CHAIN_OF_CUSTODY' | 'CUSTOM';
+  rule_logic: object;
+  error_message: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+**Error Codes:**
+- `400 BAD_REQUEST` - Invalid filter/sort parameters
+- `403 FORBIDDEN` - Module 4 not active
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 31.2 GET /api/v1/validation-rules/{id}
+
+**Purpose:** Get validation rule details
+
+**Authentication:** Required (all roles, Module 4 active, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `id` (UUID, required) - Validation rule identifier
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "company_id": "uuid",
+    "rule_name": "Waste Code Validation",
+    "rule_type": "WASTE_CODE_CHECK",
+    "rule_logic": {
+      "allowed_codes": ["01 01 01", "01 01 02"],
+      "require_description": true
+    },
+    "error_message": "Invalid waste code or missing description",
+    "is_active": true,
+    "created_at": "2025-01-01T12:00:00Z",
+    "updated_at": "2025-01-01T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Validation rule not found
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 31.3 POST /api/v1/validation-rules
+
+**Purpose:** Create validation rule (Admins only)
+
+**Authentication:** Required (Admin only, Module 4 active)
+
+**Request:**
+- **Method:** POST
+- **Body:**
+```json
+{
+  "rule_name": "Waste Code Validation",
+  "rule_type": "WASTE_CODE_CHECK",
+  "rule_logic": {
+    "allowed_codes": ["01 01 01", "01 01 02"],
+    "require_description": true
+  },
+  "error_message": "Invalid waste code or missing description",
+  "is_active": true
+}
+```
+
+**Validation Rules:**
+- `rule_name`, `rule_type`, `rule_logic`, `error_message` are required
+- `rule_logic` must be valid JSON object matching rule_type schema
+- Rule name must be unique per company
+
+**Response:** 201 Created
+```json
+{
+  "data": {
+    "id": "uuid",
+    "company_id": "uuid",
+    "rule_name": "Waste Code Validation",
+    "created_at": "2025-05-15T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `400 BAD_REQUEST` - Invalid rule configuration
+- `403 FORBIDDEN` - Insufficient permissions (Admin only)
+- `409 CONFLICT` - Rule with same name already exists
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+## 31.4 PATCH /api/v1/validation-rules/{id}
+
+**Purpose:** Update validation rule (Admins only)
+
+**Authentication:** Required (Admin only, Module 4 active)
+
+**Request:**
+- **Method:** PATCH
+- **Path Parameters:**
+  - `id` (UUID, required) - Validation rule identifier
+- **Body:**
+```json
+{
+  "rule_name": "Updated Rule Name",
+  "rule_logic": {
+    "allowed_codes": ["01 01 01", "01 01 02", "01 01 03"],
+    "require_description": true
+  },
+  "is_active": false
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "rule_name": "Updated Rule Name",
+    "updated_at": "2025-05-15T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Validation rule not found
+- `400 BAD_REQUEST` - Invalid update data
+- `403 FORBIDDEN` - Insufficient permissions (Admin only)
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+## 31.5 DELETE /api/v1/validation-rules/{id}
+
+**Purpose:** Delete validation rule (Admins only)
+
+**Authentication:** Required (Admin only, Module 4 active)
+
+**Request:**
+- **Method:** DELETE
+- **Path Parameters:**
+  - `id` (UUID, required) - Validation rule identifier
+
+**Response:** 204 No Content
+
+**Error Codes:**
+- `404 NOT_FOUND` - Validation rule not found
+- `403 FORBIDDEN` - Insufficient permissions (Admin only)
+
+**Rate Limiting:** 20 requests/minute per user
+
+---
+
+## 31.6 POST /api/v1/validation-rules/{id}/test
+
+**Purpose:** Test validation rule against sample data
+
+**Authentication:** Required (Admin, Staff, Module 4 active)
+
+**Request:**
+- **Method:** POST
+- **Path Parameters:**
+  - `id` (UUID, required) - Validation rule identifier
+- **Body:**
+```json
+{
+  "test_data": {
+    "waste_code": "01 01 01",
+    "quantity": 1500,
+    "description": "Construction waste"
+  }
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "rule_id": "uuid",
+    "rule_name": "Waste Code Validation",
+    "validation_passed": true,
+    "errors": [],
+    "test_timestamp": "2025-05-15T12:00:00Z"
+  }
+}
+```
+
+**Response (Failed Validation):**
+```json
+{
+  "data": {
+    "rule_id": "uuid",
+    "rule_name": "Waste Code Validation",
+    "validation_passed": false,
+    "errors": [
+      {
+        "field": "waste_code",
+        "message": "Invalid waste code or missing description"
+      }
+    ],
+    "test_timestamp": "2025-05-15T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Validation rule not found
+- `400 BAD_REQUEST` - Invalid test data
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 50 requests/minute per user
+
+---
+
+## 31.7 POST /api/v1/consignment-notes/{id}/validate
+
+**Purpose:** Run pre-submission validation on consignment note
+
+**Authentication:** Required (Owner, Admin, Staff, Module 4 active)
+
+**Request:**
+- **Method:** POST
+- **Path Parameters:**
+  - `id` (UUID, required) - Consignment note identifier
+
+**Response:** 200 OK (Validation Passed)
+```json
+{
+  "data": {
+    "consignment_note_id": "uuid",
+    "validation_status": "PASSED",
+    "validation_timestamp": "2025-05-15T12:00:00Z",
+    "rules_checked": 5,
+    "errors": [],
+    "warnings": []
+  }
+}
+```
+
+**Response:** 200 OK (Validation Failed)
+```json
+{
+  "data": {
+    "consignment_note_id": "uuid",
+    "validation_status": "FAILED",
+    "validation_timestamp": "2025-05-15T12:00:00Z",
+    "rules_checked": 5,
+    "errors": [
+      {
+        "rule_name": "Waste Code Validation",
+        "field": "waste_code",
+        "message": "Invalid waste code",
+        "severity": "ERROR"
+      }
+    ],
+    "warnings": [
+      {
+        "rule_name": "Quantity Check",
+        "field": "quantity",
+        "message": "Quantity exceeds typical range",
+        "severity": "WARNING"
+      }
+    ]
+  }
+}
+```
+
+**Response Schema:**
+```typescript
+interface ValidationResult {
+  consignment_note_id: string;
+  validation_status: 'PASSED' | 'FAILED' | 'WARNING';
+  validation_timestamp: string;
+  rules_checked: number;
+  errors: ValidationError[];
+  warnings: ValidationError[];
+}
+
+interface ValidationError {
+  rule_name: string;
+  field: string;
+  message: string;
+  severity: 'ERROR' | 'WARNING';
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Consignment note not found
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 50 requests/minute per user
+
+---
+
+## 31.8 GET /api/v1/consignment-notes/{id}/validation-history
+
+**Purpose:** Get validation execution history for consignment note
+
+**Authentication:** Required (all roles, Module 4 active, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `id` (UUID, required) - Consignment note identifier
+- **Query Parameters:**
+  - `limit` (optional) - Page size (default: 20, max: 100)
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "consignment_note_id": "uuid",
+    "latest_validation": {
+      "validation_status": "PASSED",
+      "validation_timestamp": "2025-05-15T12:00:00Z",
+      "rules_checked": 5
+    },
+    "validation_history": [
+      {
+        "id": "uuid",
+        "validation_status": "FAILED",
+        "validation_timestamp": "2025-05-14T12:00:00Z",
+        "rules_checked": 5,
+        "errors_count": 2
+      },
+      {
+        "id": "uuid",
+        "validation_status": "PASSED",
+        "validation_timestamp": "2025-05-15T12:00:00Z",
+        "rules_checked": 5,
+        "errors_count": 0
+      }
+    ]
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Consignment note not found
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 31.9 GET /api/v1/consignment-notes
+
+**Purpose:** List consignment notes (Enhanced with validation status)
+
+**Authentication:** Required (all roles, Module 4 active, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Query Parameters:**
+  - `filter[site_id]` (optional) - Filter by site
+  - `filter[pre_validation_status]` (optional) - Filter by validation status (PASSED, FAILED, NOT_VALIDATED)
+  - `filter[status]` (optional) - Filter by overall status
+  - `sort` (optional) - Sort field
+  - `cursor` (optional) - Cursor for pagination
+  - `limit` (optional) - Page size
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "site_id": "uuid",
+      "waste_stream_id": "uuid",
+      "consignment_number": "CN-2025-001",
+      "collection_date": "2025-05-15",
+      "waste_code": "01 01 01",
+      "quantity": 1500.0,
+      "pre_validation_status": "PASSED",
+      "pre_validation_errors": null,
+      "status": "COMPLETED",
+      "created_at": "2025-05-15T12:00:00Z"
+    }
+  ],
+  "pagination": {...}
+}
+```
+
+**Response Schema:**
+```typescript
+interface ConsignmentNote {
+  id: string;
+  site_id: string;
+  waste_stream_id: string;
+  consignment_number: string;
+  collection_date: string;
+  waste_code: string;
+  quantity: number;
+  pre_validation_status: 'PASSED' | 'FAILED' | 'NOT_VALIDATED';
+  pre_validation_errors?: object;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+**Error Codes:**
+- `400 BAD_REQUEST` - Invalid filter/sort parameters
+- `403 FORBIDDEN` - Module 4 not active
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+## 31.10 GET /api/v1/consignment-notes/{id}
+
+**Purpose:** Get consignment note details (with validation status)
+
+**Authentication:** Required (all roles, Module 4 active, RLS applies)
+
+**Request:**
+- **Method:** GET
+- **Path Parameters:**
+  - `id` (UUID, required) - Consignment note identifier
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "id": "uuid",
+    "site_id": "uuid",
+    "waste_stream_id": "uuid",
+    "consignment_number": "CN-2025-001",
+    "collection_date": "2025-05-15",
+    "waste_code": "01 01 01",
+    "description": "Construction waste",
+    "quantity": 1500.0,
+    "contractor_id": "uuid",
+    "pre_validation_status": "PASSED",
+    "pre_validation_errors": null,
+    "last_validated_at": "2025-05-15T11:00:00Z",
+    "status": "COMPLETED",
+    "created_at": "2025-05-15T12:00:00Z",
+    "updated_at": "2025-05-15T12:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `404 NOT_FOUND` - Consignment note not found
+- `403 FORBIDDEN` - Insufficient permissions
+
+**Rate Limiting:** 100 requests/minute per user
+
+---
+
+# 23. Users Endpoints
+
+## 33.1 GET /api/v1/users/{userId}
 
 **Purpose:** Get user details
 
@@ -5128,7 +8807,7 @@ interface CreateRunHourRequest {
 
 ---
 
-## 19.2 GET /api/v1/users
+## 33.2 GET /api/v1/users
 
 **Purpose:** List users (Admin only)
 
@@ -5167,7 +8846,7 @@ interface CreateRunHourRequest {
 
 ---
 
-## 19.3 POST /api/v1/users
+## 33.3 POST /api/v1/users
 
 **Purpose:** Create user (Admin only)
 
@@ -5208,7 +8887,7 @@ interface CreateRunHourRequest {
 
 ---
 
-## 19.4 PUT /api/v1/users/{userId}
+## 33.4 PUT /api/v1/users/{userId}
 
 **Purpose:** Update user profile
 
@@ -5247,7 +8926,7 @@ interface CreateRunHourRequest {
 
 ---
 
-## 19.5 DELETE /api/v1/users/{userId}
+## 33.5 DELETE /api/v1/users/{userId}
 
 **Purpose:** Delete user (Admin only)
 
@@ -5276,7 +8955,7 @@ interface CreateRunHourRequest {
 
 ---
 
-## 19.6 GET /api/v1/users/{userId}/sites
+## 33.6 GET /api/v1/users/{userId}/sites
 
 **Purpose:** List sites assigned to user
 
@@ -5309,7 +8988,7 @@ interface CreateRunHourRequest {
 
 ---
 
-## 19.7 POST /api/v1/users/{userId}/sites
+## 33.7 POST /api/v1/users/{userId}/sites
 
 **Purpose:** Assign user to site
 
@@ -5347,7 +9026,7 @@ interface CreateRunHourRequest {
 
 ---
 
-## 19.8 DELETE /api/v1/users/{userId}/sites/{siteId}
+## 33.8 DELETE /api/v1/users/{userId}/sites/{siteId}
 
 **Purpose:** Unassign user from site
 
@@ -5376,7 +9055,7 @@ interface CreateRunHourRequest {
 
 ---
 
-## 19.9 GET /api/v1/users/{userId}/roles
+## 33.9 GET /api/v1/users/{userId}/roles
 
 **Purpose:** List user roles
 
@@ -5408,7 +9087,7 @@ interface CreateRunHourRequest {
 
 ---
 
-## 19.10 POST /api/v1/users/{userId}/roles
+## 33.10 POST /api/v1/users/{userId}/roles
 
 **Purpose:** Assign role to user
 
@@ -5454,7 +9133,7 @@ interface AssignRoleRequest {
 
 ---
 
-## 19.11 DELETE /api/v1/users/{userId}/roles/{role}
+## 33.11 DELETE /api/v1/users/{userId}/roles/{role}
 
 **Purpose:** Remove role from user
 
@@ -5484,9 +9163,9 @@ interface AssignRoleRequest {
 
 ---
 
-# 20. Companies Endpoints
+# 24. Companies Endpoints
 
-## 20.1 GET /api/v1/companies
+## 35.1 GET /api/v1/companies
 
 **Purpose:** List companies (Admin only)
 
@@ -5524,7 +9203,7 @@ interface AssignRoleRequest {
 
 ---
 
-## 20.2 GET /api/v1/companies/{companyId}
+## 35.2 GET /api/v1/companies/{companyId}
 
 **Purpose:** Get company details
 
@@ -5557,7 +9236,7 @@ interface AssignRoleRequest {
 
 ---
 
-## 20.3 PUT /api/v1/companies/{companyId}
+## 35.3 PUT /api/v1/companies/{companyId}
 
 **Purpose:** Update company
 
@@ -5596,7 +9275,7 @@ interface AssignRoleRequest {
 
 ---
 
-## 20.4 GET /api/v1/companies/{companyId}/sites
+## 35.4 GET /api/v1/companies/{companyId}/sites
 
 **Purpose:** List sites for company
 
@@ -5635,7 +9314,7 @@ interface AssignRoleRequest {
 
 ---
 
-## 20.5 GET /api/v1/companies/{companyId}/users
+## 35.5 GET /api/v1/companies/{companyId}/users
 
 **Purpose:** List users for company
 
@@ -5674,7 +9353,7 @@ interface AssignRoleRequest {
 
 ---
 
-## 20.6 GET /api/v1/companies/{companyId}/module-activations
+## 35.6 GET /api/v1/companies/{companyId}/module-activations
 
 **Purpose:** List module activations for company
 
@@ -5712,9 +9391,9 @@ interface AssignRoleRequest {
 
 ---
 
-# 21. Multi-Site Endpoints
+# 25. Multi-Site Endpoints
 
-## 21.1 GET /api/v1/sites
+## 30.1 GET /api/v1/sites
 
 **Purpose:** Retrieve user's accessible sites
 
@@ -5741,6 +9420,8 @@ interface AssignRoleRequest {
       "city": "string",
       "postcode": "string",
       "regulator": "EA",
+      "compliance_score": 85,
+      "compliance_score_updated_at": "2025-01-01T12:00:00Z",
       "is_active": true,
       "created_at": "2025-01-01T12:00:00Z"
     }
@@ -5756,7 +9437,7 @@ interface AssignRoleRequest {
 
 ---
 
-## 21.2 POST /api/v1/sites
+## 30.2 POST /api/v1/sites
 
 **Purpose:** Create site
 
@@ -5814,7 +9495,7 @@ interface CreateSiteRequest {
 
 ---
 
-## 21.3 GET /api/v1/sites/{siteId}
+## 30.3 GET /api/v1/sites/{siteId}
 
 **Purpose:** Get site details
 
@@ -5837,6 +9518,8 @@ interface CreateSiteRequest {
     "postcode": "string",
     "regulator": "EA",
     "grace_period_days": 7,
+    "compliance_score": 85,
+    "compliance_score_updated_at": "2025-01-01T12:00:00Z",
     "is_active": true,
     "created_at": "2025-01-01T12:00:00Z"
   }
@@ -5851,7 +9534,7 @@ interface CreateSiteRequest {
 
 ---
 
-## 21.4 PUT /api/v1/sites/{siteId}
+## 30.4 PUT /api/v1/sites/{siteId}
 
 **Purpose:** Update site
 
@@ -5890,7 +9573,7 @@ interface CreateSiteRequest {
 
 ---
 
-## 21.5 DELETE /api/v1/sites/{siteId}
+## 30.5 DELETE /api/v1/sites/{siteId}
 
 **Purpose:** Delete site (soft delete)
 
@@ -5918,7 +9601,7 @@ interface CreateSiteRequest {
 
 ---
 
-## 21.6 GET /api/v1/sites/{siteId}/obligations
+## 30.6 GET /api/v1/sites/{siteId}/obligations
 
 **Purpose:** List obligations for site
 
@@ -5961,7 +9644,7 @@ interface CreateSiteRequest {
 
 ---
 
-## 21.7 GET /api/v1/sites/{siteId}/documents
+## 30.7 GET /api/v1/sites/{siteId}/documents
 
 **Purpose:** List documents for site
 
@@ -6003,7 +9686,7 @@ interface CreateSiteRequest {
 
 ---
 
-## 21.8 GET /api/v1/sites/{siteId}/deadlines
+## 30.8 GET /api/v1/sites/{siteId}/deadlines
 
 **Purpose:** List deadlines for site
 
@@ -6044,7 +9727,7 @@ interface CreateSiteRequest {
 
 ---
 
-## 21.9 GET /api/v1/sites/{siteId}/consolidated-view
+## 30.9 GET /api/v1/sites/{siteId}/consolidated-view
 
 **Purpose:** Retrieve consolidated multi-site view
 
@@ -6092,9 +9775,9 @@ interface CreateSiteRequest {
 
 ---
 
-# 22. Module Activation Endpoints
+# 26. Module Activation Endpoints
 
-## 22.1 POST /api/v1/modules/{moduleId}/activate
+## 31.1 POST /api/v1/modules/{moduleId}/activate
 
 **Purpose:** Activate module for company
 
@@ -6143,7 +9826,7 @@ interface ActivateModuleRequest {
 
 ---
 
-## 22.2 GET /api/v1/modules
+## 31.2 GET /api/v1/modules
 
 **Purpose:** Retrieve available modules
 
@@ -6181,7 +9864,7 @@ interface ActivateModuleRequest {
 
 ---
 
-## 22.3 GET /api/v1/module-activations
+## 31.3 GET /api/v1/module-activations
 
 **Purpose:** List module activations
 
@@ -6204,9 +9887,12 @@ interface ActivateModuleRequest {
     {
       "id": "uuid",
       "company_id": "uuid",
+      "site_id": "uuid",
       "module_id": "uuid",
       "module_name": "Trade Effluent",
       "status": "ACTIVE",
+      "compliance_score": 85,
+      "compliance_score_updated_at": "2025-01-01T12:00:00Z",
       "activated_at": "2025-01-01T12:00:00Z"
     }
   ],
@@ -6221,7 +9907,7 @@ interface ActivateModuleRequest {
 
 ---
 
-## 22.4 GET /api/v1/module-activations/{activationId}
+## 31.4 GET /api/v1/module-activations/{activationId}
 
 **Purpose:** Get module activation details
 
@@ -6242,6 +9928,8 @@ interface ActivateModuleRequest {
     "module_id": "uuid",
     "module_name": "Trade Effluent",
     "status": "ACTIVE",
+    "compliance_score": 85,
+    "compliance_score_updated_at": "2025-01-01T12:00:00Z",
     "activated_at": "2025-01-01T12:00:00Z",
     "activated_by": "uuid",
     "billing_start_date": "2025-01-01"
@@ -6257,9 +9945,14 @@ interface ActivateModuleRequest {
 
 ---
 
-## 22.5 PUT /api/v1/module-activations/{activationId}/deactivate
+## 31.5 PUT /api/v1/module-activations/{activationId}/deactivate
 
 **Purpose:** Deactivate module
+
+> **⚠️ IMPLEMENTATION STATUS (2025-02-01):**
+> - **Current Implementation:** ✅ **PARTIALLY IMPLEMENTED** - Endpoint exists at `app/api/v1/module-activations/[activationId]/deactivate/route.ts` and deactivates single module.
+> - **Missing Feature:** ❌ **Cascading Deactivation** - When Module 1 is deactivated, Module 2 and Module 3 should be automatically deactivated (cascade). This is not yet implemented.
+> - **Action Required:** Add cascading deactivation logic to automatically deactivate dependent modules when Module 1 is deactivated, and notify user accordingly.
 
 **Authentication:** Required (Owner, Admin)
 
@@ -6295,9 +9988,9 @@ interface ActivateModuleRequest {
 
 ---
 
-# 23. Admin Endpoints
+# 27. Admin Endpoints
 
-## 23.1 GET /api/v1/admin/dead-letter-queue
+## 33.1 GET /api/v1/admin/dead-letter-queue
 
 **Purpose:** List failed jobs in dead-letter queue (Admin only)
 
@@ -6338,7 +10031,7 @@ interface ActivateModuleRequest {
 
 ---
 
-## 23.2 GET /api/v1/admin/audit-logs
+## 33.2 GET /api/v1/admin/audit-logs
 
 **Purpose:** List audit logs (Admin only)
 
@@ -6380,7 +10073,7 @@ interface ActivateModuleRequest {
 
 ---
 
-## 23.3 GET /api/v1/admin/system-settings
+## 33.3 GET /api/v1/admin/system-settings
 
 **Purpose:** Get system settings (Admin only)
 
@@ -6407,7 +10100,7 @@ interface ActivateModuleRequest {
 
 ---
 
-## 23.4 PUT /api/v1/admin/system-settings
+## 33.4 PUT /api/v1/admin/system-settings
 
 **Purpose:** Update system settings (Admin only)
 
@@ -6444,7 +10137,7 @@ interface ActivateModuleRequest {
 
 ---
 
-## 23.5 Pattern Library Management Endpoints
+## 27.5 Pattern Library Management Endpoints
 
 ### 23.5.1 GET /api/v1/admin/patterns
 
@@ -6635,7 +10328,7 @@ Or:
 
 ---
 
-## 23.6 GET /api/v1/escalations
+## 33.6 GET /api/v1/escalations
 
 **Purpose:** List escalations
 
@@ -6677,7 +10370,7 @@ Or:
 
 ---
 
-## 23.6 GET /api/v1/escalations/{escalationId}
+## 33.6 GET /api/v1/escalations/{escalationId}
 
 **Purpose:** Get escalation details
 
@@ -6715,7 +10408,7 @@ Or:
 
 ---
 
-## 23.7 PUT /api/v1/escalations/{escalationId}/resolve
+## 33.7 PUT /api/v1/escalations/{escalationId}/resolve
 
 **Purpose:** Resolve escalation
 
@@ -6753,7 +10446,7 @@ Or:
 
 ---
 
-## 23.8 GET /api/v1/cross-sell-triggers
+## 33.8 GET /api/v1/cross-sell-triggers
 
 **Purpose:** List cross-sell triggers
 
@@ -6794,7 +10487,7 @@ Or:
 
 ---
 
-## 23.9 GET /api/v1/cross-sell-triggers/{triggerId}
+## 33.9 GET /api/v1/cross-sell-triggers/{triggerId}
 
 **Purpose:** Get cross-sell trigger details
 
@@ -6832,7 +10525,7 @@ Or:
 
 ---
 
-## 23.10 PUT /api/v1/cross-sell-triggers/{triggerId}
+## 33.10 PUT /api/v1/cross-sell-triggers/{triggerId}
 
 **Purpose:** Update cross-sell trigger status (convert or dismiss)
 
@@ -6890,9 +10583,9 @@ interface UpdateCrossSellTriggerRequest {
 
 ---
 
-# 24. Regulator Questions Endpoints
+# 29. Regulator Questions Endpoints
 
-## 24.1 GET /api/v1/regulator-questions
+## 35.1 GET /api/v1/regulator-questions
 
 **Purpose:** List regulator questions
 
@@ -6948,7 +10641,7 @@ interface UpdateCrossSellTriggerRequest {
 
 ---
 
-## 24.2 GET /api/v1/regulator-questions/{questionId}
+## 35.2 GET /api/v1/regulator-questions/{questionId}
 
 **Purpose:** Get regulator question details
 
@@ -6992,7 +10685,7 @@ interface UpdateCrossSellTriggerRequest {
 
 ---
 
-## 24.3 POST /api/v1/regulator-questions
+## 35.3 POST /api/v1/regulator-questions
 
 **Purpose:** Create regulator question
 
@@ -7049,7 +10742,7 @@ interface CreateRegulatorQuestionRequest {
 
 ---
 
-## 24.4 PUT /api/v1/regulator-questions/{questionId}
+## 35.4 PUT /api/v1/regulator-questions/{questionId}
 
 **Purpose:** Update regulator question (submit response)
 
@@ -7100,7 +10793,7 @@ interface UpdateRegulatorQuestionRequest {
 
 ---
 
-## 24.5 PUT /api/v1/regulator-questions/{questionId}/close
+## 35.5 PUT /api/v1/regulator-questions/{questionId}/close
 
 **Purpose:** Close regulator question
 
@@ -7131,9 +10824,9 @@ interface UpdateRegulatorQuestionRequest {
 
 ---
 
-# 25. Background Jobs Endpoints
+# 30. Background Jobs Endpoints
 
-## 25.1 GET /api/v1/background-jobs/{jobId}
+## 30.1 GET /api/v1/background-jobs/{jobId}
 
 **Purpose:** Get background job status
 
@@ -7187,9 +10880,9 @@ interface BackgroundJobResponse {
 
 > [v1 UPDATE – Consultant Control Centre Endpoints – 2024-12-27]
 
-# 26. Consultant Control Centre Endpoints
+# 31. Consultant Control Centre Endpoints
 
-## 26.1 GET /api/v1/consultant/clients
+## 31.1 GET /api/v1/consultant/clients
 
 **Purpose:** List consultant's assigned clients
 
@@ -7215,7 +10908,7 @@ interface BackgroundJobResponse {
       "compliance_summary": {
         "total_obligations": 45,
         "overdue_count": 2,
-        "compliance_score": 0.95
+        "compliance_score": 95
       }
     }
   ],
@@ -7232,7 +10925,7 @@ interface BackgroundJobResponse {
 
 ---
 
-## 26.2 GET /api/v1/consultant/dashboard
+## 31.2 GET /api/v1/consultant/dashboard
 
 **Purpose:** Get consultant dashboard with aggregated client data
 
@@ -7252,7 +10945,7 @@ interface BackgroundJobResponse {
       "total_obligations": 450,
       "overdue_count": 8,
       "approaching_deadline_count": 15,
-      "avg_compliance_score": 0.92
+      "avg_compliance_score": 92
     },
     "recent_activity": [
       {
@@ -7284,7 +10977,7 @@ interface BackgroundJobResponse {
 
 ---
 
-## 26.3 POST /api/v1/consultant/clients/{clientId}/packs
+## 31.3 POST /api/v1/consultant/clients/{clientId}/packs
 
 **Purpose:** Generate pack for assigned client
 
@@ -7329,7 +11022,7 @@ interface BackgroundJobResponse {
 
 ---
 
-## 26.4 POST /api/v1/consultant/clients/{clientId}/packs/{packId}/distribute
+## 31.4 POST /api/v1/consultant/clients/{clientId}/packs/{packId}/distribute
 
 **Purpose:** Distribute client pack to client contacts
 
@@ -7368,7 +11061,7 @@ interface BackgroundJobResponse {
 
 ---
 
-## 26.5 GET /api/v1/consultant/clients/{clientId}
+## 31.5 GET /api/v1/consultant/clients/{clientId}
 
 **Purpose:** Get client company details and compliance summary
 
@@ -7398,7 +11091,7 @@ interface BackgroundJobResponse {
       "total_obligations": 45,
       "complete_count": 43,
       "overdue_count": 2,
-      "compliance_score": 0.95
+      "compliance_score": 95
     },
     "assignment": {
       "status": "ACTIVE",
@@ -7416,9 +11109,9 @@ interface BackgroundJobResponse {
 
 ---
 
-# 27. File Upload Specifications
+# 32. File Upload Specifications
 
-## 18.1 File Size Limits
+## 32.1 File Size Limits
 
 - **Maximum file size:** 50MB per file
 - **Maximum total upload:** 200MB per request
@@ -7503,9 +11196,9 @@ interface UploadProgressResponse {
 
 ---
 
-# 28. Webhook Endpoints
+# 33. Webhook Endpoints
 
-## 27.1 POST /api/v1/webhooks
+## 33.1 POST /api/v1/webhooks
 
 **Purpose:** Register webhook
 
@@ -7551,7 +11244,7 @@ type WebhookEvent =
 }
 ```
 
-## 27.2 GET /api/v1/webhooks
+## 33.2 GET /api/v1/webhooks
 
 **Purpose:** List registered webhooks
 
@@ -7588,7 +11281,7 @@ type WebhookEvent =
 
 ---
 
-## 27.3 GET /api/v1/webhooks/{webhookId}
+## 33.3 GET /api/v1/webhooks/{webhookId}
 
 **Purpose:** Get webhook details
 
@@ -7622,7 +11315,7 @@ type WebhookEvent =
 
 ---
 
-## 27.4 PUT /api/v1/webhooks/{webhookId}
+## 33.4 PUT /api/v1/webhooks/{webhookId}
 
 **Purpose:** Update webhook
 
@@ -7663,7 +11356,7 @@ type WebhookEvent =
 
 ---
 
-## 27.5 DELETE /api/v1/webhooks/{webhookId}
+## 33.5 DELETE /api/v1/webhooks/{webhookId}
 
 **Purpose:** Delete webhook
 
@@ -7691,7 +11384,7 @@ type WebhookEvent =
 
 ---
 
-## 27.6 Webhook Delivery
+## 33.6 Webhook Delivery
 
 **HTTP Method:** POST
 
@@ -7728,9 +11421,9 @@ X-Webhook-Timestamp: {unix_timestamp}
 
 ---
 
-# 29. OpenAPI Specification
+# 34. OpenAPI Specification
 
-## 28.1 OpenAPI 3.0 Structure
+## 34.1 OpenAPI 3.0 Structure
 
 The complete OpenAPI 3.0 specification is provided as a separate file: `docs/openapi.yaml`
 
@@ -7742,7 +11435,7 @@ The complete OpenAPI 3.0 specification is provided as a separate file: `docs/ope
 - **Security Schemes:** JWT authentication
 - **Examples:** Request/response examples
 
-## 28.2 Schema Definitions
+## 34.2 Schema Definitions
 
 All request/response schemas are defined in the OpenAPI specification using JSON Schema format.
 
@@ -7779,9 +11472,1133 @@ DocumentResponse:
 
 ---
 
-# 30. TypeScript Interfaces
+# 37. Module 1 Advanced Endpoints
 
-## 29.1 Common Interfaces
+This section documents advanced Module 1 (Environmental Permits) features for compliance management, enforcement tracking, and evidence completeness scoring.
+
+## 37.1 Enforcement Notices
+
+Track regulatory enforcement actions with full lifecycle management.
+
+### GET /api/v1/module-1/enforcement-notices
+
+List all enforcement notices for accessible sites.
+
+**Authentication:** Required
+**Authorization:** VIEWER+ role
+
+**Query Parameters:**
+- `site_id` (optional) - Filter by site
+- `status` (optional) - Filter by status (ISSUED, IN_RESPONSE, CLOSED, APPEALED)
+- `cursor` (optional) - Pagination cursor
+- `limit` (optional) - Items per page (default: 20, max: 100)
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "site_id": "uuid",
+      "notice_type": "ENFORCEMENT_NOTICE" | "SUSPENSION_NOTICE" | "REVOCATION_NOTICE" | "WARNING_LETTER",
+      "reference_number": "string",
+      "issued_date": "2025-01-15",
+      "regulator": "EA" | "SEPA" | "NRW",
+      "breach_description": "string",
+      "required_actions": "string",
+      "response_deadline": "2025-02-15",
+      "status": "ISSUED" | "IN_RESPONSE" | "CLOSED" | "APPEALED",
+      "response_submitted_at": "2025-02-10T10:00:00Z",
+      "closed_at": null,
+      "appeal_submitted_at": null,
+      "created_at": "2025-01-15T09:00:00Z",
+      "updated_at": "2025-02-10T10:00:00Z"
+    }
+  ],
+  "pagination": {
+    "cursor": "string",
+    "has_more": true,
+    "total": 15
+  }
+}
+```
+
+### POST /api/v1/module-1/enforcement-notices
+
+Create a new enforcement notice.
+
+**Authentication:** Required
+**Authorization:** STAFF+ role
+
+**Request Body:**
+```json
+{
+  "site_id": "uuid",
+  "notice_type": "ENFORCEMENT_NOTICE",
+  "reference_number": "EN/2025/001",
+  "issued_date": "2025-01-15",
+  "regulator": "EA",
+  "breach_description": "Exceedance of permit limits",
+  "required_actions": "Submit corrective action plan within 30 days",
+  "response_deadline": "2025-02-15",
+  "document_id": "uuid"
+}
+```
+
+**Response:** 201 Created
+
+### POST /api/v1/module-1/enforcement-notices/{noticeId}/response
+
+Submit response to enforcement notice.
+
+**Authentication:** Required
+**Authorization:** STAFF+ role
+
+**Request Body:**
+```json
+{
+  "response_text": "string",
+  "corrective_actions_taken": "string",
+  "evidence_ids": ["uuid1", "uuid2"]
+}
+```
+
+**Response:** 200 OK
+
+### POST /api/v1/module-1/enforcement-notices/{noticeId}/close
+
+Close enforcement notice (regulator satisfied).
+
+**Authentication:** Required
+**Authorization:** ADMIN+ role
+
+**Request Body:**
+```json
+{
+  "closure_notes": "string",
+  "regulator_approval_document_id": "uuid"
+}
+```
+
+**Response:** 200 OK
+
+---
+
+## 37.2 Compliance Decisions
+
+Track compliance decision records with evidence and reasoning.
+
+### GET /api/v1/module-1/compliance-decisions
+
+List all compliance decisions.
+
+**Authentication:** Required
+**Authorization:** VIEWER+ role
+
+**Query Parameters:**
+- `site_id` (optional) - Filter by site
+- `decision_type` (optional) - Filter by type (PERMIT_APPROVAL, PERMIT_DENIAL, VARIATION_APPROVAL, etc.)
+- `cursor`, `limit` - Pagination
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "site_id": "uuid",
+      "obligation_id": "uuid",
+      "decision_type": "PERMIT_APPROVAL" | "PERMIT_DENIAL" | "VARIATION_APPROVAL" | "VARIATION_DENIAL",
+      "decision_date": "2025-01-20",
+      "decision_maker": "string",
+      "decision_rationale": "string",
+      "supporting_evidence_ids": ["uuid1", "uuid2"],
+      "conditions_attached": "string",
+      "appeal_deadline": "2025-02-20",
+      "created_at": "2025-01-20T14:00:00Z"
+    }
+  ],
+  "pagination": { ... }
+}
+```
+
+### POST /api/v1/module-1/compliance-decisions
+
+Create a compliance decision record.
+
+**Authentication:** Required
+**Authorization:** ADMIN+ role
+
+**Request Body:**
+```json
+{
+  "site_id": "uuid",
+  "obligation_id": "uuid",
+  "decision_type": "PERMIT_APPROVAL",
+  "decision_date": "2025-01-20",
+  "decision_maker": "Environmental Manager",
+  "decision_rationale": "All requirements met",
+  "supporting_evidence_ids": ["uuid1", "uuid2"],
+  "conditions_attached": "Annual review required"
+}
+```
+
+**Response:** 201 Created
+
+---
+
+## 37.3 Condition Evidence Rules
+
+Define evidence mapping rules at the condition level.
+
+### GET /api/v1/module-1/condition-evidence-rules
+
+List evidence rules for conditions.
+
+**Authentication:** Required
+**Authorization:** VIEWER+ role
+
+**Query Parameters:**
+- `obligation_id` (optional) - Filter by obligation
+- `cursor`, `limit` - Pagination
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "obligation_id": "uuid",
+      "condition_text": "string",
+      "required_evidence_types": ["LAB_CERTIFICATE", "MAINTENANCE_RECORD"],
+      "evidence_frequency": "MONTHLY",
+      "rule_description": "string",
+      "is_mandatory": true,
+      "created_at": "2025-01-10T10:00:00Z"
+    }
+  ],
+  "pagination": { ... }
+}
+```
+
+### POST /api/v1/module-1/condition-evidence-rules
+
+Create evidence rule for condition.
+
+**Request Body:**
+```json
+{
+  "obligation_id": "uuid",
+  "condition_text": "Monthly pH testing required",
+  "required_evidence_types": ["LAB_CERTIFICATE"],
+  "evidence_frequency": "MONTHLY",
+  "is_mandatory": true
+}
+```
+
+**Response:** 201 Created
+
+---
+
+## 37.4 Condition Permissions
+
+Track permissions at the condition level.
+
+### GET /api/v1/module-1/condition-permissions
+
+List condition-level permissions.
+
+**Authentication:** Required
+**Authorization:** VIEWER+ role
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "obligation_id": "uuid",
+      "permission_type": "DISCHARGE_PERMIT" | "OPERATIONAL_HOURS" | "MATERIAL_STORAGE",
+      "permission_details": "string",
+      "granted_date": "2025-01-01",
+      "expiry_date": "2026-01-01",
+      "renewal_required": true,
+      "created_at": "2025-01-01T00:00:00Z"
+    }
+  ],
+  "pagination": { ... }
+}
+```
+
+---
+
+## 37.5 Evidence Completeness Scoring
+
+Automated scoring of evidence completeness per obligation.
+
+### GET /api/v1/module-1/evidence-completeness-scores
+
+Get evidence completeness scores.
+
+**Authentication:** Required
+**Authorization:** VIEWER+ role
+
+**Query Parameters:**
+- `site_id` (optional) - Filter by site
+- `obligation_id` (optional) - Filter by obligation
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "obligation_id": "uuid",
+      "site_id": "uuid",
+      "completeness_score": 85,
+      "required_evidence_count": 12,
+      "provided_evidence_count": 10,
+      "missing_evidence_types": ["LAB_CERTIFICATE", "MAINTENANCE_RECORD"],
+      "last_calculated_at": "2025-02-01T10:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+# 38. Module 2 Advanced Endpoints
+
+This section documents advanced Module 2 (Trade Effluent) features including sampling logistics, reconciliation, consent state management, and predictive analytics.
+
+## 38.1 Sampling Logistics
+
+Manage laboratory sample workflow from scheduling to results.
+
+### GET /api/v1/module-2/sampling-logistics
+
+List all sampling records.
+
+**Authentication:** Required
+**Authorization:** VIEWER+ role
+
+**Query Parameters:**
+- `site_id` (optional) - Filter by site
+- `status` (optional) - SCHEDULED, SAMPLED, SUBMITTED, RECEIVED, COMPLETED
+- `date_from`, `date_to` - Date range filter
+- `cursor`, `limit` - Pagination
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "site_id": "uuid",
+      "parameter_id": "uuid",
+      "scheduled_date": "2025-02-15",
+      "sampled_date": "2025-02-15T09:30:00Z",
+      "sampled_by": "John Doe",
+      "sample_reference": "SAMP-2025-001",
+      "lab_name": "ALS Environmental",
+      "lab_submitted_date": "2025-02-15T11:00:00Z",
+      "lab_received_date": "2025-02-15T14:00:00Z",
+      "expected_result_date": "2025-02-22",
+      "certificate_id": "uuid",
+      "status": "SUBMITTED",
+      "notes": "Standard sampling procedure followed",
+      "created_at": "2025-02-01T10:00:00Z"
+    }
+  ],
+  "pagination": { ... }
+}
+```
+
+### POST /api/v1/module-2/sampling-logistics
+
+Create sampling record.
+
+**Request Body:**
+```json
+{
+  "site_id": "uuid",
+  "parameter_id": "uuid",
+  "scheduled_date": "2025-02-15",
+  "lab_name": "ALS Environmental",
+  "expected_result_date": "2025-02-22"
+}
+```
+
+**Response:** 201 Created
+
+### POST /api/v1/module-2/sampling-logistics/{recordId}/submit-lab
+
+Mark sample as submitted to lab.
+
+**Request Body:**
+```json
+{
+  "sampled_date": "2025-02-15T09:30:00Z",
+  "sampled_by": "John Doe",
+  "sample_reference": "SAMP-2025-001",
+  "lab_submitted_date": "2025-02-15T11:00:00Z"
+}
+```
+
+**Response:** 200 OK
+
+### POST /api/v1/module-2/sampling-logistics/{recordId}/link-certificate
+
+Link lab certificate to sampling record.
+
+**Request Body:**
+```json
+{
+  "certificate_id": "uuid",
+  "lab_received_date": "2025-02-15T14:00:00Z"
+}
+```
+
+**Response:** 200 OK
+
+---
+
+## 38.2 Monthly Statements
+
+Water company billing statement reconciliation.
+
+### GET /api/v1/module-2/monthly-statements
+
+List monthly statements.
+
+**Authentication:** Required
+**Authorization:** VIEWER+ role
+
+**Query Parameters:**
+- `site_id` (optional)
+- `statement_month` (optional) - YYYY-MM format
+- `reconciliation_status` (optional) - PENDING, MATCHED, DISCREPANCY, RESOLVED
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "site_id": "uuid",
+      "statement_month": "2025-01",
+      "water_company": "Thames Water",
+      "billed_volume_m3": 1500.5,
+      "billed_amount_gbp": 2500.75,
+      "statement_document_id": "uuid",
+      "reconciliation_status": "MATCHED",
+      "discrepancy_volume_m3": 0,
+      "discrepancy_notes": null,
+      "created_at": "2025-02-01T10:00:00Z"
+    }
+  ],
+  "pagination": { ... }
+}
+```
+
+### POST /api/v1/module-2/monthly-statements
+
+Upload monthly statement.
+
+**Request Body:**
+```json
+{
+  "site_id": "uuid",
+  "statement_month": "2025-01",
+  "water_company": "Thames Water",
+  "billed_volume_m3": 1500.5,
+  "billed_amount_gbp": 2500.75,
+  "statement_document_id": "uuid"
+}
+```
+
+**Response:** 201 Created
+
+### GET /api/v1/module-2/monthly-statements/{statementId}/reconciliations
+
+Get reconciliation details for statement.
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "statement_id": "uuid",
+    "actual_volume_m3": 1500.5,
+    "billed_volume_m3": 1500.5,
+    "discrepancy_volume_m3": 0,
+    "discrepancy_percentage": 0,
+    "status": "MATCHED",
+    "reconciled_at": "2025-02-02T10:00:00Z",
+    "reconciled_by": "uuid"
+  }
+}
+```
+
+---
+
+## 38.3 Reconciliation
+
+Volume and concentration reconciliation with discrepancy tracking.
+
+### POST /api/v1/module-2/reconciliation/calculate
+
+Calculate reconciliation for a period.
+
+**Request Body:**
+```json
+{
+  "site_id": "uuid",
+  "period_start": "2025-01-01",
+  "period_end": "2025-01-31",
+  "tolerance_percentage": 5
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "site_id": "uuid",
+    "period_start": "2025-01-01",
+    "period_end": "2025-01-31",
+    "actual_total_volume_m3": 1500.5,
+    "billed_total_volume_m3": 1505.0,
+    "discrepancy_volume_m3": 4.5,
+    "discrepancy_percentage": 0.3,
+    "within_tolerance": true,
+    "discrepancies": [
+      {
+        "date": "2025-01-15",
+        "parameter": "BOD",
+        "actual_value": 250,
+        "billed_value": 255,
+        "discrepancy": 5,
+        "reason": "Rounding difference"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## 38.4 Consent States
+
+Consent lifecycle state machine management.
+
+### GET /api/v1/module-2/consent-states
+
+List consent state transitions.
+
+**Authentication:** Required
+**Authorization:** VIEWER+ role
+
+**Query Parameters:**
+- `consent_id` (required)
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "consent_id": "uuid",
+      "state": "DRAFT" | "IN_FORCE" | "SUPERSEDED" | "EXPIRED" | "REVOKED",
+      "effective_date": "2025-01-01",
+      "transition_reason": "New consent issued",
+      "transitioned_by": "uuid",
+      "transitioned_at": "2025-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+### POST /api/v1/module-2/consent-states
+
+Create consent state record.
+
+**Request Body:**
+```json
+{
+  "consent_id": "uuid",
+  "state": "IN_FORCE",
+  "effective_date": "2025-01-01",
+  "transition_reason": "New consent issued"
+}
+```
+
+**Response:** 201 Created
+
+---
+
+## 38.5 Predictive Analytics
+
+Breach likelihood scoring and early warning alerts.
+
+### GET /api/v1/module-2/breach-likelihood-scores
+
+Get breach likelihood predictions.
+
+**Authentication:** Required
+**Authorization:** VIEWER+ role
+
+**Query Parameters:**
+- `site_id` (required)
+- `parameter_id` (optional)
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "site_id": "uuid",
+      "parameter_id": "uuid",
+      "parameter_name": "BOD",
+      "likelihood_score": 75,
+      "risk_level": "HIGH" | "MEDIUM" | "LOW",
+      "trend_direction": "INCREASING" | "STABLE" | "DECREASING",
+      "predicted_breach_date": "2025-03-15",
+      "confidence_percentage": 85,
+      "contributing_factors": [
+        "Recent exceedances",
+        "Seasonal pattern",
+        "Equipment maintenance due"
+      ],
+      "calculated_at": "2025-02-01T10:00:00Z"
+    }
+  ]
+}
+```
+
+### GET /api/v1/module-2/predictive-breach-alerts
+
+Get active predictive breach alerts.
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "site_id": "uuid",
+      "parameter_id": "uuid",
+      "alert_type": "IMMINENT_BREACH" | "TREND_WARNING" | "SEASONAL_RISK",
+      "severity": "CRITICAL" | "HIGH" | "MEDIUM" | "LOW",
+      "alert_message": "BOD levels trending towards breach",
+      "recommended_actions": [
+        "Review discharge practices",
+        "Schedule equipment maintenance",
+        "Increase monitoring frequency"
+      ],
+      "alert_issued_at": "2025-02-01T10:00:00Z",
+      "acknowledged": false
+    }
+  ]
+}
+```
+
+---
+
+# 39. Module 3 Advanced Endpoints
+
+This section documents advanced Module 3 (MCPD/Generators) features including fuel usage tracking, sulphur content reporting, and enhanced runtime monitoring.
+
+## 39.1 Fuel Usage Logs
+
+Track daily and monthly fuel consumption with sulphur content.
+
+### GET /api/v1/module-3/fuel-usage-logs
+
+List fuel usage records.
+
+**Authentication:** Required
+**Authorization:** VIEWER+ role
+
+**Query Parameters:**
+- `generator_id` (optional)
+- `log_date_from`, `log_date_to` - Date range
+- `cursor`, `limit` - Pagination
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "generator_id": "uuid",
+      "log_date": "2025-02-01",
+      "fuel_type": "NATURAL_GAS" | "DIESEL" | "GAS_OIL" | "BIOMASS",
+      "fuel_quantity_litres": 500.5,
+      "sulphur_content_percentage": 0.001,
+      "sulphur_content_verified": true,
+      "sulphur_report_id": "uuid",
+      "run_hours_during_period": 8.5,
+      "notes": "Standard operation",
+      "created_at": "2025-02-01T18:00:00Z"
+    }
+  ],
+  "pagination": { ... }
+}
+```
+
+### POST /api/v1/module-3/fuel-usage-logs
+
+Log fuel usage for a generator.
+
+**Request Body:**
+```json
+{
+  "generator_id": "uuid",
+  "log_date": "2025-02-01",
+  "fuel_type": "NATURAL_GAS",
+  "fuel_quantity_litres": 500.5,
+  "sulphur_content_percentage": 0.001,
+  "sulphur_report_id": "uuid",
+  "run_hours_during_period": 8.5
+}
+```
+
+**Response:** 201 Created
+
+---
+
+## 39.2 Sulphur Content Reports
+
+Store and verify sulphur content test results for fuel compliance.
+
+### GET /api/v1/module-3/sulphur-content-reports
+
+List sulphur content test reports.
+
+**Authentication:** Required
+**Authorization:** VIEWER+ role
+
+**Query Parameters:**
+- `generator_id` (optional)
+- `test_date_from`, `test_date_to` - Date range
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "generator_id": "uuid",
+      "fuel_type": "DIESEL",
+      "test_date": "2025-01-15",
+      "lab_name": "ALS Environmental",
+      "sulphur_content_percentage": 0.001,
+      "sulphur_limit_percentage": 0.1,
+      "compliant": true,
+      "certificate_document_id": "uuid",
+      "valid_from": "2025-01-15",
+      "valid_until": "2026-01-15",
+      "created_at": "2025-01-15T14:00:00Z"
+    }
+  ],
+  "pagination": { ... }
+}
+```
+
+### POST /api/v1/module-3/sulphur-content-reports
+
+Upload sulphur content test report.
+
+**Request Body:**
+```json
+{
+  "generator_id": "uuid",
+  "fuel_type": "DIESEL",
+  "test_date": "2025-01-15",
+  "lab_name": "ALS Environmental",
+  "sulphur_content_percentage": 0.001,
+  "sulphur_limit_percentage": 0.1,
+  "certificate_document_id": "uuid",
+  "valid_from": "2025-01-15",
+  "valid_until": "2026-01-15"
+}
+```
+
+**Response:** 201 Created
+
+---
+
+## 39.3 Runtime Monitoring Enhancements
+
+Enhanced runtime monitoring with validation workflows and reason codes.
+
+### GET /api/v1/module-3/runtime-monitoring
+
+List runtime monitoring records with enhanced fields.
+
+**Authentication:** Required
+**Authorization:** VIEWER+ role
+
+**Query Parameters:**
+- `generator_id` (required)
+- `validation_status` (optional) - PENDING, APPROVED, FLAGGED, REJECTED
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "generator_id": "uuid",
+      "record_date": "2025-02-01",
+      "run_hours": 8.5,
+      "entry_reason_code": "NORMAL_OPERATION" | "TESTING" | "MAINTENANCE" | "EMERGENCY",
+      "entry_reason_notes": "Standard operation",
+      "validation_status": "APPROVED",
+      "validated_by": "uuid",
+      "validated_at": "2025-02-02T10:00:00Z",
+      "csv_import_id": "uuid",
+      "created_at": "2025-02-01T18:00:00Z"
+    }
+  ],
+  "pagination": { ... }
+}
+```
+
+### POST /api/v1/module-3/runtime-monitoring
+
+Create runtime monitoring record with reason codes.
+
+**Request Body:**
+```json
+{
+  "generator_id": "uuid",
+  "record_date": "2025-02-01",
+  "run_hours": 8.5,
+  "entry_reason_code": "NORMAL_OPERATION",
+  "entry_reason_notes": "Standard operation"
+}
+```
+
+**Response:** 201 Created
+
+---
+
+# 40. Pack Sharing & Access Endpoints
+
+This section documents secure pack sharing with access tokens, pack contents version-locking, and regulator access logging.
+
+## 40.1 Pack Sharing
+
+Create and manage secure sharing links for audit packs.
+
+### GET /api/v1/pack-sharing
+
+List all shared packs.
+
+**Authentication:** Required
+**Authorization:** VIEWER+ role
+
+**Query Parameters:**
+- `pack_id` (optional)
+- `status` (optional) - ACTIVE, EXPIRED, REVOKED
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "pack_id": "uuid",
+      "secure_access_token": "abc123xyz",
+      "access_url": "https://app.ecocomply.com/packs/shared/abc123xyz",
+      "expires_at": "2025-03-01T00:00:00Z",
+      "recipient_email": "regulator@environment-agency.gov.uk",
+      "status": "ACTIVE",
+      "created_by": "uuid",
+      "created_at": "2025-02-01T10:00:00Z"
+    }
+  ],
+  "pagination": { ... }
+}
+```
+
+### POST /api/v1/pack-sharing
+
+Create secure sharing link for pack.
+
+**Request Body:**
+```json
+{
+  "pack_id": "uuid",
+  "recipient_email": "regulator@environment-agency.gov.uk",
+  "expires_at": "2025-03-01T00:00:00Z",
+  "access_permissions": {
+    "can_download": true,
+    "can_view_evidence": true
+  }
+}
+```
+
+**Response:** 201 Created
+```json
+{
+  "data": {
+    "id": "uuid",
+    "secure_access_token": "abc123xyz",
+    "access_url": "https://app.ecocomply.com/packs/shared/abc123xyz",
+    "expires_at": "2025-03-01T00:00:00Z"
+  }
+}
+```
+
+---
+
+## 40.2 Pack Contents
+
+Version-locked pack contents listing.
+
+### GET /api/v1/packs/{packId}/contents
+
+Get version-locked contents of a pack.
+
+**Authentication:** Required
+**Authorization:** VIEWER+ role
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "pack_id": "uuid",
+    "pack_type": "REGULATOR",
+    "generated_at": "2025-02-01T10:00:00Z",
+    "contents": {
+      "obligations": [
+        {
+          "obligation_id": "uuid",
+          "obligation_text": "string",
+          "status": "COMPLETED",
+          "evidence_count": 3
+        }
+      ],
+      "evidence_items": [
+        {
+          "evidence_id": "uuid",
+          "file_name": "lab-certificate-jan-2025.pdf",
+          "file_size_bytes": 125000,
+          "file_hash_sha256": "string",
+          "version_locked": true,
+          "snapshot_url": "string"
+        }
+      ],
+      "compliance_score": 95,
+      "compliance_clocks": [
+        {
+          "obligation_id": "uuid",
+          "days_until_due": 15,
+          "criticality": "GREEN"
+        }
+      ]
+    }
+  }
+}
+```
+
+---
+
+## 40.3 Pack Access Logs
+
+Track regulator access to shared packs.
+
+### GET /api/v1/packs/{packId}/access-logs
+
+Get access logs for pack.
+
+**Authentication:** Required
+**Authorization:** ADMIN+ role
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "pack_id": "uuid",
+      "accessed_at": "2025-02-05T14:30:00Z",
+      "accessor_email": "regulator@environment-agency.gov.uk",
+      "accessor_ip": "81.123.45.67",
+      "access_type": "VIEW" | "DOWNLOAD",
+      "user_agent": "Mozilla/5.0...",
+      "secure_token_used": "abc123xyz"
+    }
+  ],
+  "pagination": { ... }
+}
+```
+
+---
+
+# 41. Dashboard & Statistics Endpoints
+
+Enhanced dashboard statistics and metrics.
+
+## 41.1 Dashboard Statistics
+
+### GET /api/v1/dashboard/stats
+
+Get enhanced dashboard statistics.
+
+**Authentication:** Required
+**Authorization:** VIEWER+ role
+
+**Query Parameters:**
+- `site_id` (optional) - Filter by specific site
+- `module_id` (optional) - Filter by module
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "overview": {
+      "total_obligations": 150,
+      "completed_obligations": 120,
+      "overdue_obligations": 5,
+      "upcoming_deadlines_7_days": 8,
+      "compliance_score": 95
+    },
+    "by_module": [
+      {
+        "module_id": "uuid",
+        "module_name": "Environmental Permits",
+        "obligations_count": 80,
+        "compliance_score": 97
+      }
+    ],
+    "recent_activity": [
+      {
+        "type": "OBLIGATION_COMPLETED",
+        "timestamp": "2025-02-01T10:00:00Z",
+        "description": "Monthly monitoring completed"
+      }
+    ],
+    "alerts": [
+      {
+        "severity": "HIGH",
+        "message": "5 obligations overdue",
+        "count": 5
+      }
+    ]
+  }
+}
+```
+
+---
+
+# 42. Initialization & System Setup Endpoints
+
+System initialization and configuration endpoints.
+
+## 42.1 System Initialization
+
+### POST /api/v1/init/setup
+
+Initialize system for new tenant.
+
+**Authentication:** Required
+**Authorization:** OWNER role only
+
+**Request Body:**
+```json
+{
+  "company_name": "string",
+  "default_modules": ["MODULE_1"],
+  "initial_site": {
+    "site_name": "string",
+    "regulator": "EA"
+  }
+}
+```
+
+**Response:** 201 Created
+
+---
+
+# 43. Recurring Events Endpoints
+
+Manage recurrence events that trigger obligations or tasks.
+
+## 43.1 Recurring Events
+
+### GET /api/v1/recurrence-events
+
+List all recurrence events.
+
+**Authentication:** Required
+**Authorization:** VIEWER+ role
+
+**Query Parameters:**
+- `site_id` (optional)
+- `event_type` (optional) - PERMIT_ISSUED, COMMISSIONING, RENEWAL_DUE, etc.
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "site_id": "uuid",
+      "event_type": "PERMIT_ISSUED",
+      "event_date": "2025-01-01",
+      "event_description": "Permit issued for site",
+      "triggers_recurrence": true,
+      "linked_obligations": ["uuid1", "uuid2"],
+      "created_at": "2025-01-01T10:00:00Z"
+    }
+  ],
+  "pagination": { ... }
+}
+```
+
+### POST /api/v1/recurrence-events
+
+Create recurrence event.
+
+**Request Body:**
+```json
+{
+  "site_id": "uuid",
+  "event_type": "PERMIT_ISSUED",
+  "event_date": "2025-01-01",
+  "event_description": "Permit issued for site",
+  "triggers_recurrence": true
+}
+```
+
+**Response:** 201 Created
+
+---
+
+# 44. OpenAPI Specification
+
+The complete OpenAPI 3.0 specification is available at `/api/v1/openapi.json` and includes all endpoints documented in this specification.
+
+**Features:**
+- Full endpoint documentation with request/response schemas
+- Authentication requirements per endpoint
+- Error response schemas
+- Rate limiting information
+- Pagination standards
+- Type definitions
+
+**Access:**
+- Development: `http://localhost:3000/api/v1/openapi.json`
+- Production: `https://api.epcompliance.com/api/v1/openapi.json`
+
+---
+
+# 45. TypeScript Interfaces
+
+## 45.1 Common Interfaces
 
 ```typescript
 // Pagination
@@ -7813,7 +12630,7 @@ interface FilterParams {
 }
 ```
 
-## 29.2 Document Interfaces
+## 35.2 Document Interfaces
 
 ```typescript
 interface Document {
@@ -7834,7 +12651,7 @@ interface Document {
 }
 ```
 
-## 29.3 Obligation Interfaces
+## 35.3 Obligation Interfaces
 
 ```typescript
 interface Obligation {
@@ -7857,7 +12674,7 @@ interface Obligation {
 }
 ```
 
-## 29.4 Schedule Interfaces
+## 35.4 Schedule Interfaces
 
 ```typescript
 interface Schedule {
@@ -7876,7 +12693,7 @@ interface Schedule {
 }
 ```
 
-## 29.5 Notification Interfaces
+## 35.5 Notification Interfaces
 
 ```typescript
 interface Notification {
@@ -7905,7 +12722,7 @@ interface NotificationPreference {
 }
 ```
 
-## 29.6 Module Interfaces
+## 35.6 Module Interfaces
 
 ```typescript
 interface Module {

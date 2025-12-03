@@ -38,7 +38,7 @@ export default function DocumentsPage() {
 
   const { data, isLoading, error } = useQuery<DocumentsResponse>({
     queryKey: ['documents', filters, cursor],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       if (filters.site_id) params.append('site_id', filters.site_id);
       if (filters.document_type) params.append('document_type', filters.document_type);

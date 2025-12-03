@@ -43,7 +43,7 @@ export default function NewStackTestPage() {
   // Fetch generators for this site
   const { data: generatorsData } = useQuery<GeneratorsResponse>({
     queryKey: ['module-3-generators', siteId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       params.append('filter[site_id]', siteId);
       params.append('limit', '100');

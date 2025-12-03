@@ -1,6 +1,7 @@
 /**
  * Next.js Middleware
  * Handles authentication, CORS, and request logging
+ * Note: Middleware runs in Edge runtime, so worker initialization happens elsewhere
  */
 
 import { NextResponse } from 'next/server';

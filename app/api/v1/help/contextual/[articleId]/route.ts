@@ -35,8 +35,7 @@ const HELP_ARTICLES: Record<string, { id: string; title: string; content: string
 };
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { articleId: string } }
+  request: NextRequest, props: { params: Promise<{ articleId: string } }
 ) {
   try {
     const articleId = params.articleId;

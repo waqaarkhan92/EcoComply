@@ -10,8 +10,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { obligationId: string; evidenceId: string } }
+  request: NextRequest, props: { params: Promise<{ obligationId: string; evidenceId: string } }
 ) {
   const requestId = getRequestId(request);
 
@@ -77,6 +76,24 @@ export async function DELETE(
         { error: updateError.message },
         { request_id: requestId }
       );
+    }
+
+    // Get site_id for compliance score update
+    const { data: obligationWithSite } = await supabaseAdmin
+      .from('obligations')
+      .select('site_id')
+      .eq('id', obligationId)
+      .single();
+
+    // Update compliance scores (evidence unlinking affects score)
+    if (obligationWithSite) {
+      try {
+        const { updateComplianceScores } = await import('@/lib/services/compliance-score-service');
+        await updateComplianceScores(obligationWithSite.site_id);
+      } catch (error) {
+        console.error('Error updating compliance scores:', error);
+        // Don't fail the request if score update fails
+      }
     }
 
     const { user } = authResult;

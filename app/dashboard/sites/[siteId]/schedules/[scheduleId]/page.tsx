@@ -30,7 +30,7 @@ export default function ScheduleDetailPage() {
 
   const { data: schedule, isLoading, error } = useQuery<{ data: Schedule }>({
     queryKey: ['schedule', scheduleId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Schedule }>(`/schedules/${scheduleId}`);
     },
     enabled: !!scheduleId,

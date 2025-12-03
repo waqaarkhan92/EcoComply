@@ -47,7 +47,7 @@ export default function StackTestsPage() {
 
   const { data: stackTestsData, isLoading, error } = useQuery<StackTestsResponse>({
     queryKey: ['module-3-stack-tests', siteId, cursor],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       if (cursor) params.append('cursor', cursor);
       params.append('limit', '50');

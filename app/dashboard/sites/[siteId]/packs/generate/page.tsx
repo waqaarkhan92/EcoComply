@@ -26,7 +26,7 @@ export default function GeneratePackPage() {
     mutationFn: async (data: any) => {
       return apiClient.post('/packs/generate', data);
     },
-    onSuccess: (response) => {
+    onSuccess: (response: any) => {
       const packId = response.data?.id;
       if (packId) {
         router.push(`/dashboard/sites/${siteId}/packs/${packId}`);

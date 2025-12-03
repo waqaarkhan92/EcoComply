@@ -1,13 +1,18 @@
 # AI Extraction Rules Library
-## EcoComply Platform — Modules 1–3
+## EcoComply Platform — Modules 1–4
 
-**EcoComply v1.0 — Launch-Ready / Last updated: 2025-01-29**
+**EcoComply v1.0 — Launch-Ready / Last updated: 2025-01-01**
 
-**Document Version:** 1.1  
-**Status:** Implemented  
-**Depends On:** Product Logic Specification (PLS), Canonical Dictionary, AI Layer Design & Cost Optimization  
+**Document Version:** 1.2  
+**Status:** Updated  
+**Depends On:** Product Logic Specification (PLS), Canonical Dictionary, AI Layer Design & Cost Optimization, High Level Product Plan (01)  
 **Purpose:** Technical specification for the rule library system, pattern matching algorithms, and learning mechanisms
 
+> [v1.2 UPDATE – Added Module 4 Support – 2025-01-01]
+> Module 4 (Hazardous Waste) patterns added:
+> - Waste stream classification patterns
+> - Consignment note validation patterns
+> - Chain of custody patterns
 > [v1.1 UPDATE – Implementation Complete – 2025-01-29]
 > All core features implemented in:
 > - lib/ai/rule-library-matcher.ts

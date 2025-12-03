@@ -64,10 +64,14 @@ export default function SignupPage() {
         });
 
         // Now fetch company details (tokens are set, so API call will work)
-        let companyData = {
+        let companyData: {
+          id: string;
+          name: string;
+          subscription_tier: 'core' | 'growth' | 'consultant';
+        } = {
           id: response.data.user.company_id,
           name: '', // Will fetch below
-          subscription_tier: 'core' as const,
+          subscription_tier: 'core',
         };
 
         try {

@@ -27,14 +27,14 @@ export default function ModulesPage() {
 
   const { data: modulesData } = useQuery<{ data: Module[] }>({
     queryKey: ['modules'],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Module[] }>('/modules');
     },
   });
 
   const { data: activationsData } = useQuery<{ data: ModuleActivation[] }>({
     queryKey: ['module-activations', user?.company_id],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       if (!user?.company_id) return { data: [] };
       return apiClient.get<{ data: ModuleActivation[] }>(`/module-activations?filter[company_id]=${user.company_id}&filter[status]=ACTIVE`);
     },

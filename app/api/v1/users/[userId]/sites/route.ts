@@ -11,8 +11,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { userId: string } }
+  request: NextRequest, props: { params: Promise<{ userId: string } }
 ) {
   const requestId = getRequestId(request);
 
@@ -78,7 +77,7 @@ export async function GET(
           company_id
         )
       `)
-      .eq('user_id', userId);
+      .eq('user_id', user.id);
 
     if (assignmentsError) {
       return errorResponse(
@@ -112,8 +111,7 @@ export async function GET(
 }
 
 export async function POST(
-  request: NextRequest,
-  { params }: { params: { userId: string } }
+  request: NextRequest, props: { params: Promise<{ userId: string } }
 ) {
   const requestId = getRequestId(request);
 
@@ -203,7 +201,7 @@ export async function POST(
     const { data: existingAssignment } = await supabaseAdmin
       .from('user_site_assignments')
       .select('id')
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .eq('site_id', body.site_id)
       .single();
 

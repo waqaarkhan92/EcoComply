@@ -7,10 +7,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, getRequestId } from '@/lib/api/middleware';
+import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function PUT(
-  request: NextRequest,
-  { params }: { params: { userId: string } }
+  request: NextRequest, props: { params: Promise<{ userId: string } }
 ) {
   const requestId = getRequestId(request);
 

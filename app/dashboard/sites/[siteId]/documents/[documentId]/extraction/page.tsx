@@ -28,14 +28,14 @@ export default function DocumentExtractionPage() {
 
   const { data: documentData } = useQuery<{ data: Document }>({
     queryKey: ['document', documentId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Document }>(`/documents/${documentId}`);
     },
   });
 
   const { data: extractionData, refetch } = useQuery<{ data: ExtractionResults }>({
     queryKey: ['extraction-results', documentId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: ExtractionResults }>(`/documents/${documentId}/extraction-results`);
     },
     refetchInterval: (data) => {

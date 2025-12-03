@@ -51,7 +51,7 @@ export default function ExceedancesPage() {
 
   const { data, isLoading, error } = useQuery<ExceedancesResponse>({
     queryKey: ['module-2-exceedances', siteId, filters, cursor],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       params.append('filter[site_id]', siteId);
       if (filters.parameter_id) params.append('filter[parameter_id]', filters.parameter_id);

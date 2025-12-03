@@ -14,7 +14,7 @@ export default function ExtractionReviewPage() {
   // Get onboarding progress to find document_id
   const { data: progressData } = useQuery({
     queryKey: ['onboarding-progress'],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const response = await apiClient.get('/users/me/onboarding-progress');
       return response.data;
     },

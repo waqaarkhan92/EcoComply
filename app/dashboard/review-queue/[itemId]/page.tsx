@@ -64,8 +64,8 @@ export default function ReviewQueueDetailPage({ params }: { params: { itemId: st
     data: ReviewQueueItem;
   }>({
     queryKey: ['review-queue-item', params.itemId],
-    queryFn: async () => {
-      const response = await apiClient.get(`/review-queue?filter[id]=${params.itemId}`);
+    queryFn: async (): Promise<any> => {
+      const response: any = await apiClient.get(`/review-queue?filter[id]=${params.itemId}`);
       const items = response.data.data;
       return { data: items[0] };
     },

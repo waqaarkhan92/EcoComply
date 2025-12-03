@@ -25,7 +25,7 @@ export async function GET(
 
     const { documentId } = await params;
     const pageParam = request.nextUrl.searchParams.get('page');
-    const pageNumber = pageParam ? parseInt(pageParam, 10) : null;
+    const pageNumber = pageParam ? parseInt(pageParam, 10) : undefined;
 
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -61,7 +61,7 @@ export async function GET(
     const supportedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
     if (!document.mime_type || !supportedTypes.includes(document.mime_type)) {
       return errorResponse(
-        ErrorCodes.UNSUPPORTED_MEDIA_TYPE,
+        ErrorCodes.BAD_REQUEST,
         'Preview not available for this file type',
         415,
         { mime_type: document.mime_type },
@@ -70,7 +70,7 @@ export async function GET(
     }
 
     // Validate page number if provided
-    if (pageNumber !== null) {
+    if (pageNumber !== undefined && pageNumber !== null) {
       if (isNaN(pageNumber) || pageNumber < 1) {
         return errorResponse(
           ErrorCodes.VALIDATION_ERROR,
@@ -117,14 +117,14 @@ export async function GET(
     let buffer = Buffer.from(arrayBuffer);
 
     // Handle PDF page extraction if page parameter is specified
-    if (document.mime_type === 'application/pdf' && pageNumber !== null) {
+    if (document.mime_type === 'application/pdf' && pageNumber !== null && pageNumber !== undefined) {
       try {
         const { PDFDocument } = await import('pdf-lib');
-        
+
         // Load the PDF document
         const sourcePdf = await PDFDocument.load(buffer);
         const totalPages = sourcePdf.getPageCount();
-        
+
         // Validate page number against actual page count
         if (pageNumber > totalPages) {
           return errorResponse(

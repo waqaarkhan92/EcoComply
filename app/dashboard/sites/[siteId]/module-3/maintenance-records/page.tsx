@@ -43,7 +43,7 @@ export default function MaintenanceRecordsPage() {
 
   const { data: recordsData, isLoading, error } = useQuery<MaintenanceRecordsResponse>({
     queryKey: ['module-3-maintenance-records', siteId, cursor],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       if (cursor) params.append('cursor', cursor);
       params.append('limit', '50');

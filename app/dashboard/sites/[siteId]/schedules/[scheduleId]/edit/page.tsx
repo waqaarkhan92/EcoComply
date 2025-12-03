@@ -30,7 +30,7 @@ export default function EditSchedulePage() {
 
   const { data: scheduleData, isLoading } = useQuery<{ data: Schedule }>({
     queryKey: ['schedule', scheduleId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Schedule }>(`/schedules/${scheduleId}`);
     },
     enabled: !!scheduleId,

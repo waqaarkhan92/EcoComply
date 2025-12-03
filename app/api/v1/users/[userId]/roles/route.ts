@@ -11,8 +11,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { userId: string } }
+  request: NextRequest, props: { params: Promise<{ userId: string } }
 ) {
   const requestId = getRequestId(request);
 
@@ -70,7 +69,7 @@ export async function GET(
     const { data: roles, error: rolesError } = await supabaseAdmin
       .from('user_roles')
       .select('role, assigned_at')
-      .eq('user_id', userId);
+      .eq('user_id', user.id);
 
     if (rolesError) {
       return errorResponse(
@@ -104,8 +103,7 @@ export async function GET(
 }
 
 export async function POST(
-  request: NextRequest,
-  { params }: { params: { userId: string } }
+  request: NextRequest, props: { params: Promise<{ userId: string } }
 ) {
   const requestId = getRequestId(request);
 
@@ -178,7 +176,7 @@ export async function POST(
     const { data: existingRole } = await supabaseAdmin
       .from('user_roles')
       .select('id')
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .eq('role', body.role)
       .single();
 

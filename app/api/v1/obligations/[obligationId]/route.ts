@@ -290,6 +290,17 @@ export async function PUT(
       );
     }
 
+    // Update compliance scores if status changed
+    if (updates.status && updates.status !== existingObligation.status) {
+      try {
+        const { updateComplianceScores } = await import('@/lib/services/compliance-score-service');
+        await updateComplianceScores(existingObligation.site_id);
+      } catch (error) {
+        console.error('Error updating compliance scores:', error);
+        // Don't fail the request if score update fails
+      }
+    }
+
     // Log to audit_logs (if audit_logs table exists)
     try {
       await supabaseAdmin

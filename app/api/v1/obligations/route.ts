@@ -46,6 +46,14 @@ export async function GET(request: NextRequest) {
       .select('id, document_id, site_id, obligation_title, obligation_description, original_text, category, frequency, deadline_date, status, review_status, is_subjective, confidence_score, condition_reference, page_reference, created_at, updated_at')
       .is('deleted_at', null); // Only non-deleted obligations
 
+    // Apply search query
+    const searchQuery = request.nextUrl.searchParams.get('search');
+    if (searchQuery && searchQuery.trim()) {
+      const searchTerm = searchQuery.trim();
+      // Search in obligation_title and original_text using ilike (case-insensitive)
+      query = query.or(`obligation_title.ilike.%${searchTerm}%,original_text.ilike.%${searchTerm}%`);
+    }
+
     // Apply filters
     if (filters.site_id) {
       query = query.eq('site_id', filters.site_id);

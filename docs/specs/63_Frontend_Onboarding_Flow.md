@@ -1,16 +1,43 @@
 # EcoComply Onboarding Flow Specification
 
-**EcoComply v1.0 — Launch-Ready / Last updated: 2025-01-29**
+**EcoComply v1.0 — Launch-Ready / Last updated: 2025-01-01**
 
-**Document Version:** 1.1  
-**Status:** Implemented  
+**Document Version:** 1.2  
+**Status:** Updated  
 **Created by:** Cursor  
 **Depends on:**
 - ✅ User Workflow Maps (1.3) - Complete
-- ✅ Frontend Routes (2.6) - Complete
+- ✅ Frontend Routes (1.2) - Complete
+- ✅ High Level Product Plan (01) - Complete
 
 **Purpose:** Defines the complete onboarding flow system, including first-time user flows, tutorials, role-based variants, quick start optimization, and progress tracking for the EcoComply platform.
 
+> [v2.0 UPDATE – Site-First Dynamic Module Model – 2025-01-01]
+> Complete refactoring to site-first onboarding:
+> - First upload leads to Site Context → Permit → Obligations
+> - Permit is the primary entry path for compliance setup
+> - Site creation is the first step after signup
+> - All onboarding flows start with site context
+> 
+> [v1.7 UPDATE – Added Missing Onboarding Flows – 2025-01-XX]
+> New onboarding flows added:
+> - Unlinked Evidence Management Onboarding
+> - Regulator Questions Onboarding
+> - Manual Override Onboarding
+> - Pack Access Logs Onboarding
+> - Pack Contents Onboarding
+> - Module Cascading Deactivation Onboarding
+> - Business Day Adjustment Onboarding
+> 
+> [v1.2 UPDATE – Added Module 4 and New Feature Onboarding – 2025-01-01]
+> New onboarding flows added:
+> - Module 4 (Hazardous Waste) onboarding
+> - Compliance Clock onboarding
+> - Condition-level evidence mapping onboarding
+> - Recurrence trigger configuration onboarding
+> - Permit change tracking onboarding
+> - Enhanced corrective action lifecycle onboarding
+> - Consultant Mode onboarding
 > [v1.1 UPDATE – Implementation Complete – 2025-01-29]
 > All features implemented:
 > - All onboarding routes in app/onboarding/
@@ -31,6 +58,13 @@
 7. [Consultant Onboarding](#7-consultant-onboarding)
 8. [14-Day Access Flow](#8-14-day-access-flow)
 9. [Completion Tracking](#9-completion-tracking)
+10. [Unlinked Evidence Management Onboarding](#76-unlinked-evidence-management-onboarding)
+11. [Regulator Questions Onboarding](#77-regulator-questions-onboarding)
+12. [Manual Override Onboarding](#78-manual-override-onboarding)
+13. [Pack Access Logs Onboarding](#79-pack-access-logs-onboarding)
+14. [Pack Contents Onboarding](#710-pack-contents-onboarding)
+15. [Module Cascading Deactivation Onboarding](#711-module-cascading-deactivation-onboarding)
+16. [Business Day Adjustment Onboarding](#712-business-day-adjustment-onboarding)
 10. [Skip/Back Navigation](#10-skipback-navigation)
 11. [Quick Start Flow](#11-quick-start-flow)
 12. [Time-to-Value Optimization](#12-time-to-value-optimization)
@@ -250,9 +284,10 @@ The first-time user flow guides new users through essential setup steps to get t
   - Redirect to site creation step
 
 **Step 3: Site Creation** (< 1 minute, with smart defaults)
-- **Route:** `/onboarding/site-creation`
-- **File:** `app/(dashboard)/onboarding/site-creation/page.tsx`
-- **Components:** `SiteCreationPage`, `SiteCreationForm`, `SiteNameInput`, `AddressInput`, `RegulatorSelector`, `WaterCompanyInput`, `GeolocationButton`
+- **Route:** `/onboarding/site-setup`
+- **File:** `app/onboarding/site-setup/page.tsx`
+- **Components:** `SiteSetupPage`, `SiteCreationForm`, `SiteNameInput`, `AddressInput`, `RegulatorSelector`, `WaterCompanyInput`, `GeolocationButton`
+- **Key Change:** Site creation is the first step after signup, establishing site context before any module access
 - **Fields:**
   - Site name (required, min 2 characters, max 100 characters)
   - Site address (required, structured address fields or single text input)
@@ -921,13 +956,16 @@ The multi-site setup flow helps users add additional sites and understand multi-
 
 ## 6.1 Flow Overview
 
-The module activation flow guides users through activating additional modules (Module 2: Trade Effluent, Module 3: MCPD/Generators).
+The module activation flow guides users through activating additional modules (Module 2: Trade Effluent, Module 3: MCPD/Generators, Module 4: Hazardous Waste).
 
 ## 6.2 Flow Sequence
 
 **Step 1: Cross-Sell Prompt**
-- **Trigger:** System detects trigger (e.g., effluent keyword in permit, run-hour data)
-- **Content:** "We noticed you might benefit from Module 2: Trade Effluent"
+- **Trigger:** System detects trigger (e.g., effluent keyword in permit, run-hour data, waste-related keywords)
+- **Content:** Module-specific prompt:
+  - Module 2: "We noticed you might benefit from Module 2: Trade Effluent"
+  - Module 3: "We noticed you might benefit from Module 3: MCPD/Generators"
+  - Module 4: "We noticed you might benefit from Module 4: Hazardous Waste Chain of Custody"
 - **Visual:** Cross-sell prompt modal (non-intrusive)
 - **Actions:** "Learn more", "Activate now", "Not now"
 - **Duration:** ~15 seconds
@@ -972,17 +1010,834 @@ The module activation flow guides users through activating additional modules (M
 - **Activation Button:** Prominent CTA
 - **Module Setup Wizard:** Module-specific steps
 
+## 6.3 Module 4 Specific Onboarding
+
+> [v1.2 UPDATE – Module 4 Onboarding – 2025-01-01]
+
+**Step 1: Module 4 Introduction**
+- **Content:** "Module 4: Hazardous Waste Chain of Custody helps you track waste streams and maintain complete chain of custody documentation"
+- **Visual:** Module 4 overview card
+- **Duration:** ~20 seconds
+
+**Step 2: Waste Stream Classification Tutorial**
+- **Content:** "Classify your waste streams using EWC codes"
+- **Visual:** Waste stream creation form with EWC code selector
+- **Interactive:** User can create a sample waste stream
+- **Duration:** ~1 minute
+
+**Step 3: Consignment Note Creation Tutorial**
+- **Content:** "Create consignment notes with validation"
+- **Visual:** Consignment note creation form
+- **Interactive:** User can create a sample consignment note
+- **Duration:** ~1 minute
+
+**Step 4: Chain of Custody Overview**
+- **Content:** "Track complete chain of custody from creation to end-point proof"
+- **Visual:** Chain of custody timeline
+- **Duration:** ~30 seconds
+
+**Step 5: Validation Rules Introduction**
+- **Content:** "Configure validation rules to prevent errors before submission"
+- **Visual:** Validation rules configuration interface
+- **Duration:** ~30 seconds
+
+**Step 6: Completion**
+- **Content:** "Module 4 setup complete!"
+- **Visual:** Success message
+- **Actions:** "Go to Module 4 Dashboard" button
+- **Duration:** ~10 seconds
+
 ---
 
-# 7. Consultant Onboarding
+# 7. New Feature Onboarding
+
+> [v1.2 UPDATE – New Feature Onboarding – 2025-01-01]
+
+## 7.1 Compliance Clock Onboarding
+
+**Trigger:** User first views compliance clocks dashboard
+
+**Step 1: Compliance Clock Introduction**
+- **Content:** "Compliance Clock provides real-time countdown to every compliance risk"
+- **Visual:** Compliance clock dashboard overview
+- **Duration:** ~20 seconds
+
+**Step 2: Clock Status Explanation**
+- **Content:** "Red/Amber/Green indicators show criticality of upcoming deadlines"
+- **Visual:** Clock status indicators with examples
+- **Duration:** ~15 seconds
+
+**Step 3: Clock Navigation**
+- **Content:** "Click on any clock to view details and related entity"
+- **Visual:** Clock detail view demonstration
+- **Interactive:** User can click on a clock
+- **Duration:** ~20 seconds
+
+## 7.2 Condition-Level Evidence Mapping Onboarding (Module 1)
+
+**Trigger:** Admin/Staff first configures evidence rules
+
+**Step 1: Evidence Rules Introduction**
+- **Content:** "Configure evidence rules per condition to ensure completeness"
+- **Visual:** Evidence rules configuration interface
+- **Duration:** ~20 seconds
+
+**Step 2: Completeness Scoring Explanation**
+- **Content:** "Completeness scoring automatically validates evidence coverage"
+- **Visual:** Completeness score indicator
+- **Duration:** ~15 seconds
+
+## 7.3 Recurrence Trigger Configuration Onboarding (Module 1)
+
+**Trigger:** Admin/Staff first configures recurrence trigger
+
+**Step 1: Recurrence Trigger Introduction**
+- **Content:** "Configure dynamic recurrence triggers for obligations"
+- **Visual:** Recurrence trigger configuration interface
+- **Duration:** ~20 seconds
+
+**Step 2: Trigger Types Explanation**
+- **Content:** "Choose from Dynamic, Event-based, or Conditional triggers"
+- **Visual:** Trigger type selector with examples
+- **Duration:** ~20 seconds
+
+## 7.4 Permit Change Tracking Onboarding (Module 1)
+
+**Trigger:** User first uploads permit version
+
+**Step 1: Permit Versioning Introduction**
+- **Content:** "Track permit changes with automatic version comparison"
+- **Visual:** Permit versions list
+- **Duration:** ~20 seconds
+
+**Step 2: Version Comparison Tutorial**
+- **Content:** "Compare versions to see what changed"
+- **Visual:** Version comparison view
+- **Interactive:** User can compare versions
+- **Duration:** ~30 seconds
+
+**Step 3: Impact Analysis Explanation**
+- **Content:** "View impact analysis to see how changes affect obligations"
+- **Visual:** Impact analysis view
+- **Duration:** ~20 seconds
+
+## 7.5 Corrective Action Lifecycle Onboarding (Modules 2 & 4)
+
+---
+
+## 7.6 Unlinked Evidence Management Onboarding
+
+> [v1.7 UPDATE – Unlinked Evidence Management Onboarding – 2025-01-XX]
+
+### 7.6.1 Tutorial Overview
+
+**Purpose:** Guide users on managing unlinked evidence and understanding enforcement status
+
+**Trigger:** User uploads evidence without linking to obligation, or navigates to unlinked evidence page
+
+**Duration:** 3-5 minutes
+
+**Prerequisites:** Evidence uploaded, user has Staff/Admin/Owner role
+
+---
+
+### 7.6.2 Tutorial Steps
+
+**Step 1: Introduction to Unlinked Evidence**
+1. **System:** Displays tooltip on unlinked evidence widget (if evidence exists)
+2. **Message:** "Evidence must be linked to obligations within 7 days. Let's learn how to manage unlinked evidence."
+3. **User:** Clicks "Start Tutorial" or navigates to unlinked evidence page
+
+**Step 2: Understanding Enforcement Status**
+1. **System:** Highlights enforcement status badges
+2. **System:** Explains each status:
+   - PENDING_LINK: Within 7-day grace period
+   - UNLINKED_WARNING: 7-13 days (warning period)
+   - UNLINKED_CRITICAL: 14-29 days (critical period)
+   - UNLINKED_ARCHIVED: 30+ days (archived, requires restoration)
+3. **User:** Clicks "Next"
+
+**Step 3: Grace Period Countdown**
+1. **System:** Highlights grace period countdown component
+2. **System:** Explains:
+   - 7-day grace period starts when evidence is uploaded
+   - Visual progress bar shows days remaining/overdue
+   - Color-coded: Green (within grace), Amber (warning), Red (critical)
+3. **User:** Clicks "Next"
+
+**Step 4: Linking Evidence to Obligation**
+1. **System:** Highlights "Link to Obligation" button
+2. **System:** Guides user through linking process:
+   - Click "Link to Obligation"
+   - Select obligation from dropdown
+   - Confirm link
+3. **User:** Completes linking action
+4. **System:** Shows success message: "Evidence linked successfully. Enforcement status updated."
+
+**Step 5: Bulk Linking (Optional)**
+1. **System:** Explains bulk linking feature (if multiple items)
+2. **System:** Guides user through:
+   - Select multiple evidence items
+   - Click "Bulk Link"
+   - Select target obligation
+3. **User:** Completes bulk linking (optional)
+
+**Step 6: Evidence Exemption (Admin/Owner only)**
+1. **If** user is Admin/Owner:
+   - **System:** Highlights "Request Exemption" button
+   - **System:** Explains exemption process:
+     - When to use exemptions
+     - Exemption types (Temporary Evidence, Enforcement Exempt)
+     - Audit trail requirements
+   - **User:** Views exemption modal (doesn't need to submit)
+
+**Step 7: Completion**
+1. **System:** Displays completion message
+2. **System:** Shows next steps:
+   - "Continue linking evidence to obligations"
+   - "Monitor grace period countdowns"
+   - "Review unlinked evidence regularly"
+3. **User:** Clicks "Got it"
+
+---
+
+### 7.6.3 UI Elements
+
+**Tooltips:**
+- Unlinked evidence widget tooltip
+- Enforcement status badge tooltips
+- Grace period countdown tooltip
+- Link button tooltip
+
+**Highlighted Elements:**
+- Unlinked evidence widget
+- Enforcement status badges
+- Grace period countdown
+- Link to Obligation button
+- Bulk Link button (if applicable)
+- Request Exemption button (Admin/Owner only)
+
+**Completion Badge:**
+- "Unlinked Evidence Management" badge
+- Added to user profile
+
+---
+
+## 7.7 Regulator Questions Onboarding
+
+> [v1.7 UPDATE – Regulator Questions Onboarding – 2025-01-XX]
+
+### 7.7.1 Tutorial Overview
+
+**Purpose:** Guide users on handling regulator questions/challenges using the state machine
+
+**Trigger:** User navigates to regulator questions page, or first regulator question created
+
+**Duration:** 5-7 minutes
+
+**Prerequisites:** User has site access
+
+---
+
+### 7.7.2 Tutorial Steps
+
+**Step 1: Introduction to Regulator Questions**
+1. **System:** Displays tooltip on regulator questions page
+2. **Message:** "Regulator questions require timely responses. Let's learn how to manage them using our state machine."
+3. **User:** Clicks "Start Tutorial" or creates first question
+
+**Step 2: Understanding the State Machine**
+1. **System:** Highlights state machine diagram
+2. **System:** Explains each state:
+   - OPEN: Question raised, awaiting response
+   - RESPONSE_SUBMITTED: Response submitted, awaiting acknowledgment
+   - RESPONSE_ACKNOWLEDGED: Regulator acknowledged response
+   - FOLLOW_UP_REQUIRED: Additional information needed
+   - CLOSED: Question resolved
+   - RESPONSE_OVERDUE: Response deadline passed
+3. **System:** Explains state transitions with visual arrows
+4. **User:** Clicks "Next"
+
+**Step 3: Response Deadline Management**
+1. **System:** Highlights response deadline countdown
+2. **System:** Explains:
+   - Default deadline: 28 days
+   - URGENT: 7 days
+   - INFORMAL: 60 days
+   - Deadline status badges (On Time/Approaching/Overdue)
+3. **User:** Clicks "Next"
+
+**Step 4: Creating a Regulator Question**
+1. **System:** Guides user through question creation:
+   - Click "Create Question"
+   - Select question type
+   - Enter question text
+   - Set urgency level
+   - Link to related obligation (optional)
+2. **User:** Creates question (or views existing)
+3. **System:** Shows state machine with OPEN state highlighted
+
+**Step 5: Submitting a Response**
+1. **System:** Highlights "Submit Response" button
+2. **System:** Guides user through:
+   - Enter response text
+   - Attach evidence (if applicable)
+   - Review response
+   - Submit response
+3. **User:** Submits response (or views existing)
+4. **System:** Shows state transition to RESPONSE_SUBMITTED
+
+**Step 6: State Transitions (Admin/Owner)**
+1. **If** user is Admin/Owner:
+   - **System:** Explains state transition buttons:
+     - "Mark as Acknowledged" (if RESPONSE_SUBMITTED)
+     - "Request Follow-Up" (if RESPONSE_ACKNOWLEDGED)
+     - "Close Question" (if appropriate)
+   - **User:** Views state transitions (doesn't need to execute)
+
+**Step 7: Overdue Escalation**
+1. **System:** Explains overdue escalation:
+   - Automatic state transition to RESPONSE_OVERDUE
+   - Escalation to Admin/Owner
+   - Critical alerts
+2. **System:** Shows example of overdue question (if exists)
+
+**Step 8: Completion**
+1. **System:** Displays completion message
+2. **System:** Shows next steps:
+   - "Monitor response deadlines"
+   - "Respond to questions promptly"
+   - "Use state machine to track progress"
+3. **User:** Clicks "Got it"
+
+---
+
+### 7.7.3 UI Elements
+
+**Tooltips:**
+- State machine diagram tooltips
+- State transition button tooltips
+- Response deadline countdown tooltip
+
+**Highlighted Elements:**
+- State machine diagram
+- Current state node
+- Available transition arrows
+- Response deadline countdown
+- Submit Response button
+- State transition buttons (Admin/Owner)
+
+**Completion Badge:**
+- "Regulator Questions Management" badge
+- Added to user profile
+
+---
+
+## 7.8 Manual Override Onboarding
+
+> [v1.7 UPDATE – Manual Override Onboarding – 2025-01-XX]
+
+### 7.8.1 Tutorial Overview
+
+**Purpose:** Guide Admin/Owner users on manual override capabilities and audit trail requirements
+
+**Trigger:** Admin/Owner attempts to edit system-determined value, or navigates to override context
+
+**Duration:** 4-6 minutes
+
+**Prerequisites:** Admin or Owner role
+
+---
+
+### 7.8.2 Tutorial Steps
+
+**Step 1: Introduction to Manual Overrides**
+1. **System:** Displays tooltip when override context detected
+2. **Message:** "As an Admin/Owner, you can override system-determined values. Let's learn how to do this properly with audit trail requirements."
+3. **User:** Clicks "Start Tutorial" or attempts override
+
+**Step 2: Understanding Override Types**
+1. **System:** Explains override types:
+   - Obligation Edit Override
+   - Evidence Exemption Override
+   - Deadline Adjustment Override
+   - Compliance Status Override
+   - Schedule Override
+2. **System:** Shows examples of each type
+3. **User:** Clicks "Next"
+
+**Step 3: Override Reason Requirement**
+1. **System:** Highlights override reason textarea
+2. **System:** Explains:
+   - Minimum 10 characters required
+   - Maximum 500 characters
+   - Reason is logged in audit trail
+   - Reason cannot be empty
+3. **System:** Shows example reasons
+4. **User:** Clicks "Next"
+
+**Step 4: Audit Trail Notice**
+1. **System:** Highlights audit trail notice banner
+2. **System:** Explains:
+   - All overrides are logged
+   - Includes user name and timestamp
+   - Includes previous and new values
+   - Includes override reason
+   - Visible in override history
+3. **System:** Shows audit trail preview
+4. **User:** Clicks "Next"
+
+**Step 5: Performing an Override**
+1. **System:** Guides user through override process:
+   - Select entity to override
+   - Enter override reason (min 10 chars)
+   - Make override changes
+   - Review audit trail preview
+   - Confirm override
+2. **User:** Performs override (or views example)
+3. **System:** Shows success message with audit trail confirmation
+
+**Step 6: Viewing Override History**
+1. **System:** Highlights "View Override History" button
+2. **System:** Guides user through:
+   - Navigate to entity detail page
+   - Click "View Override History"
+   - View chronological list of overrides
+   - Export override history (if needed)
+3. **User:** Views override history
+
+**Step 7: Override Restrictions**
+1. **System:** Explains override restrictions:
+   - Some fields cannot be overridden (subjective flag, confidence score)
+   - Compliance status has partial restrictions
+   - Override history is immutable
+2. **System:** Shows examples of non-overridable fields
+
+**Step 8: Completion**
+1. **System:** Displays completion message
+2. **System:** Shows next steps:
+   - "Always provide clear override reasons"
+   - "Review override history regularly"
+   - "Understand audit trail implications"
+3. **User:** Clicks "Got it"
+
+---
+
+### 7.8.3 UI Elements
+
+**Tooltips:**
+- Override button tooltips
+- Override reason textarea tooltip
+- Audit trail notice tooltip
+- Override history button tooltip
+
+**Highlighted Elements:**
+- Override modal
+- Override reason textarea
+- Character count indicator
+- Audit trail notice banner
+- Audit trail preview
+- Override history section
+
+**Completion Badge:**
+- "Manual Override Management" badge
+- Added to user profile
+
+---
+
+## 7.9 Pack Access Logs Onboarding
+
+> [v1.7 UPDATE – Pack Access Logs Onboarding – 2025-01-XX]
+
+### 7.9.1 Tutorial Overview
+
+**Purpose:** Guide users on viewing and managing pack access logs
+
+**Trigger:** User navigates to pack detail page with secure link generated
+
+**Duration:** 2-3 minutes
+
+**Prerequisites:** Pack exists, secure link generated
+
+---
+
+### 7.9.2 Tutorial Steps
+
+**Step 1: Introduction to Access Logs**
+1. **System:** Displays tooltip on Access Logs tab
+2. **Message:** "Access logs track who has viewed or downloaded your pack. Let's explore this feature."
+3. **User:** Clicks "Start Tutorial" or opens Access Logs tab
+
+**Step 2: Understanding Access Logs**
+1. **System:** Highlights access logs table
+2. **System:** Explains log information:
+   - Accessor email (if provided)
+   - IP address
+   - Access timestamps
+   - View count
+   - Download count
+   - Pages viewed
+3. **User:** Clicks "Next"
+
+**Step 3: Filtering Access Logs**
+1. **System:** Highlights filter bar
+2. **System:** Guides user through:
+   - Date range filter
+   - Accessor email filter
+   - IP address filter
+3. **User:** Applies filters (optional)
+
+**Step 4: Access Timeline Visualization**
+1. **System:** Highlights access timeline chart
+2. **System:** Explains:
+   - Timeline shows access frequency
+   - Peak access times
+   - Access patterns
+3. **User:** Views timeline chart
+
+**Step 5: Exporting Access Logs**
+1. **System:** Highlights "Export Logs" button
+2. **System:** Guides user through:
+   - Click "Export Logs"
+   - Select format (PDF/CSV/JSON)
+   - Download file
+3. **User:** Exports logs (optional)
+
+**Step 6: Completion**
+1. **System:** Displays completion message
+2. **System:** Shows next steps:
+   - "Monitor pack access regularly"
+   - "Export logs for audit purposes"
+   - "Review access patterns"
+3. **User:** Clicks "Got it"
+
+---
+
+### 7.9.3 UI Elements
+
+**Tooltips:**
+- Access Logs tab tooltip
+- Filter tooltips
+- Export button tooltip
+
+**Highlighted Elements:**
+- Access Logs tab
+- Access logs table
+- Filter bar
+- Access timeline chart
+- Export button
+
+**Completion Badge:**
+- "Pack Access Logs" badge
+- Added to user profile
+
+---
+
+## 7.10 Pack Contents Onboarding
+
+> [v1.7 UPDATE – Pack Contents Onboarding – 2025-01-XX]
+
+### 7.10.1 Tutorial Overview
+
+**Purpose:** Guide users on viewing pack contents with version-locked snapshots
+
+**Trigger:** User navigates to pack detail page
+
+**Duration:** 3-4 minutes
+
+**Prerequisites:** Pack exists, pack generated
+
+---
+
+### 7.10.2 Tutorial Steps
+
+**Step 1: Introduction to Pack Contents**
+1. **System:** Displays tooltip on Contents tab
+2. **Message:** "Pack contents show version-locked snapshots of evidence and obligations. Let's explore this feature."
+3. **User:** Clicks "Start Tutorial" or opens Contents tab
+
+**Step 2: Understanding Version-Locked Snapshots**
+1. **System:** Highlights version locked badge
+2. **System:** Explains:
+   - Snapshots are immutable
+   - Preserve state at pack generation time
+   - Cannot be modified after pack creation
+   - Include file hash for integrity verification
+3. **User:** Clicks "Next"
+
+**Step 3: Viewing Evidence Contents**
+1. **System:** Highlights evidence contents list
+2. **System:** Explains evidence snapshot information:
+   - File name, type, size
+   - Upload date, uploader
+   - File hash (for integrity)
+   - Included at timestamp
+3. **User:** Views evidence snapshots
+
+**Step 4: Viewing Obligation Contents**
+1. **System:** Highlights obligation contents (if applicable)
+2. **System:** Explains obligation snapshot information:
+   - Obligation title, category, frequency
+   - Deadline date
+   - Compliance status
+   - Included at timestamp
+3. **User:** Views obligation snapshots
+
+**Step 5: Contents Summary Breakdowns**
+1. **System:** Highlights contents summary section
+2. **System:** Explains breakdowns:
+   - Evidence breakdown by type and module
+   - Obligation breakdown by status and module
+   - Total counts
+3. **User:** Views summary breakdowns
+
+**Step 6: Exporting Pack Contents**
+1. **System:** Highlights "Export Contents" button
+2. **System:** Guides user through:
+   - Click "Export Contents"
+   - Select format (PDF/CSV/JSON)
+   - Download file
+3. **User:** Exports contents (optional)
+
+**Step 7: Integrity Verification**
+1. **System:** Highlights file hash display
+2. **System:** Explains:
+   - File hash (SHA-256) for integrity verification
+   - Can verify file hasn't been modified
+   - Hash verification tool available
+3. **User:** Views file hash (optional)
+
+**Step 8: Completion**
+1. **System:** Displays completion message
+2. **System:** Shows next steps:
+   - "Review pack contents regularly"
+   - "Export contents for audit purposes"
+   - "Verify file integrity when needed"
+3. **User:** Clicks "Got it"
+
+---
+
+### 7.10.3 UI Elements
+
+**Tooltips:**
+- Contents tab tooltip
+- Version locked badge tooltip
+- File hash tooltip
+- Export button tooltip
+
+**Highlighted Elements:**
+- Contents tab
+- Version locked badges
+- Evidence snapshot cards
+- Obligation snapshot cards
+- Contents summary section
+- Export button
+
+**Completion Badge:**
+- "Pack Contents Management" badge
+- Added to user profile
+
+---
+
+## 7.11 Module Cascading Deactivation Onboarding
+
+> [v1.7 UPDATE – Module Cascading Deactivation Onboarding – 2025-01-XX]
+
+### 7.11.1 Tutorial Overview
+
+**Purpose:** Guide Admin/Owner users on module deactivation with cascading warnings
+
+**Trigger:** Admin/Owner attempts to deactivate Module 1
+
+**Duration:** 3-4 minutes
+
+**Prerequisites:** Admin or Owner role, Module 1 active, dependent modules active
+
+---
+
+### 7.11.2 Tutorial Steps
+
+**Step 1: Introduction to Module Deactivation**
+1. **System:** Displays tooltip when deactivation attempted
+2. **Message:** "Deactivating Module 1 will also deactivate dependent modules. Let's understand the cascading deactivation process."
+3. **User:** Clicks "Start Tutorial" or views deactivation modal
+
+**Step 2: Understanding Dependencies**
+1. **System:** Highlights dependency visualization
+2. **System:** Explains:
+   - Module 1 is required for Module 2 and Module 3
+   - Visual flow: Module 1 → Module 2, Module 1 → Module 3
+   - Dependency relationships
+3. **User:** Clicks "Next"
+
+**Step 3: Cascading Warning Display**
+1. **System:** Highlights cascading warning modal
+2. **System:** Explains:
+   - Warning message
+   - Dependent modules list
+   - Each dependent module shown with status
+3. **User:** Reviews dependent modules
+
+**Step 4: Data Preservation Notice**
+1. **System:** Highlights data preservation notice
+2. **System:** Explains:
+   - All data is preserved (not deleted)
+   - Reactivating Module 1 will restore access
+   - No data loss occurs
+3. **User:** Clicks "Next"
+
+**Step 5: Confirmation Requirement**
+1. **System:** Highlights confirmation checkbox
+2. **System:** Explains:
+   - Must check to proceed
+   - Confirms understanding of cascading deactivation
+   - Required for safety
+3. **User:** Checks confirmation (or views example)
+
+**Step 6: Deactivation Process**
+1. **System:** Explains deactivation process:
+   - Primary module deactivated
+   - Dependent modules deactivated
+   - Data preserved
+   - Audit trail logged
+2. **System:** Shows success notification
+
+**Step 7: Reactivation**
+1. **System:** Explains reactivation:
+   - Can reactivate Module 1
+   - Dependent modules automatically restored
+   - All data accessible again
+2. **System:** Shows reactivation button (if applicable)
+
+**Step 8: Completion**
+1. **System:** Displays completion message
+2. **System:** Shows next steps:
+   - "Understand module dependencies before deactivating"
+   - "Data is always preserved"
+   - "Reactivate modules to restore access"
+3. **User:** Clicks "Got it"
+
+---
+
+### 7.11.3 UI Elements
+
+**Tooltips:**
+- Deactivate button tooltip
+- Dependency visualization tooltip
+- Confirmation checkbox tooltip
+
+**Highlighted Elements:**
+- Deactivate button
+- Cascading warning modal
+- Dependency visualization
+- Dependent modules list
+- Data preservation notice
+- Confirmation checkbox
+
+**Completion Badge:**
+- "Module Management" badge
+- Added to user profile
+
+---
+
+## 7.12 Business Day Adjustment Onboarding
+
+> [v1.7 UPDATE – Business Day Adjustment Onboarding – 2025-01-XX]
+
+### 7.12.1 Tutorial Overview
+
+**Purpose:** Guide users on configuring business day adjustments for deadlines
+
+**Trigger:** User navigates to site settings, or deadline falls on weekend/holiday
+
+**Duration:** 2-3 minutes
+
+**Prerequisites:** Admin or Owner role, site access
+
+---
+
+### 7.12.2 Tutorial Steps
+
+**Step 1: Introduction to Business Day Adjustment**
+1. **System:** Displays tooltip on business day toggle
+2. **Message:** "Business day adjustment moves deadlines from weekends/holidays to previous working day. Let's configure this setting."
+3. **User:** Clicks "Start Tutorial" or views business day settings
+
+**Step 2: Understanding Business Days**
+1. **System:** Highlights business day info section
+2. **System:** Explains:
+   - Business days exclude weekends (Saturday, Sunday)
+   - Business days exclude UK bank holidays
+   - Setting applies to all deadlines for the site
+3. **User:** Clicks "Next"
+
+**Step 3: Configuring Business Day Adjustment**
+1. **System:** Highlights business day toggle
+2. **System:** Guides user through:
+   - Toggle switch: "Adjust deadlines to business days"
+   - Help text explains functionality
+   - Save button
+3. **User:** Toggles setting (or views example)
+
+**Step 4: Deadline Recalculation**
+1. **System:** Explains:
+   - Existing deadlines recalculated when setting enabled
+   - New deadlines automatically adjusted
+   - Weekend/holiday deadlines moved to previous working day
+2. **System:** Shows example deadline adjustment
+
+**Step 5: Completion**
+1. **System:** Displays completion message
+2. **System:** Shows next steps:
+   - "Business day adjustment applies to all deadlines"
+   - "Deadlines automatically adjusted when enabled"
+   - "Review deadline dates after enabling"
+3. **User:** Clicks "Got it"
+
+---
+
+### 7.12.3 UI Elements
+
+**Tooltips:**
+- Business day toggle tooltip
+- Business day info tooltip
+- Help text tooltip
+
+**Highlighted Elements:**
+- Business day toggle switch
+- Business day info section
+- Help text
+- Save button
+
+**Completion Badge:**
+- "Business Day Configuration" badge
+- Added to user profile
+
+---
+
+**Trigger:** User first encounters corrective action
+
+**Step 1: Corrective Action Introduction**
+- **Content:** "Corrective actions guide you through breach resolution"
+- **Visual:** Corrective action lifecycle view
+- **Duration:** ~20 seconds
+
+**Step 2: Lifecycle Stages Explanation**
+- **Content:** "Follow the lifecycle: Trigger → Investigation → Actions → Evidence → Closure"
+- **Visual:** Lifecycle stages with examples
+- **Duration:** ~30 seconds
+
+---
+
+# 8. Consultant Onboarding
 
 > [v1 UPDATE – Consultant Onboarding v1.0 – 2024-12-27]
 
-## 7.1 Flow Overview
+## 8.1 Flow Overview
 
 Consultant onboarding is optimized for users who manage multiple clients.
 
-## 7.2 Flow Sequence
+## 8.2 Flow Sequence
 
 **Step 1: Consultant Signup**
 - **Content:** "Are you a consultant managing multiple clients?"
@@ -1032,13 +1887,13 @@ Consultant onboarding is optimized for users who manage multiple clients.
 
 ---
 
-# 8. 14-Day Access Flow
+# 9. 14-Day Access Flow
 
-## 8.1 Flow Overview
+## 9.1 Flow Overview
 
 The 14-day access flow allows admins to pre-populate data before giving users access.
 
-## 8.2 Flow Sequence
+## 9.2 Flow Sequence
 
 **Step 1: Admin Creates Account**
 - **Content:** Admin creates user account
@@ -1085,9 +1940,9 @@ The 14-day access flow allows admins to pre-populate data before giving users ac
 
 ---
 
-# 9. Completion Tracking
+# 10. Completion Tracking
 
-## 9.1 Completion Criteria
+## 10.1 Completion Criteria
 
 ### First-Time User
 - ✅ Signup completed
@@ -1112,7 +1967,7 @@ The 14-day access flow allows admins to pre-populate data before giving users ac
 - ✅ Module activated
 - ✅ Module setup completed
 
-## 9.2 Database Schema
+## 10.2 Database Schema
 
 ### user_onboarding_progress Table
 
@@ -1135,7 +1990,7 @@ CREATE INDEX idx_user_onboarding_progress_flow_type ON user_onboarding_progress(
 CREATE INDEX idx_user_onboarding_progress_step ON user_onboarding_progress(step);
 ```
 
-## 9.3 API Endpoints
+## 10.3 API Endpoints
 
 ### GET /api/v1/users/{userId}/onboarding-progress
 

@@ -66,7 +66,7 @@ export default function ReviewQueuePage() {
     pagination: any;
   }>({
     queryKey: ['review-queue', selectedStatus, selectedType],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       if (selectedStatus) params.append('filter[review_status]', selectedStatus);
       if (selectedType) params.append('filter[review_type]', selectedType);

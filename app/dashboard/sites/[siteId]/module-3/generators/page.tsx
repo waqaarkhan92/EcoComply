@@ -43,7 +43,7 @@ export default function GeneratorsPage() {
 
   const { data: generatorsData, isLoading, error } = useQuery<GeneratorsResponse>({
     queryKey: ['module-3-generators', siteId, cursor],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       // Get site's document IDs first to filter generators
       const params = new URLSearchParams();
       params.append('filter[site_id]', siteId);

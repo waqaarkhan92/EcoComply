@@ -25,7 +25,7 @@ interface ClientsResponse {
 export default function ConsultantClientsPage() {
   const { data: clientsData, isLoading } = useQuery<ClientsResponse>({
     queryKey: ['consultant-clients'],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<ClientsResponse>('/consultant/clients');
     },
   });

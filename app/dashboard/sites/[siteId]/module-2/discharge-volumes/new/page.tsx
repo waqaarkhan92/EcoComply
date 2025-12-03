@@ -45,7 +45,7 @@ export default function NewDischargeVolumePage() {
   // Fetch consents for this site
   const { data: consentsData, isLoading: consentsLoading } = useQuery<ConsentsResponse>({
     queryKey: ['module-2-consents', siteId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       params.append('filter[site_id]', siteId);
       params.append('limit', '100');

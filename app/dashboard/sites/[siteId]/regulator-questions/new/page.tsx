@@ -23,7 +23,7 @@ export default function NewRegulatorQuestionPage() {
     mutationFn: async (data: any) => {
       return apiClient.post('/regulator-questions', data);
     },
-    onSuccess: (response) => {
+    onSuccess: (response: any) => {
       const questionId = response.data?.id;
       if (questionId) {
         router.push(`/dashboard/sites/${siteId}/regulator-questions/${questionId}`);

@@ -26,7 +26,7 @@ export default function ProfilePage() {
 
   const { data: profileData } = useQuery<{ data: UserProfile }>({
     queryKey: ['user-profile', user?.id],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: UserProfile }>(`/users/${user?.id}`);
     },
     enabled: !!user?.id,

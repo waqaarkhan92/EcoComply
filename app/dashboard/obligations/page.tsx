@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
@@ -41,14 +41,38 @@ export default function ObligationsPage() {
   });
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
+  // Reset cursor when search query or filters change
+  useEffect(() => {
+    setCursor(undefined);
+  }, [searchQuery, filters]);
+
+  // Fetch sites for dropdown
+  const { data: sitesData } = useQuery<{ data: Array<{ id: string; site_name: string }> }>({
+    queryKey: ['sites'],
+    queryFn: async (): Promise<any> => {
+      return apiClient.get<{ data: Array<{ id: string; site_name: string }> }>('/sites');
+    },
+  });
+
+  // Fetch documents for dropdown (filtered by selected site if applicable)
+  const { data: documentsData } = useQuery<{ data: Array<{ id: string; document_name: string; document_type: string }> }>({
+    queryKey: ['documents', filters.site_id],
+    queryFn: async (): Promise<any> => {
+      const params = new URLSearchParams();
+      if (filters.site_id) params.append('site_id', filters.site_id);
+      return apiClient.get<{ data: Array<{ id: string; document_name: string; document_type: string }> }>(`/documents?${params.toString()}`);
+    },
+  });
+
   const { data, isLoading, error } = useQuery<ObligationsResponse>({
-    queryKey: ['obligations', filters, cursor],
-    queryFn: async () => {
+    queryKey: ['obligations', filters, searchQuery, cursor],
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       if (filters.site_id) params.append('site_id', filters.site_id);
       if (filters.document_id) params.append('document_id', filters.document_id);
       if (filters.status) params.append('status', filters.status);
       if (filters.category) params.append('category', filters.category);
+      if (searchQuery) params.append('search', searchQuery);
       if (cursor) params.append('cursor', cursor);
       params.append('limit', '20');
 
@@ -59,6 +83,8 @@ export default function ObligationsPage() {
   const obligations = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
+  const sites = sitesData?.data || [];
+  const documents = documentsData?.data || [];
 
   const getDaysUntilDeadline = (deadlineDate: string | null): number | null => {
     if (!deadlineDate) return null;
@@ -113,11 +139,15 @@ export default function ObligationsPage() {
             </label>
             <select
               value={filters.site_id}
-              onChange={(e) => setFilters({ ...filters, site_id: e.target.value })}
+              onChange={(e) => setFilters({ ...filters, site_id: e.target.value, document_id: '' })}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="">All Sites</option>
-              {/* TODO: Fetch sites from API */}
+              {sites.map((site) => (
+                <option key={site.id} value={site.id}>
+                  {site.site_name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -166,9 +196,14 @@ export default function ObligationsPage() {
               value={filters.document_id}
               onChange={(e) => setFilters({ ...filters, document_id: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              disabled={documents.length === 0}
             >
               <option value="">All Documents</option>
-              {/* TODO: Fetch documents from API */}
+              {documents.map((doc) => (
+                <option key={doc.id} value={doc.id}>
+                  {doc.document_name} ({doc.document_type})
+                </option>
+              ))}
             </select>
           </div>
         </div>

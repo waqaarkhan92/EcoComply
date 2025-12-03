@@ -96,12 +96,29 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";  -- Trigram similarity for fuzzy searc
 **Core Tables (from Canonical Dictionary):**
 - **Core Entities:** `companies`, `sites`, `users`, `user_roles`, `user_site_assignments`
 - **Module Registry:** `modules` (see Canonical Dictionary Section C.4 - Module Registry Table)
-- **Module 1 (Environmental Permits):** `documents`, `document_site_assignments`, `obligations`, `evidence_items`, `schedules`, `deadlines`, `obligation_evidence_links`, `audit_packs`
-- **Module 2 (Trade Effluent):** `parameters`, `lab_results`, `exceedances`, `discharge_volumes`
+- **Module 1 (Environmental Permits):** `documents`, `document_site_assignments`, `obligations`, `evidence_items`, `schedules`, `deadlines`, `obligation_evidence_links`, `audit_packs`, `permit_versions`, `obligation_versions`, `enforcement_notices`, `compliance_decisions`, `permit_workflows`, `permit_variations`, `permit_surrenders`, `condition_evidence_rules`, `condition_permissions`, `evidence_completeness_scores`
+  - **Note:** Condition-level evidence mapping stored in `obligations.evidence_rules` (JSONB) and `condition_evidence_rules` table
+  - **Note:** Evidence versioning tracked in `evidence_items.version_history` (JSONB)
+  - **Note:** Permit change tracking via `permit_versions` and `obligation_versions` tables
+  - **Note:** Permit lifecycle workflows (variations, renewals, surrenders) tracked in `permit_workflows`, `permit_variations`, and `permit_surrenders` tables
+  - **Note:** Condition-level permissions tracked in `condition_permissions` table
+  - **Note:** Evidence completeness scoring tracked in `evidence_completeness_scores` table
+- **Module 2 (Trade Effluent):** `parameters`, `lab_results`, `exceedances`, `discharge_volumes`, `consent_states`, `corrective_actions`, `sampling_logistics`, `monthly_statements`, `statement_reconciliations`, `reconciliation_discrepancies`
   - **Note:** Trade effluent consents are stored as `documents` with `document_type = 'TRADE_EFFLUENT_CONSENT'`
-- **Module 3 (MCPD/Generators):** `generators`, `run_hour_records`, `stack_tests`, `maintenance_records`, `aer_documents`
+  - **Note:** Consent state machine tracked in `consent_states` table
+  - **Note:** Sampling logistics workflow tracked in `sampling_logistics` table
+  - **Note:** Monthly statement reconciliation tracked in `monthly_statements`, `statement_reconciliations`, and `reconciliation_discrepancies` tables
+- **Module 3 (MCPD/Generators):** `generators`, `run_hour_records`, `stack_tests`, `maintenance_records`, `aer_documents`, `runtime_monitoring`, `exemptions`, `compliance_clocks`, `fuel_usage_logs`, `sulphur_content_reports`
   - **Note:** MCPD registrations are stored as `documents` with `document_type = 'MCPD_REGISTRATION'`
-- **System Tables:** `notifications`, `background_jobs`, `dead_letter_queue`, `audit_logs`, `regulator_questions`, `review_queue_items`, `escalations`, `system_settings`
+  - **Note:** Runtime monitoring integration data stored in `runtime_monitoring` table
+  - **Note:** Exemption logic tracked in `exemptions` table
+  - **Note:** Fuel usage logs track daily/monthly fuel consumption with sulphur content
+  - **Note:** Sulphur content reports store test results and compliance verification
+- **Module 4 (Hazardous Waste):** `waste_streams`, `consignment_notes`, `contractor_licences`, `chain_of_custody`, `end_point_proofs`, `chain_break_alerts`
+  - **Note:** Waste stream classification stored in `waste_streams` table with EWC codes
+  - **Note:** Chain of custody tracked in `chain_of_custody` table
+  - **Note:** Validation rules engine logic in `consignment_notes.validation_rules` (JSONB)
+- **System Tables:** `notifications`, `background_jobs`, `dead_letter_queue`, `audit_logs`, `regulator_questions`, `review_queue_items`, `escalations`, `system_settings`, `recurring_tasks`, `evidence_expiry_tracking`, `pack_sharing`
 - **Cross-Module:** `module_activations`, `cross_sell_triggers`
 - **AI/Extraction:** `extraction_logs`
   - **Note:** Rules library patterns are stored in codebase (see Document 1.6 - AI Extraction Rules Library) or in a database table if implemented. The `extraction_logs.rule_library_version` field tracks which version of the rules library was used.
@@ -151,6 +168,10 @@ ALTER TABLE obligations ENABLE ROW LEVEL SECURITY;
 - Reference PLS Section B.10.2.1 (Entity × Role CRUD Permissions Matrix)
 - Viewer role: Read-only access enforced at database level
 - Owner/Admin roles: Full CRUD access within their company/site scope
+- **Granular Access Control:**
+  - Site-level permissions: Users can only access data for assigned sites
+  - Unit-level permissions: Module 1 supports condition-level permissions (stored in `obligations.condition_id`)
+  - Permit condition-level permissions: Fine-grained access control for specific permit conditions
 
 **Storage Bucket RLS:**
 - Supabase Storage buckets use RLS policies for file access control
@@ -263,6 +284,16 @@ aer-documents/
   │   ├── {generator_id}/
   │   │   ├── {aer_document_id}/
   │   │   │   └── aer-{year}.pdf
+
+waste-documents/
+  ├── {company_id}/
+  │   ├── {site_id}/
+  │   │   ├── consignment-notes/
+  │   │   │   └── {consignment_note_id}/
+  │   │   │       └── {uuid}.pdf
+  │   │   ├── end-point-proofs/
+  │   │   │   └── {end_point_proof_id}/
+  │   │   │       └── {uuid}.pdf
 ```
 
 **Bucket Setup Instructions:**
@@ -302,6 +333,7 @@ aer-documents/
 - **Documents (permits, consents, registrations):** 50 MB max
 - **Evidence Files:** 25 MB max
 - **Generated PDFs (audit packs, AERs):** 100 MB max
+- **Waste Documents (consignment notes, end-point proofs):** 25 MB max
 - **Validation:** File size checked before upload (client and server-side)
 
 **Retention Policies:**
@@ -309,32 +341,15 @@ aer-documents/
 - **Evidence:** Retained indefinitely (audit trail requirement)
 - **Audit Packs:** Retained for 7 years (regulatory requirement)
 - **AER Documents:** Retained for 7 years (regulatory requirement)
+- **Waste Documents (consignment notes, end-point proofs):** Retained for 7 years (regulatory requirement)
 - **Soft Deletes:** Files marked as deleted but retained for compliance
 - **Hard Deletes:** Only after explicit user request and compliance period expiration
+- **Evidence Expiry Tracking:** Evidence expiry dates tracked in database, alerts sent before expiry
 
 **Access Control:**
 - RLS policies on storage buckets enforce company/site isolation
 - Users can only access files for their assigned companies/sites
 - Role-based access (Viewer: read-only, others: read/write within scope)
-
-**Bucket Setup Instructions:**
-1. Create buckets in Supabase Dashboard:
-   - `documents` (private bucket)
-   - `evidence` (private bucket)
-   - `audit-packs` (private bucket)
-   - `aer-documents` (private bucket)
-2. Configure RLS policies (see Document 2.8 - RLS & Permissions Rules):
-   - Users can only access files for their assigned companies/sites
-   - Service role can access all files (for background jobs)
-3. Set CORS configuration:
-   - Allowed origin: `NEXT_PUBLIC_APP_URL`
-   - Allowed methods: GET, POST, PUT, DELETE
-   - Allowed headers: Authorization, Content-Type
-4. Set file size limits:
-   - Documents: 50MB max
-   - Evidence: 25MB max
-   - Generated PDFs: 100MB max
-5. Enable public access: No (all buckets are private)
 
 ---
 
@@ -491,21 +506,38 @@ aer-documents/
 **Monitoring Schedule Jobs:**
 - **Trigger:** Recurring (cron: every hour)
 - **Function:** Check obligations, calculate deadlines, update statuses
-- **Queue:** `monitoring-schedule`
+- **Dynamic Schedule Evaluation:** Evaluate event-based triggers (e.g., "6 months from commissioning")
+- **Recurring Task Generation:** Automatically create tasks from schedules
+- **Queue:** `monitoring-schedule`, `recurring-tasks`
 - **Priority:** Normal
 
 **Alert Jobs:**
 - **Deadline Alerts:** 7/3/1 day warnings for upcoming deadlines
 - **Evidence Reminders:** Notifications for obligations requiring evidence
-- **Queue:** `deadline-alerts`, `evidence-reminders`
+- **Overdue Escalation:** Automatic escalation workflows for overdue obligations
+- **Evidence Expiry Alerts:** Notifications for expiring evidence
+- **Chain-Break Alerts:** Module 4 chain of custody gap detection
+- **Queue:** `deadline-alerts`, `evidence-reminders`, `overdue-escalation`, `evidence-expiry`, `chain-break-alerts`
 - **Priority:** High
 
 **Module-Specific Jobs:**
+- **Module 1 - Permit Change Tracking:** Redline comparison, version impact analysis
+- **Module 1 - Evidence Completeness Scoring:** Automated completeness calculation per condition
+- **Module 1 - Dynamic Schedule Generation:** Event-based trigger evaluation
 - **Module 2 - Sampling Schedule:** Daily/weekly/monthly triggers for lab sampling
+- **Module 2 - Sampling Logistics:** Sample collection tracking, courier coordination, lab submission
+- **Module 2 - Reconciliation Rules:** Concentration × volume calculations, breach likelihood scoring
+- **Module 2 - Consent State Transitions:** State machine transitions (Draft → In force → Superseded → Expired)
 - **Module 3 - Run-Hour Monitoring:** 80%/90%/100% threshold checks
+- **Module 3 - Runtime Data Capture:** Integration with generator monitoring systems
+- **Module 3 - Exemption Logic:** Testing vs emergency operation classification
+- **Module 3 - Compliance Clock:** Countdown to testing deadlines, certification expiry tracking
 - **Module 3 - AER Generation:** Annual return compilation
-- **Queue:** `module-2-sampling`, `module-3-run-hours`, `aer-generation`
-- **Priority:** Normal
+- **Module 4 - Chain-Break Detection:** Gap identification in chain of custody
+- **Module 4 - Validation Rules Engine:** Carrier licence validation, volume limit checking
+- **Module 4 - End-Point Proof Tracking:** Destruction/recycling certificate tracking
+- **Queue:** `module-1-permit-tracking`, `module-1-evidence-scoring`, `module-2-sampling`, `module-2-logistics`, `module-2-reconciliation`, `module-3-run-hours`, `module-3-runtime`, `module-3-exemptions`, `module-3-compliance-clock`, `aer-generation`, `module-4-chain-break`, `module-4-validation`
+- **Priority:** Normal (High for breach detection)
 
 **Cross-Sell Trigger Detection:**
 - **Trigger:** Recurring (cron: every 6 hours)
@@ -657,10 +689,38 @@ Development: http://localhost:3000/api/v1
   ├── schedules/         # Monitoring schedules
   ├── audit-packs/       # Audit pack generation
   ├── modules/           # Module activation
+  ├── module-1/          # Module 1 specific endpoints
+  │   ├── permit-versions/    # Permit version tracking
+  │   ├── permit-workflows/   # Permit lifecycle workflows (variations, renewals, surrenders)
+  │   ├── condition-evidence-rules/  # Condition-level evidence mapping rules
+  │   ├── condition-permissions/    # Condition-level permissions
+  │   ├── evidence-completeness-scores/ # Evidence completeness scoring
+  │   ├── enforcement-notices/ # Enforcement notice tracking
+  │   └── compliance-decisions/ # Decision justification
   ├── module-2/          # Module 2 specific endpoints
+  │   ├── consent-states/      # Consent state machine
+  │   ├── monthly-statements/   # Monthly statement management
+  │   ├── reconciliation/      # Automated reconciliation
+  │   ├── corrective-actions/   # Breach response workflows
+  │   └── sampling-logistics/  # Sampling workflow
   ├── module-3/          # Module 3 specific endpoints
+  │   ├── runtime-monitoring/  # Runtime data capture
+  │   ├── exemptions/          # Exemption logic
+  │   ├── regulation-thresholds/ # MW threshold logic
+  │   ├── fuel-usage-logs/     # Fuel consumption tracking
+  │   └── sulphur-content-reports/ # Sulphur content compliance
+  ├── module-4/          # Module 4 specific endpoints
+  │   ├── waste-streams/        # Waste classification
+  │   ├── consignment-notes/    # Consignment note management
+  │   │   └── [noteId]/chain-of-custody/ # Chain of custody tracking (nested)
+  │   ├── end-point-proofs/     # Destruction/recycling certificates
+  │   └── chain-break-alerts/   # Chain break gap detection
+  ├── compliance-clocks/ # Compliance clock tracking (cross-module)
   ├── notifications/     # Notification management
   ├── jobs/              # Background job status
+  ├── recurring-tasks/   # Recurring task management
+  ├── escalations/       # Escalation workflow management
+  ├── pack-sharing/      # Pack sharing and distribution
   └── health/            # Health check endpoints
 ```
 
@@ -843,6 +903,9 @@ X-RateLimit-Reset: 1640995200
 - `POST /api/v1/documents` - Upload document (permit, consent, registration)
 - `GET /api/v1/documents/{id}` - Get document details
 - `GET /api/v1/documents` - List documents (filtered by site/company)
+- `POST /api/v1/documents/{id}/versions` - Create new permit version
+- `GET /api/v1/documents/{id}/versions` - List permit versions
+- `GET /api/v1/documents/{id}/versions/{version_id}/redline` - Get redline comparison
 
 **Extraction Endpoints:**
 - `POST /api/v1/documents/{id}/extract` - Trigger AI extraction
@@ -854,6 +917,9 @@ X-RateLimit-Reset: 1640995200
 - `GET /api/v1/obligations/{id}` - Get obligation details
 - `PUT /api/v1/obligations/{id}` - Update obligation
 - `POST /api/v1/obligations/{id}/evidence` - Link evidence to obligation
+- `GET /api/v1/obligations/{id}/completeness` - Get completeness score
+- `GET /api/v1/obligations/{id}/versions` - Get obligation version history
+- `POST /api/v1/obligations/{id}/decisions` - Log compliance decision
 
 **Evidence Management Endpoints:**
 - `POST /api/v1/evidence` - Upload evidence file
@@ -864,6 +930,15 @@ X-RateLimit-Reset: 1640995200
 - `POST /api/v1/modules/{module_id}/activate` - Activate module
 - `GET /api/v1/modules` - List available modules
 - `GET /api/v1/modules/active` - List active modules for company
+
+**Cross-Cutting Endpoints:**
+- `GET /api/v1/recurring-tasks` - List recurring tasks
+- `POST /api/v1/recurring-tasks` - Create recurring task
+- `GET /api/v1/escalations` - List escalations
+- `POST /api/v1/escalations/{id}/resolve` - Resolve escalation
+- `GET /api/v1/evidence/expiring` - List expiring evidence
+- `POST /api/v1/pack-sharing` - Share pack with external user
+- `GET /api/v1/pack-sharing/{id}` - Get sharing link details
 
 **Note:** Detailed API specification, including all endpoints, request/response schemas, authentication requirements, and error codes, will be provided in Document 2.5 (Backend API Specification).
 
@@ -1740,10 +1815,54 @@ This Technical Architecture & Stack document defines the complete technical infr
 
 All technical decisions align with the Product Logic Specification (PLS) and Canonical Dictionary, ensuring consistency across the platform. The architecture supports modular expansion (Modules 1, 2, 3, and future modules) via the data-driven `modules` table.
 
+**Cross-Cutting Technical Requirements:**
+
+**Implementation Notes:**
+- These features are not optional - they are foundational
+- Must be built into module architecture from the start
+- Cannot be retrofitted later without significant rework
+- Consistency across modules is critical for user experience
+
+**1. RLS Scoping (Granular Access Control):**
+- Site-level permissions: All queries filtered by `site_id` via RLS
+- Unit-level permissions: Module 1 supports condition-level permissions
+- Condition-level permissions: Fine-grained access control for specific permit conditions
+- Implementation: RLS policies check `user_site_assignments` and `obligations.condition_id`
+
+**2. Automated Recurring Task Generation:**
+- Dynamic task creation from schedules (not just fixed cron jobs)
+- Event-based triggers evaluated on schedule evaluation
+- Task assignment and tracking via `recurring_tasks` table
+- Integration with monitoring scheduler
+
+**3. Overdue Escalation + Audit Trail:**
+- Automatic escalation workflows for overdue obligations
+- Decision logging in `compliance_decisions` table
+- Complete audit trail in `audit_logs` table
+- Escalation history tracked in `escalations` table
+
+**4. Evidence Ageing + Expiry Rules:**
+- Evidence expiry tracking in `evidence_items.expiry_date`
+- Ageing alerts sent before expiry (configurable threshold)
+- Automatic expiry detection via background job
+- Renewal reminders for expiring evidence
+
+**5. Full Inspector/Auditor Sharing Flows:**
+- Secure pack sharing via `pack_sharing` table
+- Time-limited access tokens (expiry configurable)
+- Access control for external users (read-only)
+- Audit trail of sharing in `audit_logs`
+
+**6. Audit Pack Integration from Day 1:**
+- Module-specific pack templates per module
+- Standalone pack generation capability (each module can generate its own pack)
+- Cross-module pack integration (combines data from multiple modules)
+- Pack generation framework reusable across all modules
+
 **Next Steps:**
-- Document 2.2: Database Schema (detailed table definitions)
-- Document 2.3: Background Jobs Specification (detailed job definitions)
-- Document 2.5: Backend API Specification (detailed endpoint definitions)
+- Document 2.2: Database Schema (detailed table definitions including Module 4)
+- Document 2.3: Background Jobs Specification (detailed job definitions for all modules)
+- Document 2.5: Backend API Specification (detailed endpoint definitions including Module 4)
 
 ---
 

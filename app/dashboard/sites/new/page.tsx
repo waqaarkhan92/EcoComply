@@ -28,7 +28,7 @@ export default function NewSitePage() {
     mutationFn: async (data: any) => {
       return apiClient.post('/sites', data);
     },
-    onSuccess: (response) => {
+    onSuccess: (response: any) => {
       const siteId = response.data?.id;
       if (siteId) {
         router.push(`/dashboard/sites/${siteId}`);

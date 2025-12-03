@@ -11,8 +11,7 @@ import { requireModule } from '@/lib/api/module-check';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { aerId: string } }
+  request: NextRequest, props: { params: Promise<{ aerId: string } }
 ) {
   const requestId = getRequestId(request);
   const { aerId } = params;

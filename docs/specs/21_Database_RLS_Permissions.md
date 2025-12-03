@@ -11,9 +11,10 @@
 > - Uses `module_activations.status = 'ACTIVE'` instead of `is_active = TRUE`
 > - Removed all references to non-existent `user_roles.company_id` and `user_site_assignments.role`
 
-**Document Version:** 1.0  
-**Status:** Complete  
-**Created by:** Cursor  
+**Document Version:** 1.1
+**Status:** Complete
+**Created by:** Cursor
+**Last Updated:** 2025-12-01
 **Depends on:**
 - ✅ Product Logic Specification (1.1) - Complete
 - ✅ Canonical Dictionary (1.2) - Complete
@@ -22,7 +23,9 @@
 
 **Purpose:** Defines the complete Row Level Security (RLS) and permissions system for the EcoComply platform, including all RLS policies, CRUD matrices, permission evaluation logic, and security implementation details.
 
-> [v1 UPDATE – Version Header – 2024-12-27]
+**Changelog:**
+- **2025-12-01 (v1.1):** Added RLS policies for 8 new tables: compliance_clocks_universal, compliance_clock_dashboard, escalation_workflows, permit_workflows, permit_variations, permit_surrenders, recurrence_trigger_executions, corrective_action_items, validation_executions
+- **2024-12-27 (v1.0):** Initial version with schema alignment fixes
 
 ---
 
@@ -34,7 +37,8 @@
 4. [Module 1 Tables RLS Policies](#4-module-1-tables-rls-policies)
 5. [Module 2 Tables RLS Policies](#5-module-2-tables-rls-policies)
 6. [Module 3 Tables RLS Policies](#6-module-3-tables-rls-policies)
-7. [Cross-Module Tables RLS Policies](#7-cross-module-tables-rls-policies)
+7. [Module 4 Tables RLS Policies](#7-module-4-tables-rls-policies-hazardous-waste-chain-of-custody)
+8. [Cross-Module Tables RLS Policies](#8-cross-module-tables-rls-policies)
 8. [Rule Library & Learning Mechanism RLS Policies](#8-rule-library--learning-mechanism-rls-policies)
 9. [Complete CRUD Matrices](#9-complete-crud-matrices)
 10. [Permission Evaluation Logic](#10-permission-evaluation-logic)
@@ -240,6 +244,12 @@ USING (
     -- Consultants: assigned client companies (read-only, cannot update)
     FALSE
   )
+  -- Explicitly block consultants from updating ANY company fields
+  AND NOT EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_id = auth.uid()
+    AND role = 'CONSULTANT'
+  )
 )
 WITH CHECK (
   -- Same condition as USING
@@ -252,11 +262,19 @@ WITH CHECK (
       AND role IN ('OWNER', 'ADMIN')
     )
   )
+  -- Block consultants from updating settings/subscription fields
+  AND NOT EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_id = auth.uid()
+    AND role = 'CONSULTANT'
+  )
 );
 ```
 
 **Access Logic:**
 - Owners and Admins can update companies they are assigned to
+- Consultants CANNOT update companies (read-only access)
+- Consultants blocked from updating settings, subscription_tier, billing fields, or any company fields
 - Cannot update soft-deleted companies
 
 ### DELETE Policy
@@ -1355,15 +1373,34 @@ CREATE POLICY evidence_items_select_site_access ON evidence_items
 FOR SELECT
 USING (
   is_archived = false
-  AND site_id IN (
-    SELECT site_id FROM user_site_assignments
-    WHERE user_id = auth.uid()
+  AND (
+    -- Regular users: assigned sites
+    site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+    )
+    OR
+    -- Consultants: sites in assigned client companies (tenant isolation)
+    (
+      EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_id = auth.uid()
+        AND role = 'CONSULTANT'
+      )
+      AND company_id IN (
+        SELECT client_company_id FROM consultant_client_assignments
+        WHERE consultant_id = auth.uid()
+        AND status = 'ACTIVE'
+      )
+    )
   )
 );
 ```
 
 **Access Logic:**
-- Users can see evidence from their assigned sites
+- Regular users can see evidence from their assigned sites
+- Consultants can see evidence from sites in assigned client companies only (strict tenant isolation)
+- Evidence queries filtered by consultant assignments to prevent cross-client data leakage
 
 ### INSERT Policy
 
@@ -1373,16 +1410,43 @@ USING (
 CREATE POLICY evidence_items_insert_staff_access ON evidence_items
 FOR INSERT
 WITH CHECK (
-  site_id IN (
-    SELECT site_id FROM user_site_assignments
-    WHERE user_id = auth.uid()
-    AND role IN ('OWNER', 'ADMIN', 'STAFF', 'CONSULTANT')
+  (
+    -- Regular users: assigned sites
+    site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
+    )
+  )
+  OR
+  (
+    -- Consultants: sites in assigned client companies only (tenant isolation)
+    EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role = 'CONSULTANT'
+    )
+    AND company_id IN (
+      SELECT client_company_id FROM consultant_client_assignments
+      WHERE consultant_id = auth.uid()
+      AND status = 'ACTIVE'
+    )
+    AND site_id IN (
+      SELECT id FROM sites
+      WHERE company_id IN (
+        SELECT client_company_id FROM consultant_client_assignments
+        WHERE consultant_id = auth.uid()
+        AND status = 'ACTIVE'
+      )
+    )
   )
 );
 ```
 
 **Access Logic:**
-- Owners, Admins, Staff, and Consultants can upload evidence
+- Owners, Admins, Staff can upload evidence to their assigned sites
+- Consultants can upload evidence ONLY to sites in assigned client companies (strict tenant isolation)
+- Cross-client evidence uploads blocked at RLS level
 
 ### UPDATE Policy
 
@@ -1460,17 +1524,46 @@ FOR INSERT
 WITH CHECK (
   obligation_id IN (
     SELECT id FROM obligations
-    WHERE site_id IN (
-      SELECT site_id FROM user_site_assignments
-      WHERE user_id = auth.uid()
-      AND role IN ('OWNER', 'ADMIN', 'STAFF', 'CONSULTANT')
+    WHERE (
+      -- Regular users: assigned sites
+      site_id IN (
+        SELECT site_id FROM user_site_assignments
+        WHERE user_id = auth.uid()
+        AND role IN ('OWNER', 'ADMIN', 'STAFF')
+      )
+      OR
+      -- Consultants: obligations in assigned client companies only (tenant isolation)
+      (
+        EXISTS (
+          SELECT 1 FROM user_roles
+          WHERE user_id = auth.uid()
+          AND role = 'CONSULTANT'
+        )
+        AND company_id IN (
+          SELECT client_company_id FROM consultant_client_assignments
+          WHERE consultant_id = auth.uid()
+          AND status = 'ACTIVE'
+        )
+      )
+    )
+    -- Additional check: evidence must be from same company (prevents cross-client linking)
+    AND EXISTS (
+      SELECT 1 FROM evidence_items ei
+      WHERE ei.id = obligation_evidence_links.evidence_id
+      AND ei.company_id = (
+        SELECT company_id FROM obligations
+        WHERE id = obligation_evidence_links.obligation_id
+      )
     )
   )
 );
 ```
 
 **Access Logic:**
-- Owners, Admins, Staff, and Consultants can link evidence to obligations
+- Owners, Admins, Staff can link evidence to obligations in their assigned sites
+- Consultants can link evidence ONLY to obligations in assigned client companies
+- Cross-client evidence linking blocked: evidence and obligation must be from same company
+- Tenant isolation enforced at RLS level to prevent evidence leakage across clients
 
 ### UPDATE Policy
 
@@ -1526,7 +1619,346 @@ USING (
 **Access Logic:**
 - Owners, Admins, and Staff can unlink evidence from obligations
 
-## 4.5 Audit Packs Table
+## 4.5 Permit Versions Table
+
+**Table:** `permit_versions`  
+**RLS Enabled:** Yes  
+**Soft Delete:** No
+
+### SELECT Policy
+
+**Policy:** `permit_versions_select_site_access`
+
+```sql
+CREATE POLICY permit_versions_select_site_access ON permit_versions
+FOR SELECT
+USING (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+  )
+);
+```
+
+**Access Logic:**
+- Users can see permit versions from their assigned sites
+
+### INSERT Policy
+
+**Policy:** `permit_versions_insert_staff_access`
+
+```sql
+CREATE POLICY permit_versions_insert_staff_access ON permit_versions
+FOR INSERT
+WITH CHECK (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, and Staff can create permit versions
+
+### UPDATE Policy
+
+**Policy:** `permit_versions_update_staff_access`
+
+```sql
+CREATE POLICY permit_versions_update_staff_access ON permit_versions
+FOR UPDATE
+USING (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
+  )
+)
+WITH CHECK (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, and Staff can update permit versions
+
+### DELETE Policy
+
+**Policy:** `permit_versions_delete_owner_admin_access`
+
+```sql
+CREATE POLICY permit_versions_delete_owner_admin_access ON permit_versions
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND site_id = permit_versions.site_id
+    AND role IN ('OWNER', 'ADMIN')
+  )
+);
+```
+
+**Access Logic:**
+- Only Owners and Admins can delete permit versions
+
+## 4.6 Obligation Versions Table
+
+> [v1.6 UPDATE – Obligation Versions Table Removed – 2025-01-01]
+> - Removed `obligation_versions` table RLS policies
+> - Obligation change tracking now handled via `audit_logs` table
+> - See `audit_logs` table RLS policies for change tracking access control
+
+## 4.7 Enforcement Notices Table
+
+**Table:** `enforcement_notices`  
+**RLS Enabled:** Yes  
+**Soft Delete:** No
+
+### SELECT Policy
+
+**Policy:** `enforcement_notices_select_site_access`
+
+```sql
+CREATE POLICY enforcement_notices_select_site_access ON enforcement_notices
+FOR SELECT
+USING (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+  )
+);
+```
+
+**Access Logic:**
+- Users can see enforcement notices from their assigned sites
+
+### INSERT Policy
+
+**Policy:** `enforcement_notices_insert_staff_access`
+
+```sql
+CREATE POLICY enforcement_notices_insert_staff_access ON enforcement_notices
+FOR INSERT
+WITH CHECK (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, and Staff can create enforcement notices
+
+### UPDATE Policy
+
+**Policy:** `enforcement_notices_update_staff_access`
+
+```sql
+CREATE POLICY enforcement_notices_update_staff_access ON enforcement_notices
+FOR UPDATE
+USING (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
+  )
+)
+WITH CHECK (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, and Staff can update enforcement notices
+
+### DELETE Policy
+
+**Policy:** `enforcement_notices_delete_owner_admin_access`
+
+```sql
+CREATE POLICY enforcement_notices_delete_owner_admin_access ON enforcement_notices
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND site_id = enforcement_notices.site_id
+    AND role IN ('OWNER', 'ADMIN')
+  )
+);
+```
+
+**Access Logic:**
+- Only Owners and Admins can delete enforcement notices
+
+## 4.8 Compliance Decisions Table
+
+**Table:** `compliance_decisions`  
+**RLS Enabled:** Yes  
+**Soft Delete:** No
+
+### SELECT Policy
+
+**Policy:** `compliance_decisions_select_site_access`
+
+```sql
+CREATE POLICY compliance_decisions_select_site_access ON compliance_decisions
+FOR SELECT
+USING (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+  )
+);
+```
+
+**Access Logic:**
+- Users can see compliance decisions from their assigned sites
+
+### INSERT Policy
+
+**Policy:** `compliance_decisions_insert_staff_access`
+
+```sql
+CREATE POLICY compliance_decisions_insert_staff_access ON compliance_decisions
+FOR INSERT
+WITH CHECK (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND role IN ('OWNER', 'ADMIN', 'STAFF', 'CONSULTANT')
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, Staff, and Consultants can create compliance decisions
+
+### UPDATE Policy
+
+**Policy:** `compliance_decisions_update_staff_access`
+
+```sql
+CREATE POLICY compliance_decisions_update_staff_access ON compliance_decisions
+FOR UPDATE
+USING (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
+  )
+)
+WITH CHECK (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, and Staff can update compliance decisions
+
+### DELETE Policy
+
+**Policy:** `compliance_decisions_delete_owner_admin_access`
+
+```sql
+CREATE POLICY compliance_decisions_delete_owner_admin_access ON compliance_decisions
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND site_id = compliance_decisions.site_id
+    AND role IN ('OWNER', 'ADMIN')
+  )
+);
+```
+
+**Access Logic:**
+- Only Owners and Admins can delete compliance decisions
+
+## 4.6 Condition Evidence Rules Table
+
+**Table:** `condition_evidence_rules`  
+**RLS Enabled:** Yes  
+**Soft Delete:** No
+
+### Policies Summary:
+- **SELECT:** `condition_evidence_rules_select_site_access` - Site access
+- **INSERT:** `condition_evidence_rules_insert_staff_access` - Staff+ roles
+- **UPDATE:** `condition_evidence_rules_update_staff_access` - Staff+ roles
+- **DELETE:** `condition_evidence_rules_delete_owner_admin_access` - Owner/Admin only
+
+## 4.7 Evidence Completeness Scores Table
+
+**Table:** `evidence_completeness_scores`  
+**RLS Enabled:** Yes  
+**Soft Delete:** No
+
+### Policies Summary:
+- **SELECT:** `evidence_completeness_scores_select_site_access` - Site access
+- **INSERT:** `evidence_completeness_scores_insert_system_access` - System only (auto-calculated)
+- **UPDATE:** `evidence_completeness_scores_update_system_access` - System only (auto-updated)
+- **DELETE:** `evidence_completeness_scores_delete_owner_admin_access` - Owner/Admin only
+
+> [v1.6 UPDATE – Evidence Versions Table Removed – 2025-01-01]
+> - Removed `evidence_versions` table RLS policies
+> - Evidence version history now stored in `evidence_items.version_history` JSONB field
+> - No separate RLS policies needed (version history is part of evidence_items table)
+
+## 4.8 Recurrence Trigger Rules Table
+
+**Table:** `recurrence_trigger_rules`  
+**RLS Enabled:** Yes  
+**Soft Delete:** No
+
+### Policies Summary:
+- **SELECT:** `recurrence_trigger_rules_select_site_access` - Site access
+- **INSERT:** `recurrence_trigger_rules_insert_staff_access` - Staff+ roles
+- **UPDATE:** `recurrence_trigger_rules_update_staff_access` - Staff+ roles
+- **DELETE:** `recurrence_trigger_rules_delete_owner_admin_access` - Owner/Admin only
+
+## 4.10 Recurrence Events Table
+
+**Table:** `recurrence_events`  
+**RLS Enabled:** Yes  
+**Soft Delete:** No
+
+### Policies Summary:
+- **SELECT:** `recurrence_events_select_site_access` - Site access
+- **INSERT:** `recurrence_events_insert_staff_access` - Staff+ roles
+- **UPDATE:** `recurrence_events_update_staff_access` - Staff+ roles
+- **DELETE:** `recurrence_events_delete_owner_admin_access` - Owner/Admin only
+
+## 4.11 Recurrence Conditions Table
+
+**Table:** `recurrence_conditions`  
+**RLS Enabled:** Yes  
+**Soft Delete:** No
+
+### Policies Summary:
+- **SELECT:** `recurrence_conditions_select_site_access` - Site access
+- **INSERT:** `recurrence_conditions_insert_staff_access` - Staff+ roles
+- **UPDATE:** `recurrence_conditions_update_staff_access` - Staff+ roles
+- **DELETE:** `recurrence_conditions_delete_owner_admin_access` - Owner/Admin only
+
+## 4.12 Audit Packs Table
 
 **Table:** `audit_packs`  
 **RLS Enabled:** Yes  
@@ -1651,10 +2083,25 @@ WITH CHECK (
     pack_type != 'BOARD_MULTI_SITE_RISK'
     AND site_id IS NOT NULL
     AND EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role = 'CONSULTANT'
+    )
+    AND EXISTS (
       SELECT 1 FROM consultant_client_assignments
       WHERE consultant_id = auth.uid()
       AND client_company_id = company_id
       AND status = 'ACTIVE'
+    )
+    -- Additional validation: site must belong to assigned client company
+    AND EXISTS (
+      SELECT 1 FROM sites
+      WHERE id = site_id
+      AND company_id IN (
+        SELECT client_company_id FROM consultant_client_assignments
+        WHERE consultant_id = auth.uid()
+        AND status = 'ACTIVE'
+      )
     )
   )
 );
@@ -1663,8 +2110,14 @@ WITH CHECK (
 **Access Logic:**
 - **Board Pack:** Only Owners/Admins can generate (company-level access, site_id = NULL)
 - **Other Pack Types:** Owners, Admins, Staff can generate (site-level access)
-- **Consultants:** Can generate packs for assigned clients (site-level access, not Board Pack)
+- **Consultants:** Can generate packs ONLY for assigned clients (strict validation)
+  - Must have CONSULTANT role
+  - Must have active assignment to client company
+  - Site must belong to assigned client company
+  - Cannot generate Board Packs (executive-level access required)
+  - Pack generation blocked with `403 FORBIDDEN` if client not assigned
 - **Rationale:** Board Pack contains company-wide risk data requiring executive-level access
+- **Tenant Isolation:** Consultants cannot generate packs for unassigned clients
 
 ### UPDATE Policy
 
@@ -1813,6 +2266,417 @@ USING (
 - **Board Pack:** Only Owners/Admins can delete (company-level access)
 - **Other Pack Types:** Only Owners/Admins can delete (site-level access)
 
+---
+
+## 4.13 Permit Workflows Table
+
+**Table:** `permit_workflows`
+**RLS Enabled:** Yes
+**Soft Delete:** No
+
+### SELECT Policy
+
+**Policy:** `permit_workflows_select_site_access`
+
+```sql
+CREATE POLICY permit_workflows_select_site_access ON permit_workflows
+FOR SELECT
+USING (
+  document_id IN (
+    SELECT id FROM documents
+    WHERE deleted_at IS NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Users can see permit workflows for documents from their assigned sites
+
+### INSERT Policy
+
+**Policy:** `permit_workflows_insert_staff_access`
+
+```sql
+CREATE POLICY permit_workflows_insert_staff_access ON permit_workflows
+FOR INSERT
+WITH CHECK (
+  document_id IN (
+    SELECT id FROM documents
+    WHERE deleted_at IS NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF', 'CONSULTANT')
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, Staff, and Consultants can create permit workflows
+
+### UPDATE Policy
+
+**Policy:** `permit_workflows_update_staff_access`
+
+```sql
+CREATE POLICY permit_workflows_update_staff_access ON permit_workflows
+FOR UPDATE
+USING (
+  document_id IN (
+    SELECT id FROM documents
+    WHERE deleted_at IS NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
+    )
+  )
+)
+WITH CHECK (
+  document_id IN (
+    SELECT id FROM documents
+    WHERE deleted_at IS NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, and Staff can update permit workflows
+
+### DELETE Policy
+
+**Policy:** `permit_workflows_delete_owner_admin_access`
+
+```sql
+CREATE POLICY permit_workflows_delete_owner_admin_access ON permit_workflows
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM documents d
+    JOIN user_site_assignments usa ON usa.site_id = d.site_id
+    WHERE d.id = permit_workflows.document_id
+    AND d.deleted_at IS NULL
+    AND usa.user_id = auth.uid()
+    AND usa.role IN ('OWNER', 'ADMIN')
+  )
+);
+```
+
+**Access Logic:**
+- Only Owners and Admins can delete permit workflows
+
+---
+
+## 4.14 Permit Variations Table
+
+**Table:** `permit_variations`
+**RLS Enabled:** Yes
+**Soft Delete:** No
+
+### SELECT Policy
+
+**Policy:** `permit_variations_select_site_access`
+
+```sql
+CREATE POLICY permit_variations_select_site_access ON permit_variations
+FOR SELECT
+USING (
+  document_id IN (
+    SELECT id FROM documents
+    WHERE deleted_at IS NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Users can see permit variations for documents from their assigned sites
+
+### INSERT Policy
+
+**Policy:** `permit_variations_insert_staff_access`
+
+```sql
+CREATE POLICY permit_variations_insert_staff_access ON permit_variations
+FOR INSERT
+WITH CHECK (
+  document_id IN (
+    SELECT id FROM documents
+    WHERE deleted_at IS NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF', 'CONSULTANT')
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, Staff, and Consultants can create permit variations
+
+### UPDATE Policy
+
+**Policy:** `permit_variations_update_staff_access`
+
+```sql
+CREATE POLICY permit_variations_update_staff_access ON permit_variations
+FOR UPDATE
+USING (
+  document_id IN (
+    SELECT id FROM documents
+    WHERE deleted_at IS NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
+    )
+  )
+)
+WITH CHECK (
+  document_id IN (
+    SELECT id FROM documents
+    WHERE deleted_at IS NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, and Staff can update permit variations
+
+### DELETE Policy
+
+**Policy:** `permit_variations_delete_owner_admin_access`
+
+```sql
+CREATE POLICY permit_variations_delete_owner_admin_access ON permit_variations
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM documents d
+    JOIN user_site_assignments usa ON usa.site_id = d.site_id
+    WHERE d.id = permit_variations.document_id
+    AND d.deleted_at IS NULL
+    AND usa.user_id = auth.uid()
+    AND usa.role IN ('OWNER', 'ADMIN')
+  )
+);
+```
+
+**Access Logic:**
+- Only Owners and Admins can delete permit variations
+
+---
+
+## 4.15 Permit Surrenders Table
+
+**Table:** `permit_surrenders`
+**RLS Enabled:** Yes
+**Soft Delete:** No
+
+### SELECT Policy
+
+**Policy:** `permit_surrenders_select_site_access`
+
+```sql
+CREATE POLICY permit_surrenders_select_site_access ON permit_surrenders
+FOR SELECT
+USING (
+  document_id IN (
+    SELECT id FROM documents
+    WHERE deleted_at IS NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Users can see permit surrenders for documents from their assigned sites
+
+### INSERT Policy
+
+**Policy:** `permit_surrenders_insert_staff_access`
+
+```sql
+CREATE POLICY permit_surrenders_insert_staff_access ON permit_surrenders
+FOR INSERT
+WITH CHECK (
+  document_id IN (
+    SELECT id FROM documents
+    WHERE deleted_at IS NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF', 'CONSULTANT')
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, Staff, and Consultants can create permit surrenders
+
+### UPDATE Policy
+
+**Policy:** `permit_surrenders_update_staff_access`
+
+```sql
+CREATE POLICY permit_surrenders_update_staff_access ON permit_surrenders
+FOR UPDATE
+USING (
+  document_id IN (
+    SELECT id FROM documents
+    WHERE deleted_at IS NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
+    )
+  )
+)
+WITH CHECK (
+  document_id IN (
+    SELECT id FROM documents
+    WHERE deleted_at IS NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, and Staff can update permit surrenders
+
+### DELETE Policy
+
+**Policy:** `permit_surrenders_delete_owner_admin_access`
+
+```sql
+CREATE POLICY permit_surrenders_delete_owner_admin_access ON permit_surrenders
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM documents d
+    JOIN user_site_assignments usa ON usa.site_id = d.site_id
+    WHERE d.id = permit_surrenders.document_id
+    AND d.deleted_at IS NULL
+    AND usa.user_id = auth.uid()
+    AND usa.role IN ('OWNER', 'ADMIN')
+  )
+);
+```
+
+**Access Logic:**
+- Only Owners and Admins can delete permit surrenders
+
+---
+
+## 4.16 Recurrence Trigger Executions Table
+
+**Table:** `recurrence_trigger_executions`
+**RLS Enabled:** Yes
+**Soft Delete:** No
+
+### SELECT Policy
+
+**Policy:** `recurrence_trigger_executions_select_site_access`
+
+```sql
+CREATE POLICY recurrence_trigger_executions_select_site_access ON recurrence_trigger_executions
+FOR SELECT
+USING (
+  trigger_rule_id IN (
+    SELECT id FROM recurrence_trigger_rules
+    WHERE schedule_id IN (
+      SELECT id FROM schedules
+      WHERE obligation_id IN (
+        SELECT id FROM obligations
+        WHERE deleted_at IS NULL
+        AND site_id IN (
+          SELECT site_id FROM user_site_assignments
+          WHERE user_id = auth.uid()
+        )
+      )
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Users can see trigger executions for schedules linked to obligations from their assigned sites
+- Read-only audit log for debugging recurrence logic
+
+### INSERT Policy
+
+**Policy:** `recurrence_trigger_executions_insert_system_access`
+
+```sql
+CREATE POLICY recurrence_trigger_executions_insert_system_access ON recurrence_trigger_executions
+FOR INSERT
+WITH CHECK (auth.role() = 'service_role');
+```
+
+**Access Logic:**
+- Only system can insert trigger execution records (audit log)
+
+### UPDATE Policy
+
+```sql
+-- No UPDATE policy - trigger executions are immutable audit records
+```
+
+**Access Logic:**
+- Trigger executions cannot be updated (immutable audit trail)
+
+### DELETE Policy
+
+**Policy:** `recurrence_trigger_executions_delete_owner_admin_access`
+
+```sql
+CREATE POLICY recurrence_trigger_executions_delete_owner_admin_access ON recurrence_trigger_executions
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM recurrence_trigger_rules rtr
+    JOIN schedules s ON rtr.schedule_id = s.id
+    JOIN obligations o ON s.obligation_id = o.id
+    JOIN user_site_assignments usa ON usa.site_id = o.site_id
+    WHERE rtr.id = recurrence_trigger_executions.trigger_rule_id
+    AND o.deleted_at IS NULL
+    AND usa.user_id = auth.uid()
+    AND usa.role IN ('OWNER', 'ADMIN')
+  )
+);
+```
+
+**Access Logic:**
+- Only Owners and Admins can delete trigger execution records
+
+---
 
 # 5. Module 2 Tables RLS Policies (Trade Effluent)
 
@@ -1873,7 +2737,249 @@ USING (
 - **UPDATE:** `exceedances_update_staff_module` - Staff+ roles + Module 2 activated
 - **DELETE:** `exceedances_delete_owner_admin_module` - Owner/Admin + Module 2 activated
 
-## 5.4 Discharge Volumes Table
+## 5.4 Consent States Table
+
+**Table:** `consent_states`  
+**RLS Enabled:** Yes  
+**Module:** Module 2
+
+### Policies Summary:
+- **SELECT:** `consent_states_select_site_module` - Site access + Module 2 activated
+- **INSERT:** `consent_states_insert_staff_module` - Staff+ roles + Module 2 activated
+- **UPDATE:** `consent_states_update_staff_module` - Staff+ roles + Module 2 activated
+- **DELETE:** `consent_states_delete_owner_admin_module` - Owner/Admin + Module 2 activated
+
+## 5.5 Corrective Actions Table
+
+**Table:** `corrective_actions`
+**RLS Enabled:** Yes
+**Module:** Module 2 & Module 4
+
+### Policies Summary:
+- **SELECT:** `corrective_actions_select_site_module` - Site access + Module 2/4 activated
+- **INSERT:** `corrective_actions_insert_staff_module` - Staff+ roles + Module 2/4 activated
+- **UPDATE:** `corrective_actions_update_staff_module` - Staff+ roles + Module 2/4 activated
+- **DELETE:** `corrective_actions_delete_owner_admin_module` - Owner/Admin + Module 2/4 activated
+
+---
+
+## 5.6 Corrective Action Items Table
+
+**Table:** `corrective_action_items`
+**RLS Enabled:** Yes
+**Module:** Module 2 & Module 4
+**Soft Delete:** No
+
+### SELECT Policy
+
+**Policy:** `corrective_action_items_select_access`
+
+```sql
+CREATE POLICY corrective_action_items_select_access ON corrective_action_items
+FOR SELECT
+USING (
+  -- User can see items if they have access to the parent corrective action
+  corrective_action_id IN (
+    SELECT id FROM corrective_actions
+    WHERE site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+    )
+  )
+  OR
+  -- User can see items assigned to them
+  assigned_to = auth.uid()
+);
+```
+
+**Access Logic:**
+- Users can see items from corrective actions at their assigned sites
+- Users can see items assigned to them regardless of site assignment
+- Supports cross-site visibility for assigned tasks
+
+### INSERT Policy
+
+**Policy:** `corrective_action_items_insert_staff_access`
+
+```sql
+CREATE POLICY corrective_action_items_insert_staff_access ON corrective_action_items
+FOR INSERT
+WITH CHECK (
+  corrective_action_id IN (
+    SELECT id FROM corrective_actions
+    WHERE site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF', 'CONSULTANT')
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, Staff, and Consultants can create action items
+- Must have access to parent corrective action's site
+
+### UPDATE Policy
+
+**Policy:** `corrective_action_items_update_access`
+
+```sql
+CREATE POLICY corrective_action_items_update_access ON corrective_action_items
+FOR UPDATE
+USING (
+  -- Staff+ roles can update items from their sites
+  corrective_action_id IN (
+    SELECT id FROM corrective_actions
+    WHERE site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
+    )
+  )
+  OR
+  -- Assigned user can update their own items
+  assigned_to = auth.uid()
+)
+WITH CHECK (
+  corrective_action_id IN (
+    SELECT id FROM corrective_actions
+    WHERE site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
+    )
+  )
+  OR
+  assigned_to = auth.uid()
+);
+```
+
+**Access Logic:**
+- Owners, Admins, and Staff can update items from their sites
+- Users can update items assigned to them (mark complete, add evidence)
+- Enables task delegation and self-service completion
+
+### DELETE Policy
+
+**Policy:** `corrective_action_items_delete_owner_admin_access`
+
+```sql
+CREATE POLICY corrective_action_items_delete_owner_admin_access ON corrective_action_items
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM corrective_actions ca
+    JOIN user_site_assignments usa ON usa.site_id = ca.site_id
+    WHERE ca.id = corrective_action_items.corrective_action_id
+    AND usa.user_id = auth.uid()
+    AND usa.role IN ('OWNER', 'ADMIN')
+  )
+);
+```
+
+**Access Logic:**
+- Only Owners and Admins can delete action items
+
+---
+
+## 5.7 Sampling Logistics Table
+
+**Table:** `sampling_logistics`
+**RLS Enabled:** Yes
+**Module:** Module 2
+
+### Policies Summary:
+- **SELECT:** `sampling_logistics_select_site_module` - Site access + Module 2 activated
+- **INSERT:** `sampling_logistics_insert_staff_module` - Staff+ roles + Module 2 activated
+- **UPDATE:** `sampling_logistics_update_staff_module` - Staff+ roles + Module 2 activated
+- **DELETE:** `sampling_logistics_delete_owner_admin_module` - Owner/Admin + Module 2 activated
+
+## 5.8 Reconciliation Rules Table
+
+**Table:** `reconciliation_rules`
+**RLS Enabled:** Yes
+**Module:** Module 2
+
+### Policies Summary:
+- **SELECT:** `reconciliation_rules_select_site_module` - Site access + Module 2 activated
+- **INSERT:** `reconciliation_rules_insert_staff_module` - Staff+ roles + Module 2 activated
+- **UPDATE:** `reconciliation_rules_update_staff_module` - Staff+ roles + Module 2 activated
+- **DELETE:** `reconciliation_rules_delete_owner_admin_module` - Owner/Admin + Module 2 activated
+
+## 5.9 Breach Likelihood Scores Table
+
+**Table:** `breach_likelihood_scores`
+**RLS Enabled:** Yes
+**Module:** Module 2
+
+### Policies Summary:
+- **SELECT:** `breach_likelihood_scores_select_site_module` - Site access + Module 2 activated
+- **INSERT:** `breach_likelihood_scores_insert_system_module` - System only (auto-calculated) + Module 2 activated
+- **UPDATE:** `breach_likelihood_scores_update_system_module` - System only (auto-updated) + Module 2 activated
+- **DELETE:** `breach_likelihood_scores_delete_owner_admin_module` - Owner/Admin + Module 2 activated
+
+## 5.10 Predictive Breach Alerts Table
+
+**Table:** `predictive_breach_alerts`
+**RLS Enabled:** Yes
+**Module:** Module 2
+
+### Policies Summary:
+- **SELECT:** `predictive_breach_alerts_select_site_module` - Site access + Module 2 activated
+- **INSERT:** `predictive_breach_alerts_insert_system_module` - System only (auto-generated) + Module 2 activated
+- **UPDATE:** `predictive_breach_alerts_update_staff_module` - Staff+ roles + Module 2 activated
+- **DELETE:** `predictive_breach_alerts_delete_owner_admin_module` - Owner/Admin + Module 2 activated
+
+## 5.11 Exposure Calculations Table
+
+**Table:** `exposure_calculations`
+**RLS Enabled:** Yes
+**Module:** Module 2
+
+### Policies Summary:
+- **SELECT:** `exposure_calculations_select_site_module` - Site access + Module 2 activated
+- **INSERT:** `exposure_calculations_insert_system_module` - System only (auto-calculated) + Module 2 activated
+- **UPDATE:** `exposure_calculations_update_system_module` - System only (auto-updated) + Module 2 activated
+- **DELETE:** `exposure_calculations_delete_owner_admin_module` - Owner/Admin + Module 2 activated
+
+## 5.12 Monthly Statements Table
+
+**Table:** `monthly_statements`
+**RLS Enabled:** Yes
+**Module:** Module 2
+
+### Policies Summary:
+- **SELECT:** `monthly_statements_select_site_module` - Site access + Module 2 activated
+- **INSERT:** `monthly_statements_insert_staff_module` - Staff+ roles + Module 2 activated
+- **UPDATE:** `monthly_statements_update_staff_module` - Staff+ roles + Module 2 activated
+- **DELETE:** `monthly_statements_delete_owner_admin_module` - Owner/Admin + Module 2 activated
+
+## 5.13 Statement Reconciliations Table
+
+**Table:** `statement_reconciliations`
+**RLS Enabled:** Yes
+**Module:** Module 2
+
+### Policies Summary:
+- **SELECT:** `statement_reconciliations_select_site_module` - Site access + Module 2 activated
+- **INSERT:** `statement_reconciliations_insert_staff_module` - Staff+ roles + Module 2 activated
+- **UPDATE:** `statement_reconciliations_update_staff_module` - Staff+ roles + Module 2 activated
+- **DELETE:** `statement_reconciliations_delete_owner_admin_module` - Owner/Admin + Module 2 activated
+
+## 5.14 Reconciliation Discrepancies Table
+
+**Table:** `reconciliation_discrepancies`
+**RLS Enabled:** Yes
+**Module:** Module 2
+
+### Policies Summary:
+- **SELECT:** `reconciliation_discrepancies_select_site_module` - Site access + Module 2 activated
+- **INSERT:** `reconciliation_discrepancies_insert_system_module` - System only (auto-generated) + Module 2 activated
+- **UPDATE:** `reconciliation_discrepancies_update_staff_module` - Staff+ roles + Module 2 activated
+- **DELETE:** `reconciliation_discrepancies_delete_owner_admin_module` - Owner/Admin + Module 2 activated
+
+## 5.15 Discharge Volumes Table
 
 **Table:** `discharge_volumes`  
 **RLS Enabled:** Yes  
@@ -1939,7 +3045,72 @@ USING (
 - **UPDATE:** `maintenance_records_update_staff_module` - Staff+ roles + Module 3 activated
 - **DELETE:** `maintenance_records_delete_owner_admin_module` - Owner/Admin + Module 3 activated
 
-## 6.5 AER Documents Table
+## 6.5 Runtime Monitoring Table
+
+**Table:** `runtime_monitoring`  
+**RLS Enabled:** Yes  
+**Module:** Module 3
+
+### Policies Summary:
+- **SELECT:** `runtime_monitoring_select_site_module` - Site access + Module 3 activated
+- **INSERT:** `runtime_monitoring_insert_staff_module` - Staff+ roles + Module 3 activated (or system for automated)
+- **UPDATE:** `runtime_monitoring_update_staff_module` - Staff+ roles + Module 3 activated
+- **DELETE:** `runtime_monitoring_delete_owner_admin_module` - Owner/Admin + Module 3 activated
+
+## 6.6 Exemptions Table
+
+**Table:** `exemptions`  
+**RLS Enabled:** Yes  
+**Module:** Module 3
+
+### Policies Summary:
+- **SELECT:** `exemptions_select_site_module` - Site access + Module 3 activated
+- **INSERT:** `exemptions_insert_staff_module` - Staff+ roles + Module 3 activated
+- **UPDATE:** `exemptions_update_staff_module` - Staff+ roles + Module 3 activated
+- **DELETE:** `exemptions_delete_owner_admin_module` - Owner/Admin + Module 3 activated
+
+> [v1.6 UPDATE – Compliance Clocks Table Removed – 2025-01-01]
+> - Removed `compliance_clocks` table RLS policies (Module 3 specific)
+> - Module 3 generator clocks now use `compliance_clocks_universal` table with `entity_type = 'GENERATOR'`
+> - See `compliance_clocks_universal` table RLS policies (Section 8.11) for unified clock access control
+
+## 6.7 Regulation Thresholds Table
+
+**Table:** `regulation_thresholds`  
+**RLS Enabled:** Yes  
+**Module:** Module 3
+
+### Policies Summary:
+- **SELECT:** `regulation_thresholds_select_company_access` - Company access + Module 3 activated
+- **INSERT:** `regulation_thresholds_insert_staff_module` - Staff+ roles + Module 3 activated
+- **UPDATE:** `regulation_thresholds_update_staff_module` - Staff+ roles + Module 3 activated
+- **DELETE:** `regulation_thresholds_delete_owner_admin_module` - Owner/Admin + Module 3 activated
+
+## 6.9 Threshold Compliance Rules Table
+
+**Table:** `threshold_compliance_rules`  
+**RLS Enabled:** Yes  
+**Module:** Module 3
+
+### Policies Summary:
+- **SELECT:** `threshold_compliance_rules_select_site_module` - Site access + Module 3 activated
+- **INSERT:** `threshold_compliance_rules_insert_staff_module` - Staff+ roles + Module 3 activated
+- **UPDATE:** `threshold_compliance_rules_update_staff_module` - Staff+ roles + Module 3 activated
+- **DELETE:** `threshold_compliance_rules_delete_owner_admin_module` - Owner/Admin + Module 3 activated
+
+## 6.10 Frequency Calculations Table
+
+**Table:** `frequency_calculations`  
+**RLS Enabled:** Yes  
+**Module:** Module 3
+
+### Policies Summary:
+- **SELECT:** `frequency_calculations_select_site_module` - Site access + Module 3 activated
+- **INSERT:** `frequency_calculations_insert_system_module` - System only (auto-calculated) + Module 3 activated
+- **UPDATE:** `frequency_calculations_update_staff_module` - Staff+ roles + Module 3 activated
+- **DELETE:** `frequency_calculations_delete_owner_admin_module` - Owner/Admin + Module 3 activated
+
+## 6.11 AER Documents Table
 
 **Table:** `aer_documents`  
 **RLS Enabled:** Yes  
@@ -1953,9 +3124,575 @@ USING (
 
 ---
 
-# 7. Cross-Module Tables RLS Policies
+# 7. Module 4 Tables RLS Policies (Hazardous Waste Chain of Custody)
 
-## 7.1 Notifications Table
+**Note:** All Module 4 tables require module activation check via `module_activations` table.
+
+## 7.1 Waste Streams Table
+
+**Table:** `waste_streams`  
+**RLS Enabled:** Yes  
+**Module:** Module 4
+
+### Policies Summary:
+- **SELECT:** `waste_streams_select_site_module` - Site access + Module 4 activated
+- **INSERT:** `waste_streams_insert_staff_module` - Staff+ roles + Module 4 activated
+- **UPDATE:** `waste_streams_update_staff_module` - Staff+ roles + Module 4 activated
+- **DELETE:** `waste_streams_delete_owner_admin_module` - Owner/Admin + Module 4 activated
+
+## 7.2 Consignment Notes Table
+
+**Table:** `consignment_notes`  
+**RLS Enabled:** Yes  
+**Module:** Module 4
+
+### Policies Summary:
+- **SELECT:** `consignment_notes_select_site_module` - Site access + Module 4 activated
+- **INSERT:** `consignment_notes_insert_staff_module` - Staff+ roles + Module 4 activated
+- **UPDATE:** `consignment_notes_update_staff_module` - Staff+ roles + Module 4 activated
+- **DELETE:** `consignment_notes_delete_owner_admin_module` - Owner/Admin + Module 4 activated
+
+## 7.3 Contractor Licences Table
+
+**Table:** `contractor_licences`  
+**RLS Enabled:** Yes  
+**Module:** Module 4
+
+### Policies Summary:
+- **SELECT:** `contractor_licences_select_company_access` - Company access + Module 4 activated
+- **INSERT:** `contractor_licences_insert_staff_module` - Staff+ roles + Module 4 activated
+- **UPDATE:** `contractor_licences_update_staff_module` - Staff+ roles + Module 4 activated
+- **DELETE:** `contractor_licences_delete_owner_admin_module` - Owner/Admin + Module 4 activated
+
+## 7.4 Chain of Custody Table
+
+**Table:** `chain_of_custody`  
+**RLS Enabled:** Yes  
+**Module:** Module 4
+
+### Policies Summary:
+- **SELECT:** `chain_of_custody_select_site_module` - Site access + Module 4 activated
+- **INSERT:** `chain_of_custody_insert_staff_module` - Staff+ roles + Module 4 activated
+- **UPDATE:** `chain_of_custody_update_staff_module` - Staff+ roles + Module 4 activated
+- **DELETE:** `chain_of_custody_delete_owner_admin_module` - Owner/Admin + Module 4 activated
+
+## 7.5 End Point Proofs Table
+
+**Table:** `end_point_proofs`  
+**RLS Enabled:** Yes  
+**Module:** Module 4
+
+### Policies Summary:
+- **SELECT:** `end_point_proofs_select_site_module` - Site access + Module 4 activated
+- **INSERT:** `end_point_proofs_insert_staff_module` - Staff+ roles + Module 4 activated
+- **UPDATE:** `end_point_proofs_update_staff_module` - Staff+ roles + Module 4 activated
+- **DELETE:** `end_point_proofs_delete_owner_admin_module` - Owner/Admin + Module 4 activated
+
+## 7.6 Chain Break Alerts Table
+
+**Table:** `chain_break_alerts`  
+**RLS Enabled:** Yes  
+**Module:** Module 4
+
+### Policies Summary:
+- **SELECT:** `chain_break_alerts_select_site_module` - Site access + Module 4 activated
+- **INSERT:** `chain_break_alerts_insert_system_module` - System only (auto-generated)
+- **UPDATE:** `chain_break_alerts_update_staff_module` - Staff+ roles + Module 4 activated
+- **DELETE:** `chain_break_alerts_delete_owner_admin_module` - Owner/Admin + Module 4 activated
+
+## 7.7 Validation Rules Table
+
+**Table:** `validation_rules`  
+**RLS Enabled:** Yes  
+**Module:** Module 4
+
+### Policies Summary:
+- **SELECT:** `validation_rules_select_company_access` - Company access + Module 4 activated
+- **INSERT:** `validation_rules_insert_staff_module` - Staff+ roles + Module 4 activated
+- **UPDATE:** `validation_rules_update_staff_module` - Staff+ roles + Module 4 activated
+- **DELETE:** `validation_rules_delete_owner_admin_module` - Owner/Admin + Module 4 activated
+
+## 7.8 Validation Rule Configs Table
+
+**Table:** `validation_rule_configs`  
+**RLS Enabled:** Yes  
+**Module:** Module 4
+
+### Policies Summary:
+- **SELECT:** `validation_rule_configs_select_site_module` - Site access + Module 4 activated
+- **INSERT:** `validation_rule_configs_insert_staff_module` - Staff+ roles + Module 4 activated
+- **UPDATE:** `validation_rule_configs_update_staff_module` - Staff+ roles + Module 4 activated
+- **DELETE:** `validation_rule_configs_delete_owner_admin_module` - Owner/Admin + Module 4 activated
+
+## 7.9 Validation Results Table
+
+**Table:** `validation_results`
+**RLS Enabled:** Yes
+**Module:** Module 4
+
+### Policies Summary:
+- **SELECT:** `validation_results_select_site_module` - Site access + Module 4 activated
+- **INSERT:** `validation_results_insert_system_module` - System only (auto-generated) + Module 4 activated
+- **UPDATE:** `validation_results_update_staff_module` - Staff+ roles + Module 4 activated
+- **DELETE:** `validation_results_delete_owner_admin_module` - Owner/Admin + Module 4 activated
+
+---
+
+## 7.10 Validation Executions Table
+
+**Table:** `validation_executions`
+**RLS Enabled:** Yes
+**Module:** Module 4
+**Soft Delete:** No
+
+### SELECT Policy
+
+**Policy:** `validation_executions_select_site_access`
+
+```sql
+CREATE POLICY validation_executions_select_site_access ON validation_executions
+FOR SELECT
+USING (
+  consignment_note_id IN (
+    SELECT id FROM consignment_notes
+    WHERE site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Users can see validation executions for consignment notes from their assigned sites
+- Provides visibility into validation history and debugging
+
+### INSERT Policy
+
+**Policy:** `validation_executions_insert_system_access`
+
+```sql
+CREATE POLICY validation_executions_insert_system_access ON validation_executions
+FOR INSERT
+WITH CHECK (auth.role() = 'service_role');
+```
+
+**Access Logic:**
+- Only system can insert validation execution records (immutable audit log)
+- Records created automatically when validation rules are executed
+
+### UPDATE Policy
+
+```sql
+-- No UPDATE policy - validation executions are immutable audit records
+```
+
+**Access Logic:**
+- Validation executions cannot be updated (immutable audit trail)
+- Ensures integrity of validation history for compliance audits
+
+### DELETE Policy
+
+**Policy:** `validation_executions_delete_owner_admin_access`
+
+```sql
+CREATE POLICY validation_executions_delete_owner_admin_access ON validation_executions
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM consignment_notes cn
+    JOIN user_site_assignments usa ON usa.site_id = cn.site_id
+    WHERE cn.id = validation_executions.consignment_note_id
+    AND usa.user_id = auth.uid()
+    AND usa.role IN ('OWNER', 'ADMIN')
+  )
+);
+```
+
+**Access Logic:**
+- Only Owners and Admins can delete validation execution records
+- Deletion should be rare as these are audit records
+
+---
+
+# 8. Cross-Module Tables RLS Policies
+
+## 8.1 Recurring Tasks Table
+
+**Table:** `recurring_tasks`  
+**RLS Enabled:** Yes  
+**Soft Delete:** No
+
+### SELECT Policy
+
+**Policy:** `recurring_tasks_select_site_access`
+
+```sql
+CREATE POLICY recurring_tasks_select_site_access ON recurring_tasks
+FOR SELECT
+USING (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+  )
+);
+```
+
+**Access Logic:**
+- Users can see recurring tasks from their assigned sites
+
+### INSERT Policy
+
+**Policy:** `recurring_tasks_insert_system_access`
+
+```sql
+CREATE POLICY recurring_tasks_insert_system_access ON recurring_tasks
+FOR INSERT
+WITH CHECK (auth.role() = 'service_role');
+```
+
+**Access Logic:**
+- Only system can create recurring tasks (auto-generated from schedules)
+
+### UPDATE Policy
+
+**Policy:** `recurring_tasks_update_staff_access`
+
+```sql
+CREATE POLICY recurring_tasks_update_staff_access ON recurring_tasks
+FOR UPDATE
+USING (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
+  )
+)
+WITH CHECK (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, and Staff can update recurring tasks
+
+### DELETE Policy
+
+**Policy:** `recurring_tasks_delete_owner_admin_access`
+
+```sql
+CREATE POLICY recurring_tasks_delete_owner_admin_access ON recurring_tasks
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND site_id = recurring_tasks.site_id
+    AND role IN ('OWNER', 'ADMIN')
+  )
+);
+```
+
+**Access Logic:**
+- Only Owners and Admins can delete recurring tasks
+
+## 8.2 Evidence Expiry Tracking Table
+
+**Table:** `evidence_expiry_tracking`  
+**RLS Enabled:** Yes  
+**Soft Delete:** No
+
+### SELECT Policy
+
+**Policy:** `evidence_expiry_tracking_select_site_access`
+
+```sql
+CREATE POLICY evidence_expiry_tracking_select_site_access ON evidence_expiry_tracking
+FOR SELECT
+USING (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+  )
+);
+```
+
+**Access Logic:**
+- Users can see evidence expiry tracking from their assigned sites
+
+### INSERT Policy
+
+**Policy:** `evidence_expiry_tracking_insert_system_access`
+
+```sql
+CREATE POLICY evidence_expiry_tracking_insert_system_access ON evidence_expiry_tracking
+FOR INSERT
+WITH CHECK (auth.role() = 'service_role');
+```
+
+**Access Logic:**
+- Only system can create evidence expiry tracking (auto-generated from evidence items)
+
+### UPDATE Policy
+
+**Policy:** `evidence_expiry_tracking_update_system_access`
+
+```sql
+CREATE POLICY evidence_expiry_tracking_update_system_access ON evidence_expiry_tracking
+FOR UPDATE
+USING (auth.role() = 'service_role')
+WITH CHECK (auth.role() = 'service_role');
+```
+
+**Access Logic:**
+- Only system can update evidence expiry tracking (auto-updated)
+
+### DELETE Policy
+
+**Policy:** `evidence_expiry_tracking_delete_owner_admin_access`
+
+```sql
+CREATE POLICY evidence_expiry_tracking_delete_owner_admin_access ON evidence_expiry_tracking
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND site_id = evidence_expiry_tracking.site_id
+    AND role IN ('OWNER', 'ADMIN')
+  )
+);
+```
+
+**Access Logic:**
+- Only Owners and Admins can delete evidence expiry tracking
+
+## 8.3 Condition Permissions Table
+
+**Table:** `condition_permissions`  
+**RLS Enabled:** Yes  
+**Soft Delete:** No
+
+### SELECT Policy
+
+**Policy:** `condition_permissions_select_site_access`
+
+```sql
+CREATE POLICY condition_permissions_select_site_access ON condition_permissions
+FOR SELECT
+USING (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+  )
+);
+```
+
+**Access Logic:**
+- Users can see condition permissions from their assigned sites
+
+### INSERT Policy
+
+**Policy:** `condition_permissions_insert_staff_access`
+
+```sql
+CREATE POLICY condition_permissions_insert_staff_access ON condition_permissions
+FOR INSERT
+WITH CHECK (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, and Staff can create condition permissions
+
+### UPDATE Policy
+
+**Policy:** `condition_permissions_update_staff_access`
+
+```sql
+CREATE POLICY condition_permissions_update_staff_access ON condition_permissions
+FOR UPDATE
+USING (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
+  )
+)
+WITH CHECK (
+  site_id IN (
+    SELECT site_id FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND role IN ('OWNER', 'ADMIN', 'STAFF')
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, and Staff can update condition permissions
+
+### DELETE Policy
+
+**Policy:** `condition_permissions_delete_owner_admin_access`
+
+```sql
+CREATE POLICY condition_permissions_delete_owner_admin_access ON condition_permissions
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM user_site_assignments
+    WHERE user_id = auth.uid()
+    AND site_id = condition_permissions.site_id
+    AND role IN ('OWNER', 'ADMIN')
+  )
+);
+```
+
+**Access Logic:**
+- Only Owners and Admins can delete condition permissions
+
+## 8.4 Pack Sharing Table
+
+**Table:** `pack_sharing`  
+**RLS Enabled:** Yes  
+**Soft Delete:** No
+
+### SELECT Policy
+
+**Policy:** `pack_sharing_select_pack_access`
+
+```sql
+CREATE POLICY pack_sharing_select_pack_access ON pack_sharing
+FOR SELECT
+USING (
+  pack_id IN (
+    SELECT id FROM audit_packs
+    WHERE (
+      -- Site-level access
+      site_id IN (
+        SELECT site_id FROM user_site_assignments
+        WHERE user_id = auth.uid()
+      )
+      OR
+      -- Regular users: Owner/Admin of their own company (for Board Pack)
+      (
+        company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+        AND EXISTS (
+          SELECT 1 FROM user_roles
+          WHERE user_id = auth.uid()
+          AND role IN ('OWNER', 'ADMIN')
+        )
+      )
+      OR
+      -- Consultants: assigned client companies
+      company_id IN (
+        SELECT client_company_id FROM consultant_client_assignments
+        WHERE consultant_id = auth.uid()
+        AND status = 'ACTIVE'
+      )
+    )
+  )
+  OR
+  -- Shared link access (token-based, no authentication required if token valid)
+  (
+    access_token IS NOT NULL
+    AND expires_at > NOW()
+    AND is_active = true
+    -- Token validation happens at application level
+  )
+);
+```
+
+**Access Logic:**
+- Users can see pack sharing records for packs they can access
+- Shared links bypass standard RLS (token-based access)
+
+### INSERT Policy
+
+**Policy:** `pack_sharing_insert_staff_access`
+
+```sql
+CREATE POLICY pack_sharing_insert_staff_access ON pack_sharing
+FOR INSERT
+WITH CHECK (
+  pack_id IN (
+    SELECT id FROM audit_packs
+    WHERE site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF', 'CONSULTANT')
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, Staff, and Consultants can create pack sharing records
+
+### UPDATE Policy
+
+**Policy:** `pack_sharing_update_staff_access`
+
+```sql
+CREATE POLICY pack_sharing_update_staff_access ON pack_sharing
+FOR UPDATE
+USING (
+  pack_id IN (
+    SELECT id FROM audit_packs
+    WHERE site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
+    )
+  )
+)
+WITH CHECK (
+  pack_id IN (
+    SELECT id FROM audit_packs
+    WHERE site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, and Staff can update pack sharing records
+
+### DELETE Policy
+
+**Policy:** `pack_sharing_delete_staff_access`
+
+```sql
+CREATE POLICY pack_sharing_delete_staff_access ON pack_sharing
+FOR DELETE
+USING (
+  pack_id IN (
+    SELECT id FROM audit_packs
+    WHERE site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN', 'STAFF')
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Owners, Admins, and Staff can delete pack sharing records
+
+## 8.5 Notifications Table
 
 **Table:** `notifications`  
 **RLS Enabled:** Yes  
@@ -1997,7 +3734,7 @@ USING (user_id = auth.uid());
 - System creates/updates notifications
 - Users can delete their own notifications
 
-## 7.2 Audit Logs Table
+## 8.6 Audit Logs Table
 
 **Table:** `audit_logs`  
 **RLS Enabled:** Yes (read-only for company)  
@@ -2051,7 +3788,7 @@ WITH CHECK (auth.role() = 'service_role');
 **Access Logic:**
 - No one can update or delete audit logs
 
-## 7.3 Regulator Questions Table
+## 8.7 Regulator Questions Table
 
 **Table:** `regulator_questions`  
 **RLS Enabled:** Yes  
@@ -2220,7 +3957,7 @@ USING (
 **Access Logic:**
 - Only Owners and Admins can delete regulator questions
 
-## 7.4 Review Queue Items Table
+## 8.8 Review Queue Items Table
 
 **Table:** `review_queue_items`  
 **RLS Enabled:** Yes  
@@ -2296,7 +4033,7 @@ USING (auth.role() = 'service_role');
 **Access Logic:**
 - Only system can delete review queue items (after review completion)
 
-## 7.5 Escalations Table
+## 8.9 Escalations Table
 
 **Table:** `escalations`  
 **RLS Enabled:** Yes  
@@ -2383,7 +4120,283 @@ USING (
 **Access Logic:**
 - Only Owners and Admins can delete escalations
 
-## 7.6 Excel Imports Table
+---
+
+## 8.10 Escalation Workflows Table
+
+**Table:** `escalation_workflows`
+**RLS Enabled:** Yes
+**Soft Delete:** No
+
+### SELECT Policy
+
+**Policy:** `escalation_workflows_select_company_access`
+
+```sql
+CREATE POLICY escalation_workflows_select_company_access ON escalation_workflows
+FOR SELECT
+USING (
+  company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+  OR
+  company_id IN (
+    SELECT client_company_id FROM consultant_client_assignments
+    WHERE consultant_id = auth.uid()
+    AND status = 'ACTIVE'
+  )
+);
+```
+
+**Access Logic:**
+- Users can see escalation workflows for their company
+- Consultants can see workflows for assigned client companies
+- Company-level configuration accessible to all company users
+
+### INSERT Policy
+
+**Policy:** `escalation_workflows_insert_admin_access`
+
+```sql
+CREATE POLICY escalation_workflows_insert_admin_access ON escalation_workflows
+FOR INSERT
+WITH CHECK (
+  company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+  AND EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_id = auth.uid()
+    AND role IN ('OWNER', 'ADMIN')
+  )
+);
+```
+
+**Access Logic:**
+- Only Owners and Admins can create escalation workflows
+- Must be for their own company
+
+### UPDATE Policy
+
+**Policy:** `escalation_workflows_update_admin_access`
+
+```sql
+CREATE POLICY escalation_workflows_update_admin_access ON escalation_workflows
+FOR UPDATE
+USING (
+  company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+  AND EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_id = auth.uid()
+    AND role IN ('OWNER', 'ADMIN')
+  )
+)
+WITH CHECK (
+  company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+  AND EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_id = auth.uid()
+    AND role IN ('OWNER', 'ADMIN')
+  )
+);
+```
+
+**Access Logic:**
+- Only Owners and Admins can update escalation workflows
+- Cannot change workflows of other companies
+
+### DELETE Policy
+
+**Policy:** `escalation_workflows_delete_owner_access`
+
+```sql
+CREATE POLICY escalation_workflows_delete_owner_access ON escalation_workflows
+FOR DELETE
+USING (
+  company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+  AND EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_id = auth.uid()
+    AND role = 'OWNER'
+  )
+);
+```
+
+**Access Logic:**
+- Only Owners can delete escalation workflows
+
+---
+
+## 8.11 Compliance Clocks Universal Table
+
+**Table:** `compliance_clocks_universal`
+**RLS Enabled:** Yes
+**Soft Delete:** No
+
+### SELECT Policy
+
+**Policy:** `compliance_clocks_universal_select_site_access`
+
+```sql
+CREATE POLICY compliance_clocks_universal_select_site_access ON compliance_clocks_universal
+FOR SELECT
+USING (
+  -- Site-specific clocks: site access required
+  (
+    site_id IS NOT NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+    )
+  )
+  OR
+  -- Company-level clocks (no site_id): company access required
+  (
+    site_id IS NULL
+    AND company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+  )
+  OR
+  -- Consultants: client company access
+  (
+    company_id IN (
+      SELECT client_company_id FROM consultant_client_assignments
+      WHERE consultant_id = auth.uid()
+      AND status = 'ACTIVE'
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Users can see clocks for their assigned sites
+- Company-level clocks visible to all company users
+- Consultants can see clocks for assigned client companies
+- Supports both site-level and company-level compliance tracking
+
+### INSERT Policy
+
+**Policy:** `compliance_clocks_universal_insert_system_access`
+
+```sql
+CREATE POLICY compliance_clocks_universal_insert_system_access ON compliance_clocks_universal
+FOR INSERT
+WITH CHECK (auth.role() = 'service_role');
+```
+
+**Access Logic:**
+- Only system can insert compliance clocks (auto-generated)
+- Clocks created automatically based on deadlines, permits, licences, etc.
+
+### UPDATE Policy
+
+**Policy:** `compliance_clocks_universal_update_system_access`
+
+```sql
+CREATE POLICY compliance_clocks_universal_update_system_access ON compliance_clocks_universal
+FOR UPDATE
+USING (auth.role() = 'service_role')
+WITH CHECK (auth.role() = 'service_role');
+```
+
+**Access Logic:**
+- Only system can update compliance clocks
+- Automatic updates based on target dates and recalculations
+
+### DELETE Policy
+
+**Policy:** `compliance_clocks_universal_delete_owner_admin_access`
+
+```sql
+CREATE POLICY compliance_clocks_universal_delete_owner_admin_access ON compliance_clocks_universal
+FOR DELETE
+USING (
+  -- Site-specific clocks
+  (
+    site_id IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM user_site_assignments
+      WHERE user_id = auth.uid()
+      AND site_id = compliance_clocks_universal.site_id
+      AND role IN ('OWNER', 'ADMIN')
+    )
+  )
+  OR
+  -- Company-level clocks
+  (
+    site_id IS NULL
+    AND company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role IN ('OWNER', 'ADMIN')
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Only Owners and Admins can delete compliance clocks
+- Deletion should be rare as clocks are auto-managed
+
+---
+
+## 8.12 Compliance Clock Dashboard Table
+
+**Table:** `compliance_clock_dashboard` (Materialized View)
+**RLS Enabled:** Yes
+**Soft Delete:** No
+
+### SELECT Policy
+
+**Policy:** `compliance_clock_dashboard_select_site_access`
+
+```sql
+CREATE POLICY compliance_clock_dashboard_select_site_access ON compliance_clock_dashboard
+FOR SELECT
+USING (
+  -- Site-specific dashboard: site access required
+  (
+    site_id IS NOT NULL
+    AND site_id IN (
+      SELECT site_id FROM user_site_assignments
+      WHERE user_id = auth.uid()
+    )
+  )
+  OR
+  -- Company-level dashboard (no site_id): company access required
+  (
+    site_id IS NULL
+    AND company_id = (SELECT company_id FROM users WHERE id = auth.uid())
+  )
+  OR
+  -- Consultants: client company access
+  (
+    company_id IN (
+      SELECT client_company_id FROM consultant_client_assignments
+      WHERE consultant_id = auth.uid()
+      AND status = 'ACTIVE'
+    )
+  )
+);
+```
+
+**Access Logic:**
+- Users can see dashboard metrics for their assigned sites
+- Company-level dashboard visible to all company users
+- Consultants can see dashboard for assigned client companies
+- Materialized view - no INSERT/UPDATE/DELETE policies needed
+
+### INSERT/UPDATE/DELETE Policies
+
+```sql
+-- No INSERT, UPDATE, or DELETE policies
+-- Materialized view is refreshed automatically by system
+```
+
+**Access Logic:**
+- Materialized view is read-only
+- Refreshed periodically by system (e.g., hourly)
+- Provides aggregated compliance clock metrics for dashboard display
+
+---
+
+## 8.13 Excel Imports Table
 
 **Table:** `excel_imports`  
 **RLS Enabled:** Yes  
@@ -2449,10 +4462,10 @@ USING (user_id = auth.uid());
 **Access Logic:**
 - Users can delete their own Excel imports
 
-## 7.7 Module Activations Table
+## 8.14 Module Activations Table
 
-**Table:** `module_activations`  
-**RLS Enabled:** Yes  
+**Table:** `module_activations`
+**RLS Enabled:** Yes
 **Soft Delete:** No
 
 ### SELECT Policy
@@ -2558,10 +4571,10 @@ USING (
 **Access Logic:**
 - Only Owners can deactivate modules
 
-## 7.8 Cross-Sell Triggers Table
+## 8.15 Cross-Sell Triggers Table
 
-**Table:** `cross_sell_triggers`  
-**RLS Enabled:** Yes  
+**Table:** `cross_sell_triggers`
+**RLS Enabled:** Yes
 **Soft Delete:** No
 
 ### SELECT Policy
@@ -2656,10 +4669,10 @@ USING (
 **Access Logic:**
 - Owners and Admins can delete cross-sell triggers
 
-## 7.9 Extraction Logs Table
+## 8.16 Extraction Logs Table
 
-**Table:** `extraction_logs`  
-**RLS Enabled:** Yes  
+**Table:** `extraction_logs`
+**RLS Enabled:** Yes
 **Soft Delete:** No
 
 ### SELECT Policy
@@ -2735,9 +4748,9 @@ USING (
 
 ---
 
-## 7.8 Rule Library & Learning Mechanism Tables RLS Policies
+## 8.17 Rule Library & Learning Mechanism Tables RLS Policies
 
-### 7.8.1 rule_library_patterns Table
+### 8.17.1 rule_library_patterns Table
 
 **Table:** `rule_library_patterns`  
 **RLS Enabled:** Yes  
@@ -2790,10 +4803,10 @@ USING (
 
 ---
 
-### 7.8.2 pattern_candidates Table
+### 8.17.2 pattern_candidates Table
 
-**Table:** `pattern_candidates`  
-**RLS Enabled:** Yes  
+**Table:** `pattern_candidates`
+**RLS Enabled:** Yes
 **Soft Delete:** No
 
 #### SELECT Policy
@@ -2830,10 +4843,10 @@ USING (
 
 ---
 
-### 7.8.3 pattern_events Table
+### 8.17.3 pattern_events Table
 
-**Table:** `pattern_events`  
-**RLS Enabled:** Yes  
+**Table:** `pattern_events`
+**RLS Enabled:** Yes
 **Soft Delete:** No
 
 #### SELECT Policy
@@ -2871,10 +4884,10 @@ USING (
 
 ---
 
-### 7.8.4 correction_records Table
+### 8.17.4 correction_records Table
 
-**Table:** `correction_records`  
-**RLS Enabled:** Yes  
+**Table:** `correction_records`
+**RLS Enabled:** Yes
 **Soft Delete:** No
 
 #### SELECT Policy
@@ -2910,9 +4923,9 @@ WITH CHECK (corrected_by = auth.uid());
 
 ---
 
-# 8. Complete CRUD Matrices
+# 9. Complete CRUD Matrices
 
-## 8.1 CRUD Matrix Legend
+## 9.1 CRUD Matrix Legend
 
 - **C** = Create (INSERT)
 - **R** = Read (SELECT)
@@ -2921,7 +4934,7 @@ WITH CHECK (corrected_by = auth.uid());
 - **-** = No access
 - **\*** = Requires module activation
 
-## 8.2 Complete CRUD Matrix per Role per Entity
+## 9.2 Complete CRUD Matrix per Role per Entity
 
 | Entity | Owner | Admin | Staff | Viewer | Consultant |
 |--------|-------|-------|-------|--------|------------|
@@ -2938,21 +4951,60 @@ WITH CHECK (corrected_by = auth.uid());
 | **Deadlines** | CRUD | CRUD | CU | R | CU (client only) |
 | **Evidence Items** | CRU | CRU | CRU | R | CRU (client only) |
 | **Obligation Evidence Links** | CRUD | CRUD | CRUD | R | CRUD (client only) |
+| **Permit Versions** | CRUD | CRUD | CRU | R | CRU (client only) |
+| **Obligation Versions** | CRUD | CRUD | - | R | - |
+| **Enforcement Notices** | CRUD | CRUD | CRU | R | CRU (client only) |
+| **Compliance Decisions** | CRUD | CRUD | CRU | R | CRU (client only) |
+| **Condition Evidence Rules** | CRUD | CRUD | CRU | R | CRU (client only) |
+| **Evidence Completeness Scores** | CRUD | CRUD | - | R | - |
+| **Evidence Versions** | CRUD | CRUD | - | R | - |
+| **Recurrence Trigger Rules** | CRUD | CRUD | CRU | R | CRU (client only) |
+| **Recurrence Events** | CRUD | CRUD | CRU | R | CRU (client only) |
+| **Recurrence Conditions** | CRUD | CRUD | CRU | R | CRU (client only) |
 | **Audit Packs** | CRUD | CRUD | CRU | R | CRU (client only) |
 | **Parameters (Module 2)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
 | **Lab Results (Module 2)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
 | **Exceedances (Module 2)** | CRUD* | CRUD* | CU* | R* | CU* (client only) |
+| **Consent States (Module 2)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Corrective Actions (Module 2)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Sampling Logistics (Module 2)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Reconciliation Rules (Module 2)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Breach Likelihood Scores (Module 2)** | CRUD* | CRUD* | - | R* | - |
+| **Predictive Breach Alerts (Module 2)** | CRUD* | CRUD* | CU* | R* | CU* (client only) |
+| **Exposure Calculations (Module 2)** | CRUD* | CRUD* | - | R* | - |
+| **Monthly Statements (Module 2)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Statement Reconciliations (Module 2)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Reconciliation Discrepancies (Module 2)** | CRUD* | CRUD* | CU* | R* | CU* (client only) |
 | **Discharge Volumes (Module 2)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
 | **Generators (Module 3)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
 | **Run Hour Records (Module 3)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
 | **Stack Tests (Module 3)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
 | **Maintenance Records (Module 3)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Runtime Monitoring (Module 3)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Exemptions (Module 3)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Compliance Clocks (Module 3)** | CRUD* | CRUD* | CU* | R* | CU* (client only) |
+| **Regulation Thresholds (Module 3)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Threshold Compliance Rules (Module 3)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Frequency Calculations (Module 3)** | CRUD* | CRUD* | CU* | R* | CU* (client only) |
 | **AER Documents (Module 3)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Waste Streams (Module 4)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Consignment Notes (Module 4)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Contractor Licences (Module 4)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Chain of Custody (Module 4)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **End Point Proofs (Module 4)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Chain Break Alerts (Module 4)** | CRUD* | CRUD* | CU* | R* | CU* (client only) |
+| **Validation Rules (Module 4)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Validation Rule Configs (Module 4)** | CRUD* | CRUD* | CRU* | R* | CRU* (client only) |
+| **Validation Results (Module 4)** | CRUD* | CRUD* | CU* | R* | CU* (client only) |
 | **Notifications** | R (own) | R (own) | R (own) | R (own) | R (own) |
 | **Audit Logs** | R (company) | R (company) | R (company) | R (company) | R (client only) |
 | **Regulator Questions** | CRUD | CRUD | CRU | R | CRU (client only) |
 | **Review Queue Items** | CRUD | CRUD | CU | R | CU (client only) |
 | **Escalations** | CRUD | CRUD | CU | R | CU (client only) |
+| **Recurring Tasks** | CRUD | CRUD | CU | R | CU (client only) |
+| **Evidence Expiry Tracking** | CRUD | CRUD | - | R | - |
+| **Condition Permissions** | CRUD | CRUD | CRU | R | CRU (client only) |
+| **Pack Sharing** | CRUD | CRUD | CRUD | R | CRUD (client only) |
 | **Excel Imports** | CRUD (own) | CRUD (own) | CRUD (own) | R (own) | CRUD (own) |
 | **Module Activations** | CRUD | CRUD | R | R | R |
 | **Cross-Sell Triggers** | CRUD | CRUD | R | R | R (client only) |
@@ -2964,7 +5016,7 @@ WITH CHECK (corrected_by = auth.uid());
 - **System Settings:** Table exists but RLS disabled (global settings, not tenant-scoped). Access controlled via application-level permissions (Owner/Admin only).
 - **Rule Library Patterns:** Metadata stored in system, not a database table. Access controlled via application-level permissions (Owner/Admin can modify, Staff/Viewer read-only).
 
-## 8.3 Special Rules
+## 9.3 Special Rules
 
 ### Evidence Deletion
 - **No role can DELETE evidence items** - Evidence is archived by system after retention period
@@ -2976,6 +5028,19 @@ WITH CHECK (corrected_by = auth.uid());
 - **Escalations:** INSERT by system only (auto-generated from overdue items)
 - **Review Queue Items:** INSERT by system only (auto-generated from AI extraction)
 - **Cross-Sell Triggers:** INSERT by system only (auto-generated from usage patterns)
+- **Obligation Versions:** INSERT by system only (auto-generated on obligation changes)
+- **Evidence Completeness Scores:** INSERT/UPDATE by system only (auto-calculated)
+- **Evidence Versions:** INSERT by system only (auto-generated on evidence update)
+- **Recurring Tasks:** INSERT by system only (auto-generated from schedules)
+- **Evidence Expiry Tracking:** INSERT/UPDATE by system only (auto-generated from evidence items)
+- **Breach Likelihood Scores:** INSERT/UPDATE by system only (auto-calculated)
+- **Predictive Breach Alerts:** INSERT by system only (auto-generated)
+- **Exposure Calculations:** INSERT/UPDATE by system only (auto-calculated)
+- **Reconciliation Discrepancies:** INSERT by system only (auto-generated)
+- **Frequency Calculations:** INSERT by system only (auto-calculated)
+- **Compliance Clocks:** INSERT by system only (auto-generated from generators)
+- **Chain Break Alerts:** INSERT by system only (auto-generated from chain of custody validation)
+- **Validation Results:** INSERT by system only (auto-generated from validation rules)
 
 ### Module Activation Requirements
 - Module 2/3 entities require module activation check
@@ -2994,9 +5059,9 @@ WITH CHECK (corrected_by = auth.uid());
 
 ---
 
-# 9. Permission Evaluation Logic
+# 10. Permission Evaluation Logic
 
-## 9.1 SQL Functions for Permission Checks
+## 10.1 SQL Functions for Permission Checks
 
 ### Function: has_company_access
 
@@ -3132,7 +5197,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 **Purpose:** Check if a module is activated for a company
 
-## 9.2 Application Layer Permission Check
+## 10.2 Application Layer Permission Check
 
 ### Pseudocode
 
@@ -3224,7 +5289,7 @@ function isModuleActivated(companyId, moduleId):
   )
 ```
 
-## 9.3 Permission Check API Endpoint
+## 10.3 Permission Check API Endpoint
 
 **GET /api/v1/permissions/check**
 
@@ -3273,13 +5338,13 @@ function isModuleActivated(companyId, moduleId):
 
 ---
 
-# 10. Consultant Data Isolation
+# 11. Consultant Data Isolation
 
-## 10.1 Consultant Isolation Strategy
+## 11.1 Consultant Isolation Strategy
 
 Consultants have multi-company access but must be isolated to only their assigned client companies/sites. This is enforced at the database level via RLS policies.
 
-## 10.2 Consultant Assignment
+## 11.2 Consultant Assignment
 
 Consultants are assigned to client companies via the `consultant_client_assignments` table:
 - `consultant_id` = consultant user ID (must have `role = 'CONSULTANT'` in `user_roles`)
@@ -3288,7 +5353,7 @@ Consultants are assigned to client companies via the `consultant_client_assignme
 
 **Note:** Consultants have a primary company via `users.company_id` (their own company), but can access multiple client companies via `consultant_client_assignments`.
 
-## 10.3 Consultant Isolation Policy Pattern
+## 11.3 Consultant Isolation Policy Pattern
 
 All tables with `company_id` or `site_id` must include consultant isolation check:
 
@@ -3314,7 +5379,7 @@ USING (
 );
 ```
 
-## 10.4 Consultant Access Logic
+## 11.4 Consultant Access Logic
 
 **Function:** `is_consultant_assigned_to_company`
 
@@ -3335,22 +5400,44 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
-## 10.5 Consultant Restrictions
+## 11.5 Consultant Restrictions
 
+**Access Restrictions:**
 - **Upload Restrictions:** Consultants can only upload documents/evidence to assigned client companies/sites
-- **Cross-Client Prohibition:** Consultants cannot:
-  - View data from unassigned clients
-  - Upload documents to unassigned clients
-  - Link evidence across different clients
-  - Generate audit packs for unassigned clients
+- **Settings Access:** Consultants CANNOT access company settings or subscription management
+  - No SELECT/UPDATE access to `companies` table for settings fields (billing, subscription_tier, etc.)
+  - No access to subscription/billing endpoints
+  - Settings navigation hidden in UI for consultant role
+- **Subscription Management:** Consultants CANNOT view or modify subscription/billing information
+  - No access to billing history, payment methods, or subscription changes
+  - Subscription endpoints return `403 FORBIDDEN` for consultant role
+
+**Cross-Client Prohibition (Tenant Isolation):**
+- **View Data:** Consultants cannot view data from unassigned clients
+- **Upload Documents:** Consultants cannot upload documents to unassigned clients
+- **Evidence Isolation:** Evidence cannot leak across clients - strict tenant isolation enforced:
+  - Evidence items can only be linked to obligations within the same client company
+  - Evidence uploads are scoped to assigned client sites only
+  - Cross-client evidence linking is blocked at RLS level
+  - Evidence queries filtered by `company_id IN (SELECT client_company_id FROM consultant_client_assignments WHERE consultant_id = auth.uid() AND status = 'ACTIVE')`
+- **Pack Generation:** Consultants can only generate audit packs for assigned clients
+  - Pack generation validates `company_id` against `consultant_client_assignments`
+  - All pack types (Regulator, Tender, Board, Insurer, Audit) restricted to assigned clients only
+  - Pack generation blocked with `403 FORBIDDEN` if client not assigned
+
+**Multi-Site Access:**
+- Consultants can view multiple assigned sites across different client companies
+- Site access determined by `consultant_client_assignments.client_company_id`
+- All sites within assigned client companies are accessible
+- Site switcher in UI shows all assigned client sites grouped by company
 
 ---
 
 > [v1 UPDATE – Consultant Client Assignments RLS – 2024-12-27]
 
-# 11. v1.0 Consultant Client Assignments RLS Policies
+# 12. v1.0 Consultant Client Assignments RLS Policies
 
-## 11.1 consultant_client_assignments Table
+## 12.1 consultant_client_assignments Table
 
 **Table:** `consultant_client_assignments`  
 **RLS Enabled:** Yes  
@@ -3467,9 +5554,9 @@ USING (
 
 > [v1 UPDATE – Pack Access Policies – 2024-12-27]
 
-# 12. v1.0 Pack Access Policies
+# 13. v1.0 Pack Access Policies
 
-## 12.1 Pack Type Access Control
+## 13.1 Pack Type Access Control
 
 **Plan-Based Access:**
 - Core Plan: `REGULATOR_INSPECTION`, `AUDIT_PACK` only
@@ -3478,7 +5565,7 @@ USING (
 
 **Enforcement:** Application-level (plan check) + RLS (site/company access)
 
-## 12.2 Pack Generation Access
+## 13.2 Pack Generation Access
 
 **Updated Policy:** `audit_packs_insert_staff_access` (extends existing policy)
 
@@ -3490,7 +5577,7 @@ USING (
 - **Consultants:** Can generate packs for assigned clients (site-level access, not Board Pack)
 - Pack type access validated at API level based on user plan
 
-## 12.3 Pack View Access
+## 13.3 Pack View Access
 
 **Policy:** `audit_packs_select_site_access` (existing, no changes)
 
@@ -3498,7 +5585,7 @@ USING (
 - All users can view packs from their assigned sites
 - Pack type visibility not restricted (users see all pack types they have access to generate)
 
-## 12.4 Board Pack Multi-Site Access
+## 13.4 Board Pack Multi-Site Access
 
 **Special Case:** Board Pack requires `company_id` scope (not `site_id`)
 
@@ -3552,82 +5639,21 @@ USING (
 
 > [v1 UPDATE – Pack Distribution Policies – 2024-12-27]
 
-# 13. v1.0 Pack Distribution Policies
+# 14. v1.0 Pack Distribution Policies
 
-## 13.1 pack_distributions Table
+> [v1.6 UPDATE – Pack Distributions Table Removed – 2025-01-01]
+> - Removed `pack_distributions` table RLS policies
+> - Pack distribution functionality merged into `pack_sharing` table
+> - See `pack_sharing` table RLS policies (Section 9.4) for consolidated distribution access control
 
-**Table:** `pack_distributions`  
-**RLS Enabled:** Yes  
-**Soft Delete:** No
+## 14.1 pack_sharing Table (Consolidated Distribution)
 
-### SELECT Policy
+> [v1.6 UPDATE – Pack Distributions Table Removed – 2025-01-01]
+> - Removed `pack_distributions` table RLS policies
+> - Pack distribution functionality merged into `pack_sharing` table
+> - See `pack_sharing` table RLS policies (Section 9.4) for consolidated distribution access control
 
-**Policy:** `pack_distributions_select_pack_access`
-
-```sql
-CREATE POLICY pack_distributions_select_pack_access ON pack_distributions
-FOR SELECT
-USING (
-  pack_id IN (
-    SELECT id FROM audit_packs
-    WHERE (
-      -- Site-level access
-      site_id IN (
-        SELECT site_id FROM user_site_assignments
-        WHERE user_id = auth.uid()
-      )
-      OR
-      -- Regular users: Owner/Admin of their own company (for Board Pack)
-      (
-        company_id = (SELECT company_id FROM users WHERE id = auth.uid())
-        AND EXISTS (
-          SELECT 1 FROM user_roles
-          WHERE user_id = auth.uid()
-          AND role IN ('OWNER', 'ADMIN')
-        )
-      )
-      OR
-      -- Consultants: assigned client companies
-      company_id IN (
-        SELECT client_company_id FROM consultant_client_assignments
-        WHERE consultant_id = auth.uid()
-        AND status = 'ACTIVE'
-      )
-    )
-  )
-);
-```
-
-**Access Logic:**
-- Users can see distributions for packs they can access
-
-### INSERT Policy
-
-**Policy:** `pack_distributions_insert_staff_access`
-
-```sql
-CREATE POLICY pack_distributions_insert_staff_access ON pack_distributions
-FOR INSERT
-WITH CHECK (
-  pack_id IN (
-    SELECT id FROM audit_packs
-    WHERE site_id IN (
-      SELECT site_id FROM user_site_assignments
-      WHERE user_id = auth.uid()
-      AND role IN ('OWNER', 'ADMIN', 'STAFF', 'CONSULTANT')
-    )
-  )
-  -- Distribution method access validated at application level (Growth Plan required)
-);
-```
-
-**Access Logic:**
-- Owners, Admins, Staff, and Consultants can create distributions
-- Distribution method access validated at API level:
-  - Core Plan: EMAIL for Regulator Pack and Audit Pack only
-  - Growth Plan/Consultant Edition: EMAIL for all pack types + SHARED_LINK
-
-## 13.2 Shared Link Access
+## 14.2 Shared Link Access
 
 **Policy:** `audit_packs_select_shared_link_access`
 
@@ -3653,15 +5679,15 @@ USING (
 **Access Logic:**
 - Shared links bypass standard RLS (token-based access)
 - Token validation and expiration checked at application level
-- Shared link access logged in `pack_distributions` table
+- Shared link access logged in `pack_sharing` table
 
 **Reference:** Product Logic Specification Section I.8.7 (Pack Distribution Logic)
 
 ---
 
-# 14. Service Role Handling
+# 15. Service Role Handling
 
-## 11.1 Service Role vs User JWT
+## 15.1 Service Role vs User JWT
 
 ### Service Role Usage
 
@@ -3689,7 +5715,7 @@ USING (
 - Policies check `auth.uid()` for user identity
 - Policies check `user_roles` and `user_site_assignments` for access
 
-## 11.2 Service Role Policy Pattern
+## 15.2 Service Role Policy Pattern
 
 ```sql
 -- Example: System-only INSERT policy
@@ -3700,9 +5726,9 @@ WITH CHECK (auth.role() = 'service_role');
 
 ---
 
-# 15. Edge Cases & Special Scenarios
+# 16. Edge Cases & Special Scenarios
 
-## 12.1 Soft Delete Handling
+## 16.1 Soft Delete Handling
 
 ### RLS Policy Pattern for Soft Deletes
 
@@ -3733,7 +5759,7 @@ USING (
 - Only Owner can permanently delete (hard delete)
 - Requires separate DELETE policy with `deleted_at IS NOT NULL` check
 
-## 12.2 Nested Resource Access
+## 16.2 Nested Resource Access
 
 ### Access via Parent Resource
 
@@ -3760,7 +5786,7 @@ USING (
 );
 ```
 
-## 12.3 Module-Specific Permissions
+## 16.3 Module-Specific Permissions
 
 ### Module Activation Check
 
@@ -3786,7 +5812,7 @@ USING (
 );
 ```
 
-## 12.4 Time-Based Permissions
+## 16.4 Time-Based Permissions
 
 ### Historical Data Access
 
@@ -3798,7 +5824,7 @@ USING (
 - No restrictions on future-dated records
 - Users can create obligations with future deadlines
 
-## 12.5 Bulk Operations
+## 16.5 Bulk Operations
 
 ### Bulk Create
 
@@ -3818,9 +5844,9 @@ USING (
 
 ---
 
-# 16. Performance Considerations
+# 17. Performance Considerations
 
-## 13.1 Index Requirements
+## 17.1 Index Requirements
 
 ### Required Indexes for RLS Performance
 
@@ -3844,7 +5870,7 @@ CREATE INDEX idx_{table}_company_id ON {table}(company_id);
 CREATE INDEX idx_{table}_site_id ON {table}(site_id);
 ```
 
-## 13.2 Query Optimization
+## 17.2 Query Optimization
 
 ### RLS Policy Optimization
 
@@ -3853,7 +5879,7 @@ CREATE INDEX idx_{table}_site_id ON {table}(site_id);
 - Avoid complex joins in policy conditions
 - Cache permission checks where possible
 
-## 13.3 Caching Strategy
+## 17.3 Caching Strategy
 
 ### Permission Check Caching
 
@@ -3864,9 +5890,9 @@ CREATE INDEX idx_{table}_site_id ON {table}(site_id);
 
 ---
 
-# 17. RLS Policy Deployment
+# 18. RLS Policy Deployment
 
-## 14.1 Migration Strategy
+## 18.1 Migration Strategy
 
 ### Migration File Structure
 
@@ -3890,7 +5916,7 @@ migrations/
 5. Test policies in staging environment
 6. Deploy to production
 
-## 14.2 Policy Versioning
+## 18.2 Policy Versioning
 
 ### Version Tracking
 
@@ -3898,7 +5924,7 @@ migrations/
 - Include policy name, version, SQL, created_at, created_by
 - Rollback to previous version if needed
 
-## 14.3 Policy Rollback Procedures
+## 18.3 Policy Rollback Procedures
 
 ### Rollback Steps
 
@@ -3909,7 +5935,7 @@ migrations/
 5. Test rollback in staging
 6. Deploy rollback to production
 
-## 14.4 Policy Testing
+## 18.4 Policy Testing
 
 ### Unit Tests
 
@@ -3932,9 +5958,9 @@ migrations/
 
 ---
 
-# 18. Permission Testing
+# 19. Permission Testing
 
-## 15.1 Test Cases for Core Tables
+## 19.1 Test Cases for Core Tables
 
 ### Test Case 1: Owner can access own company data
 - **Setup:** Create owner user, create company, assign owner to company
@@ -3978,7 +6004,7 @@ migrations/
 - **Expected:** Returns 403 Forbidden (module not activated)
 - **RLS Policy:** `parameters_insert_staff_module` (checks module activation)
 
-## 15.2 Test Cases for Edge Cases
+## 19.2 Test Cases for Edge Cases
 
 ### Test Case 8: Soft-deleted records access
 - **Setup:** Create owner user, create company, soft-delete company
@@ -3992,7 +6018,7 @@ migrations/
 - **Expected:** Returns all data (RLS bypassed for service role)
 - **RLS Policy:** Check `auth.role() = 'service_role'`
 
-## 15.3 Performance Test Cases
+## 19.3 Performance Test Cases
 
 ### Test Case 10: RLS policy performance with large dataset
 - **Setup:** Create 10,000 obligations across 100 sites, assign user to 10 sites
@@ -4002,9 +6028,9 @@ migrations/
 
 ---
 
-# 19. TypeScript Interfaces
+# 20. TypeScript Interfaces
 
-## 16.1 Permission Check Interfaces
+## 20.1 Permission Check Interfaces
 
 ```typescript
 interface PermissionCheckRequest {
@@ -4029,7 +6055,7 @@ interface RolePermission {
 }
 ```
 
-## 16.2 RLS Policy Configuration Interface
+## 20.2 RLS Policy Configuration Interface
 
 ```typescript
 interface RLSPolicyConfig {
@@ -4046,11 +6072,17 @@ interface RLSPolicyConfig {
 
 **Document Complete**
 
-This specification defines the complete RLS and permissions system for the EcoComply platform, including all 32 tables with RLS policies, complete CRUD matrices, permission evaluation logic, consultant isolation, service role handling, edge cases, performance considerations, deployment procedures, test cases, and TypeScript interfaces.
+This specification defines the complete RLS and permissions system for the EcoComply platform, including all 76 tables with RLS policies, complete CRUD matrices, permission evaluation logic, consultant isolation, service role handling, edge cases, performance considerations, deployment procedures, test cases, and TypeScript interfaces.
 
 **Document Status:** ✅ **COMPLETE**
 
-**Word Count:** ~12,000+ words
+**Word Count:** ~16,000+ words
 
-**Sections:** 16 comprehensive sections covering all aspects of RLS and permissions implementation
+**Sections:** 20 comprehensive sections covering all aspects of RLS and permissions implementation
+
+**Last Updated:** 2025-01-01
+
+**Alignment:** ✅ Fully aligned with High Level Product Plan and Database Schema (20_Database_Schema.md)
+
+**Version:** 1.1 - Added RLS policies for all 21 new tables from hostile review
 

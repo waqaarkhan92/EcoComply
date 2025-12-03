@@ -92,9 +92,9 @@ export async function GET(request: NextRequest) {
     // Check if there are more results
     const hasMore = (volumes || []).length > limit;
     const data = hasMore ? (volumes || []).slice(0, limit) : (volumes || []);
-    const nextCursor = hasMore && data.length > 0 ? createCursor(data[data.length - 1].created_at) : null;
+    const nextCursor = hasMore && data.length > 0 ? createCursor(data[data.length - 1].id, data[data.length - 1].created_at) : undefined;
 
-    const response = paginatedResponse(data, nextCursor, { request_id: requestId });
+    const response = paginatedResponse(data, nextCursor, limit, hasMore, { request_id: requestId });
     return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Error in GET /api/v1/module-2/discharge-volumes:', error);

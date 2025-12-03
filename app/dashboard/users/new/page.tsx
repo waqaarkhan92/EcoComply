@@ -22,7 +22,7 @@ export default function NewUserPage() {
     mutationFn: async (data: any) => {
       return apiClient.post('/users', data);
     },
-    onSuccess: (response) => {
+    onSuccess: (response: any) => {
       const userId = response.data?.id;
       if (userId) {
         router.push(`/dashboard/users/${userId}`);

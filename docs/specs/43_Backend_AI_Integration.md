@@ -1,8 +1,9 @@
 # EcoComply AI Integration Layer
+## EcoComply Platform — Modules 1–4
 
-**EcoComply v1.0 — Launch-Ready / Last updated: 2024-12-27**
+**EcoComply v1.0 — Launch-Ready / Last updated: 2025-01-01**
 
-**Document Version:** 1.0  
+**Document Version:** 1.1  
 **Status:** Complete  
 **Created by:** Cursor  
 **Depends on:**
@@ -14,6 +15,10 @@
 
 **Purpose:** Defines the complete AI integration layer implementation for the EcoComply platform, including OpenAI API integration, cost optimization, confidence scoring, rule library integration, error handling, and background job integration.
 
+> [v1.1 UPDATE – Added Module 4 (Hazardous Waste) Support – 2025-01-01]
+> - Added consignment note transformation logic
+> - Updated all module references to include Module 4
+> - Added Module 4 data transformation interfaces
 > [v1 UPDATE – Version Header – 2024-12-27]
 
 ---
@@ -58,6 +63,7 @@ The AI Integration Layer serves as the bridge between the EcoComply platform and
 3. **Accuracy:** Use rule library validation and confidence scoring to ensure high-quality extractions
 4. **Performance:** Minimize API response times through batching and optimization
 5. **Observability:** Track costs, performance, and errors for continuous improvement
+6. **Operational Resilience:** System must remain fully operable if AI is offline or confidence is poor - fallback to manual structured capture
 
 ## 1.3 Integration Points
 
@@ -66,6 +72,7 @@ The AI Integration Layer serves as the bridge between the EcoComply platform and
 - **Rule Library:** Validates extractions against known patterns before using LLM
 - **Notification System:** Notifies users of flagged items requiring review
 - **Review Queue:** Creates review queue items for low-confidence extractions
+- **Manual Capture Interface:** Fallback UI for structured manual data entry when AI unavailable or confidence too low
 
 ---
 
@@ -978,6 +985,19 @@ async function buildPrompt(
 - **Score Interpretation:** Higher score = more confident extraction
 - **Score Validation:** Validate confidence scores are within range
 
+### Confidence Threshold for Human Review
+
+**Threshold Rules:**
+- **≥85%:** Auto-accept extraction (user can still edit)
+- **70-84%:** Flag for human review (yellow highlight, "Review recommended")
+- **<70%:** Require human review OR suggest manual entry (red highlight, "Low confidence - manual entry recommended")
+
+**Implementation:**
+- All extractions with confidence <85% are automatically added to review queue
+- Priority assignment: High priority for <70%, Medium priority for 70-84%
+- Users receive notification when items require review
+- Users can choose to discard AI extraction and use manual entry instead
+
 ### Confidence Score Structure
 
 ```typescript
@@ -1546,9 +1566,10 @@ async function notifyReviewRequired(
 
 ### Transformation Strategy
 
-- **Map Obligations:** Transform LLM output to obligations table schema
+- **Map Obligations:** Transform LLM output to obligations table schema (Modules 1, 3, 4)
 - **Map Parameters:** Transform LLM output to parameters table schema (Module 2)
 - **Map Run-Hours:** Transform LLM output to run_hour_records table schema (Module 3)
+- **Map Consignment Notes:** Transform LLM output to consignment_notes table schema (Module 4)
 - **Validate Data:** Validate transformed data before insertion
 - **Apply Business Rules:** Apply business logic during transformation
 
@@ -1580,6 +1601,21 @@ interface LLMRunHourOutput {
     generator_name: string;
     run_hours: number;
     date: string;
+  }>;
+}
+
+interface LLMConsignmentNoteOutput {
+  consignment_notes: Array<{
+    ewc_code: string;
+    waste_description: string;
+    quantity: number;
+    unit: 'TONNES' | 'KILOGRAMS' | 'LITRES';
+    carrier_name: string;
+    carrier_licence_number: string;
+    collection_date: string;
+    destination_site: string;
+    end_point_proof_reference?: string | null;
+    confidence_score: number;
   }>;
 }
 ```
@@ -1787,7 +1823,193 @@ async function findGeneratorByName(siteId: string, name: string): Promise<any> {
 }
 ```
 
-## 9.5 Data Validation
+## 9.5 Consignment Note Transformation (Module 4)
+
+### Consignment Note Mapping
+
+- **EWC Code Mapping:** Map `ewc_code` to `ewc_code` field
+- **Waste Description Mapping:** Map `waste_description` to `waste_description`
+- **Quantity Mapping:** Map `quantity` to `quantity_tonnes` (convert units if needed)
+- **Carrier Mapping:** Map `carrier_name` and `carrier_licence_number` to carrier lookup
+- **Date Mapping:** Parse `collection_date` to Date object
+- **End-Point Proof:** Map `end_point_proof_reference` to evidence linking
+
+### Consignment Note Transformation Implementation
+
+```typescript
+interface ConsignmentNoteInput {
+  ewc_code: string;
+  waste_description: string;
+  quantity: number;
+  unit: 'TONNES' | 'KILOGRAMS' | 'LITRES';
+  carrier_name: string;
+  carrier_licence_number: string;
+  collection_date: string;
+  destination_site: string;
+  end_point_proof_reference?: string | null;
+  confidence_score: number;
+}
+
+async function transformLLMOutputToConsignmentNotes(
+  llmOutput: LLMConsignmentNoteOutput,
+  documentId: string,
+  siteId: string,
+  companyId: string,
+  moduleId: string
+): Promise<ConsignmentNote[]> {
+  const consignmentNotes: ConsignmentNote[] = [];
+  
+  for (const noteData of llmOutput.consignment_notes) {
+    // Validate EWC code format
+    if (!noteData.ewc_code || !/^\d{6}$/.test(noteData.ewc_code.replace(/\s+/g, ''))) {
+      throw new Error(`Invalid EWC code format: ${noteData.ewc_code}`);
+    }
+    
+    // Lookup or create waste stream
+    const wasteStream = await findOrCreateWasteStream(
+      siteId,
+      noteData.ewc_code,
+      noteData.waste_description
+    );
+    
+    // Lookup or create carrier
+    const carrier = await findOrCreateCarrier(
+      companyId,
+      noteData.carrier_name,
+      noteData.carrier_licence_number
+    );
+    
+    // Convert quantity to tonnes
+    let quantityTonnes: number;
+    switch (noteData.unit) {
+      case 'TONNES':
+        quantityTonnes = noteData.quantity;
+        break;
+      case 'KILOGRAMS':
+        quantityTonnes = noteData.quantity / 1000;
+        break;
+      case 'LITRES':
+        // Approximate conversion (varies by waste type, use 1:1 for water-based)
+        quantityTonnes = noteData.quantity / 1000;
+        break;
+      default:
+        throw new Error(`Unknown unit: ${noteData.unit}`);
+    }
+    
+    // Parse collection date
+    const collectionDate = new Date(noteData.collection_date);
+    if (isNaN(collectionDate.getTime())) {
+      throw new Error(`Invalid collection date: ${noteData.collection_date}`);
+    }
+    
+    // Generate consignment note number (if not provided)
+    const consignmentNoteNumber = await generateConsignmentNoteNumber(
+      companyId,
+      collectionDate
+    );
+    
+    consignmentNotes.push({
+      id: crypto.randomUUID(),
+      document_id: documentId,
+      company_id: companyId,
+      site_id: siteId,
+      module_id: moduleId,
+      waste_stream_id: wasteStream.id,
+      carrier_id: carrier.id,
+      consignment_note_number: consignmentNoteNumber,
+      ewc_code: noteData.ewc_code.replace(/\s+/g, ''), // Remove spaces
+      waste_description: noteData.waste_description,
+      quantity_tonnes: quantityTonnes,
+      collection_date: collectionDate,
+      destination_site: noteData.destination_site,
+      validation_status: 'PENDING', // Will be validated by validation rules engine
+      pre_validation_status: 'PENDING',
+      confidence_score: noteData.confidence_score || 0.85,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+  }
+  
+  return consignmentNotes;
+}
+
+async function findOrCreateWasteStream(
+  siteId: string,
+  ewcCode: string,
+  description: string
+): Promise<any> {
+  // Lookup existing waste stream
+  const existing = await db.query(`
+    SELECT * FROM waste_streams
+    WHERE site_id = $1 AND ewc_code = $2
+    LIMIT 1
+  `, [siteId, ewcCode]);
+  
+  if (existing.rows.length > 0) {
+    return existing.rows[0];
+  }
+  
+  // Create new waste stream
+  const result = await db.query(`
+    INSERT INTO waste_streams (
+      id, site_id, ewc_code, waste_description, is_hazardous, created_at, updated_at
+    ) VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW(), NOW())
+    RETURNING *
+  `, [siteId, ewcCode, description, ewcCode.startsWith('20')]); // Hazardous if starts with 20
+  
+  return result.rows[0];
+}
+
+async function findOrCreateCarrier(
+  companyId: string,
+  carrierName: string,
+  licenceNumber: string
+): Promise<any> {
+  // Lookup existing carrier
+  const existing = await db.query(`
+    SELECT * FROM carrier_licences
+    WHERE company_id = $1 AND licence_number = $2
+    LIMIT 1
+  `, [companyId, licenceNumber]);
+  
+  if (existing.rows.length > 0) {
+    return existing.rows[0];
+  }
+  
+  // Create new carrier record
+  const result = await db.query(`
+    INSERT INTO carrier_licences (
+      id, company_id, carrier_name, licence_number, is_active, created_at, updated_at
+    ) VALUES (gen_random_uuid(), $1, $2, $3, true, NOW(), NOW())
+    RETURNING *
+  `, [companyId, carrierName, licenceNumber]);
+  
+  return result.rows[0];
+}
+
+async function generateConsignmentNoteNumber(
+  companyId: string,
+  date: Date
+): Promise<string> {
+  // Format: CN-{YYYYMMDD}-{SEQUENCE}
+  const dateStr = date.toISOString().split('T')[0].replace(/-/g, '');
+  const sequence = await getNextSequenceNumber(companyId, date);
+  return `CN-${dateStr}-${sequence.toString().padStart(4, '0')}`;
+}
+
+async function getNextSequenceNumber(companyId: string, date: Date): Promise<number> {
+  const result = await db.query(`
+    SELECT COUNT(*) + 1 as next_seq
+    FROM consignment_notes
+    WHERE company_id = $1
+      AND DATE(collection_date) = DATE($2)
+  `, [companyId, date]);
+  
+  return parseInt(result.rows[0].next_seq);
+}
+```
+
+## 9.6 Data Validation
 
 ### Validation Rules
 
@@ -1960,14 +2182,118 @@ function sleep(ms: number): Promise<void> {
 
 ## 10.3 Fallback Strategy
 
-### Model Fallback
+> [v1.2 UPDATE – Comprehensive AI Fallback Strategy – 2025-01-01]
+> - Added primary extraction: model-driven approach
+> - Added fallback: manual structured capture
+> - System must remain fully operable if AI offline or poor confidence
+> - Confidence scoring threshold to flag human review
 
+### 10.3.1 Primary Extraction: Model-Driven
+
+**Primary Strategy:**
+- **AI-First Approach:** All document extraction attempts use AI model (GPT-4o) as primary method
+- **Rule Library Pre-Check:** Before calling LLM, check rule library for pattern matches (≥90% confidence)
+- **LLM Extraction:** If no rule match, use LLM to extract obligations, parameters, run-hours, or consignment notes
+- **Confidence Scoring:** All extractions receive confidence scores (0-100%)
+- **Auto-Accept Threshold:** Extractions with confidence ≥85% are auto-accepted (user can still edit)
+
+### 10.3.2 Fallback: Manual Structured Capture
+
+**Fallback Triggers:**
+1. **AI Offline/Unavailable:**
+   - API connection timeout (>30 seconds)
+   - API service unavailable (503 status)
+   - Network connectivity issues
+   - API key invalid or expired (after retry attempts)
+
+2. **Poor Confidence:**
+   - Confidence score <70% (below human review threshold)
+   - Multiple extraction failures for same document
+   - Parsing errors that cannot be resolved
+
+3. **User Preference:**
+   - User explicitly chooses manual entry
+   - User rejects AI extraction and requests manual capture
+
+**Manual Capture Interface:**
+- **Structured Forms:** Module-specific structured forms for manual data entry
+  - **Module 1 (Permits):** Obligation entry form (title, frequency, deadline, category, description)
+  - **Module 2 (Trade Effluent):** Parameter entry form (name, limit, unit, sampling frequency)
+  - **Module 3 (MCPD/Generators):** Generator and run-hour entry form
+  - **Module 4 (Hazardous Waste):** Consignment note entry form (EWC code, quantity, carrier, dates)
+- **Validation:** Same validation rules apply to manual entries as AI extractions
+- **Data Quality:** Manual entries marked with `import_source = 'MANUAL'` in database
+- **No AI Dependency:** Manual capture works independently of AI service availability
+
+### 10.3.3 System Operability Requirements
+
+**Critical Requirement:** System MUST remain fully operable if AI is offline or confidence is poor.
+
+**Operability Guarantees:**
+1. **Document Upload:** Users can always upload documents, even if AI is unavailable
+2. **Manual Entry:** Structured manual entry forms are always available
+3. **Data Management:** All CRUD operations (create, read, update, delete) work without AI
+4. **Pack Generation:** Pack generation works with manually entered data
+5. **Compliance Tracking:** Compliance clocks, deadlines, and evidence linking work independently
+6. **User Workflows:** All user workflows continue to function (evidence upload, obligation completion, etc.)
+
+**Graceful Degradation:**
+- **AI Unavailable:** System displays message: "AI extraction temporarily unavailable. Please use manual entry."
+- **Low Confidence:** System displays: "AI extraction confidence is low. Please review and edit, or use manual entry."
+- **No Blocking:** System never blocks user actions due to AI unavailability
+
+### 10.3.4 Confidence Scoring Threshold for Human Review
+
+**Confidence Thresholds:**
+
+| Confidence Score | Action | User Experience |
+|------------------|--------|-----------------|
+| **≥85%** | Auto-accept | Extraction shown as "Confirmed"; user can still edit |
+| **70-84%** | Flag for review | Yellow highlight; "Review recommended" label; user must review before proceeding |
+| **<70%** | Require review OR fallback to manual | Red highlight; "Low confidence - manual entry recommended"; system suggests manual entry as alternative |
+
+**Threshold Implementation:**
+```typescript
+interface ConfidenceThreshold {
+  autoAccept: number;      // ≥85%
+  flagForReview: number;    // 70-84%
+  requireReview: number;    // <70%
+}
+
+const CONFIDENCE_THRESHOLDS: ConfidenceThreshold = {
+  autoAccept: 85,
+  flagForReview: 70,
+  requireReview: 70
+};
+
+function determineAction(confidenceScore: number): 'auto_accept' | 'flag_review' | 'require_review_or_manual' {
+  if (confidenceScore >= CONFIDENCE_THRESHOLDS.autoAccept) {
+    return 'auto_accept';
+  } else if (confidenceScore >= CONFIDENCE_THRESHOLDS.flagForReview) {
+    return 'flag_review';
+  } else {
+    return 'require_review_or_manual';
+  }
+}
+```
+
+**Human Review Flagging:**
+- **Automatic Flagging:** Items with confidence <85% are automatically added to review queue
+- **Priority Assignment:** 
+  - High priority: confidence <70%
+  - Medium priority: confidence 70-84%
+- **Notification:** Users receive notification when items require review
+- **Manual Entry Option:** Users can choose to discard AI extraction and use manual entry instead
+
+### 10.3.5 Model Fallback (Secondary Fallback)
+
+**Model Fallback Strategy:**
 - **Primary Model:** Use GPT-4o for all requests
 - **Fallback Model:** Use GPT-4o-mini if GPT-4o fails
 - **Fallback Conditions:** Fallback on rate limit, quota exceeded, model unavailable
 - **Fallback Logging:** Log fallback usage for cost tracking
 
-### Fallback Implementation
+**Model Fallback Implementation:**
 
 ```typescript
 async function callOpenAIWithFallback(
@@ -1977,7 +2303,7 @@ async function callOpenAIWithFallback(
     // Try primary model
     return await callOpenAI(request);
   } catch (error) {
-    if (shouldFallback(error)) {
+    if (shouldFallbackToModel(error)) {
       // Fallback to GPT-4o-mini
       const fallbackRequest = {
         ...request,
@@ -1987,11 +2313,12 @@ async function callOpenAIWithFallback(
       await logFallbackUsage(request.model, 'gpt-4o-mini', error);
       return await callOpenAI(fallbackRequest);
     }
-    throw error;
+    // If model fallback also fails, trigger manual capture fallback
+    throw new ManualCaptureRequiredError('AI extraction unavailable. Please use manual entry.');
   }
 }
 
-function shouldFallback(error: any): boolean {
+function shouldFallbackToModel(error: any): boolean {
   if (error instanceof APIError) {
     return ['rate_limit', 'quota_exceeded', 'server_error'].includes(error.type);
   }
@@ -2008,6 +2335,132 @@ async function logFallbackUsage(
       original_model, fallback_model, error_message, occurred_at
     ) VALUES ($1, $2, $3, NOW())
   `, [originalModel, fallbackModel, error.message]);
+}
+```
+
+### 10.3.6 Complete Fallback Flow
+
+**Extraction Flow with Fallbacks:**
+
+```
+1. Document Upload
+   ↓
+2. Rule Library Check (pattern matching)
+   ├─ Match found (≥90% confidence) → Use rule library result
+   └─ No match → Proceed to Step 3
+   ↓
+3. AI Extraction Attempt (GPT-4o)
+   ├─ Success → Calculate confidence score
+   │   ├─ Confidence ≥85% → Auto-accept
+   │   ├─ Confidence 70-84% → Flag for review
+   │   └─ Confidence <70% → Require review OR suggest manual entry
+   ├─ Model Error (rate limit, quota) → Try GPT-4o-mini
+   │   ├─ Success → Continue with confidence scoring
+   │   └─ Failure → Proceed to Step 4
+   └─ Critical Error (offline, invalid key) → Proceed to Step 4
+   ↓
+4. Manual Structured Capture
+   ├─ Display structured form for module-specific data entry
+   ├─ User enters data manually
+   ├─ System validates data (same rules as AI extraction)
+   └─ Data saved with import_source = 'MANUAL'
+```
+
+**Error Handling with Fallback:**
+
+```typescript
+async function extractDocumentWithFallback(
+  documentId: string,
+  documentType: string,
+  moduleId: string
+): Promise<ExtractionResult> {
+  try {
+    // Step 1: Try rule library
+    const ruleMatch = await checkRuleLibrary(documentId);
+    if (ruleMatch && ruleMatch.confidence >= 90) {
+      return {
+        source: 'rule_library',
+        data: ruleMatch.data,
+        confidence: ruleMatch.confidence
+      };
+    }
+    
+    // Step 2: Try AI extraction
+    try {
+      const aiResult = await extractWithAI(documentId, documentType);
+      
+      // Check confidence
+      if (aiResult.confidence >= 85) {
+        return { source: 'ai', data: aiResult.data, confidence: aiResult.confidence };
+      } else if (aiResult.confidence >= 70) {
+        // Flag for review but return result
+        await flagForReview(documentId, aiResult, 'low_confidence');
+        return { source: 'ai', data: aiResult.data, confidence: aiResult.confidence, requiresReview: true };
+      } else {
+        // Low confidence - suggest manual entry
+        throw new LowConfidenceError('AI extraction confidence too low. Manual entry recommended.');
+      }
+    } catch (aiError) {
+      // Step 3: AI failed - check if we can try fallback model
+      if (shouldFallbackToModel(aiError)) {
+        try {
+          const fallbackResult = await extractWithAI(documentId, documentType, 'gpt-4o-mini');
+          return { source: 'ai_fallback', data: fallbackResult.data, confidence: fallbackResult.confidence };
+        } catch (fallbackError) {
+          // Fallback model also failed - proceed to manual
+          throw new ManualCaptureRequiredError('AI extraction unavailable. Please use manual entry.');
+        }
+      } else {
+        // Critical error - proceed to manual
+        throw new ManualCaptureRequiredError('AI extraction unavailable. Please use manual entry.');
+      }
+    }
+  } catch (error) {
+    // Step 4: Manual capture fallback
+    if (error instanceof ManualCaptureRequiredError || error instanceof LowConfidenceError) {
+      // Return manual capture interface
+      return {
+        source: 'manual_capture_required',
+        data: null,
+        confidence: null,
+        manualCaptureForm: getManualCaptureForm(moduleId, documentType)
+      };
+    }
+    throw error;
+  }
+}
+```
+
+### 10.3.7 Fallback Logging and Monitoring
+
+**Fallback Metrics:**
+- Track fallback frequency (AI → Manual, AI → Model Fallback)
+- Monitor confidence score distribution
+- Track manual capture usage rates
+- Alert on high fallback rates (indicates AI service issues)
+
+**Logging Implementation:**
+
+```typescript
+interface FallbackLog {
+  documentId: string;
+  fallbackType: 'model_fallback' | 'manual_capture' | 'low_confidence';
+  reason: string;
+  confidenceScore?: number;
+  timestamp: Date;
+}
+
+async function logFallback(
+  documentId: string,
+  fallbackType: FallbackLog['fallbackType'],
+  reason: string,
+  confidenceScore?: number
+): Promise<void> {
+  await db.query(`
+    INSERT INTO fallback_logs (
+      document_id, fallback_type, reason, confidence_score, occurred_at
+    ) VALUES ($1, $2, $3, $4, NOW())
+  `, [documentId, fallbackType, reason, confidenceScore]);
 }
 ```
 
@@ -2447,7 +2900,7 @@ async function trackCost(
 ### Cost Aggregation
 
 - **Per Document:** Aggregate costs per document
-- **Per Module:** Aggregate costs per module (Module 1, 2, 3)
+- **Per Module:** Aggregate costs per module (Modules 1–4, dynamically queried from `modules` table)
 - **Per Time Period:** Aggregate costs per day/week/month
 - **Per User/Company:** Aggregate costs per user/company
 
@@ -2699,20 +3152,68 @@ async function transformLLMOutput(
 ): Promise<ExtractionResult> {
   const content = JSON.parse(llmResponse.choices[0].message.content);
   
-  const obligations = transformLLMOutputToObligations(
-    content,
-    documentId,
-    siteId,
-    companyId,
-    moduleId,
-    'PDF_EXTRACTION'
-  );
+  // Get module_code from module_id to determine transformation type
+  const module = await db.query(`
+    SELECT module_code FROM modules WHERE id = $1
+  `, [moduleId]);
+  const moduleCode = module.rows[0]?.module_code;
+  
+  // Transform based on module type
+  let obligations: any[] = [];
+  let parameters: any[] = [];
+  let runHours: any[] = [];
+  let consignmentNotes: any[] = [];
+  
+  // Common obligations (Modules 1, 3, 4)
+  if (content.obligations) {
+    obligations = transformLLMOutputToObligations(
+      content,
+      documentId,
+      siteId,
+      companyId,
+      moduleId,
+      'PDF_EXTRACTION'
+    );
+  }
+  
+  // Module 2: Trade Effluent parameters
+  if (moduleCode === 'TRADE_EFFLUENT' && content.parameters) {
+    parameters = transformLLMOutputToParameters(
+      content,
+      documentId,
+      siteId,
+      companyId,
+      moduleId
+    );
+  }
+  
+  // Module 3: Generators/MCPD run hours
+  if (moduleCode === 'GENERATORS' && content.generators) {
+    runHours = await transformLLMOutputToRunHours(
+      content,
+      siteId
+    );
+  }
+  
+  // Module 4: Hazardous Waste consignment notes
+  if (moduleCode === 'HAZARDOUS_WASTE' && content.consignment_notes) {
+    consignmentNotes = await transformLLMOutputToConsignmentNotes(
+      content,
+      documentId,
+      siteId,
+      companyId,
+      moduleId
+    );
+  }
   
   return {
     id: crypto.randomUUID(),
     documentId,
     siteId,
     obligations,
+    parameters,
+    runHours,
+    consignmentNotes,
     confidence: extractConfidenceScore(content),
     flaggedItems: [],
     cost: 0, // Will be calculated after token counting
@@ -2797,9 +3298,10 @@ async function updateJobProgress(
 
 ### Results Storage
 
-- **Store Obligations:** Store extracted obligations in obligations table
+- **Store Obligations:** Store extracted obligations in obligations table (Modules 1, 3, 4)
 - **Store Parameters:** Store extracted parameters in parameters table (Module 2)
 - **Store Run Hours:** Store extracted run hours in run_hour_records table (Module 3)
+- **Store Consignment Notes:** Store extracted consignment notes in consignment_notes table (Module 4)
 - **Link to Document:** Link extractions to source document
 
 ### Results Storage Implementation
@@ -2887,6 +3389,39 @@ async function storeExtractionResults(
         runHour.percentage_of_monthly_limit,
         runHour.entry_method || 'CSV',
         runHour.entered_by || null
+      ]);
+    }
+  }
+  
+  // Store consignment notes (Module 4)
+  if (result.consignmentNotes) {
+    for (const note of result.consignmentNotes) {
+      await db.query(`
+        INSERT INTO consignment_notes (
+          id, document_id, company_id, site_id, module_id,
+          waste_stream_id, carrier_id, consignment_note_number,
+          ewc_code, waste_description, quantity_tonnes,
+          collection_date, destination_site,
+          validation_status, pre_validation_status,
+          confidence_score, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW())
+      `, [
+        note.id,
+        note.document_id,
+        note.company_id,
+        note.site_id,
+        note.module_id,
+        note.waste_stream_id,
+        note.carrier_id,
+        note.consignment_note_number,
+        note.ewc_code,
+        note.waste_description,
+        note.quantity_tonnes,
+        note.collection_date,
+        note.destination_site,
+        note.validation_status || 'PENDING',
+        note.pre_validation_status || 'PENDING',
+        note.confidence_score || 0.85
       ]);
     }
   }

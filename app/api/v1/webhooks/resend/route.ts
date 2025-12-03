@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       // Find notification by delivery_provider_id
       const { data: notifications } = await supabaseAdmin
         .from('notifications')
-        .select('id, status')
+        .select('id, status, metadata')
         .eq('delivery_provider', 'RESEND')
         .eq('delivery_provider_id', messageId)
         .limit(1);

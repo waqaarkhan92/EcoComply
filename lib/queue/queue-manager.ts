@@ -25,6 +25,16 @@ export const QUEUE_NAMES = {
   REPORT_GENERATION: 'report-generation',
   EVIDENCE_RETENTION: 'monitoring-schedule', // Same queue as monitoring schedule
   NOTIFICATION_DELIVERY: 'deadline-alerts', // Same queue as deadline alerts (high priority)
+  COMPLIANCE_CLOCK_UPDATE: 'compliance-clock-update',
+  RECURRING_TASK_GENERATION: 'recurring-task-generation',
+  EVIDENCE_EXPIRY_TRACKING: 'evidence-expiry-tracking',
+  SLA_BREACH_ALERTS: 'sla-breach-alerts',
+  PERMIT_WORKFLOWS: 'permit-workflows',
+  CORRECTIVE_ACTIONS: 'corrective-actions',
+  VALIDATION_PROCESSING: 'validation-processing',
+  RUNTIME_MONITORING: 'runtime-monitoring',
+  TRIGGER_EXECUTION: 'trigger-execution',
+  DASHBOARD_REFRESH: 'dashboard-refresh',
 } as const;
 
 // Redis connection

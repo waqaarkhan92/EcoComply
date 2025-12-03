@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
 
     // Queue report generation job
     try {
-      const queue = getQueue(QUEUE_NAMES.PACK_GENERATION);
+      const queue = getQueue(QUEUE_NAMES.AUDIT_PACK_GENERATION);
       await queue.add('generate-water-company-report', {
         report_id: jobId,
         document_id,

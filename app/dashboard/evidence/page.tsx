@@ -35,7 +35,7 @@ export default function EvidencePage() {
     pagination: any;
   }>({
     queryKey: ['evidence', searchQuery, selectedSite],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       if (searchQuery) params.append('filter[file_name]', searchQuery);
       if (selectedSite) params.append('filter[site_id]', selectedSite);

@@ -135,6 +135,45 @@ export async function getEmailTemplate(
       return packReadyTemplate(notificationType, variables);
     case 'PACK_DISTRIBUTED':
       return packDistributedTemplate(variables);
+    // v1.3 Permit Workflow Notifications
+    case 'PERMIT_RENEWAL_REQUIRED':
+      return permitRenewalRequiredTemplate(variables);
+    case 'REGULATOR_RESPONSE_OVERDUE':
+      return regulatorResponseOverdueTemplate(variables);
+    // v1.3 Corrective Action Notifications
+    case 'CORRECTIVE_ACTION_ITEM_DUE_SOON':
+      return correctiveActionItemDueSoonTemplate(variables);
+    case 'CORRECTIVE_ACTION_ITEM_OVERDUE':
+      return correctiveActionItemOverdueTemplate(variables);
+    case 'CORRECTIVE_ACTION_READY_FOR_CLOSURE':
+      return correctiveActionReadyForClosureTemplate(variables);
+    // v1.3 Validation Notifications
+    case 'CONSIGNMENT_VALIDATION_FAILED':
+      return consignmentValidationFailedTemplate(variables);
+    case 'CONSIGNMENT_VALIDATION_WARNING':
+      return consignmentValidationWarningTemplate(variables);
+    // v1.3 Runtime Monitoring Notifications
+    case 'RUNTIME_VALIDATION_PENDING':
+      return runtimeValidationPendingTemplate(variables);
+    case 'RUNTIME_VALIDATION_REJECTED':
+      return runtimeValidationRejectedTemplate(variables);
+    // v1.3 Compliance Clock Notifications
+    case 'COMPLIANCE_CLOCK_CRITICAL':
+      return complianceClockCriticalTemplate(variables);
+    case 'COMPLIANCE_CLOCK_REMINDER':
+      return complianceClockReminderTemplate(variables);
+    case 'COMPLIANCE_CLOCK_OVERDUE':
+      return complianceClockOverdueTemplate(variables);
+    // v1.4 Breach Detection Notifications
+    case 'COMPLIANCE_BREACH_DETECTED':
+      return complianceBreachDetectedTemplate(variables);
+    case 'REGULATORY_DEADLINE_BREACH':
+      return regulatoryDeadlineBreachTemplate(variables);
+    // v1.3 SLA Breach Notifications
+    case 'SLA_BREACH_DETECTED':
+      return slaBreachDetectedTemplate(variables);
+    case 'SLA_BREACH_EXTENDED':
+      return slaBreachExtendedTemplate(variables);
     default:
       // Default template for unknown types
       return defaultTemplate(notification.subject || 'Notification', notification.body_text || '');
@@ -469,6 +508,538 @@ function packDistributedTemplate(variables: TemplateVariables): {
   `;
 
   const html = baseEmailTemplate(content, variables.company_name as string);
+  const text = stripHtml(html);
+
+  return { subject, html, text };
+}
+
+/**
+ * Permit Renewal Required Template (v1.3)
+ */
+function permitRenewalRequiredTemplate(variables: TemplateVariables): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = renderTemplate('Permit Renewal Required: {{document_type}} expires in {{days_remaining}} days', variables);
+  
+  const content = `
+    <h2 style="color: #026A67; margin-top: 0;">🔄 Permit Renewal Required</h2>
+    <p>Hello,</p>
+    <p>Your permit is approaching its expiry date and requires renewal:</p>
+    <div style="background-color: white; border-left: 4px solid #026A67; padding: 15px; margin: 20px 0;">
+      <strong>${variables.document_type || 'Permit'}: ${variables.document_name || 'N/A'}</strong><br>
+      <span style="color: #6b7280;">Site: ${variables.site_name || 'N/A'}</span><br>
+      <span style="color: #6b7280;">Expiry Date: ${variables.expiry_date || 'N/A'}</span><br>
+      <span style="color: #CB7C00;"><strong>Days Until Expiry: ${variables.days_remaining || 90}</strong></span>
+    </div>
+    <p>A renewal workflow has been created. Please start the renewal process to avoid compliance issues.</p>
+    ${variables.action_url ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${variables.action_url}" style="background-color: #026A67; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Renewal Workflow</a>
+      </div>
+    ` : ''}
+  `;
+
+  const html = baseEmailTemplate(content, variables.company_name as string, variables.unsubscribe_url as string);
+  const text = stripHtml(html);
+
+  return { subject, html, text };
+}
+
+/**
+ * Regulator Response Overdue Template (v1.3)
+ */
+function regulatorResponseOverdueTemplate(variables: TemplateVariables): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = renderTemplate('🚨 Regulator Response Overdue: {{workflow_type}} - {{days_overdue}} days', variables);
+  
+  const content = `
+    <h2 style="color: #B13434; margin-top: 0;">⚠️ Regulator Response Overdue</h2>
+    <p>Hello,</p>
+    <p><strong>The regulator response for your permit workflow was due and is now overdue:</strong></p>
+    <div style="background-color: white; border-left: 4px solid #B13434; padding: 15px; margin: 20px 0;">
+      <strong>Workflow Type: ${variables.workflow_type || 'N/A'}</strong><br>
+      <span style="color: #6b7280;">Document: ${variables.document_name || 'N/A'}</span><br>
+      <span style="color: #B13434;"><strong>Response Deadline: ${variables.deadline || 'N/A'}</strong></span><br>
+      <span style="color: #B13434;"><strong>Days Overdue: ${variables.days_overdue || 0}</strong></span>
+    </div>
+    <p>Please follow up with the regulator to ensure timely response.</p>
+    ${variables.action_url ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${variables.action_url}" style="background-color: #B13434; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Workflow</a>
+      </div>
+    ` : ''}
+  `;
+
+  const html = baseEmailTemplate(content, variables.company_name as string, variables.unsubscribe_url as string);
+  const text = stripHtml(html);
+
+  return { subject, html, text };
+}
+
+/**
+ * Corrective Action Item Due Soon Template (v1.3)
+ */
+function correctiveActionItemDueSoonTemplate(variables: TemplateVariables): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = renderTemplate('Corrective Action Item Due in 3 Days: {{item_title}}', variables);
+  
+  const content = `
+    <h2 style="color: #CB7C00; margin-top: 0;">⚠️ Corrective Action Item Due Soon</h2>
+    <p>Hello,</p>
+    <p>You have a corrective action item due in 3 days:</p>
+    <div style="background-color: white; border-left: 4px solid #CB7C00; padding: 15px; margin: 20px 0;">
+      <strong>${variables.item_title || 'Action Item'}</strong><br>
+      <span style="color: #6b7280;">Corrective Action: ${variables.corrective_action_name || 'N/A'}</span><br>
+      <span style="color: #6b7280;">Due Date: ${variables.due_date || 'N/A'}</span><br>
+      <span style="color: #CB7C00;"><strong>Days Remaining: 3</strong></span>
+    </div>
+    <p>Please ensure this item is completed on time.</p>
+    ${variables.action_url ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${variables.action_url}" style="background-color: #026A67; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Action Item</a>
+      </div>
+    ` : ''}
+  `;
+
+  const html = baseEmailTemplate(content, variables.company_name as string, variables.unsubscribe_url as string);
+  const text = stripHtml(html);
+
+  return { subject, html, text };
+}
+
+/**
+ * Corrective Action Item Overdue Template (v1.3)
+ */
+function correctiveActionItemOverdueTemplate(variables: TemplateVariables): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = renderTemplate('🚨 Corrective Action Item Overdue: {{item_title}} - {{days_overdue}} days', variables);
+  
+  const content = `
+    <h2 style="color: #B13434; margin-top: 0;">🚨 Corrective Action Item Overdue</h2>
+    <p>Hello,</p>
+    <p><strong>This corrective action item is now overdue and requires immediate attention:</strong></p>
+    <div style="background-color: white; border-left: 4px solid #B13434; padding: 15px; margin: 20px 0;">
+      <strong>${variables.item_title || 'Action Item'}</strong><br>
+      <span style="color: #6b7280;">Corrective Action: ${variables.corrective_action_name || 'N/A'}</span><br>
+      <span style="color: #B13434;"><strong>Due Date: ${variables.due_date || 'N/A'}</strong></span><br>
+      <span style="color: #B13434;"><strong>Days Overdue: ${variables.days_overdue || 0}</strong></span>
+    </div>
+    <p>Please complete this item as soon as possible.</p>
+    ${variables.action_url ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${variables.action_url}" style="background-color: #B13434; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Action Item</a>
+      </div>
+    ` : ''}
+  `;
+
+  const html = baseEmailTemplate(content, variables.company_name as string, variables.unsubscribe_url as string);
+  const text = stripHtml(html);
+
+  return { subject, html, text };
+}
+
+/**
+ * Corrective Action Ready for Closure Template (v1.3)
+ */
+function correctiveActionReadyForClosureTemplate(variables: TemplateVariables): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = renderTemplate('✅ Corrective Action Ready for Resolution: {{corrective_action_name}}', variables);
+  
+  const content = `
+    <h2 style="color: #1E7A50; margin-top: 0;">✅ Corrective Action Ready for Resolution</h2>
+    <p>Hello,</p>
+    <p>All action items for your corrective action have been completed:</p>
+    <div style="background-color: white; border-left: 4px solid #1E7A50; padding: 15px; margin: 20px 0;">
+      <strong>${variables.corrective_action_name || 'Corrective Action'}</strong><br>
+      <span style="color: #6b7280;">Status: Ready for Resolution Verification</span>
+    </div>
+    <p>The corrective action is now ready for resolution verification. Please review and close it when appropriate.</p>
+    ${variables.action_url ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${variables.action_url}" style="background-color: #1E7A50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Corrective Action</a>
+      </div>
+    ` : ''}
+  `;
+
+  const html = baseEmailTemplate(content, variables.company_name as string, variables.unsubscribe_url as string);
+  const text = stripHtml(html);
+
+  return { subject, html, text };
+}
+
+/**
+ * Consignment Validation Failed Template (v1.3)
+ */
+function consignmentValidationFailedTemplate(variables: TemplateVariables): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = renderTemplate('❌ Consignment Note Validation Failed', variables);
+  
+  const content = `
+    <h2 style="color: #B13434; margin-top: 0;">❌ Consignment Note Validation Failed</h2>
+    <p>Hello,</p>
+    <p>The consignment note validation failed with the following errors:</p>
+    <div style="background-color: white; border-left: 4px solid #B13434; padding: 15px; margin: 20px 0;">
+      ${variables.errors ? (typeof variables.errors === 'string' ? variables.errors : (Array.isArray(variables.errors) ? variables.errors.join('<br>') : JSON.stringify(variables.errors))) : 'Validation error occurred'}
+    </div>
+    <p>Please review and correct the issues before submitting the consignment note.</p>
+    ${variables.action_url ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${variables.action_url}" style="background-color: #026A67; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Review Consignment Note</a>
+      </div>
+    ` : ''}
+  `;
+
+  const html = baseEmailTemplate(content, variables.company_name as string, variables.unsubscribe_url as string);
+  const text = stripHtml(html);
+
+  return { subject, html, text };
+}
+
+/**
+ * Consignment Validation Warning Template (v1.3)
+ */
+function consignmentValidationWarningTemplate(variables: TemplateVariables): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = renderTemplate('⚠️ Consignment Note Validation Warning', variables);
+  
+  const content = `
+    <h2 style="color: #CB7C00; margin-top: 0;">⚠️ Consignment Note Validation Warning</h2>
+    <p>Hello,</p>
+    <p>The consignment note validation completed with warnings:</p>
+    <div style="background-color: white; border-left: 4px solid #CB7C00; padding: 15px; margin: 20px 0;">
+      ${variables.warnings ? (typeof variables.warnings === 'string' ? variables.warnings : (Array.isArray(variables.warnings) ? variables.warnings.join('<br>') : JSON.stringify(variables.warnings))) : 'Validation warning'}
+    </div>
+    <p>Please review these warnings before submitting the consignment note.</p>
+    ${variables.action_url ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${variables.action_url}" style="background-color: #026A67; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Review Consignment Note</a>
+      </div>
+    ` : ''}
+  `;
+
+  const html = baseEmailTemplate(content, variables.company_name as string, variables.unsubscribe_url as string);
+  const text = stripHtml(html);
+
+  return { subject, html, text };
+}
+
+/**
+ * Runtime Validation Pending Template (v1.3)
+ */
+function runtimeValidationPendingTemplate(variables: TemplateVariables): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = renderTemplate('⏳ {{pending_count}} Manual Runtime Entries Pending Validation', variables);
+  
+  const content = `
+    <h2 style="color: #026A67; margin-top: 0;">⏳ Runtime Validation Pending</h2>
+    <p>Hello,</p>
+    <p>You have manual runtime entries pending validation:</p>
+    <div style="background-color: white; border-left: 4px solid #026A67; padding: 15px; margin: 20px 0;">
+      <strong>Generator: ${variables.generator_identifier || 'N/A'}</strong><br>
+      <span style="color: #6b7280;">Pending Entries: ${variables.pending_count || 0}</span><br>
+      <span style="color: #6b7280;">Oldest Entry: ${variables.oldest_entry_date || 'N/A'}</span>
+    </div>
+    <p>Please review and validate these entries as soon as possible.</p>
+    ${variables.action_url ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${variables.action_url}" style="background-color: #026A67; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Review Runtime Entries</a>
+      </div>
+    ` : ''}
+  `;
+
+  const html = baseEmailTemplate(content, variables.company_name as string, variables.unsubscribe_url as string);
+  const text = stripHtml(html);
+
+  return { subject, html, text };
+}
+
+/**
+ * Runtime Validation Rejected Template (v1.3)
+ */
+function runtimeValidationRejectedTemplate(variables: TemplateVariables): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = renderTemplate('❌ Runtime Entry Validation Rejected', variables);
+  
+  const content = `
+    <h2 style="color: #B13434; margin-top: 0;">❌ Runtime Entry Validation Rejected</h2>
+    <p>Hello,</p>
+    <p>A runtime entry you submitted has been rejected:</p>
+    <div style="background-color: white; border-left: 4px solid #B13434; padding: 15px; margin: 20px 0;">
+      <strong>Generator: ${variables.generator_identifier || 'N/A'}</strong><br>
+      <span style="color: #6b7280;">Run Date: ${variables.run_date || 'N/A'}</span><br>
+      <span style="color: #6b7280;">Runtime Hours: ${variables.runtime_hours || 'N/A'}</span><br>
+      ${variables.rejection_reason ? `<span style="color: #B13434;"><strong>Reason: ${variables.rejection_reason}</strong></span>` : ''}
+    </div>
+    <p>Please review and resubmit with corrections.</p>
+    ${variables.action_url ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${variables.action_url}" style="background-color: #026A67; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Review Entry</a>
+      </div>
+    ` : ''}
+  `;
+
+  const html = baseEmailTemplate(content, variables.company_name as string, variables.unsubscribe_url as string);
+  const text = stripHtml(html);
+
+  return { subject, html, text };
+}
+
+/**
+ * Compliance Clock Critical Template (v1.3)
+ */
+function complianceClockCriticalTemplate(variables: TemplateVariables): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = renderTemplate('CRITICAL: {{entity_type}} \'{{entity_name}}\' - {{days_remaining}} days remaining', variables);
+  
+  const content = `
+    <h2 style="color: #B13434; margin-top: 0;">⏰ Compliance Clock: CRITICAL Status</h2>
+    <p>Hello,</p>
+    <p>A compliance clock has entered <strong style="color: #B13434;">CRITICAL</strong> status and requires immediate attention:</p>
+    <div style="background-color: white; border-left: 4px solid #B13434; padding: 15px; margin: 20px 0;">
+      <strong>Entity Type: ${variables.entity_type || 'N/A'}</strong><br>
+      <strong>Entity Name: ${variables.entity_name || 'N/A'}</strong><br>
+      <span style="color: #6b7280;">Target Date: ${variables.target_date || 'N/A'}</span><br>
+      <span style="color: #B13434;"><strong>Days Remaining: ${variables.days_remaining || 0}</strong></span>
+    </div>
+    <p>Please take action immediately to avoid compliance issues.</p>
+    ${variables.action_url ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${variables.action_url}" style="background-color: #B13434; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Take Action Now</a>
+      </div>
+    ` : ''}
+  `;
+
+  const html = baseEmailTemplate(content, variables.company_name as string, variables.unsubscribe_url as string);
+  const text = stripHtml(html);
+
+  return { subject, html, text };
+}
+
+/**
+ * Compliance Clock Reminder Template (v1.3)
+ */
+function complianceClockReminderTemplate(variables: TemplateVariables): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = renderTemplate('Reminder: {{entity_type}} \'{{entity_name}}\' due in {{days_remaining}} days', variables);
+  
+  const content = `
+    <h2 style="color: #026A67; margin-top: 0;">🔔 Compliance Clock Reminder</h2>
+    <p>Hello,</p>
+    <p>This is a scheduled reminder for an upcoming compliance deadline:</p>
+    <div style="background-color: white; border-left: 4px solid #026A67; padding: 15px; margin: 20px 0;">
+      <strong>Entity Type: ${variables.entity_type || 'N/A'}</strong><br>
+      <strong>Entity Name: ${variables.entity_name || 'N/A'}</strong><br>
+      <span style="color: #6b7280;">Target Date: ${variables.target_date || 'N/A'}</span><br>
+      <span style="color: #026A67;"><strong>Days Remaining: ${variables.days_remaining || 0}</strong></span>
+    </div>
+    ${variables.action_url ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${variables.action_url}" style="background-color: #026A67; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Details</a>
+      </div>
+    ` : ''}
+  `;
+
+  const html = baseEmailTemplate(content, variables.company_name as string, variables.unsubscribe_url as string);
+  const text = stripHtml(html);
+
+  return { subject, html, text };
+}
+
+/**
+ * Compliance Clock Overdue Template (v1.3)
+ */
+function complianceClockOverdueTemplate(variables: TemplateVariables): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = renderTemplate('🚨 OVERDUE: {{entity_type}} \'{{entity_name}}\' - {{overdue_days}} days overdue', variables);
+  
+  const content = `
+    <h2 style="color: #B13434; margin-top: 0;">🚨 Compliance Clock: OVERDUE</h2>
+    <p>Hello,</p>
+    <p><strong>A compliance clock target date has passed and is now overdue:</strong></p>
+    <div style="background-color: white; border-left: 4px solid #B13434; padding: 15px; margin: 20px 0;">
+      <strong>Entity Type: ${variables.entity_type || 'N/A'}</strong><br>
+      <strong>Entity Name: ${variables.entity_name || 'N/A'}</strong><br>
+      <span style="color: #B13434;"><strong>Target Date: ${variables.target_date || 'N/A'}</strong></span><br>
+      <span style="color: #B13434;"><strong>Days Overdue: ${variables.overdue_days || 0}</strong></span>
+    </div>
+    <p>Immediate action is required to address this compliance issue.</p>
+    ${variables.action_url ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${variables.action_url}" style="background-color: #B13434; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Take Action Now</a>
+      </div>
+    ` : ''}
+  `;
+
+  const html = baseEmailTemplate(content, variables.company_name as string, variables.unsubscribe_url as string);
+  const text = stripHtml(html);
+
+  return { subject, html, text };
+}
+
+/**
+ * Compliance Breach Detected Template (v1.4)
+ */
+function complianceBreachDetectedTemplate(variables: TemplateVariables): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = renderTemplate('🚨 COMPLIANCE BREACH DETECTED: {{obligation_title}}', variables);
+  
+  const content = `
+    <h2 style="color: #B13434; margin-top: 0;">🚨 Compliance Breach Detected</h2>
+    <p>Hello,</p>
+    <p><strong>A compliance breach has been detected and requires immediate attention:</strong></p>
+    <div style="background-color: white; border-left: 4px solid #B13434; padding: 15px; margin: 20px 0;">
+      <strong>${variables.obligation_title || 'Obligation'}</strong><br>
+      <span style="color: #6b7280;">Site: ${variables.site_name || 'N/A'}</span><br>
+      <span style="color: #B13434;"><strong>Breach Type: ${variables.breach_type || 'Regulatory Deadline'}</strong></span><br>
+      ${variables.breach_details ? `<span style="color: #6b7280;">Details: ${variables.breach_details}</span>` : ''}
+    </div>
+    <p>This breach requires immediate remediation to avoid regulatory penalties.</p>
+    ${variables.action_url ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${variables.action_url}" style="background-color: #B13434; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Obligation</a>
+      </div>
+    ` : ''}
+  `;
+
+  const html = baseEmailTemplate(content, variables.company_name as string, variables.unsubscribe_url as string);
+  const text = stripHtml(html);
+
+  return { subject, html, text };
+}
+
+/**
+ * Regulatory Deadline Breach Template (v1.4)
+ */
+function regulatoryDeadlineBreachTemplate(variables: TemplateVariables): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = renderTemplate('🚨 REGULATORY DEADLINE BREACH: {{obligation_title}}', variables);
+  
+  const content = `
+    <h2 style="color: #B13434; margin-top: 0;">🚨 Regulatory Deadline Breach</h2>
+    <p>Hello,</p>
+    <p><strong>A regulatory deadline has been breached:</strong></p>
+    <div style="background-color: white; border-left: 4px solid #B13434; padding: 15px; margin: 20px 0;">
+      <strong>${variables.obligation_title || 'Obligation'}</strong><br>
+      <span style="color: #6b7280;">Site: ${variables.site_name || 'N/A'}</span><br>
+      <span style="color: #B13434;"><strong>Deadline: ${variables.deadline_date || 'N/A'}</strong></span><br>
+      <span style="color: #B13434;"><strong>Days Overdue: ${variables.days_overdue || 0}</strong></span>
+    </div>
+    <p>Immediate action is required to address this regulatory breach.</p>
+    ${variables.action_url ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${variables.action_url}" style="background-color: #B13434; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Obligation</a>
+      </div>
+    ` : ''}
+  `;
+
+  const html = baseEmailTemplate(content, variables.company_name as string, variables.unsubscribe_url as string);
+  const text = stripHtml(html);
+
+  return { subject, html, text };
+}
+
+/**
+ * SLA Breach Detected Template (v1.3)
+ */
+function slaBreachDetectedTemplate(variables: TemplateVariables): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = renderTemplate('⚠️ SLA Breach Detected: {{obligation_title}}', variables);
+  
+  const content = `
+    <h2 style="color: #CB7C00; margin-top: 0;">⚠️ SLA Breach Detected</h2>
+    <p>Hello,</p>
+    <p>An SLA target date has been missed:</p>
+    <div style="background-color: white; border-left: 4px solid #CB7C00; padding: 15px; margin: 20px 0;">
+      <strong>${variables.obligation_title || 'Obligation'}</strong><br>
+      <span style="color: #6b7280;">Site: ${variables.site_name || 'N/A'}</span><br>
+      <span style="color: #CB7C00;"><strong>SLA Target Date: ${variables.sla_target_date || 'N/A'}</strong></span>
+    </div>
+    <p>Please review and take appropriate action to meet the SLA requirement.</p>
+    ${variables.action_url ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${variables.action_url}" style="background-color: #026A67; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Obligation</a>
+      </div>
+    ` : ''}
+  `;
+
+  const html = baseEmailTemplate(content, variables.company_name as string, variables.unsubscribe_url as string);
+  const text = stripHtml(html);
+
+  return { subject, html, text };
+}
+
+/**
+ * SLA Breach Extended Template (v1.3)
+ */
+function slaBreachExtendedTemplate(variables: TemplateVariables): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = renderTemplate('SLA Breach Extended: {{obligation_title}} - New Target: {{new_sla_target_date}}', variables);
+  
+  const content = `
+    <h2 style="color: #026A67; margin-top: 0;">SLA Breach Extended</h2>
+    <p>Hello,</p>
+    <p>The SLA target date for this obligation has been extended:</p>
+    <div style="background-color: white; border-left: 4px solid #026A67; padding: 15px; margin: 20px 0;">
+      <strong>${variables.obligation_title || 'Obligation'}</strong><br>
+      <span style="color: #6b7280;">Site: ${variables.site_name || 'N/A'}</span><br>
+      <span style="color: #026A67;"><strong>New SLA Target Date: ${variables.new_sla_target_date || 'N/A'}</strong></span><br>
+      ${variables.extension_reason ? `<span style="color: #6b7280;">Reason: ${variables.extension_reason}</span>` : ''}
+    </div>
+    ${variables.action_url ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${variables.action_url}" style="background-color: #026A67; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Obligation</a>
+      </div>
+    ` : ''}
+  `;
+
+  const html = baseEmailTemplate(content, variables.company_name as string, variables.unsubscribe_url as string);
   const text = stripHtml(html);
 
   return { subject, html, text };

@@ -63,7 +63,7 @@ export default function ParametersPage() {
 
   const { data: parametersData, isLoading: parametersLoading, error: parametersError } = useQuery<ParametersResponse>({
     queryKey: ['module-2-parameters', siteId, cursor],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       params.append('filter[site_id]', siteId);
       if (cursor) params.append('cursor', cursor);
@@ -76,7 +76,7 @@ export default function ParametersPage() {
 
   const { data: exceedancesData, isLoading: exceedancesLoading } = useQuery<ExceedancesResponse>({
     queryKey: ['module-2-exceedances', siteId, exceedanceCursor],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       params.append('filter[site_id]', siteId);
       if (exceedanceCursor) params.append('cursor', exceedanceCursor);

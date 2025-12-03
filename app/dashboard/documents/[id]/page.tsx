@@ -42,7 +42,7 @@ export default function DocumentDetailPage({
 
   const { data: document, isLoading: docLoading, error: docError } = useQuery<Document>({
     queryKey: ['document', id],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const response = await apiClient.get<Document>(`/documents/${id}`);
       console.log('📄 Document fetched - extraction_status:', response.data?.extraction_status);
       return response.data;
@@ -79,7 +79,7 @@ export default function DocumentDetailPage({
 
   const { data: obligations, isLoading: obligationsLoading, error: obligationsError } = useQuery<Obligation[]>({
     queryKey: ['document-obligations', id],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       try {
         console.log('📋 Fetching obligations for document:', id);
         // Fetch with higher limit to get all obligations (increase from default 20 to 100)
@@ -133,13 +133,13 @@ export default function DocumentDetailPage({
     refetchInterval: (query) => {
       // Get fresh document data from cache
       const freshDoc = queryClient.getQueryData<Document>(['document', id]);
-      const currentObligations = query.data;
+      const currentObligations = query.state.data;
       
       console.log('🔄 Obligations refetchInterval check:', {
         hasDoc: !!freshDoc,
         docStatus: freshDoc?.extraction_status,
         currentObligationsCount: currentObligations?.length || 0,
-        queryAge: query.dataUpdatedAt ? Date.now() - query.dataUpdatedAt : 0,
+        queryAge: query.state.dataUpdatedAt ? Date.now() - query.state.dataUpdatedAt : 0,
       });
       
       // Always poll if extraction is in progress or if we have no obligations yet
@@ -162,14 +162,14 @@ export default function DocumentDetailPage({
       if (freshDoc && freshDoc.extraction_status === 'COMPLETED') {
         if (currentObligations && currentObligations.length > 0) {
           // Poll a few more times to catch any delayed obligations
-          const queryAge = Date.now() - (query.dataUpdatedAt || 0);
+          const queryAge = Date.now() - (query.state.dataUpdatedAt || 0);
           if (queryAge < 30000) { // Keep polling for 30 seconds after completion
             console.log('🔄 Polling obligations (completed, query age:', Math.floor(queryAge / 1000), 's)');
             return 3000;
           }
         } else {
           // COMPLETED but no obligations - keep polling longer!
-          const queryAge = Date.now() - (query.dataUpdatedAt || 0);
+          const queryAge = Date.now() - (query.state.dataUpdatedAt || 0);
           if (queryAge < 120000) { // Keep polling for 2 minutes if no obligations found
             console.log('🔄 Polling obligations (completed but no obligations yet, query age:', Math.floor(queryAge / 1000), 's)');
             return 5000;
@@ -196,7 +196,7 @@ export default function DocumentDetailPage({
     completed_at?: string | null;
   }>({
     queryKey: ['extraction-status', id],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       try {
         console.log('📊 Fetching extraction status for:', id);
         const response = await apiClient.get<{
@@ -251,7 +251,7 @@ export default function DocumentDetailPage({
       }
       // Keep polling after extraction completes to get final obligation count
       if (freshDoc && freshDoc.extraction_status === 'COMPLETED') {
-        const currentStatus = query.data;
+        const currentStatus = query.state.data;
         // Keep polling until we get 100% progress and obligations show up
         if (!currentStatus || currentStatus.progress !== 100 || currentStatus.obligation_count === 0) {
           return 3000; // Poll every 3 seconds until complete

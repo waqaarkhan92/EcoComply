@@ -1,6 +1,6 @@
 # AI Microservice Prompts
-## EcoComply Platform — Modules 1–3
-**Document Version: 1.1**  
+## EcoComply Platform — Modules 1–4
+**Document Version: 1.2**  
 **Status: Implemented**  
 **Depends On:**
 - AI Layer Design & Cost Optimization (1.5a)
@@ -8,8 +8,12 @@
 - Product Logic Specification (1.1)
 - Canonical Dictionary (1.4)
 
-**Purpose:** Complete prompt templates for all AI microservice operations across all three modules
+**Purpose:** Complete prompt templates for all AI microservice operations across all four modules
 
+> [v1.2 UPDATE – Added Module 4 (Hazardous Waste) Support – 2025-01-01]
+> - Added consignment note extraction prompt
+> - Updated document type classification to include hazardous waste document types
+> - Updated prompt index to include Module 4 prompts
 > [v1.1 UPDATE – Implementation Complete – 2025-01-29]
 > All prompts implemented in:
 > - lib/ai/prompts.ts (all 20+ prompt templates)
@@ -155,15 +159,17 @@ DOCUMENT TYPES:
 1. ENVIRONMENTAL_PERMIT - EA/SEPA/NRW/NIEA permits, Part A/B permits, WML, PPC permits
 2. TRADE_EFFLUENT_CONSENT - Water company consents for trade effluent discharge
 3. MCPD_REGISTRATION - Medium Combustion Plant Directive registrations, specified generator registrations
+4. HAZARDOUS_WASTE_CONSIGNMENT_NOTE - Hazardous waste consignment notes, waste transfer notes, carrier documentation
 
 CLASSIFICATION SIGNALS:
 - Environmental Permit: "Environmental Permit", "Part A", "Part B", "Waste Management Licence", "PPC Permit", "SEPA", "NRW", "NIEA", permit reference format (EPR/XX/XXXXX)
 - Trade Effluent: "Trade Effluent Consent", "Consent to Discharge", water company names (Thames Water, Severn Trent, etc.), "discharge permit"
 - MCPD: "MCPD Registration", "Medium Combustion Plant", "MCP Regulations", "Specified Generator", "Tranche A/B", "Annual Emissions Report"
+- Hazardous Waste: "Consignment Note", "Hazardous Waste", "EWC Code", "Waste Transfer Note", "Carrier Licence", "Hazardous Waste Regulations", "Duty of Care"
 
 OUTPUT JSON:
 {
-  "document_type": "ENVIRONMENTAL_PERMIT|TRADE_EFFLUENT_CONSENT|MCPD_REGISTRATION",
+  "document_type": "ENVIRONMENTAL_PERMIT|TRADE_EFFLUENT_CONSENT|MCPD_REGISTRATION|HAZARDOUS_WASTE_CONSIGNMENT_NOTE",
   "confidence": 0.00-1.00,
   "signals_detected": ["signal1", "signal2"],
   "regulator": "EA|SEPA|NRW|NIEA|WATER_COMPANY|null",
@@ -201,7 +207,7 @@ Expected Output Schema
   "properties": {
     "document_type": {
       "type": ["string", "null"],
-      "enum": ["ENVIRONMENTAL_PERMIT", "TRADE_EFFLUENT_CONSENT", "MCPD_REGISTRATION", null]
+      "enum": ["ENVIRONMENTAL_PERMIT", "TRADE_EFFLUENT_CONSENT", "MCPD_REGISTRATION", "HAZARDOUS_WASTE_CONSIGNMENT_NOTE", null]
     },
     "confidence": {
       "type": "number",
@@ -2859,17 +2865,19 @@ AER SECTIONS (EA Standard Format):
 1. Generator Details
 2. Reporting Period
 3. Run-Hours Summary
-4. Fuel Consumption
-5. Emissions Data
-6. Stack Test Results
-7. Incidents/Breakdowns
+4. Fuel Usage Logs (daily/monthly fuel consumption with sulphur content)
+5. Sulphur Content Reports (test results and compliance verification)
+6. Emissions Data
+7. Stack Test Results
+8. Incidents/Breakdowns
 
 DATA AGGREGATION RULES:
 1. Sum run-hours per generator for reporting period
-2. Aggregate fuel consumption by fuel type
-3. Use most recent stack test results for emissions
-4. Include ALL incidents/breakdowns during period
-5. Calculate total site emissions if multiple generators
+2. Aggregate fuel usage logs by fuel type for reporting period
+3. Include sulphur content reports for fuel batches used during period
+4. Use most recent stack test results for emissions
+5. Include ALL incidents/breakdowns during period
+6. Calculate total site emissions if multiple generators
 
 VALIDATION RULES:
 - All required fields must be populated
@@ -2893,6 +2901,25 @@ OUTPUT JSON:
       "total_run_hours": number,
       "annual_limit": number,
       "percentage_of_limit": number
+    }],
+    "fuel_usage_logs": [{
+      "log_date": "YYYY-MM-DD",
+      "generator_id": "uuid",
+      "fuel_type": "NATURAL_GAS|DIESEL|GAS_OIL|HEAVY_FUEL_OIL|BIOMASS|BIOGAS|DUAL_FUEL|OTHER",
+      "quantity": number,
+      "unit": "LITRES|CUBIC_METRES|TONNES|KILOGRAMS|MEGAWATT_HOURS",
+      "sulphur_content_percentage": number or null,
+      "sulphur_content_mg_per_kg": number or null
+    }],
+    "sulphur_content_reports": [{
+      "test_date": "YYYY-MM-DD",
+      "fuel_type": "NATURAL_GAS|DIESEL|...",
+      "batch_reference": "string",
+      "sulphur_content_percentage": number,
+      "sulphur_content_mg_per_kg": number or null,
+      "regulatory_limit_percentage": number or null,
+      "regulatory_limit_mg_per_kg": number or null,
+      "compliance_status": "COMPLIANT|NON_COMPLIANT|EXCEEDED|PENDING"
     }],
     "fuel_consumption": [{
       "fuel_type": "NATURAL_GAS|DIESEL|...",
@@ -2947,7 +2974,13 @@ GENERATOR DATA:
 RUN-HOUR RECORDS:
 {run_hour_records_json}
 
-FUEL CONSUMPTION DATA:
+FUEL USAGE LOGS:
+{fuel_usage_logs_json}
+
+SULPHUR CONTENT REPORTS:
+{sulphur_content_reports_json}
+
+FUEL CONSUMPTION DATA (Legacy - from aer_documents.fuel_consumption_data):
 {fuel_consumption_json}
 
 STACK TEST RESULTS:
@@ -3101,6 +3134,177 @@ Validate completeness and flag any missing data.
 4. Generate PDF in EA template format
 5. Update aer_documents record
 6. Set submission deadline reminder
+
+---
+
+## 6.7 Module 4: Consignment Note Extraction
+
+**Prompt ID:** PROMPT_M4_CONSIGNMENT_001
+**Purpose:** Extract consignment note data from hazardous waste consignment notes and waste transfer notes.
+**Model:** GPT-4o
+**Estimated Tokens:**
+- Input: ~5,000-15,000
+- Output: ~1,500-3,000
+**Cost per Call:** ~$0.05-0.10
+**Confidence Threshold:** 85% (flagged for mandatory human review)
+
+### System Message
+
+You are a hazardous waste consignment note extractor. Extract ALL consignment note data from this document.
+
+IMPORTANT: Consignment note extraction is HIGH RISK. All extractions are flagged for human review.
+
+CONSIGNMENT NOTE FIELDS:
+- EWC Code (6-digit European Waste Catalogue code, format: XX XX XX)
+- Waste Description (full description of waste)
+- Quantity (numeric value)
+- Unit (TONNES, KILOGRAMS, LITRES)
+- Carrier Name (licensed waste carrier)
+- Carrier Licence Number (waste carrier licence reference)
+- Collection Date (date waste was collected)
+- Destination Site (name/address of receiving facility)
+- End-Point Proof Reference (evidence of proper disposal, if present)
+
+VALIDATION RULES:
+- EWC Code must be exactly 6 digits (may include spaces)
+- Quantity must be positive number
+- Collection date must be valid date
+- Carrier licence number must be present if carrier name is provided
+
+OUTPUT JSON:
+{
+  "consignment_notes": [{
+    "ewc_code": "XX XX XX",
+    "waste_description": "full description",
+    "quantity": number,
+    "unit": "TONNES|KILOGRAMS|LITRES",
+    "carrier_name": "carrier company name",
+    "carrier_licence_number": "licence reference",
+    "collection_date": "YYYY-MM-DD",
+    "destination_site": "site name/address",
+    "end_point_proof_reference": "reference or null",
+    "confidence_score": 0.00-1.00
+  }],
+  "extraction_warnings": ["warning1", "warning2"]
+}
+
+**Token Count:** ~380 tokens
+**Optimization Notes:**
+- EWC code format validation critical
+- Unit conversion handled in transformation layer
+- End-point proof reference optional but important for compliance
+
+### User Message Template
+
+Extract consignment note data from this document:
+
+SITE: {site_name}
+EXPECTED WASTE STREAMS: {expected_waste_streams_json}
+
+CONSIGNMENT NOTE TEXT:
+{document_text}
+
+Flag any values that cannot be confidently extracted or validated.
+
+**Placeholders:**
+- {site_name}: Site name for context
+- {expected_waste_streams_json}: JSON array of known waste streams (EWC codes) for this site
+- {document_text}: Full text of consignment note document
+
+### Expected Output Schema
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "consignment_notes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ewc_code": {
+            "type": "string",
+            "pattern": "^\\d{2}\\s?\\d{2}\\s?\\d{2}$"
+          },
+          "waste_description": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 0
+          },
+          "unit": {
+            "type": "string",
+            "enum": ["TONNES", "KILOGRAMS", "LITRES"]
+          },
+          "carrier_name": {
+            "type": "string"
+          },
+          "carrier_licence_number": {
+            "type": "string"
+          },
+          "collection_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "destination_site": {
+            "type": "string"
+          },
+          "end_point_proof_reference": {
+            "type": ["string", "null"]
+          },
+          "confidence_score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": ["ewc_code", "waste_description", "quantity", "unit", "carrier_name", "carrier_licence_number", "collection_date", "destination_site", "confidence_score"]
+      }
+    },
+    "extraction_warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "required": ["consignment_notes"]
+}
+```
+
+### Example Output
+
+```json
+{
+  "consignment_notes": [
+    {
+      "ewc_code": "20 01 21",
+      "waste_description": "Fluorescent tubes and other mercury-containing waste",
+      "quantity": 2.5,
+      "unit": "TONNES",
+      "carrier_name": "ABC Waste Services Ltd",
+      "carrier_licence_number": "CBDU123456",
+      "collection_date": "2024-12-15",
+      "destination_site": "XYZ Recycling Facility, Industrial Estate, City",
+      "end_point_proof_reference": "EPR-2024-12345",
+      "confidence_score": 0.92
+    }
+  ],
+  "extraction_warnings": []
+}
+```
+
+### Confidence Scoring
+
+- **High (≥90%):** All fields present, EWC code format valid, dates valid, carrier licence format matches expected pattern
+- **Medium (70-89%):** Most fields present, minor format issues (e.g., EWC code spacing), missing optional fields
+- **Low (<70%):** Missing required fields, invalid EWC code format, invalid dates, extraction flagged for manual review
+
+### Error Handling
+
+- **Invalid EWC Code:** Flag warning, attempt to correct spacing, if still invalid set confidence <70%
+- **Missing Carrier Licence:** Flag warning, set confidence <85%
+- **Invalid Date:** Flag warning, attempt to parse alternative formats, if still invalid set confidence <70%
+- **Missing Quantity/Unit:** Flag warning, set confidence <70%
 
 ---
 
@@ -4008,6 +4212,7 @@ If promoted variant causes issues:
 | PROMPT_M3_RUNHOUR_001 | ✅ Complete | Module 3 | `lib/ai/prompts.ts`, `lib/ai/openai-client.ts` |
 | PROMPT_M3_STACKTEST_001 | ✅ Complete | Module 3 | `lib/ai/prompts.ts`, `lib/ai/openai-client.ts` |
 | PROMPT_M3_AER_001 | ✅ Complete | Module 3 | `lib/ai/prompts.ts`, `lib/ai/openai-client.ts` |
+| PROMPT_M4_CONSIGNMENT_001 | ✅ Complete | Module 4 | `lib/ai/prompts.ts`, `lib/ai/openai-client.ts` |
 | PROMPT_M1_IMPROVE_001 | ✅ Complete | Module 1 | `lib/ai/prompts.ts`, `lib/ai/openai-client.ts` |
 | PROMPT_M1_M3_ELV_001 | ✅ Complete | Module 1 & 3 | `lib/ai/prompts.ts`, `lib/ai/openai-client.ts` |
 | PROMPT_OBL_REG_001 | ✅ Complete | All | `lib/ai/prompts.ts`, `lib/ai/openai-client.ts` |
@@ -4032,7 +4237,7 @@ If promoted variant causes issues:
 
 **Status:** ✅ Implemented
 
-- GPT-4o for all extraction tasks (Module 1, 2, 3)
+- GPT-4o for all extraction tasks (Modules 1–4)
 - GPT-4o-mini for classification, validation, suggestions
 - Model selection logic in `lib/ai/openai-client.ts`
 

@@ -37,7 +37,7 @@ export default function DocumentUploadPage() {
     mutationFn: async (formDataToSubmit: FormData) => {
       return apiClient.upload('/documents', formDataToSubmit);
     },
-    onSuccess: (response) => {
+    onSuccess: (response: any) => {
       console.log('Upload response:', JSON.stringify(response, null, 2));
       queryClient.invalidateQueries({ queryKey: ['documents'] });
       

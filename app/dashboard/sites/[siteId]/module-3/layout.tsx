@@ -19,7 +19,7 @@ export default function Module3Layout({
   // Check if Module 3 is activated - try to access a Module 3 endpoint to verify
   const { data, isLoading, error } = useQuery<{ data: any[] }>({
     queryKey: ['module-3-check', user?.company_id],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       // Try to fetch generators - if Module 3 is not activated, this will return 403
       try {
         return await apiClient.get('/module-3/generators?limit=1');

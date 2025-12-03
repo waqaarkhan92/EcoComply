@@ -25,7 +25,7 @@ export default function SearchPage() {
 
   const { data: searchData, isLoading } = useQuery<SearchResponse>({
     queryKey: ['search', searchTerm],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       if (!searchTerm) return { data: [] };
       return apiClient.get<SearchResponse>(`/search?q=${encodeURIComponent(searchTerm)}`);
     },

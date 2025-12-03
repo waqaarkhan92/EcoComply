@@ -35,7 +35,7 @@ export default function ConsentsPage() {
 
   const { data, isLoading, error } = useQuery<ConsentsResponse>({
     queryKey: ['module-2-consents', siteId, cursor],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       params.append('filter[site_id]', siteId);
       if (cursor) params.append('cursor', cursor);

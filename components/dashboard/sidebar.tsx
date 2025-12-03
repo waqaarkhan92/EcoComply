@@ -15,6 +15,9 @@ import {
   TestTube,
   Zap,
   Clock,
+  Calendar,
+  AlertTriangle,
+  Share2,
 } from 'lucide-react';
 import { useModuleActivation } from '@/lib/hooks/use-module-activation';
 
@@ -23,7 +26,12 @@ const navigation = [
   { name: 'Documents', href: '/dashboard/documents', icon: FileText },
   { name: 'Obligations', href: '/dashboard/obligations', icon: ClipboardList },
   { name: 'Evidence', href: '/dashboard/evidence', icon: FolderOpen },
+  { name: 'Recurring Tasks', href: '/dashboard/recurring-tasks', icon: Calendar },
+  { name: 'Recurrence Events', href: '/dashboard/recurrence-events', icon: Calendar },
+  { name: 'Trigger Rules', href: '/dashboard/recurrence-trigger-rules', icon: Settings },
+  { name: 'Expiring Evidence', href: '/dashboard/evidence/expiring', icon: AlertTriangle },
   { name: 'Packs', href: '/dashboard/packs', icon: Package },
+  { name: 'Pack Sharing', href: '/dashboard/pack-sharing', icon: Share2 },
   { name: 'Notifications', href: '/dashboard/notifications', icon: Bell },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];

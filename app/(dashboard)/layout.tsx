@@ -24,7 +24,7 @@ export default function DashboardLayout({
   // Check onboarding progress
   const { data: onboardingData } = useQuery({
     queryKey: ['onboarding-progress'],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const response = await apiClient.get('/users/me/onboarding-progress');
       return response.data;
     },

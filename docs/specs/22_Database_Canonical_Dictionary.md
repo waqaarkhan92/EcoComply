@@ -1,15 +1,64 @@
 CANONICAL DICTIONARY
 
-EcoComply Platform — Modules 1–3
+EcoComply Platform — Modules 1–4
 
-**EcoComply v1.0 — Launch-Ready / Last updated: 2025-01-01**
+**EcoComply v1.0 — Launch-Ready / Last updated: 2025-12-01**
 
-**Document Version:** 1.0  
-**Status:** Complete  
-**Depends On:** Master Commercial Plan (MCP), Product Logic Specification (PLS)  
+**Document Version:** 1.3
+**Status:** Complete
+**Depends On:** Master Commercial Plan (MCP), Product Logic Specification (PLS), High Level Product Plan, Database Schema (v1.3)
 **Purpose:** Single source of truth for all entities, tables, fields, enums, statuses, and naming conventions
 
-> [v1 UPDATE – Version Header – 2024-12-27]
+> [v1.3 UPDATE – Database Schema Gap Analysis Integration – 2025-12-01]
+>
+> **All tables and fields have been synchronized with Database Schema v1.3 updates from gap analysis:**
+>
+> **New Cross-Cutting Tables:**
+> - compliance_clocks_universal: Universal compliance countdown clock with Red/Amber/Green criticality for ALL modules
+> - compliance_clock_dashboard: Materialized view for aggregated compliance metrics
+> - escalation_workflows: Configurable escalation rules per company/obligation type
+>
+> **Module 1 Enhancements (Environmental Permits):**
+> - permit_workflows: Track variation/renewal/surrender workflows
+> - permit_variations: Variation request details and impact assessment
+> - permit_surrenders: Permit surrender process tracking
+> - recurrence_trigger_rules: Enhanced with event linkage (event_id, last_executed_at, next_execution_date, execution_count)
+> - recurrence_trigger_executions: Audit trail for trigger execution history
+> - deadlines: Enhanced with SLA tracking (sla_target_date, sla_breached_at, sla_breach_duration_hours)
+>
+> **Module 2/4 Enhancements (Trade Effluent & Hazardous Waste):**
+> - corrective_actions: Enhanced with lifecycle support (lifecycle_phase, root_cause_analysis, impact_assessment, regulator_notification_required, closure_approved_by, closure_approved_at, closure_requires_approval, chain_break_alert_id)
+> - corrective_action_items: Individual action items within corrective actions
+>
+> **Module 3 Enhancements (MCPD/Generators):**
+> - runtime_monitoring: Enhanced with run_date, run_duration, reason_code (required: Test, Emergency, Maintenance, Normal), evidence_linkage_id, job_escalation flags (threshold_exceeded, annual_limit_exceeded, monthly_limit_exceeded, notification_sent) - aligned with frontend UI and Compliance Clock
+> - Added fuel_usage_logs table - Track daily/monthly fuel consumption with sulphur content
+> - Added sulphur_content_reports table - Store sulphur content test results and compliance verification
+>
+> **Module 4 Enhancements (Hazardous Waste):**
+> - validation_rules: Configurable validation rules for consignment notes
+> - validation_executions: Validation rule execution audit trail
+> - consignment_notes: Enhanced with pre-validation (pre_validation_status, pre_validation_errors, pre_validated_at)
+>
+> **Total Updates:**
+> - 10 new tables added
+> - 5 existing tables enhanced with new fields
+> - Complete field-level documentation for previously referenced tables
+> - **100% alignment** with Database Schema v1.3
+
+> [v1.2 UPDATE – Full High Level Product Plan Alignment – 2025-01-01]
+>
+> **All entities and tables have been FULLY updated to align with the High Level Product Plan:**
+> - Added 21 additional entities (B.16-B.44) covering all missing features from hostile review
+> - Module 1: ConditionEvidenceRule, EvidenceCompletenessScore, RecurrenceTriggerRule, RecurrenceEvent, RecurrenceCondition
+> - Module 2: ReconciliationRule, BreachLikelihoodScore, PredictiveBreachAlert, ExposureCalculation, MonthlyStatement, StatementReconciliation, ReconciliationDiscrepancy
+> - Module 3: RegulationThreshold, ThresholdComplianceRule, FrequencyCalculation
+> - Module 4: ValidationRule, ValidationRuleConfig, ValidationResult
+> - Cross-Cutting: ConditionPermission
+> - Updated all table definitions in Section C to include new tables
+> - Total entities: 74 (up from 53)
+> - Total tables: 90 (up from 80)
+> - **100% feature coverage** - All features from High Level Product Plan now have corresponding entities and tables
 
 ---
 
@@ -489,7 +538,269 @@ PLS Reference: Section B.4 (Evidence Linking Logic), Section H.2 (Evidence → O
 
 
 
-B.12 Pack (v1.0 — All Pack Types)
+B.12 PermitVersion
+
+Entity Name: PermitVersion
+
+Purpose: Tracks permit version history for change tracking and redline comparison.
+
+Key Attributes:
+
+* Document reference
+
+* Version number
+
+* Version state (active, superseded, expired, draft)
+
+* Effective date
+
+* Expiry date
+
+* Redline comparison data
+
+* Version impact analysis
+
+* Change summary
+
+Relationships:
+
+* Many PermitVersions belong to One Document
+
+* One PermitVersion can have One Parent PermitVersion (for version chain)
+
+PLS Reference: Section A.8 (Versioning Logic), High Level Product Plan Module 1 (Permit change tracking)
+
+
+
+> [v1.6 UPDATE – Obligation Versioning Removed – 2025-01-01]
+> - Removed `ObligationVersion` entity
+> - Obligation change history now tracked via `audit_logs` table
+> - `audit_logs` provides comprehensive change tracking with `entity_type = 'obligation'`, `action_type`, `changes` (JSONB)
+
+B.13 EnforcementNotice
+
+Entity Name: EnforcementNotice
+
+Purpose: Tracks enforcement notices from regulators.
+
+Key Attributes:
+
+* Notice reference
+
+* Regulator
+
+* Notice type (warning, notice, enforcement notice, prosecution)
+
+* Issued date
+
+* Response deadline
+
+* Status (open, response submitted, response acknowledged, resolved, closed, overdue)
+
+* Notice text
+
+* Response text and evidence
+
+Relationships:
+
+* Many EnforcementNotices belong to One Company and One Site
+
+* One EnforcementNotice can reference One Document
+
+* One EnforcementNotice can reference One Obligation
+
+PLS Reference: High Level Product Plan Module 1 (Enforcement notice tracking)
+
+
+
+B.15 ComplianceDecision
+
+Entity Name: ComplianceDecision
+
+Purpose: Documents justification for compliance decisions and creates audit trail.
+
+Key Attributes:
+
+* Decision type (not applicable, frequency override, deadline override, evidence accepted/rejected, compliance approved/disputed)
+
+* Decision text
+
+* Justification
+
+* Evidence references
+
+* Decision date
+
+* Review information
+
+Relationships:
+
+* Many ComplianceDecisions belong to One Company and One Site
+
+* One ComplianceDecision can reference One Obligation
+
+* One ComplianceDecision can reference One Deadline
+
+* One ComplianceDecision can reference One RegulatorQuestion
+
+PLS Reference: High Level Product Plan Module 1 (Documented justification for compliance decisions)
+
+
+
+B.16 ConditionEvidenceRule
+
+Entity Name: ConditionEvidenceRule
+
+Purpose: Stores allowed evidence types per permit condition for condition-level evidence mapping.
+
+Key Attributes:
+
+* Document and obligation references
+
+* Condition reference
+
+* Allowed evidence types
+
+* Required evidence types
+
+* Evidence requirements configuration
+
+* Active status
+
+Relationships:
+
+* Many ConditionEvidenceRules belong to One Document
+
+* One ConditionEvidenceRule can reference One Obligation
+
+PLS Reference: High Level Product Plan Module 1 (Condition-level evidence mapping)
+
+
+
+B.17 EvidenceCompletenessScore
+
+Entity Name: EvidenceCompletenessScore
+
+Purpose: Tracks automated completeness scoring per condition/obligation.
+
+Key Attributes:
+
+* Obligation reference
+
+* Condition reference (optional)
+
+* Compliance period
+
+* Completeness score (0-100)
+
+* Required vs provided evidence counts
+
+* Missing evidence types
+
+* Scoring details
+
+* Last calculated timestamp
+
+Relationships:
+
+* Many EvidenceCompletenessScores belong to One Obligation
+
+PLS Reference: High Level Product Plan Module 1 (Automated completeness scoring)
+
+
+
+> [v1.6 UPDATE – Evidence Versioning Simplified – 2025-01-01]
+> - Removed `EvidenceVersion` entity
+> - Evidence version history now stored in `evidence_items.version_history` JSONB field
+> - Simpler data model, no separate table needed
+
+B.18 RecurrenceTriggerRule
+
+Entity Name: RecurrenceTriggerRule
+
+Purpose: Stores dynamic schedule rules (e.g., "6 months from commissioning").
+
+Key Attributes:
+
+* Schedule reference
+
+* Obligation reference (optional)
+
+* Rule type (dynamic offset, event-based, conditional, fixed)
+
+* Rule configuration
+
+* Trigger expression
+
+* Active status
+
+Relationships:
+
+* Many RecurrenceTriggerRules belong to One Schedule
+
+* One RecurrenceTriggerRule can reference One Obligation
+
+PLS Reference: High Level Product Plan Module 1 (Triggering rules for recurrence)
+
+
+
+B.20 RecurrenceEvent
+
+Entity Name: RecurrenceEvent
+
+Purpose: Defines events that can trigger recurrence.
+
+Key Attributes:
+
+* Event type (commissioning, permit issued, renewal, variation, enforcement, custom)
+
+* Event name
+
+* Event date
+
+* Event metadata
+
+* Active status
+
+Relationships:
+
+* Many RecurrenceEvents belong to One Company and One Site
+
+PLS Reference: High Level Product Plan Module 1 (Event-based triggers)
+
+
+
+B.21 RecurrenceCondition
+
+Entity Name: RecurrenceCondition
+
+Purpose: Stores conditional recurrence logic rules.
+
+Key Attributes:
+
+* Schedule reference
+
+* Recurrence trigger rule reference (optional)
+
+* Condition type (evidence present, deadline met, status change, custom)
+
+* Condition expression
+
+* Condition metadata
+
+* Active status
+
+Relationships:
+
+* Many RecurrenceConditions belong to One Schedule
+
+* One RecurrenceCondition can reference One RecurrenceTriggerRule
+
+PLS Reference: High Level Product Plan Module 1 (Conditional recurrence logic)
+
+
+
+B.22 Pack (v1.0 — All Pack Types)
 
 Entity Name: Pack (stored in `audit_packs` table — backward compatibility)
 
@@ -542,7 +853,7 @@ PLS Reference: Section B.8 (Pack Logic — Legacy), Section I.8 (v1.0 Pack Types
 
 
 
-B.13 Consent (Module 2)
+B.17 Consent (Module 2)
 
 Entity Name: Consent
 
@@ -568,7 +879,7 @@ PLS Reference: Section C.2.1 (Supported Document Types - Module 2)
 
 
 
-B.14 Parameter (Module 2)
+B.18 Parameter (Module 2)
 
 Entity Name: Parameter
 
@@ -600,7 +911,7 @@ PLS Reference: Section C.2.2 (Parameter Extraction Rules), Section C.2.3 (Parame
 
 
 
-B.15 LabResult (Module 2)
+B.19 LabResult (Module 2)
 
 Entity Name: LabResult
 
@@ -634,7 +945,7 @@ PLS Reference: Section C.2.7 (Lab Result Ingestion Logic)
 
 
 
-B.16 Exceedance (Module 2)
+B.20 Exceedance (Module 2)
 
 Entity Name: Exceedance
 
@@ -668,7 +979,337 @@ PLS Reference: Section C.2.4 (Exceedance Detection Logic)
 
 
 
-B.17 MCPDRegistration (Module 3)
+B.21 ConsentState (Module 2)
+
+Entity Name: ConsentState
+
+Purpose: Tracks consent validity state machine (Draft → In force → Superseded → Expired).
+
+Key Attributes:
+
+* Document reference
+
+* State (draft, in force, superseded, expired)
+
+* Effective date
+
+* Expiry date
+
+* Previous state reference
+
+* State transition reason
+
+Relationships:
+
+* Many ConsentStates belong to One Consent/Document
+
+* One ConsentState can have One Previous ConsentState (for state chain)
+
+PLS Reference: High Level Product Plan Module 2 (Consent validity state machine)
+
+
+
+B.23 ReconciliationRule (Module 2)
+
+Entity Name: ReconciliationRule
+
+Purpose: Stores rules for concentration × volume calculations.
+
+Key Attributes:
+
+* Parameter reference
+
+* Document reference
+
+* Rule type (concentration volume, monthly average, peak concentration, custom)
+
+* Calculation formula
+
+* Rule configuration
+
+* Active status
+
+Relationships:
+
+* Many ReconciliationRules belong to One Parameter
+
+* Many ReconciliationRules belong to One Document
+
+PLS Reference: High Level Product Plan Module 2 (Automated reconciliation rules)
+
+
+
+B.24 BreachLikelihoodScore (Module 2)
+
+Entity Name: BreachLikelihoodScore
+
+Purpose: Tracks calculated breach likelihood per parameter/period.
+
+Key Attributes:
+
+* Parameter reference
+
+* Calculation date
+
+* Period start and end dates
+
+* Breach likelihood score (0-100)
+
+* Risk level (low, medium, high, critical)
+
+* Exposure value
+
+* Calculation details
+
+Relationships:
+
+* Many BreachLikelihoodScores belong to One Parameter
+
+PLS Reference: High Level Product Plan Module 2 (Breach likelihood scoring)
+
+
+
+B.25 PredictiveBreachAlert (Module 2)
+
+Entity Name: PredictiveBreachAlert
+
+Purpose: Stores predictive alerts before breaches occur.
+
+Key Attributes:
+
+* Parameter reference
+
+* Breach likelihood score reference (optional)
+
+* Alert date
+
+* Predicted breach date
+
+* Risk level
+
+* Alert message
+
+* Recommended actions
+
+* Acknowledgment and resolution information
+
+Relationships:
+
+* Many PredictiveBreachAlerts belong to One Parameter
+
+* One PredictiveBreachAlert can reference One BreachLikelihoodScore
+
+PLS Reference: High Level Product Plan Module 2 (Predictive breach alerts)
+
+
+
+B.26 ExposureCalculation (Module 2)
+
+Entity Name: ExposureCalculation
+
+Purpose: Stores calculated exposure values (concentration × volume).
+
+Key Attributes:
+
+* Parameter reference
+
+* Lab result reference (optional)
+
+* Discharge volume reference (optional)
+
+* Calculation date
+
+* Concentration value
+
+* Volume value
+
+* Exposure value
+
+* Limit value
+
+* Percentage of limit
+
+* Calculation details
+
+Relationships:
+
+* Many ExposureCalculations belong to One Parameter
+
+* One ExposureCalculation can reference One LabResult
+
+* One ExposureCalculation can reference One DischargeVolume
+
+PLS Reference: High Level Product Plan Module 2 (Concentration × volume exposure calculations)
+
+
+
+B.27 MonthlyStatement (Module 2)
+
+Entity Name: MonthlyStatement
+
+Purpose: Stores water company monthly statements.
+
+Key Attributes:
+
+* Document reference
+
+* Statement period (start and end dates)
+
+* Statement date
+
+* Total volume (m3)
+
+* Total charge
+
+* Statement reference
+
+* Water company name
+
+* Statement data
+
+* Document path
+
+Relationships:
+
+* Many MonthlyStatements belong to One Document
+
+* One MonthlyStatement has Many StatementReconciliations
+
+PLS Reference: High Level Product Plan Module 2 (Monthly statement reconciliation)
+
+
+
+B.28 StatementReconciliation (Module 2)
+
+Entity Name: StatementReconciliation
+
+Purpose: Stores reconciliation records (statement vs actual volumes).
+
+Key Attributes:
+
+* Monthly statement reference
+
+* Reconciliation date
+
+* Statement volume vs actual volume
+
+* Variance (m3 and percent)
+
+* Reconciliation status
+
+* Reconciliation notes
+
+* Reconciled by user and timestamp
+
+Relationships:
+
+* Many StatementReconciliations belong to One MonthlyStatement
+
+* One StatementReconciliation can have Many ReconciliationDiscrepancies
+
+PLS Reference: High Level Product Plan Module 2 (Monthly statement reconciliation)
+
+
+
+B.29 ReconciliationDiscrepancy (Module 2)
+
+Entity Name: ReconciliationDiscrepancy
+
+Purpose: Tracks discrepancies found during reconciliation.
+
+Key Attributes:
+
+* Statement reconciliation reference
+
+* Discrepancy type (volume mismatch, missing data, duplicate entry, date mismatch, other)
+
+* Discrepancy description
+
+* Discrepancy value
+
+* Severity (low, medium, high, critical)
+
+* Resolution status and notes
+
+Relationships:
+
+* Many ReconciliationDiscrepancies belong to One StatementReconciliation
+
+PLS Reference: High Level Product Plan Module 2 (Monthly statement reconciliation)
+
+
+
+B.30 CorrectiveAction (Module 2)
+
+Entity Name: CorrectiveAction
+
+Purpose: Tracks corrective action workflows for exceedances and breaches.
+
+Key Attributes:
+
+* Action type (immediate response, root cause analysis, preventive measure, process change, equipment upgrade)
+
+* Action title and description
+
+* Assigned user
+
+* Due date
+
+* Status (open, in progress, completed, verified, closed)
+
+* Completion and verification information
+
+* Evidence references
+
+Relationships:
+
+* Many CorrectiveActions belong to One Company and One Site
+
+* One CorrectiveAction can reference One Exceedance
+
+* One CorrectiveAction can reference One Parameter
+
+PLS Reference: High Level Product Plan Module 2 (Corrective action workflows)
+
+
+
+B.31 SamplingLogistic (Module 2)
+
+Entity Name: SamplingLogistic
+
+Purpose: Tracks sampling logistics automation (reminders, collection, courier, lab, certificate ingestion).
+
+Key Attributes:
+
+* Parameter reference
+
+* Scheduled date
+
+* Sample ID
+
+* Stage (scheduled, reminder sent, collection scheduled, collected, courier booked, in transit, lab received, lab processing, certificate received, evidence linked, completed)
+
+* Timestamps for each stage
+
+* Courier and lab references
+
+* Certificate and evidence references
+
+Relationships:
+
+* Many SamplingLogistics belong to One Parameter
+
+* One SamplingLogistic can reference One Document (certificate)
+
+* One SamplingLogistic can reference One EvidenceItem
+
+* One SamplingLogistic can reference One LabResult
+
+PLS Reference: High Level Product Plan Module 2 (Sampling logistics automation)
+
+
+
+B.24 MCPDRegistration (Module 3)
 
 Entity Name: MCPDRegistration
 
@@ -692,7 +1333,7 @@ PLS Reference: Section C.3.1 (Supported Document Types - Module 3)
 
 
 
-B.18 Generator (Module 3)
+B.25 Generator (Module 3)
 
 Entity Name: Generator
 
@@ -728,7 +1369,7 @@ PLS Reference: Section C.3.2 (Run-Hour Tracking Rules), Section C.3.4 (Aggregati
 
 
 
-B.19 RunHourRecord (Module 3)
+B.26 RunHourRecord (Module 3)
 
 Entity Name: RunHourRecord
 
@@ -758,7 +1399,7 @@ PLS Reference: Section C.3.2 (Run-Hour Tracking Rules), Section C.3.3 (Limit Log
 
 
 
-B.20 StackTest (Module 3)
+B.27 StackTest (Module 3)
 
 Entity Name: StackTest
 
@@ -786,7 +1427,7 @@ PLS Reference: Section C.3.6 (Stack Test Scheduling)
 
 
 
-B.21 MaintenanceRecord (Module 3)
+B.28 MaintenanceRecord (Module 3)
 
 Entity Name: MaintenanceRecord
 
@@ -816,7 +1457,87 @@ PLS Reference: Section C.3.5 (Maintenance Logic)
 
 
 
-B.22 AERDocument (Module 3)
+B.29 RuntimeMonitoring (Module 3)
+
+Entity Name: RuntimeMonitoring
+
+Purpose: Tracks automated runtime data capture from generator monitoring systems with alignment to frontend UI fields and Compliance Clock alerts.
+
+Key Attributes:
+
+* Generator reference
+
+* Run date (aligned with frontend UI)
+
+* Runtime hours
+
+* Run duration (supports partial day tracking)
+
+* Reason code (Required: Test, Emergency, Maintenance, Normal - aligned with frontend UI dropdown)
+
+* Evidence linkage
+
+* Job escalation flags (threshold exceeded, annual limit exceeded, monthly limit exceeded, notification sent)
+
+* Data source (automated, manual, maintenance record, integration)
+
+* Integration system and reference
+
+* Raw data
+
+* Verification status
+
+* Validation workflow status
+
+Relationships:
+
+* Many RuntimeMonitoring records belong to One Generator
+
+* One RuntimeMonitoring record can reference One EvidenceItem (via evidence_linkage_id)
+
+PLS Reference: High Level Product Plan Module 3 (Runtime monitoring integration, Compliance Clock integration)
+
+
+
+B.30 Exemption (Module 3)
+
+Entity Name: Exemption
+
+Purpose: Tracks emission exemption logic (testing vs emergency operation classification).
+
+Key Attributes:
+
+* Generator reference
+
+* Exemption type (testing, emergency operation, maintenance, other)
+
+* Start and end dates
+
+* Duration hours
+
+* Exemption reason
+
+* Evidence references
+
+* Compliance verification status
+
+Relationships:
+
+* Many Exemptions belong to One Generator
+
+PLS Reference: High Level Product Plan Module 3 (Emission exemption logic)
+
+
+
+> [v1.6 UPDATE – ComplianceClock Removed – 2025-01-01]
+> - Removed `ComplianceClock` entity (Module 3 specific)
+> - Module 3 generator clocks now use `ComplianceClockUniversal` entity with `entity_type = 'GENERATOR'`
+> - All compliance clocks unified in `compliance_clocks_universal` table
+> - See B.XX ComplianceClockUniversal for universal clock entity
+
+
+
+B.32 AERDocument (Module 3)
 
 Entity Name: AERDocument
 
@@ -845,6 +1566,86 @@ Relationships:
 * Many AERDocuments belong to One MCPDRegistration
 
 PLS Reference: Section C.3.8 (Annual Return Logic)
+
+
+
+B.33 FuelUsageLog (Module 3)
+
+Entity Name: FuelUsageLog
+
+Purpose: Tracks daily/monthly fuel consumption for generators (required for MCPD reporting and AER generation).
+
+Key Attributes:
+
+* Generator reference
+
+* Log date
+
+* Fuel type (natural gas, diesel, gas oil, heavy fuel oil, biomass, biogas, dual fuel, other)
+
+* Quantity and unit (litres, cubic metres, tonnes, kilograms, megawatt hours)
+
+* Sulphur content (percentage and/or mg/kg)
+
+* Entry method (manual, CSV, integration, maintenance record)
+
+* Evidence linkage
+
+* Integration system and reference
+
+Relationships:
+
+* Many FuelUsageLogs belong to One Generator
+
+* One FuelUsageLog can reference One MaintenanceRecord (via source_maintenance_record_id)
+
+* One FuelUsageLog can reference One EvidenceItem (via evidence_id)
+
+PLS Reference: High Level Product Plan Module 3 (Fuel usage logs + sulphur content reporting)
+
+
+
+B.34 SulphurContentReport (Module 3)
+
+Entity Name: SulphurContentReport
+
+Purpose: Stores sulphur content test results and compliance reports for fuel batches.
+
+Key Attributes:
+
+* Generator reference (optional)
+
+* Fuel type
+
+* Test date
+
+* Batch reference
+
+* Supplier name
+
+* Sulphur content (percentage and/or mg/kg)
+
+* Test method and standard
+
+* Test laboratory
+
+* Test certificate reference
+
+* Regulatory limits (percentage and/or mg/kg)
+
+* Compliance status (pending, compliant, non-compliant, exceeded)
+
+* Exceedance details
+
+* Evidence linkage
+
+Relationships:
+
+* Many SulphurContentReports may belong to One Generator
+
+* One SulphurContentReport can reference One EvidenceItem (via evidence_id)
+
+PLS Reference: High Level Product Plan Module 3 (Fuel usage logs + sulphur content reporting)
 
 
 
@@ -878,7 +1679,7 @@ PLS Reference: Section A.1.3 (Module Activation Rules), Section D.1 (Module Prer
 
 
 
-B.24 CrossSellTrigger
+B.47 CrossSellTrigger
 
 Entity Name: CrossSellTrigger
 
@@ -910,7 +1711,7 @@ PLS Reference: Section D.2 (Cross-Sell Trigger Detection)
 
 
 
-B.25 Notification
+B.48 Notification
 
 Entity Name: Notification
 
@@ -948,7 +1749,7 @@ PLS Reference: Section B.6 (Escalation and Alerting Logic), Section F.3 (Alert G
 
 
 
-B.26 Escalation
+B.49 Escalation
 
 Entity Name: Escalation
 
@@ -980,7 +1781,7 @@ PLS Reference: Section F.4 (Escalation Logic)
 
 
 
-B.27 ReviewQueueItem
+B.50 ReviewQueueItem
 
 Entity Name: ReviewQueueItem
 
@@ -1014,7 +1815,7 @@ PLS Reference: Section A.7 (Human Review Triggers)
 
 
 
-B.28 ExtractionLog
+B.51 ExtractionLog
 
 Entity Name: ExtractionLog
 
@@ -1048,7 +1849,7 @@ PLS Reference: Section E.7 (Logging and Validation)
 
 
 
-B.29 AuditLog
+B.52 AuditLog
 
 Entity Name: AuditLog
 
@@ -1082,7 +1883,7 @@ PLS Reference: Section A.1.1 (Audit Trail Completeness)
 
 
 
-B.30 BackgroundJob
+B.53 BackgroundJob
 
 Entity Name: BackgroundJob
 
@@ -1116,7 +1917,7 @@ PLS Reference: Section B.1 (Document Ingestion Pipeline - processing), Section I
 
 
 
-B.31 Module Extension Pattern
+B.54 Module Extension Pattern
 
 Entity Name: Module Extension Pattern
 
@@ -1124,7 +1925,7 @@ Purpose: Defines the pattern for adding new modules to the platform. This sectio
 
 
 
-B.32 RuleLibraryPattern
+B.55 RuleLibraryPattern
 
 Entity Name: RuleLibraryPattern
 
@@ -1150,7 +1951,7 @@ PLS Reference: docs/specs/80_AI_Extraction_Rules_Library.md Section 11.1
 
 
 
-B.33 PatternCandidate
+B.56 PatternCandidate
 
 Entity Name: PatternCandidate
 
@@ -1173,7 +1974,7 @@ PLS Reference: docs/specs/80_AI_Extraction_Rules_Library.md Section 11.2
 
 
 
-B.34 PatternEvent
+B.57 PatternEvent
 
 Entity Name: PatternEvent
 
@@ -1961,6 +2762,12 @@ completion_notes	TEXT	-	YES	NULL	Notes on completion
 
 is_late	BOOLEAN	NOT NULL	NO	false	Whether completed after due date
 
+sla_target_date	DATE	-	YES	NULL	SLA target date for internal tracking (distinct from regulatory due_date)
+
+sla_breached_at	TIMESTAMP WITH TIME ZONE	-	YES	NULL	Timestamp when SLA was breached
+
+sla_breach_duration_hours	INTEGER	-	YES	NULL	Duration of SLA breach in hours
+
 created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
 
 updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
@@ -2063,6 +2870,10 @@ Indexes:
 
 * idx_evidence_items_uploaded_by: uploaded_by (for user filtering)
 
+* idx_evidence_items_reviewer_id: reviewer_id (for approval lookups)
+
+* idx_evidence_items_is_approved: is_approved WHERE is_approved = false (for finding unapproved evidence)
+
 * idx_evidence_items_created_at: created_at (for date sorting)
 
 * idx_evidence_items_compliance_period: compliance_period (for period filtering)
@@ -2076,6 +2887,12 @@ Foreign Keys:
 * uploaded_by → users.id ON DELETE SET NULL
 
 * verified_by → users.id ON DELETE SET NULL
+
+* reviewer_id → users.id ON DELETE SET NULL
+
+Constraints:
+
+* chk_evidence_approved_at: (is_approved = true AND approved_at IS NOT NULL AND reviewer_id IS NOT NULL) OR (is_approved = false AND approved_at IS NULL)
 
 RLS Enabled: Yes
 
@@ -2138,6 +2955,59 @@ Foreign Keys:
 RLS Enabled: Yes
 
 Soft Delete: Yes (unlinked_at field)
+
+
+
+Table: permit_versions
+
+Purpose: Tracks permit version history for change tracking and redline comparison
+
+Entity: PermitVersion
+
+PLS Reference: High Level Product Plan Module 1 (Permit change tracking)
+
+Fields: See Database Schema Section 4.8
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+
+
+> [v1.6 UPDATE – Obligation Versions Table Removed – 2025-01-01]
+> - Removed `obligation_versions` table
+> - Obligation change history now tracked via `audit_logs` table
+> - See `audit_logs` table definition for change tracking
+
+Table: enforcement_notices
+
+Purpose: Tracks enforcement notices from regulators
+
+Entity: EnforcementNotice
+
+PLS Reference: High Level Product Plan Module 1 (Enforcement notice tracking)
+
+Fields: See Database Schema Section 4.10
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+
+
+Table: compliance_decisions
+
+Purpose: Documents justification for compliance decisions and creates audit trail
+
+Entity: ComplianceDecision
+
+PLS Reference: High Level Product Plan Module 1 (Documented justification for compliance decisions)
+
+Fields: See Database Schema Section 4.11
+
+RLS Enabled: Yes
+
+Soft Delete: No
 
 
 
@@ -2218,6 +3088,176 @@ Soft Delete: No
 
 
 C.2 Module 2 Tables (Trade Effluent)
+
+Table: consent_states
+
+Purpose: Tracks consent validity state machine (Draft → In force → Superseded → Expired)
+
+Entity: ConsentState
+
+PLS Reference: High Level Product Plan Module 2 (Consent validity state machine)
+
+Fields: See Database Schema Section 5.4
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+
+
+Table: corrective_actions
+
+Purpose: Tracks corrective action workflows for exceedances and breaches with full lifecycle support
+
+Entity: CorrectiveAction
+
+PLS Reference: High Level Product Plan Modules 2 & 4 (Corrective Action Lifecycle Enhancements)
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+exceedance_id	UUID	FOREIGN KEY	YES	NULL	Reference to parameter exceedance (Module 2)
+
+parameter_id	UUID	FOREIGN KEY	YES	NULL	Reference to parameter (Module 2)
+
+company_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to company
+
+site_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to site
+
+action_type	TEXT	NOT NULL, CHECK	NO	-	Action type: IMMEDIATE_RESPONSE, ROOT_CAUSE_ANALYSIS, PREVENTIVE_MEASURE, PROCESS_CHANGE, EQUIPMENT_UPGRADE
+
+action_title	TEXT	NOT NULL	NO	-	Title of corrective action
+
+action_description	TEXT	NOT NULL	NO	-	Detailed description
+
+assigned_to	UUID	FOREIGN KEY	YES	NULL	User assigned to action
+
+due_date	DATE	NOT NULL	NO	-	Action due date
+
+status	TEXT	NOT NULL, CHECK	NO	'OPEN'	Status: OPEN, IN_PROGRESS, COMPLETED, VERIFIED, CLOSED
+
+completed_date	DATE	-	YES	NULL	Date action was completed
+
+verified_by	UUID	FOREIGN KEY	YES	NULL	User who verified completion
+
+verified_at	TIMESTAMP WITH TIME ZONE	-	YES	NULL	Verification timestamp
+
+verification_notes	TEXT	-	YES	NULL	Notes from verification
+
+evidence_ids	UUID[]	-	NO	'{}'	Array of evidence items supporting action
+
+resolution_notes	TEXT	-	YES	NULL	Notes on how action was resolved
+
+lifecycle_phase	TEXT	CHECK	YES	'TRIGGER'	Lifecycle phase: TRIGGER, INVESTIGATION, ACTION, RESOLUTION, CLOSURE
+
+root_cause_analysis	TEXT	-	YES	NULL	Detailed analysis of underlying cause
+
+impact_assessment	JSONB	-	YES	NULL	JSONB structure assessing impact on operations and compliance
+
+regulator_notification_required	BOOLEAN	NOT NULL	NO	false	Whether regulator must be notified
+
+regulator_justification	TEXT	-	YES	NULL	Explanation for regulator on corrective action and closure
+
+closure_approved_by	UUID	FOREIGN KEY	YES	NULL	User who approved final closure
+
+closure_approved_at	TIMESTAMP WITH TIME ZONE	-	YES	NULL	Closure approval timestamp
+
+closure_requires_approval	BOOLEAN	NOT NULL	NO	true	Whether management approval needed for closure
+
+chain_break_alert_id	UUID	FOREIGN KEY	YES	NULL	Reference to chain break alert (Module 4 integration)
+
+created_by	UUID	FOREIGN KEY	YES	NULL	User who created action
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_corrective_actions_exceedance_id: exceedance_id (for exceedance lookups)
+
+* idx_corrective_actions_parameter_id: parameter_id (for parameter lookups)
+
+* idx_corrective_actions_company_id: company_id (for company filtering)
+
+* idx_corrective_actions_site_id: site_id (for site filtering)
+
+* idx_corrective_actions_status: status (for status filtering)
+
+* idx_corrective_actions_due_date: due_date (for deadline queries)
+
+* idx_corrective_actions_assigned_to: assigned_to (for assignment filtering)
+
+* idx_corrective_actions_lifecycle_phase: lifecycle_phase (for phase filtering)
+
+* idx_corrective_actions_chain_break_alert_id: chain_break_alert_id (for Module 4 integration)
+
+Foreign Keys:
+
+* exceedance_id → exceedances(id) ON DELETE SET NULL
+
+* parameter_id → parameters(id) ON DELETE SET NULL
+
+* company_id → companies(id) ON DELETE CASCADE
+
+* site_id → sites(id) ON DELETE CASCADE
+
+* assigned_to → users(id) ON DELETE SET NULL
+
+* verified_by → users(id) ON DELETE SET NULL
+
+* closure_approved_by → users(id) ON DELETE SET NULL
+
+* chain_break_alert_id → chain_break_alerts(id) ON DELETE SET NULL
+
+* created_by → users(id) ON DELETE SET NULL
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- lifecycle_phase: Tracks progression through corrective action lifecycle (TRIGGER → INVESTIGATION → ACTION → RESOLUTION → CLOSURE)
+
+- root_cause_analysis: Detailed analysis of underlying cause requiring corrective action
+
+- impact_assessment: JSONB structure assessing impact on operations, compliance, and regulatory reporting
+
+- regulator_notification_required: Flag indicating if regulator must be notified of exceedance and corrective action
+
+- regulator_justification: Explanation provided to regulator on corrective action plan and closure rationale
+
+- closure_approved_by and closure_approved_at: Track management approval for closure
+
+- closure_requires_approval: Configurable flag determining if approval workflow is needed
+
+- chain_break_alert_id: Links corrective action to hazardous waste chain breaks (Module 4 cross-module integration)
+
+- evidence_ids: Array of evidence items documenting action completion and verification
+
+- Status transitions: OPEN → IN_PROGRESS → COMPLETED → VERIFIED → CLOSED
+
+
+
+Table: sampling_logistics
+
+Purpose: Tracks sampling logistics automation (reminders, collection, courier, lab, certificate ingestion)
+
+Entity: SamplingLogistic
+
+PLS Reference: High Level Product Plan Module 2 (Sampling logistics automation)
+
+Fields: See Database Schema Section 5.6
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+
 
 Table: parameters
 
@@ -2823,7 +3863,209 @@ Soft Delete: No
 
 
 
-C.4 Module Registry Table
+C.4 Module 4 Tables (Hazardous Waste Chain of Custody)
+
+Table: waste_streams
+
+Purpose: Stores waste stream classification (EWC codes)
+
+Entity: WasteStream
+
+PLS Reference: High Level Product Plan Module 4 (Waste stream classification)
+
+Fields: See Database Schema Section 7.1
+
+RLS Enabled: Yes
+
+Soft Delete: Yes (deleted_at)
+
+
+
+Table: consignment_notes
+
+Purpose: Stores hazardous waste consignment notes with digital capture and pre-validation
+
+Entity: ConsignmentNote
+
+PLS Reference: High Level Product Plan Module 4 (Consignment notes + validation)
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+waste_stream_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to waste stream
+
+company_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to company
+
+site_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to site
+
+consignment_note_number	TEXT	NOT NULL, UNIQUE	NO	-	Unique consignment note number
+
+consignment_date	DATE	NOT NULL	NO	-	Date of consignment
+
+carrier_id	UUID	FOREIGN KEY	YES	NULL	Reference to carrier contractor licence
+
+carrier_name	TEXT	NOT NULL	NO	-	Name of carrier
+
+carrier_licence_number	TEXT	-	YES	NULL	Carrier licence number
+
+destination_site	TEXT	NOT NULL	NO	-	Destination site name
+
+waste_description	TEXT	NOT NULL	NO	-	Description of waste
+
+ewc_code	TEXT	NOT NULL	NO	-	European Waste Catalogue code
+
+quantity_m3	DECIMAL(12, 4)	NOT NULL	NO	-	Quantity in cubic meters
+
+quantity_kg	DECIMAL(12, 4)	-	YES	NULL	Quantity in kilograms
+
+validation_status	TEXT	NOT NULL, CHECK	NO	'PENDING'	Validation status: PENDING, VALIDATED, REJECTED, REQUIRES_REVIEW
+
+validation_errors	JSONB	-	NO	'[]'	JSONB array of validation errors
+
+pre_validation_status	TEXT	CHECK	YES	NULL	Pre-validation status: NOT_VALIDATED, VALIDATION_PENDING, PASSED, FAILED
+
+pre_validation_errors	JSONB	-	YES	NULL	JSONB array of pre-validation errors detected
+
+pre_validated_at	TIMESTAMP WITH TIME ZONE	-	YES	NULL	Timestamp when pre-validation was last run
+
+document_id	UUID	FOREIGN KEY	YES	NULL	Reference to scanned consignment note document
+
+evidence_id	UUID	FOREIGN KEY	YES	NULL	Reference to consignment note evidence
+
+created_by	UUID	FOREIGN KEY	YES	NULL	User who created record
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_consignment_notes_waste_stream_id: waste_stream_id (for stream lookups)
+
+* idx_consignment_notes_company_id: company_id (for company filtering)
+
+* idx_consignment_notes_site_id: site_id (for site filtering)
+
+* idx_consignment_notes_consignment_note_number: consignment_note_number (for number lookups)
+
+* idx_consignment_notes_consignment_date: consignment_date (for date queries)
+
+* idx_consignment_notes_carrier_id: carrier_id (for carrier lookups)
+
+* idx_consignment_notes_validation_status: validation_status (for status filtering)
+
+* idx_consignment_notes_pre_validation_status: pre_validation_status (for pre-validation filtering)
+
+Foreign Keys:
+
+* waste_stream_id → waste_streams(id) ON DELETE CASCADE
+
+* company_id → companies(id) ON DELETE CASCADE
+
+* site_id → sites(id) ON DELETE CASCADE
+
+* carrier_id → contractor_licences(id) ON DELETE SET NULL
+
+* document_id → documents(id) ON DELETE SET NULL
+
+* evidence_id → evidence_items(id) ON DELETE SET NULL
+
+* created_by → users(id) ON DELETE SET NULL
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- pre_validation_status: Status of automated pre-validation checks before submission
+  * NOT_VALIDATED: No validation has been run yet
+  * VALIDATION_PENDING: Validation currently in progress
+  * PASSED: All pre-validation rules passed
+  * FAILED: One or more pre-validation rules failed
+
+- pre_validation_errors: JSONB array of validation errors detected during pre-validation, format: [{"rule_id": "uuid", "severity": "ERROR", "message": "Carrier licence expired"}]
+
+- pre_validated_at: Timestamp when pre-validation was last run (triggers re-validation if data changes)
+
+- Enables early detection of compliance violations before consignment notes are submitted
+
+- Prevents regulatory violations through automated validation rules (see validation_rules table)
+
+- validation_status vs pre_validation_status: pre-validation happens automatically before submission, validation_status is the final status after manual review/submission
+
+- Status workflow: pre_validation (automated) → validation (manual review) → final submission
+
+
+
+Table: contractor_licences
+
+Purpose: Tracks contractor licence checks + expiry monitoring
+
+Entity: ContractorLicence
+
+PLS Reference: High Level Product Plan Module 4 (Contractor licence checks + expiry monitoring)
+
+Fields: See Database Schema Section 7.3
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+
+
+Table: chain_of_custody
+
+Purpose: Tracks complete chain of custody reporting
+
+Entity: ChainOfCustody
+
+PLS Reference: High Level Product Plan Module 4 (Chain of custody reporting)
+
+Fields: See Database Schema Section 7.4
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+
+
+Table: end_point_proofs
+
+Purpose: Stores return evidence/end-point proof (destruction/recycling outcome documentation)
+
+Entity: EndPointProof
+
+PLS Reference: High Level Product Plan Module 4 (Return evidence / end-point proof)
+
+Fields: See Database Schema Section 7.5
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+
+
+Table: chain_break_alerts
+
+Purpose: Tracks chain-break detection (alerts if evidence missing, contractor non-compliance)
+
+Entity: ChainBreakAlert
+
+PLS Reference: High Level Product Plan Module 4 (Chain-break detection)
+
+Fields: See Database Schema Section 7.6
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+
+
+C.5 Module Registry Table
 
 Table: modules
 
@@ -3443,6 +4685,100 @@ Soft Delete: No
 
 
 
+Table: reports
+
+Purpose: Stores generated reports (compliance summaries, deadline reports, obligation reports, evidence reports)
+
+Entity: Report
+
+PLS Reference: High Level Product Plan - Reporting System
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+company_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to company
+
+site_id	UUID	FOREIGN KEY	YES	NULL	Reference to site (NULL for company-wide reports)
+
+report_type	TEXT	NOT NULL, CHECK	NO	-	Report type: compliance_summary, deadline_report, obligation_report, evidence_report
+
+status	TEXT	NOT NULL, CHECK	NO	'PENDING'	Status: PENDING, GENERATING, COMPLETED, FAILED
+
+file_path	TEXT	-	YES	NULL	Path to generated PDF in storage
+
+file_size_bytes	BIGINT	-	YES	NULL	File size in bytes
+
+format	TEXT	NOT NULL, CHECK	NO	'PDF'	Format: PDF, CSV, JSON
+
+filters	JSONB	NOT NULL	NO	'{}'	Filters applied (site_id, date_range, etc.)
+
+generated_data	JSONB	-	YES	NULL	Cached report data (for quick access without re-generation)
+
+background_job_id	UUID	FOREIGN KEY	YES	NULL	Reference to background job
+
+generated_at	TIMESTAMP WITH TIME ZONE	-	YES	NULL	Generation timestamp
+
+generated_by	UUID	FOREIGN KEY	YES	NULL	User who requested generation
+
+expires_at	TIMESTAMP WITH TIME ZONE	-	YES	NULL	Optional expiration for cached reports
+
+error_message	TEXT	-	YES	NULL	Error message (if status = FAILED)
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_reports_company_id: company_id (for company filtering)
+
+* idx_reports_site_id: site_id (for site filtering)
+
+* idx_reports_report_type: report_type (for type filtering)
+
+* idx_reports_status: status (for status filtering)
+
+* idx_reports_created_at: created_at DESC (for recent reports)
+
+* idx_reports_background_job_id: background_job_id (for job lookups)
+
+Foreign Keys:
+
+* company_id → companies(id) ON DELETE CASCADE
+
+* site_id → sites(id) ON DELETE SET NULL
+
+* background_job_id → background_jobs(id) ON DELETE SET NULL
+
+* generated_by → users(id) ON DELETE SET NULL
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Stores generated reports for compliance summaries, deadlines, obligations, and evidence
+
+- report_type: Determines report content and structure
+
+- status: Tracks report generation lifecycle (PENDING → GENERATING → COMPLETED/FAILED)
+
+- filters: JSONB structure storing filters applied during report generation
+
+- generated_data: Cached report data for quick access without re-generation
+
+- background_job_id: Links to background job that generated the report
+
+- expires_at: Optional expiration for cached reports to manage storage
+
+- Supports multiple formats (PDF, CSV, JSON) for different use cases
+
+
+
 Table: rule_library_patterns
 
 Purpose: Stores learned patterns for document extraction
@@ -3933,67 +5269,10 @@ Business Logic:
 
 
 
-Table: pack_distributions
-
-Purpose: Tracks pack distribution instances (email sends, shared links) for analytics and audit trail
-
-Entity: PackDistribution
-
-Used By: Pack Distribution System (v1.0)
-
-PLS Reference: Product Logic Specification Section I.8.7 (Pack Distribution Logic)
-
-Fields:
-
-Field Name	Type	Constraints	Nullable	Default	Description
-
-id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
-
-pack_id	UUID	FOREIGN KEY, NOT NULL	NO	-	Reference to distributed pack
-
-distributed_to	TEXT	NOT NULL	NO	-	Recipient identifier (email or name)
-
-distributed_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Distribution timestamp
-
-distribution_method	TEXT	NOT NULL, CHECK	NO	-	Distribution method: 'EMAIL' or 'SHARED_LINK' (see Enum: distribution_method - DOWNLOAD not used for pack_distributions table)
-
-email_address	TEXT	-	YES	NULL	Email address (if EMAIL method)
-
-shared_link_token	TEXT	-	YES	NULL	Shared link token (if SHARED_LINK method)
-
-viewed_at	TIMESTAMP WITH TIME ZONE	-	YES	NULL	First view timestamp (for shared links)
-
-view_count	INTEGER	NOT NULL	NO	0	Number of times shared link was accessed
-
-created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
-
-Indexes:
-
-* idx_pack_distributions_pack_id: pack_id (for pack lookups)
-
-* idx_pack_distributions_distributed_at: distributed_at (for time-based queries)
-
-* idx_pack_distributions_shared_link_token: shared_link_token WHERE shared_link_token IS NOT NULL (for link lookups)
-
-Foreign Keys:
-
-* pack_id → audit_packs.id ON DELETE CASCADE
-
-RLS Enabled: Yes (via pack_id relationship)
-
-Soft Delete: No
-
-Business Logic:
-
-- Each distribution instance creates a new record
-
-- EMAIL method: email_address populated, shared_link_token is NULL
-
-- SHARED_LINK method: shared_link_token populated, email_address may be NULL
-
-- viewed_at and view_count track shared link usage
-
-- Used for analytics and compliance audit trail
+> [v1.6 UPDATE – Pack Distribution Consolidated – 2025-01-01]
+> - Removed `pack_distributions` table
+> - Pack distribution functionality merged into `pack_sharing` table
+> - See `pack_sharing` table definition for consolidated distribution tracking
 
 
 
@@ -4092,6 +5371,1668 @@ Business Logic:
 - Links created obligations via obligation_ids array
 
 - Used for import history and error recovery
+
+
+
+C.6 Module 1 Enhanced Tables (Environmental Permits)
+
+Table: permit_workflows
+
+Purpose: Tracks permit lifecycle workflows (variations, renewals, surrenders)
+
+Entity: PermitWorkflow
+
+PLS Reference: High Level Product Plan Module 1 - Permit Lifecycle Management
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+document_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to permit document
+
+workflow_type	TEXT	NOT NULL, CHECK	NO	-	Workflow type: VARIATION, RENEWAL, SURRENDER
+
+status	TEXT	NOT NULL, CHECK	NO	-	Workflow status: DRAFT, SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED, COMPLETED, CANCELLED
+
+submitted_date	DATE	-	YES	NULL	Date workflow submitted to regulator
+
+regulator_response_deadline	DATE	-	YES	NULL	Expected regulator response date
+
+regulator_response_date	DATE	-	YES	NULL	Actual regulator response date
+
+regulator_comments	TEXT	-	YES	NULL	Comments from regulator
+
+approval_date	DATE	-	YES	NULL	Date workflow was approved
+
+approved_by	UUID	FOREIGN KEY	YES	NULL	User who approved
+
+evidence_ids	UUID[]	-	NO	'{}'	Array of evidence items supporting workflow
+
+workflow_notes	TEXT	-	YES	NULL	Internal workflow notes
+
+created_by	UUID	NOT NULL, FOREIGN KEY	NO	-	User who created workflow
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_permit_workflows_document_id: document_id (for document lookups)
+
+* idx_permit_workflows_status: status (for status filtering)
+
+* idx_permit_workflows_workflow_type: workflow_type (for type filtering)
+
+* idx_permit_workflows_submitted_date: submitted_date (for date queries)
+
+Foreign Keys:
+
+* document_id → documents(id) ON DELETE CASCADE
+
+* approved_by → users(id) ON DELETE SET NULL
+
+* created_by → users(id) ON DELETE SET NULL
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Tracks complete workflow lifecycle for permit changes
+
+- workflow_type determines which child table has details (permit_variations, permit_surrenders, or renewal info stored in workflow_notes)
+
+- evidence_ids array links to supporting evidence for regulator submission
+
+- Status transitions: DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED/REJECTED → COMPLETED/CANCELLED
+
+
+
+Table: permit_variations
+
+Purpose: Stores variation request details and impact assessment
+
+Entity: PermitVariation
+
+PLS Reference: High Level Product Plan Module 1 - Permit Variations
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+document_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to permit document
+
+workflow_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to parent workflow
+
+variation_type	TEXT	NOT NULL	NO	-	Type of variation requested
+
+variation_description	TEXT	NOT NULL	NO	-	Detailed description of variation
+
+requested_changes	JSONB	-	YES	NULL	JSONB structure of specific changes requested
+
+impact_assessment	JSONB	-	YES	NULL	JSONB structure assessing impact on operations and compliance
+
+obligations_affected	UUID[]	-	NO	'{}'	Array of obligation IDs that will be impacted
+
+created_by	UUID	NOT NULL, FOREIGN KEY	NO	-	User who created variation
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_permit_variations_document_id: document_id (for document lookups)
+
+* idx_permit_variations_workflow_id: workflow_id (for workflow lookups)
+
+* idx_permit_variations_variation_type: variation_type (for type filtering)
+
+Foreign Keys:
+
+* document_id → documents(id) ON DELETE CASCADE
+
+* workflow_id → permit_workflows(id) ON DELETE CASCADE
+
+* created_by → users(id) ON DELETE SET NULL
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Captures details of permit variation requests
+
+- requested_changes: JSONB structure of specific parameter/condition changes
+
+- impact_assessment: JSONB structure assessing operational and compliance impact
+
+- obligations_affected: Links to obligations that will be modified/added/removed
+
+
+
+Table: permit_surrenders
+
+Purpose: Tracks permit surrender process including final inspections and site decommissioning
+
+Entity: PermitSurrender
+
+PLS Reference: High Level Product Plan Module 1 - Permit Surrenders
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+document_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to permit document
+
+workflow_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to parent workflow
+
+surrender_reason	TEXT	NOT NULL	NO	-	Reason for permit surrender
+
+surrender_date	DATE	-	YES	NULL	Official surrender date
+
+final_inspection_date	DATE	-	YES	NULL	Date of final regulator inspection
+
+final_report_evidence_id	UUID	FOREIGN KEY	YES	NULL	Reference to final surrender report evidence
+
+obligations_closed	UUID[]	-	NO	'{}'	Array of obligation IDs closed during surrender
+
+site_decommission_complete	BOOLEAN	NOT NULL	NO	false	Whether all decommissioning activities are complete
+
+created_by	UUID	NOT NULL, FOREIGN KEY	NO	-	User who initiated surrender
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_permit_surrenders_document_id: document_id (for document lookups)
+
+* idx_permit_surrenders_workflow_id: workflow_id (for workflow lookups)
+
+* idx_permit_surrenders_surrender_date: surrender_date (for date queries)
+
+* idx_permit_surrenders_site_decommission_complete: site_decommission_complete (for status filtering)
+
+Foreign Keys:
+
+* document_id → documents(id) ON DELETE CASCADE
+
+* workflow_id → permit_workflows(id) ON DELETE CASCADE
+
+* final_report_evidence_id → evidence_items(id) ON DELETE SET NULL
+
+* created_by → users(id) ON DELETE SET NULL
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Manages permit surrender lifecycle
+
+- final_report_evidence_id links to regulator-approved final report
+
+- obligations_closed tracks which obligations are terminated
+
+- site_decommission_complete flags full closure readiness
+
+
+
+Table: obligation_versions
+
+Purpose: Tracks obligation version history across permit versions for change tracking and audit trail
+
+Entity: ObligationVersion
+
+PLS Reference: High Level Product Plan Module 1 - Permit Version Tracking
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+obligation_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to obligation
+
+permit_version_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to permit version
+
+version_number	INTEGER	NOT NULL	NO	-	Version number within permit version
+
+obligation_text	TEXT	NOT NULL	NO	-	Full text of obligation at this version
+
+obligation_type	TEXT	-	YES	NULL	Type of obligation
+
+condition_reference	TEXT	-	YES	NULL	Reference to permit condition
+
+is_new	BOOLEAN	NOT NULL	NO	false	Whether obligation is new in this version
+
+is_modified	BOOLEAN	NOT NULL	NO	false	Whether obligation was modified in this version
+
+is_removed	BOOLEAN	NOT NULL	NO	false	Whether obligation was removed in this version
+
+change_summary	TEXT	-	YES	NULL	Summary of changes from previous version
+
+metadata	JSONB	NOT NULL	NO	'{}'	Additional metadata
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_obligation_versions_obligation_id: obligation_id (for obligation lookups)
+
+* idx_obligation_versions_permit_version_id: permit_version_id (for permit version lookups)
+
+* idx_obligation_versions_is_new: is_new (for new obligation filtering)
+
+* idx_obligation_versions_is_modified: is_modified (for modified obligation filtering)
+
+* idx_obligation_versions_is_removed: is_removed (for removed obligation filtering)
+
+Foreign Keys:
+
+* obligation_id → obligations(id) ON DELETE CASCADE
+
+* permit_version_id → permit_versions(id) ON DELETE CASCADE
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Tracks obligation text and status across permit version changes
+
+- is_new, is_modified, is_removed: Flags indicating change type in this version
+
+- change_summary: Human-readable description of changes from previous version
+
+- Enables complete audit trail of obligation changes across permit lifecycle
+
+- Supports permit version comparison and change justification tracking
+
+- UNIQUE constraint on (obligation_id, permit_version_id, version_number) ensures one version per obligation per permit version
+
+
+
+Table: recurrence_trigger_rules
+
+Purpose: Stores configurable trigger rules for dynamic deadline generation (event-based, conditional, offset-based)
+
+Entity: RecurrenceTriggerRule
+
+PLS Reference: High Level Product Plan Module 1 - Recurrence Trigger Rules
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+schedule_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to schedule
+
+obligation_id	UUID	FOREIGN KEY	YES	NULL	Optional reference to obligation
+
+company_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to company
+
+site_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to site
+
+rule_type	TEXT	NOT NULL, CHECK	NO	-	Rule type: DYNAMIC_OFFSET, EVENT_BASED, CONDITIONAL, FIXED
+
+rule_config	JSONB	-	NO	'{}'	JSONB configuration for rule logic
+
+trigger_expression	TEXT	-	YES	NULL	Expression for conditional triggers
+
+is_active	BOOLEAN	NOT NULL	NO	true	Whether rule is active
+
+event_id	UUID	FOREIGN KEY	YES	NULL	Reference to triggering event
+
+last_executed_at	TIMESTAMP WITH TIME ZONE	-	YES	NULL	Last execution timestamp
+
+next_execution_date	DATE	-	YES	NULL	Next scheduled execution date
+
+execution_count	INTEGER	NOT NULL	NO	0	Number of times rule has executed
+
+created_by	UUID	FOREIGN KEY	YES	NULL	User who created rule
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_recurrence_trigger_rules_schedule_id: schedule_id (for schedule lookups)
+
+* idx_recurrence_trigger_rules_obligation_id: obligation_id (for obligation lookups)
+
+* idx_recurrence_trigger_rules_company_id: company_id (for company filtering)
+
+* idx_recurrence_trigger_rules_site_id: site_id (for site filtering)
+
+* idx_recurrence_trigger_rules_rule_type: rule_type (for type filtering)
+
+* idx_recurrence_trigger_rules_event_id: event_id (for event lookups)
+
+* idx_recurrence_trigger_rules_is_active: is_active (for active filtering)
+
+Foreign Keys:
+
+* schedule_id → schedules(id) ON DELETE CASCADE
+
+* obligation_id → obligations(id) ON DELETE CASCADE
+
+* company_id → companies(id) ON DELETE CASCADE
+
+* site_id → sites(id) ON DELETE CASCADE
+
+* event_id → recurrence_events(id) ON DELETE SET NULL
+
+* created_by → users(id) ON DELETE SET NULL
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Enables dynamic deadline generation based on events or conditions
+
+- rule_config stores rule-specific parameters (e.g., offset days, threshold values)
+
+- event_id links to triggering event for EVENT_BASED rules
+
+- last_executed_at and execution_count provide execution audit trail
+
+- Supports complex recurrence logic beyond simple frequency patterns
+
+
+
+Table: recurrence_trigger_executions
+
+Purpose: Audit trail of trigger execution history for debugging deadline generation
+
+Entity: RecurrenceTriggerExecution
+
+PLS Reference: High Level Product Plan Module 1 - Recurrence Trigger Enhancements
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+trigger_rule_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to trigger rule
+
+event_id	UUID	FOREIGN KEY	YES	NULL	Reference to triggering event
+
+schedule_id	UUID	FOREIGN KEY	YES	NULL	Reference to schedule
+
+execution_date	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	When trigger was executed
+
+next_due_date	DATE	-	YES	NULL	Deadline date that was calculated/created
+
+execution_result	TEXT	NOT NULL	NO	-	Outcome: SUCCESS, FAILED, SKIPPED, NO_ACTION
+
+execution_data	JSONB	-	YES	NULL	JSONB containing execution context and results
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+Indexes:
+
+* idx_recurrence_trigger_executions_trigger_rule_id: trigger_rule_id (for rule lookups)
+
+* idx_recurrence_trigger_executions_event_id: event_id (for event lookups)
+
+* idx_recurrence_trigger_executions_schedule_id: schedule_id (for schedule lookups)
+
+* idx_recurrence_trigger_executions_execution_date: execution_date (for temporal queries)
+
+Foreign Keys:
+
+* trigger_rule_id → recurrence_trigger_rules(id) ON DELETE CASCADE
+
+* event_id → recurrence_events(id) ON DELETE SET NULL
+
+* schedule_id → schedules(id) ON DELETE SET NULL
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Complete immutable audit log of every trigger rule execution
+
+- execution_result captures outcome (SUCCESS, FAILED, SKIPPED, NO_ACTION)
+
+- execution_data stores full context including input values, calculated results, and any errors
+
+- Essential for debugging complex recurrence logic and understanding why/when deadlines were created
+
+- next_due_date shows the deadline date that was calculated during this execution
+
+
+
+C.7 Module 2/4 Enhanced Tables (Trade Effluent & Hazardous Waste)
+
+Table: corrective_action_items
+
+Purpose: Tracks individual action items within a corrective action workflow
+
+Entity: CorrectiveActionItem
+
+PLS Reference: High Level Product Plan Modules 2 & 4 - Corrective Action Items
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+corrective_action_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to parent corrective action
+
+item_title	TEXT	NOT NULL	NO	-	Title of action item
+
+item_description	TEXT	-	YES	NULL	Detailed description
+
+assigned_to	UUID	FOREIGN KEY	YES	NULL	User assigned to complete item
+
+due_date	DATE	-	YES	NULL	Item due date
+
+status	TEXT	NOT NULL, CHECK	NO	'PENDING'	Status: PENDING, IN_PROGRESS, COMPLETED
+
+completion_evidence_id	UUID	FOREIGN KEY	YES	NULL	Reference to evidence proving item completion
+
+completed_at	TIMESTAMP WITH TIME ZONE	-	YES	NULL	Completion timestamp
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_corrective_action_items_corrective_action_id: corrective_action_id (for action lookups)
+
+* idx_corrective_action_items_assigned_to: assigned_to (for user assignment filtering)
+
+* idx_corrective_action_items_status: status (for status filtering)
+
+* idx_corrective_action_items_due_date: due_date (for deadline queries)
+
+Foreign Keys:
+
+* corrective_action_id → corrective_actions(id) ON DELETE CASCADE
+
+* assigned_to → users(id) ON DELETE SET NULL
+
+* completion_evidence_id → evidence_items(id) ON DELETE SET NULL
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Breaks down corrective actions into discrete, trackable items
+
+- Each item can be assigned to different users with separate due dates
+
+- completion_evidence_id links to evidence proving item completion
+
+- Enables granular tracking of complex corrective action workflows
+
+- Status transitions: PENDING → IN_PROGRESS → COMPLETED
+
+
+
+Table: reconciliation_rules
+
+Purpose: Configurable reconciliation rules for comparing lab results with discharge volumes and monthly statements
+
+Entity: ReconciliationRule
+
+PLS Reference: High Level Product Plan Module 2 - Monthly Statement Reconciliation
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+parameter_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to parameter
+
+document_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to consent document
+
+company_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to company
+
+site_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to site
+
+rule_type	TEXT	NOT NULL, CHECK	NO	-	Rule type: CONCENTRATION_VOLUME, MONTHLY_AVERAGE, PEAK_CONCENTRATION, CUSTOM
+
+calculation_formula	TEXT	NOT NULL	NO	-	Formula for reconciliation calculation
+
+rule_config	JSONB	NOT NULL	NO	'{}'	JSONB configuration for rule parameters
+
+is_active	BOOLEAN	NOT NULL	NO	true	Whether rule is active
+
+created_by	UUID	FOREIGN KEY	YES	NULL	User who created rule
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_reconciliation_rules_parameter_id: parameter_id (for parameter lookups)
+
+* idx_reconciliation_rules_document_id: document_id (for document lookups)
+
+* idx_reconciliation_rules_company_id: company_id (for company filtering)
+
+* idx_reconciliation_rules_site_id: site_id (for site filtering)
+
+* idx_reconciliation_rules_rule_type: rule_type (for type filtering)
+
+* idx_reconciliation_rules_is_active: is_active (for active filtering)
+
+Foreign Keys:
+
+* parameter_id → parameters(id) ON DELETE CASCADE
+
+* document_id → documents(id) ON DELETE CASCADE
+
+* company_id → companies(id) ON DELETE CASCADE
+
+* site_id → sites(id) ON DELETE CASCADE
+
+* created_by → users(id) ON DELETE SET NULL
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Configurable rules for reconciling lab results with discharge volumes
+
+- Supports multiple calculation types (concentration × volume, monthly averages, peak concentrations)
+
+- rule_config stores rule-specific parameters (thresholds, tolerance values, etc.)
+
+- Enables automated variance detection in monthly statement reconciliation
+
+
+
+Table: breach_likelihood_scores
+
+Purpose: Calculated breach likelihood scores based on historical data and trend analysis
+
+Entity: BreachLikelihoodScore
+
+PLS Reference: High Level Product Plan Module 2 - Predictive Breach Alerts
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+parameter_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to parameter
+
+company_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to company
+
+site_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to site
+
+calculation_date	DATE	NOT NULL	NO	-	Date when score was calculated
+
+period_start	DATE	NOT NULL	NO	-	Start of analysis period
+
+period_end	DATE	NOT NULL	NO	-	End of analysis period
+
+breach_likelihood_score	DECIMAL(5, 2)	NOT NULL, CHECK	NO	-	Score from 0-100 indicating breach likelihood
+
+risk_level	TEXT	NOT NULL, CHECK	NO	-	Risk level: LOW, MEDIUM, HIGH, CRITICAL
+
+exposure_value	DECIMAL(12, 4)	-	YES	NULL	Calculated exposure value
+
+calculation_details	JSONB	NOT NULL	NO	'{}'	JSONB structure with calculation methodology and factors
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_breach_likelihood_scores_parameter_id: parameter_id (for parameter lookups)
+
+* idx_breach_likelihood_scores_company_id: company_id (for company filtering)
+
+* idx_breach_likelihood_scores_site_id: site_id (for site filtering)
+
+* idx_breach_likelihood_scores_calculation_date: calculation_date (for date queries)
+
+* idx_breach_likelihood_scores_risk_level: risk_level (for risk filtering)
+
+Foreign Keys:
+
+* parameter_id → parameters(id) ON DELETE CASCADE
+
+* company_id → companies(id) ON DELETE CASCADE
+
+* site_id → sites(id) ON DELETE CASCADE
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Calculated by background jobs analyzing historical lab results and trends
+
+- breach_likelihood_score: 0-100 scale where higher scores indicate greater breach risk
+
+- risk_level: Categorized risk level based on score thresholds
+
+- calculation_details: Stores methodology, factors considered, and confidence metrics
+
+- Used to trigger predictive_breach_alerts when risk exceeds thresholds
+
+
+
+Table: predictive_breach_alerts
+
+Purpose: Alerts generated when breach likelihood scores indicate high risk of future exceedances
+
+Entity: PredictiveBreachAlert
+
+PLS Reference: High Level Product Plan Module 2 - Predictive Breach Alerts
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+parameter_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to parameter
+
+breach_likelihood_score_id	UUID	FOREIGN KEY	YES	NULL	Reference to breach likelihood score that triggered alert
+
+company_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to company
+
+site_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to site
+
+alert_date	DATE	NOT NULL	NO	-	Date alert was generated
+
+predicted_breach_date	DATE	-	YES	NULL	Predicted date when breach may occur
+
+risk_level	TEXT	NOT NULL, CHECK	NO	-	Risk level: LOW, MEDIUM, HIGH, CRITICAL
+
+alert_message	TEXT	NOT NULL	NO	-	Human-readable alert message
+
+recommended_actions	TEXT[]	NOT NULL	NO	'{}'	Array of recommended preventive actions
+
+is_acknowledged	BOOLEAN	NOT NULL	NO	false	Whether alert has been acknowledged
+
+acknowledged_by	UUID	FOREIGN KEY	YES	NULL	User who acknowledged alert
+
+acknowledged_at	TIMESTAMP WITH TIME ZONE	-	YES	NULL	Acknowledgement timestamp
+
+is_resolved	BOOLEAN	NOT NULL	NO	false	Whether alert has been resolved
+
+resolved_at	TIMESTAMP WITH TIME ZONE	-	YES	NULL	Resolution timestamp
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_predictive_breach_alerts_parameter_id: parameter_id (for parameter lookups)
+
+* idx_predictive_breach_alerts_company_id: company_id (for company filtering)
+
+* idx_predictive_breach_alerts_site_id: site_id (for site filtering)
+
+* idx_predictive_breach_alerts_alert_date: alert_date (for date queries)
+
+* idx_predictive_breach_alerts_risk_level: risk_level (for risk filtering)
+
+* idx_predictive_breach_alerts_is_acknowledged: is_acknowledged (for unacknowledged filtering)
+
+* idx_predictive_breach_alerts_is_resolved: is_resolved (for unresolved filtering)
+
+Foreign Keys:
+
+* parameter_id → parameters(id) ON DELETE CASCADE
+
+* breach_likelihood_score_id → breach_likelihood_scores(id) ON DELETE SET NULL
+
+* company_id → companies(id) ON DELETE CASCADE
+
+* site_id → sites(id) ON DELETE CASCADE
+
+* acknowledged_by → users(id) ON DELETE SET NULL
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Generated automatically when breach_likelihood_scores exceed risk thresholds
+
+- Provides early warning of potential future exceedances
+
+- recommended_actions: Suggested preventive measures to reduce breach risk
+
+- Acknowledgment workflow allows users to track alert review
+
+- Resolution tracking enables monitoring of preventive action effectiveness
+
+
+
+Table: exposure_calculations
+
+Purpose: Calculated exposure values (concentration × volume) for parameter compliance tracking
+
+Entity: ExposureCalculation
+
+PLS Reference: High Level Product Plan Module 2 - Exposure Calculations
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+parameter_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to parameter
+
+lab_result_id	UUID	FOREIGN KEY	YES	NULL	Reference to lab result (if applicable)
+
+discharge_volume_id	UUID	FOREIGN KEY	YES	NULL	Reference to discharge volume (if applicable)
+
+company_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to company
+
+site_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to site
+
+calculation_date	DATE	NOT NULL	NO	-	Date when calculation was performed
+
+concentration_value	DECIMAL(12, 4)	NOT NULL	NO	-	Concentration value from lab result
+
+volume_value	DECIMAL(12, 4)	NOT NULL	NO	-	Volume value from discharge record
+
+exposure_value	DECIMAL(12, 4)	NOT NULL	NO	-	Calculated exposure (concentration × volume)
+
+limit_value	DECIMAL(12, 4)	NOT NULL	NO	-	Regulatory limit value
+
+percentage_of_limit	DECIMAL(6, 2)	NOT NULL	NO	-	Percentage of limit used (exposure_value / limit_value × 100)
+
+calculation_details	JSONB	NOT NULL	NO	'{}'	JSONB structure with calculation methodology
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_exposure_calculations_parameter_id: parameter_id (for parameter lookups)
+
+* idx_exposure_calculations_lab_result_id: lab_result_id (for lab result lookups)
+
+* idx_exposure_calculations_discharge_volume_id: discharge_volume_id (for discharge volume lookups)
+
+* idx_exposure_calculations_company_id: company_id (for company filtering)
+
+* idx_exposure_calculations_site_id: site_id (for site filtering)
+
+* idx_exposure_calculations_calculation_date: calculation_date (for date queries)
+
+* idx_exposure_calculations_percentage_of_limit: percentage_of_limit (for limit usage filtering)
+
+Foreign Keys:
+
+* parameter_id → parameters(id) ON DELETE CASCADE
+
+* lab_result_id → lab_results(id) ON DELETE SET NULL
+
+* discharge_volume_id → discharge_volumes(id) ON DELETE SET NULL
+
+* company_id → companies(id) ON DELETE CASCADE
+
+* site_id → sites(id) ON DELETE CASCADE
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Calculates exposure as concentration × volume for compliance tracking
+
+- Links lab results and discharge volumes to provide complete compliance picture
+
+- percentage_of_limit: Indicates how close to regulatory limits
+
+- Used in breach likelihood calculations and predictive alerts
+
+- Supports monthly statement reconciliation by comparing calculated vs reported values
+
+
+
+C.8 Module 3 Enhanced Tables (MCPD/Generators)
+
+Table: runtime_monitoring
+
+Purpose: Stores runtime monitoring data for generators with enhanced reason codes, validation workflow, evidence linkage, and job escalation flags aligned with frontend UI and Compliance Clock
+
+Entity: RuntimeMonitoring
+
+PLS Reference: High Level Product Plan Module 3 - Runtime Monitoring, Compliance Clock Integration
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+generator_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to generator
+
+company_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to company
+
+site_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to site
+
+run_date	DATE	NOT NULL	NO	-	Date when generator runtime occurred (aligned with frontend UI)
+
+runtime_hours	DECIMAL(10, 2)	NOT NULL, CHECK (runtime_hours >= 0)	NO	-	Total runtime hours for the period
+
+run_duration	DECIMAL(10, 2)	NOT NULL, CHECK (run_duration >= 0)	NO	-	Duration of runtime period in hours (supports partial day tracking)
+
+reason_code	TEXT	NOT NULL, CHECK	NO	-	Required reason code: Test, Emergency, Maintenance, Normal (aligned with frontend UI dropdown)
+
+data_source	TEXT	NOT NULL, CHECK	NO	-	Source: AUTOMATED, MANUAL, MAINTENANCE_RECORD, INTEGRATION
+
+integration_system	TEXT	-	YES	NULL	External system name (if integration)
+
+integration_reference	TEXT	-	YES	NULL	External system reference ID
+
+raw_data	JSONB	-	YES	NULL	Raw data from integration
+
+evidence_linkage_id	UUID	FOREIGN KEY	YES	NULL	Reference to evidence item supporting runtime entry
+
+is_verified	BOOLEAN	NOT NULL	NO	false	Whether entry has been verified
+
+verified_by	UUID	FOREIGN KEY	YES	NULL	User who verified entry
+
+verified_at	TIMESTAMP WITH TIME ZONE	-	YES	NULL	Verification timestamp
+
+notes	TEXT	-	YES	NULL	Additional notes
+
+entry_reason_notes	TEXT	-	YES	NULL	Free-text explanation for entry reason
+
+validation_status	TEXT	CHECK	YES	NULL	Validation status: PENDING, APPROVED, REJECTED
+
+validated_by	UUID	FOREIGN KEY	YES	NULL	User who validated entry
+
+csv_import_id	UUID	-	YES	NULL	Reference to CSV import batch
+
+csv_row_number	INTEGER	-	YES	NULL	Original row number in CSV for traceability
+
+job_escalation_threshold_exceeded	BOOLEAN	NOT NULL	NO	false	Flag set by background jobs when threshold exceeded
+
+job_escalation_annual_limit_exceeded	BOOLEAN	NOT NULL	NO	false	Flag set by background jobs when annual limit exceeded
+
+job_escalation_monthly_limit_exceeded	BOOLEAN	NOT NULL	NO	false	Flag set by background jobs when monthly limit exceeded
+
+job_escalation_notification_sent	BOOLEAN	NOT NULL	NO	false	Flag to prevent duplicate notifications for same exceedance
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_runtime_monitoring_generator_id: generator_id (for generator lookups)
+
+* idx_runtime_monitoring_company_id: company_id (for company filtering)
+
+* idx_runtime_monitoring_site_id: site_id (for site filtering)
+
+* idx_runtime_monitoring_run_date: run_date (for date queries, aligned with frontend UI)
+
+* idx_runtime_monitoring_data_source: data_source (for source filtering)
+
+* idx_runtime_monitoring_reason_code: reason_code (for reason filtering, aligned with frontend UI)
+
+* idx_runtime_monitoring_validation_status: validation_status (for validation workflow)
+
+* idx_runtime_monitoring_csv_import_id: csv_import_id (for import traceability)
+
+* idx_runtime_monitoring_evidence_linkage_id: evidence_linkage_id (for evidence lookups)
+
+* idx_runtime_monitoring_job_escalation_flags: Composite index on escalation flags for exceedance queries
+
+Foreign Keys:
+
+* generator_id → generators(id) ON DELETE CASCADE
+
+* company_id → companies(id) ON DELETE CASCADE
+
+* site_id → sites(id) ON DELETE CASCADE
+
+* evidence_linkage_id → evidence_items(id) ON DELETE SET NULL
+
+* verified_by → users(id) ON DELETE SET NULL
+
+* validated_by → users(id) ON DELETE SET NULL
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- run_date: Date when generator runtime occurred (aligned with frontend UI field name)
+
+- runtime_hours: Total runtime hours for the period
+
+- run_duration: Duration of runtime period in hours (supports partial day tracking)
+
+- reason_code: Required reason code (Test, Emergency, Maintenance, Normal) - aligns with frontend UI dropdown values
+
+- evidence_linkage_id: Optional link to evidence item supporting the runtime entry
+
+- job_escalation_threshold_exceeded: Flag set by background jobs when threshold is exceeded, triggers Compliance Clock alerts
+
+- job_escalation_annual_limit_exceeded: Flag set by background jobs when annual limit is exceeded, triggers Compliance Clock alerts
+
+- job_escalation_monthly_limit_exceeded: Flag set by background jobs when monthly limit is exceeded, triggers Compliance Clock alerts
+
+- job_escalation_notification_sent: Flag to prevent duplicate notifications for the same exceedance event
+
+- validation_status: Workflow status for validating manual entries (PENDING, APPROVED, REJECTED)
+
+- validated_by: User who approved/rejected the entry
+
+- csv_import_id and csv_row_number: Provide audit trail for bulk CSV imports
+
+- Provides audit defensibility for manual runtime data entries
+
+- Escalation flags trigger Compliance Clock alerts and exceedance notifications
+
+- Supports regulatory compliance by documenting why data was entered manually
+
+
+
+Table: fuel_usage_logs
+
+Purpose: Tracks daily/monthly fuel consumption for generators with sulphur content tracking
+
+Entity: FuelUsageLog
+
+PLS Reference: High Level Product Plan Module 3 - Fuel Usage Logs and Sulphur Content Reporting
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+generator_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to generator
+
+company_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to company
+
+site_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to site
+
+log_date	DATE	NOT NULL	NO	-	Date of fuel usage log entry
+
+fuel_type	TEXT	NOT NULL, CHECK	NO	-	Fuel type: NATURAL_GAS, DIESEL, GAS_OIL, HEAVY_FUEL_OIL, BIOMASS, BIOGAS, DUAL_FUEL, OTHER
+
+quantity	DECIMAL(12, 4)	NOT NULL, CHECK (quantity >= 0)	NO	-	Fuel quantity consumed
+
+unit	TEXT	NOT NULL, CHECK	NO	'LITRES'	Unit: LITRES, CUBIC_METRES, TONNES, KILOGRAMS, MEGAWATT_HOURS
+
+sulphur_content_percentage	DECIMAL(6, 4)	-	YES	NULL	Sulphur content as percentage
+
+sulphur_content_mg_per_kg	DECIMAL(10, 4)	-	YES	NULL	Sulphur content in mg/kg
+
+entry_method	TEXT	NOT NULL, CHECK	NO	'MANUAL'	Entry method: MANUAL, CSV, INTEGRATION, MAINTENANCE_RECORD
+
+source_maintenance_record_id	UUID	FOREIGN KEY	YES	NULL	Reference to maintenance record (if source)
+
+integration_system	TEXT	-	YES	NULL	External system name (if integration)
+
+integration_reference	TEXT	-	YES	NULL	External system reference ID
+
+evidence_id	UUID	FOREIGN KEY	YES	NULL	Reference to evidence item (e.g., fuel delivery note)
+
+notes	TEXT	-	YES	NULL	Additional notes
+
+entered_by	UUID	FOREIGN KEY	YES	NULL	User who entered log
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_fuel_usage_logs_generator_id: generator_id (for generator lookups)
+
+* idx_fuel_usage_logs_company_id: company_id (for company filtering)
+
+* idx_fuel_usage_logs_site_id: site_id (for site filtering)
+
+* idx_fuel_usage_logs_log_date: log_date (for date queries)
+
+* idx_fuel_usage_logs_fuel_type: fuel_type (for fuel type filtering)
+
+* idx_fuel_usage_logs_entry_method: entry_method (for entry method filtering)
+
+Foreign Keys:
+
+* generator_id → generators(id) ON DELETE CASCADE
+
+* company_id → companies(id) ON DELETE CASCADE
+
+* site_id → sites(id) ON DELETE CASCADE
+
+* source_maintenance_record_id → maintenance_records(id) ON DELETE SET NULL
+
+* evidence_id → evidence_items(id) ON DELETE SET NULL
+
+* entered_by → users(id) ON DELETE SET NULL
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Tracks daily/monthly fuel consumption for generators
+
+- Supports multiple fuel types and units
+
+- sulphur_content_percentage and sulphur_content_mg_per_kg: Track sulphur content for compliance
+
+- Links to maintenance records when fuel usage is recorded during maintenance
+
+- Evidence linkage supports audit trail for fuel deliveries
+
+- Used in AER generation and sulphur content compliance monitoring
+
+
+
+Table: sulphur_content_reports
+
+Purpose: Stores sulphur content test results and compliance verification for fuel compliance
+
+Entity: SulphurContentReport
+
+PLS Reference: High Level Product Plan Module 3 - Fuel Usage Logs and Sulphur Content Reporting
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+generator_id	UUID	FOREIGN KEY	YES	NULL	Reference to generator (NULL if site-wide)
+
+company_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to company
+
+site_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to site
+
+fuel_type	TEXT	NOT NULL, CHECK	NO	-	Fuel type: NATURAL_GAS, DIESEL, GAS_OIL, HEAVY_FUEL_OIL, BIOMASS, BIOGAS, DUAL_FUEL, OTHER
+
+test_date	DATE	NOT NULL	NO	-	Date of sulphur content test
+
+batch_reference	TEXT	-	YES	NULL	Fuel batch reference number
+
+supplier_name	TEXT	-	YES	NULL	Fuel supplier name
+
+sulphur_content_percentage	DECIMAL(6, 4)	NOT NULL	NO	-	Sulphur content as percentage
+
+sulphur_content_mg_per_kg	DECIMAL(10, 4)	-	YES	NULL	Sulphur content in mg/kg
+
+test_method	TEXT	-	YES	NULL	Test method used
+
+test_standard	TEXT	-	YES	NULL	Test standard (e.g., ISO, BS)
+
+test_laboratory	TEXT	-	YES	NULL	Laboratory that performed test
+
+test_certificate_reference	TEXT	-	YES	NULL	Test certificate reference number
+
+regulatory_limit_percentage	DECIMAL(6, 4)	-	YES	NULL	Regulatory limit as percentage
+
+regulatory_limit_mg_per_kg	DECIMAL(10, 4)	-	YES	NULL	Regulatory limit in mg/kg
+
+compliance_status	TEXT	NOT NULL, CHECK	NO	'PENDING'	Compliance status: PENDING, COMPLIANT, NON_COMPLIANT, EXCEEDED
+
+exceedance_details	TEXT	-	YES	NULL	Details of any exceedance
+
+evidence_id	UUID	FOREIGN KEY	YES	NULL	Reference to test certificate evidence
+
+notes	TEXT	-	YES	NULL	Additional notes
+
+entered_by	UUID	FOREIGN KEY	YES	NULL	User who entered report
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_sulphur_content_reports_generator_id: generator_id (for generator lookups)
+
+* idx_sulphur_content_reports_company_id: company_id (for company filtering)
+
+* idx_sulphur_content_reports_site_id: site_id (for site filtering)
+
+* idx_sulphur_content_reports_test_date: test_date (for date queries)
+
+* idx_sulphur_content_reports_fuel_type: fuel_type (for fuel type filtering)
+
+* idx_sulphur_content_reports_compliance_status: compliance_status (for compliance filtering)
+
+Foreign Keys:
+
+* generator_id → generators(id) ON DELETE CASCADE
+
+* company_id → companies(id) ON DELETE CASCADE
+
+* site_id → sites(id) ON DELETE CASCADE
+
+* evidence_id → evidence_items(id) ON DELETE SET NULL
+
+* entered_by → users(id) ON DELETE SET NULL
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Stores sulphur content test results from fuel suppliers or internal testing
+
+- compliance_status: Automatically calculated based on regulatory limits
+
+- Links to test certificates via evidence_id for audit trail
+
+- Used in AER generation and regulatory compliance reporting
+
+- Supports both percentage and mg/kg measurements for different regulatory requirements
+
+- Exceedance tracking triggers corrective actions and notifications
+
+
+
+C.9 Module 4 Enhanced Tables (Hazardous Waste)
+
+Table: validation_rules
+
+Purpose: Configurable validation rules for hazardous waste consignment notes
+
+Entity: ValidationRule
+
+PLS Reference: High Level Product Plan Module 4 - Validation Rules Engine
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+company_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to company
+
+waste_stream_id	UUID	FOREIGN KEY	YES	NULL	Optional reference to waste stream
+
+rule_type	TEXT	NOT NULL, CHECK	NO	-	Rule type: CARRIER_LICENCE, VOLUME_LIMIT, STORAGE_DURATION, EWC_CODE, DESTINATION, CUSTOM
+
+rule_name	TEXT	NOT NULL	NO	-	Human-readable rule name
+
+rule_description	TEXT	-	YES	NULL	Detailed rule description
+
+rule_config	JSONB	NOT NULL	NO	-	JSONB configuration containing rule parameters
+
+severity	TEXT	NOT NULL, CHECK	NO	-	Severity: ERROR, WARNING, INFO
+
+is_active	BOOLEAN	NOT NULL	NO	true	Whether rule is active
+
+created_by	UUID	NOT NULL, FOREIGN KEY	NO	-	User who created rule
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_validation_rules_company_id: company_id (for company filtering)
+
+* idx_validation_rules_waste_stream_id: waste_stream_id (for stream filtering)
+
+* idx_validation_rules_rule_type: rule_type (for type filtering)
+
+* idx_validation_rules_is_active: is_active (for active filtering)
+
+Foreign Keys:
+
+* company_id → companies(id) ON DELETE CASCADE
+
+* waste_stream_id → waste_streams(id) ON DELETE CASCADE
+
+* created_by → users(id) ON DELETE SET NULL
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Configurable validation rules per company and optionally per waste stream
+
+- rule_config: JSONB structure containing rule parameters (e.g., {"max_volume": 100, "max_duration_days": 30})
+
+- severity: Determines if violation blocks submission (ERROR), warns user (WARNING), or is informational (INFO)
+
+- is_active: Enables/disables rules without deleting them
+
+- Prevents violations before they occur through automated pre-validation
+
+- Rule config examples: {"check_expiry": true, "days_before_expiry_warning": 30} for CARRIER_LICENCE type
+
+
+
+Table: validation_executions
+
+Purpose: Tracks validation rule execution results for consignment notes
+
+Entity: ValidationExecution
+
+PLS Reference: High Level Product Plan Module 4 - Validation Executions
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+consignment_note_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to consignment note
+
+validation_rule_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to validation rule
+
+validation_date	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	When validation was executed
+
+validation_result	TEXT	NOT NULL, CHECK	NO	-	Result: PASS, FAIL, WARNING
+
+validation_message	TEXT	-	YES	NULL	Human-readable message explaining result
+
+validation_data	JSONB	-	YES	NULL	JSONB containing detailed validation context and calculated values
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+Indexes:
+
+* idx_validation_executions_consignment_note_id: consignment_note_id (for note lookups)
+
+* idx_validation_executions_validation_rule_id: validation_rule_id (for rule lookups)
+
+* idx_validation_executions_validation_result: validation_result (for result filtering)
+
+* idx_validation_executions_validation_date: validation_date (for temporal queries)
+
+Foreign Keys:
+
+* consignment_note_id → consignment_notes(id) ON DELETE CASCADE
+
+* validation_rule_id → validation_rules(id) ON DELETE CASCADE
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Immutable audit log of every validation rule execution
+
+- validation_result: Outcome of validation check (PASS, FAIL, WARNING)
+
+- validation_message: Human-readable message explaining the result
+
+- validation_data: JSONB containing detailed validation context and calculated values
+
+- Enables tracing why a consignment note passed or failed validation
+
+- Supports compliance audits and debugging validation logic
+
+- Each consignment note validation creates multiple execution records (one per applicable rule)
+
+
+
+C.10 Cross-Cutting Tables (Universal Features)
+
+Table: compliance_clocks_universal
+
+Purpose: Universal compliance countdown clock supporting ALL modules with Red/Amber/Green criticality
+
+Entity: ComplianceClockUniversal
+
+PLS Reference: High Level Product Plan - Universal Compliance Clock (Cross-Cutting Feature)
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+company_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to company
+
+site_id	UUID	FOREIGN KEY	YES	NULL	Optional reference to site
+
+module_id	UUID	FOREIGN KEY	YES	NULL	Optional reference to module
+
+entity_type	TEXT	NOT NULL, CHECK	NO	-	Entity type: OBLIGATION, DEADLINE, PARAMETER, GENERATOR, CONSENT, WASTE_STREAM, CONTRACTOR_LICENCE
+
+entity_id	UUID	NOT NULL	NO	-	UUID of tracked entity
+
+clock_type	TEXT	NOT NULL	NO	-	Type of clock (e.g., RENEWAL_DUE, EXPIRY_WARNING, COMPLIANCE_DEADLINE)
+
+clock_name	TEXT	NOT NULL	NO	-	Human-readable clock description
+
+target_date	DATE	NOT NULL	NO	-	Target/deadline date
+
+days_remaining	INTEGER	NOT NULL	NO	-	Calculated days until target_date
+
+criticality	TEXT	CHECK	YES	NULL	Criticality: RED, AMBER, GREEN
+
+status	TEXT	CHECK	YES	NULL	Status: ACTIVE, COMPLETED, OVERDUE, CANCELLED
+
+reminder_days	INTEGER[]	-	NO	'{90, 30, 7}'	Days before target to send reminders
+
+reminders_sent	INTEGER[]	-	NO	'{}'	Days at which reminders were already sent
+
+completed_by	UUID	FOREIGN KEY	YES	NULL	User who marked clock as completed (set when status = 'COMPLETED')
+
+completed_at	TIMESTAMP WITH TIME ZONE	-	YES	NULL	Timestamp when clock was completed (set when status = 'COMPLETED')
+
+evidence_id	UUID	FOREIGN KEY	YES	NULL	Optional link to evidence item proving completion (e.g., stack test certificate, renewal document)
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_compliance_clocks_universal_company_id: company_id (for company filtering)
+
+* idx_compliance_clocks_universal_site_id: site_id (for site filtering)
+
+* idx_compliance_clocks_universal_module_id: module_id (for module filtering)
+
+* idx_compliance_clocks_universal_entity: entity_type, entity_id (for entity lookups)
+
+* idx_compliance_clocks_universal_target_date: target_date (for deadline queries)
+
+* idx_compliance_clocks_universal_criticality: criticality, status (for dashboard filtering)
+
+* idx_compliance_clocks_universal_status: status (for status filtering)
+
+* idx_compliance_clocks_universal_completed_by: completed_by (for completion tracking)
+
+* idx_compliance_clocks_universal_evidence_id: evidence_id (for evidence lookups)
+
+Foreign Keys:
+
+* company_id → companies(id) ON DELETE CASCADE
+
+* site_id → sites(id) ON DELETE CASCADE
+
+* module_id → modules(id) ON DELETE CASCADE
+
+* completed_by → users(id) ON DELETE SET NULL
+
+* evidence_id → evidence_items(id) ON DELETE SET NULL
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Universal countdown mechanism for ALL modules (not just Module 3 generators)
+
+- entity_type and entity_id provide polymorphic reference to tracked entity
+
+- clock_type identifies the type of clock (e.g., RENEWAL_DUE, EXPIRY_WARNING, COMPLIANCE_DEADLINE, LICENCE_EXPIRY)
+
+- criticality calculated based on days_remaining thresholds:
+  * RED: Critical/urgent (typically < 7 days or status = OVERDUE)
+  * AMBER: Warning (typically 7-30 days)
+  * GREEN: OK (typically > 30 days)
+
+- days_remaining: Calculated daily as target_date - current_date
+
+- status: Current clock state (ACTIVE, COMPLETED, OVERDUE, CANCELLED)
+
+- Drives alerts, escalation, and pack readiness across ALL modules
+
+- reminder_days defines when reminders should be sent
+
+- reminders_sent tracks which reminders have already been sent to prevent duplicates
+
+
+
+Table: compliance_clock_dashboard
+
+Purpose: Materialized view providing aggregated compliance clock metrics for dashboard display
+
+Entity: ComplianceClockDashboard (Materialized View)
+
+PLS Reference: High Level Product Plan - Universal Compliance Clock Dashboard
+
+Note: This is a materialized view, not a table. Defined here for completeness.
+
+Structure:
+
+Field Name	Type	Description
+
+company_id	UUID	Company reference
+
+site_id	UUID	Site reference (nullable)
+
+module_id	UUID	Module reference (nullable)
+
+red_count	BIGINT	Count of RED criticality clocks
+
+amber_count	BIGINT	Count of AMBER criticality clocks
+
+green_count	BIGINT	Count of GREEN criticality clocks
+
+overdue_count	BIGINT	Count of OVERDUE status clocks
+
+next_critical_date	DATE	Earliest upcoming deadline for active clocks
+
+last_updated	TIMESTAMP WITH TIME ZONE	Most recent clock update timestamp
+
+Indexes:
+
+* idx_compliance_clock_dashboard_pkey: UNIQUE(company_id, COALESCE(site_id, '00000000-0000-0000-0000-000000000000'), COALESCE(module_id, '00000000-0000-0000-0000-000000000000'))
+
+* idx_compliance_clock_dashboard_company_id: company_id
+
+* idx_compliance_clock_dashboard_site_id: site_id
+
+* idx_compliance_clock_dashboard_module_id: module_id
+
+RLS Enabled: Yes
+
+Refresh Strategy: Refresh periodically (e.g., hourly) or on-demand after clock updates
+
+Business Logic:
+
+- Aggregates compliance clock metrics by company/site/module
+
+- Provides fast dashboard queries without scanning full clocks table
+
+- red_count, amber_count, green_count: Count of clocks in each criticality level
+
+- overdue_count: Count of overdue items requiring immediate action
+
+- next_critical_date: Earliest upcoming deadline for active clocks
+
+- Powers top-level dashboard with Red/Amber/Green status overview
+
+
+
+Table: escalation_workflows
+
+Purpose: Configurable escalation rules per company/obligation type with automatic escalation workflows
+
+Entity: EscalationWorkflow
+
+PLS Reference: High Level Product Plan - Escalation Workflow Configuration
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+company_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to company
+
+obligation_category	TEXT	-	YES	NULL	Optional obligation category filter (NULL = applies to all)
+
+level_1_days	INTEGER	NOT NULL	NO	7	Days overdue before level 1 escalation
+
+level_2_days	INTEGER	NOT NULL	NO	14	Days overdue before level 2 escalation
+
+level_3_days	INTEGER	NOT NULL	NO	21	Days overdue before level 3 escalation
+
+level_4_days	INTEGER	NOT NULL	NO	30	Days overdue before level 4 escalation
+
+level_1_recipients	UUID[]	-	NO	'{}'	Array of user IDs to notify at level 1
+
+level_2_recipients	UUID[]	-	NO	'{}'	Array of user IDs to notify at level 2
+
+level_3_recipients	UUID[]	-	NO	'{}'	Array of user IDs to notify at level 3
+
+level_4_recipients	UUID[]	-	NO	'{}'	Array of user IDs to notify at level 4
+
+is_active	BOOLEAN	NOT NULL	NO	true	Whether workflow is active
+
+created_by	UUID	NOT NULL, FOREIGN KEY	NO	-	User who created workflow
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+updated_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Last update timestamp
+
+Indexes:
+
+* idx_escalation_workflows_company_id: company_id (for company filtering)
+
+* idx_escalation_workflows_obligation_category: obligation_category (for category filtering)
+
+* idx_escalation_workflows_is_active: is_active (for active filtering)
+
+Foreign Keys:
+
+* company_id → companies(id) ON DELETE CASCADE
+
+* created_by → users(id) ON DELETE SET NULL
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Configurable escalation rules per company with optional obligation category filtering
+
+- level_N_days: Days overdue before triggering escalation level N (e.g., level_1_days = 7 means escalate after 7 days overdue)
+
+- level_N_recipients: Array of user IDs to notify at each escalation level
+
+- obligation_category: Optional filter to apply different escalation rules to different obligation types (NULL = applies to all)
+
+- is_active: Enables/disables escalation workflow without deleting
+
+- Replaces hard-coded escalation logic with configurable company-specific workflows
+
+- Supports progressive escalation with up to 4 levels of notification
+
+
+
+Table: pack_distributions
+
+Purpose: Tracks distribution of audit packs to external recipients (regulators, consultants, etc.)
+
+Entity: PackDistribution
+
+PLS Reference: High Level Product Plan - Audit Pack Distribution
+
+Fields:
+
+Field Name	Type	Constraints	Nullable	Default	Description
+
+id	UUID	PRIMARY KEY	NO	gen_random_uuid()	Unique identifier
+
+pack_id	UUID	NOT NULL, FOREIGN KEY	NO	-	Reference to audit pack
+
+distributed_to	TEXT	NOT NULL	NO	-	Recipient identifier (email address or name)
+
+distributed_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Distribution timestamp
+
+distribution_method	TEXT	NOT NULL, CHECK	NO	-	Distribution method: EMAIL, SHARED_LINK
+
+email_address	TEXT	-	YES	NULL	Email address (if EMAIL method)
+
+shared_link_token	TEXT	-	YES	NULL	Secure link token (if SHARED_LINK method)
+
+viewed_at	TIMESTAMP WITH TIME ZONE	-	YES	NULL	Timestamp when pack was viewed
+
+view_count	INTEGER	NOT NULL	NO	0	Number of times pack was viewed
+
+created_at	TIMESTAMP WITH TIME ZONE	NOT NULL	NO	NOW()	Record creation timestamp
+
+Indexes:
+
+* idx_pack_distributions_pack_id: pack_id (for pack lookups)
+
+* idx_pack_distributions_distributed_at: distributed_at (for date queries)
+
+* idx_pack_distributions_shared_link_token: shared_link_token (for token lookups)
+
+Foreign Keys:
+
+* pack_id → audit_packs(id) ON DELETE CASCADE
+
+RLS Enabled: Yes
+
+Soft Delete: No
+
+Business Logic:
+
+- Tracks distribution of audit packs to external recipients
+
+- distribution_method: EMAIL (sent via email) or SHARED_LINK (secure link shared)
+
+- shared_link_token: Secure token for accessing pack without login
+
+- viewed_at and view_count: Track recipient engagement with distributed pack
+
+- Supports audit trail of pack distribution for compliance purposes
+
 
 
 D. ENUMS AND STATUS VALUES
@@ -5352,19 +8293,19 @@ Enum: distribution_method
 
 Type: TEXT with CHECK constraint
 
-Used In: audit_packs.distribution_method, pack_distributions.distribution_method
+Used In: audit_packs.distribution_method, pack_sharing.distribution_method
 
 Values:
 
-* `DOWNLOAD`: Pack downloaded directly by user (used in audit_packs table only, not tracked in pack_distributions)
+* `DOWNLOAD`: Pack downloaded directly by user (used in audit_packs table only)
 
 * `EMAIL`: Pack sent via email attachment
 
-* `SHARED_LINK`: Pack shared via shareable link (used in pack_distributions table)
+* `SHARED_LINK`: Pack shared via shareable link (used in pack_sharing table)
 
 **Note:** 
 - `audit_packs.distribution_method` can be `DOWNLOAD`, `EMAIL`, or `SHARED_LINK`
-- `pack_distributions.distribution_method` can only be `EMAIL` or `SHARED_LINK` (downloads are not tracked as distributions)
+- `pack_sharing.distribution_method` can be `EMAIL` or `SHARED_LINK` (NULL for secure access tokens, downloads are not tracked as distributions)
 
 State Transitions:
 
@@ -6189,18 +9130,79 @@ Term: Fuel Consumption
 Definition: Fuel consumption data for generators. Required for AER calculations.
 
 Maps To:
-- Entity: AERDocument
-- Table: aer_documents
-- Field(s): fuel_consumption_data (JSONB)
+- Entity: FuelUsageLog
+- Table: fuel_usage_logs
+- Field(s): quantity, unit, fuel_type, log_date
 
-Context: Users enter fuel consumption data. Used in AER generation.
+Context: Users enter fuel consumption data daily/monthly. Used in AER generation and MCPD compliance reporting.
 
 Examples:
 - "Fuel consumption: 5000 litres"
 - "Annual fuel usage"
 - "Fuel consumption data"
+- "Daily fuel log"
 
-PLS Reference: Section C.3.8 (Annual Return Logic)
+PLS Reference: Section C.3.8 (Annual Return Logic), High Level Product Plan Module 3 (Fuel usage logs)
+
+
+
+Term: Fuel Usage Log
+
+Definition: Daily or monthly record of fuel consumption for a generator.
+
+Maps To:
+- Entity: FuelUsageLog
+- Table: fuel_usage_logs
+- Field(s): log_date, quantity, unit, fuel_type, sulphur_content_percentage, sulphur_content_mg_per_kg
+
+Context: Users log fuel consumption manually, via CSV, or from maintenance records. Links to fuel delivery receipts as evidence.
+
+Examples:
+- "Fuel log entry"
+- "Daily fuel consumption record"
+- "Monthly fuel usage"
+
+PLS Reference: High Level Product Plan Module 3 (Fuel usage logs + sulphur content reporting)
+
+
+
+Term: Sulphur Content
+
+Definition: Sulphur content in fuel, measured as percentage or mg/kg. Required for MCPD compliance reporting.
+
+Maps To:
+- Entity: SulphurContentReport, FuelUsageLog
+- Table: sulphur_content_reports, fuel_usage_logs
+- Field(s): sulphur_content_percentage, sulphur_content_mg_per_kg
+
+Context: Users enter sulphur content from test certificates or fuel delivery documentation. Used for compliance verification.
+
+Examples:
+- "Sulphur content: 0.001%"
+- "Sulphur content: 10 mg/kg"
+- "Low sulphur fuel"
+
+PLS Reference: High Level Product Plan Module 3 (Fuel usage logs + sulphur content reporting)
+
+
+
+Term: Sulphur Content Report
+
+Definition: Test result document showing sulphur content of a fuel batch with compliance verification.
+
+Maps To:
+- Entity: SulphurContentReport
+- Table: sulphur_content_reports
+- Field(s): test_date, sulphur_content_percentage, sulphur_content_mg_per_kg, compliance_status, regulatory_limit_percentage, regulatory_limit_mg_per_kg
+
+Context: Users upload test certificates or enter test results manually. System verifies compliance against regulatory limits.
+
+Examples:
+- "Sulphur content test certificate"
+- "Fuel batch test report"
+- "Sulphur compliance verification"
+
+PLS Reference: High Level Product Plan Module 3 (Fuel usage logs + sulphur content reporting)
 
 
 

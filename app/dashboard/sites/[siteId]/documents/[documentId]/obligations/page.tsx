@@ -32,7 +32,7 @@ export default function DocumentObligationsPage() {
 
   const { data: obligationsData, isLoading } = useQuery<ObligationsResponse>({
     queryKey: ['document-obligations', documentId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<ObligationsResponse>(`/documents/${documentId}/obligations`);
     },
   });

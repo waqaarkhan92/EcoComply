@@ -48,7 +48,7 @@ export async function GET(
 
     // Check job status from queue
     try {
-      const queue = getQueue(QUEUE_NAMES.PACK_GENERATION);
+      const queue = getQueue(QUEUE_NAMES.AUDIT_PACK_GENERATION);
       const job = await queue.getJob(reportId);
 
       if (!job) {

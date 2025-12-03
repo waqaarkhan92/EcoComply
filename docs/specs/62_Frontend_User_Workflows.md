@@ -1,12 +1,37 @@
 # USER WORKFLOW MAPS
-## EcoComply Platform — Modules 1–3
+## EcoComply Platform — Modules 1–4
 
-**EcoComply v1.0 — Launch-Ready / Last updated: 2024-12-27**
+**EcoComply v1.0 — Launch-Ready / Last updated: 2025-01-01**
 
-**Document Version:** 1.0  
-**Status:** Complete  
-**Depends On:** Master Commercial Plan (MCP), Product Logic Specification (PLS), Canonical Dictionary
+**Document Version:** 1.1  
+**Status:** Updated  
+**Depends On:** Master Commercial Plan (MCP), Product Logic Specification (PLS), Canonical Dictionary, High Level Product Plan (01)
 
+> [v2.0 UPDATE – Site-First Dynamic Module Model – 2025-01-01]
+> Complete refactoring to site-first workflows:
+> - Every workflow begins at Site → Module
+> - Permit is the primary entry path for compliance setup
+> - Non-permit modules must not imply a standalone tenant
+> - All workflows start with site context selection
+> 
+> [v1.7 UPDATE – Added Missing Workflows – 2025-01-XX]
+> New workflows added:
+> - Regulator Challenge State Machine Workflow
+> - Manual Override Workflow
+> - Unlinked Evidence Management Workflow
+> - Module Cascading Deactivation Workflow
+> - Pack Access Logs Viewing Workflow
+> - Pack Contents Viewing Workflow
+> 
+> [v1.1 UPDATE – Added Module 4 and New Features – 2025-01-01]
+> New workflows added:
+> - Module 4 (Hazardous Waste) workflows
+> - Compliance Clock workflows
+> - Condition-level evidence mapping workflows
+> - Recurrence trigger workflows
+> - Permit change tracking workflows
+> - Enhanced corrective action lifecycle workflows
+> - Consultant Mode workflows
 > [v1 UPDATE – Version Header – 2024-12-27]
 
 ---
@@ -19,17 +44,35 @@
   - [2.1.1 Subjective Interpretation Workflow](#211-subjective-interpretation-workflow)
   - [2.2 Obligation Review & Editing](#22-obligation-review--editing)
   - [2.3 Evidence Capture & Linking](#23-evidence-capture--linking)
+  - [2.3.1 Condition-Level Evidence Mapping Workflow](#231-condition-level-evidence-mapping-workflow)
   - [2.4 Obligation Completion Workflow](#24-obligation-completion-workflow)
+  - [2.4.1 Recurrence Trigger Configuration Workflow](#241-recurrence-trigger-configuration-workflow)
   - [2.5 Monitoring Schedule Creation](#25-monitoring-schedule-creation)
   - [2.5 Compliance Dashboard Navigation](#25-compliance-dashboard-navigation)
   - [2.6 Pack Generation (v1.0)](#26-pack-generation-v10)
   - [2.6.1 Pack Distribution Workflow (Growth Plan)](#261-pack-distribution-workflow-growth-plan)
-  - [2.7 Consultant Control Centre Workflows](#27-consultant-control-centre-workflows)
-    - [2.7.1 Consultant Onboarding Workflow](#271-consultant-onboarding-workflow)
-    - [2.7.2 Client Assignment Workflow](#272-client-assignment-workflow)
-    - [2.7.3 Consultant Pack Generation for Client](#273-consultant-pack-generation-for-client)
+  - [2.7 Permit Change Tracking Workflow](#27-permit-change-tracking-workflow)
+  - [2.8 Consultant Control Centre Workflows](#28-consultant-control-centre-workflows)
+    - [2.8.1 Consultant Onboarding Workflow](#281-consultant-onboarding-workflow)
+    - [2.8.2 Client Assignment Workflow](#282-client-assignment-workflow)
+    - [2.8.3 Consultant Pack Generation for Client](#283-consultant-pack-generation-for-client)
 - [3. Module 2: Trade Effluent](#3-module-2-trade-effluent)
+  - [3.1 Corrective Action Lifecycle Workflow](#31-corrective-action-lifecycle-workflow)
 - [4. Module 3: MCPD/Generators](#4-module-3-mcpdgenerators)
+- [5. Module 4: Hazardous Waste Chain of Custody](#5-module-4-hazardous-waste-chain-of-custody)
+  - [5.1 Waste Stream Classification Workflow](#51-waste-stream-classification-workflow)
+  - [5.2 Consignment Note Creation & Validation Workflow](#52-consignment-note-creation--validation-workflow)
+  - [5.3 Chain of Custody Tracking Workflow](#53-chain-of-custody-tracking-workflow)
+  - [5.4 End-Point Proof Workflow](#54-end-point-proof-workflow)
+  - [5.5 Corrective Action Lifecycle Workflow (Module 4)](#55-corrective-action-lifecycle-workflow-module-4)
+- [6. Cross-Cutting Workflows](#6-cross-cutting-workflows)
+  - [6.1 Compliance Clock Workflow](#61-compliance-clock-workflow)
+  - [6.9 Regulator Challenge State Machine Workflow](#69-regulator-challenge-state-machine-workflow)
+  - [6.10 Manual Override Workflow](#610-manual-override-workflow)
+  - [6.11 Unlinked Evidence Management Workflow](#611-unlinked-evidence-management-workflow)
+  - [6.12 Module Cascading Deactivation Workflow](#612-module-cascading-deactivation-workflow)
+  - [6.13 Pack Access Logs Viewing Workflow](#613-pack-access-logs-viewing-workflow)
+  - [6.14 Pack Contents Viewing Workflow](#614-pack-contents-viewing-workflow)
 
 ---
 
@@ -43,20 +86,29 @@ This document defines complete step-by-step user journey maps for all workflows 
 
 ---
 
-# 2. MODULE 1: ENVIRONMENTAL PERMITS
+# 2. PERMITS MODULE (Site-Level)
+
+> [v2.0 UPDATE – Site-First Dynamic Module Model – 2025-01-01]
+> 
+> **Key Changes:**
+> - All workflows begin at Site → Permits Module
+> - Permit is the primary entry path for compliance setup
+> - Workflows are site-scoped, not tenant-scoped
 
 ## 2.1 Permit Upload & Extraction
 
 ### Starting Point
-- **Trigger:** User clicks "Upload Permit" on Site dashboard
-- **Prerequisites:** User has Staff, Admin, or Owner role; Site exists; Required modules (defined in modules.requires_module_id) are active
+- **Trigger:** User navigates to Site → Permits → Documents → Upload Permit
+- **Prerequisites:** User has Staff, Admin, or Owner role; Site exists
+- **Entry Path:** Site Context → Permits Module → Documents → Upload
 
 ### Step-by-Step Flow
 
 **Upload Method Selection:**
-1. **User:** Clicks "Upload Permit" button on Site dashboard
-2. **System:** Shows upload method selector: "Upload PDF" (default) OR "Import from Excel"
-3. **User:** Selects upload method
+1. **User:** Navigates to Site → Permits → Documents
+2. **User:** Clicks "Upload Permit" button
+3. **System:** Shows upload method selector: "Upload PDF" (default) OR "Import from Excel"
+4. **User:** Selects upload method
 
 **PDF Upload Path:**
 1. **User:** Clicks "Upload PDF" option (or default selection)
@@ -460,6 +512,10 @@ This document defines complete step-by-step user journey maps for all workflows 
 
 9. **System:** Creates ObligationEvidenceLink records
     - **If** obligation link created, **then**:
+      - Evidence is created with `is_approved = false`, `reviewer_id = NULL`, `approved_at = NULL`
+      - Evidence requires approval before it can be used in pack generation
+      - System displays notification: "Evidence uploaded. Please approve evidence before generating packs."
+    - **If** user attempts to skip linking (clicks "Skip" or "Cancel"), **then**:
       - Sets `evidence.enforcement_status = 'LINKED'`
       - Evidence can be used for compliance verification
     - **If** no obligation link created, **then**:
@@ -494,6 +550,115 @@ This document defines complete step-by-step user journey maps for all workflows 
 ### Error Paths
 - **Storage Error:** Evidence not saved; retry prompt displayed, then support contact
 - **Link Validation Failure:** Cross-site linking attempted; error displayed: "Evidence cannot be linked to obligations on different sites **unless both are linked to the same multi-site shared permit**"
+
+---
+
+## 2.3.2 Evidence Approval Workflow
+
+> [v1.6 UPDATE – Evidence Approval Requirement – 2025-01-01]
+
+**Purpose:** Approve evidence items before they can be used in pack generation.
+
+### Starting Point
+- **Trigger:** Manager/Admin/Owner reviews evidence item OR user attempts pack generation with unapproved evidence
+- **Prerequisites:** Evidence item exists; User has Owner, Admin, or Manager role
+
+### Step-by-Step Flow
+
+1. **User:** Navigates to evidence item detail page OR receives notification about unapproved evidence
+
+2. **System:** Displays evidence approval interface
+   - Shows evidence file preview/thumbnail
+   - Shows evidence metadata: file_name, file_type, uploaded_by, uploaded_at, linked_obligations
+   - Shows current approval status:
+     - **If** `is_approved = false`: Displays "Pending Approval" badge
+     - **If** `is_approved = true`: Displays "Approved" badge with reviewer name and approval timestamp
+
+3. **User (Owner/Admin/Manager):** Reviews evidence item
+   - Views evidence file (download or preview)
+   - Reviews linked obligations
+   - Checks evidence metadata and compliance period
+
+4. **User:** Clicks "Approve Evidence" button
+
+5. **System:** Validates user role
+   - **If** user is not Owner, Admin, or Manager, **then** display error "Only Owners, Admins, and Managers can approve evidence"
+   - **Else** proceed to Step 6
+
+6. **User:** (Optional) Adds review notes
+   - System displays text area for review notes
+   - Notes stored in `metadata.review_notes` field
+
+7. **User:** Clicks "Confirm Approval"
+
+8. **System:** Approves evidence item
+   - Sets `is_approved = true`
+   - Sets `reviewer_id = current_user.id`
+   - Sets `approved_at = NOW()`
+   - Stores review notes in `metadata.review_notes` (if provided)
+   - Updates `updated_at = NOW()`
+   - Logs approval action in audit trail:
+     - `action_type = 'EVIDENCE_APPROVED'`
+     - `entity_type = 'evidence_item'`
+     - `entity_id = evidence_item.id`
+     - `user_id = current_user.id`
+     - `timestamp = NOW()`
+
+9. **System:** Updates evidence status
+   - Evidence can now be used in pack generation
+   - If evidence was blocking pack generation, system displays notification: "Evidence approved. You can now generate packs."
+
+10. **System:** Notifies relevant users
+    - Sends notification to evidence uploader: "Your evidence [file_name] has been approved"
+    - If evidence was blocking pack generation, notifies pack requester: "Evidence approved. Pack generation can proceed."
+
+### End States
+- **Approved:** Evidence item approved with reviewer_id and approved_at set; can be used in pack generation
+- **Rejected:** Evidence item remains unapproved (is_approved = false); cannot be used in pack generation
+
+### Error Paths
+- **Insufficient Permissions:** User not Owner/Admin/Manager; error displayed, approval blocked
+- **Evidence Not Found:** Evidence item not found; 404 error displayed
+- **Already Approved:** Evidence already approved; system displays current approval details (reviewer, timestamp)
+
+### Bulk Approval Workflow
+
+**Starting Point:**
+- **Trigger:** Manager/Admin/Owner navigates to "Pending Evidence Approval" page
+- **Prerequisites:** User has Owner, Admin, or Manager role
+
+**Step-by-Step Flow:**
+
+1. **User:** Navigates to Evidence Library → "Pending Approval" filter
+
+2. **System:** Displays list of unapproved evidence items
+   - Shows: file_name, uploaded_by, uploaded_at, linked_obligations_count
+   - Groups by: site, compliance_period, or upload_date (user-selectable)
+
+3. **User:** Selects evidence items to approve (multi-select)
+
+4. **User:** Clicks "Approve Selected" button
+
+5. **System:** Validates all selected items
+   - Checks user has approval permissions
+   - Validates evidence items exist and are not archived
+
+6. **System:** Approves all selected evidence items in batch
+   - For each evidence item:
+     - Sets `is_approved = true`
+     - Sets `reviewer_id = current_user.id`
+     - Sets `approved_at = NOW()`
+   - Logs batch approval in audit trail
+
+7. **System:** Displays confirmation
+   - Shows count of approved items
+   - Shows any items that failed approval (if any)
+
+### End States
+- **Bulk Approved:** All selected evidence items approved; can be used in pack generation
+- **Partial Approval:** Some items approved, some failed; user can retry failed items
+
+**Reference:** Product Logic Specification Section B.4.2.1 (Evidence Approval Requirements)
 
 ---
 
@@ -560,10 +725,18 @@ This document defines complete step-by-step user journey maps for all workflows 
      - `ip_address = request.ip`
      - `session_id = request.session_id`
 
-7. **System:** Updates compliance score
-   - Recalculates site-level compliance score
-   - Updates dashboard widgets
-   - Triggers compliance alerts if score improves
+7. **System:** Updates compliance score (real-time)
+   - Recalculates module-level compliance score:
+     - Formula: `(completed_and_evidenced_obligations / total_due_obligations) * 100`
+     - Applies overdue penalties if applicable
+   - Recalculates site-level compliance score:
+     - Average of all active module scores
+   - Updates `module_activations.compliance_score` and `sites.compliance_score`
+   - Updates `compliance_score_updated_at` timestamp
+   - Invalidates frontend queries (triggers UI refresh)
+   - Updates dashboard widgets in real-time
+   - Triggers compliance alerts if score drops below threshold (70%)
+   - Updates Compliance Clock if score affects criticality
 
 8. **User:** Views completion confirmation
    - System displays: "Obligation marked as complete"
@@ -705,9 +878,20 @@ This document defines complete step-by-step user journey maps for all workflows 
 
 ---
 
-## 2.6 Pack Generation (v1.0)
+## 2.6 Pack Generation (Universal - All Modules)
 
-> [v1 UPDATE – Pack Generation Workflows – 2024-12-27]
+> [v1.5 UPDATE – Standardized Pack Generation – 2025-01-01]
+
+**Universal Pack Specification:**
+- **SLA:** < 2 minutes (< 120 seconds) generation time
+- **Required Contents (All Modules):**
+  1. Compliance Score (site-level + module breakdown)
+  2. Obligation list with statuses
+  3. Evidence attachments (version-locked)
+  4. Change justification & signoff history
+  5. Compliance Clock summary (overdue + upcoming)
+  6. Pack provenance signature (timestamp + signer + hash)
+- **Regulator Access:** Secure link (no login required)
 
 ### Starting Point
 - **Trigger:** User clicks "Generate Pack" OR scheduled generation trigger
@@ -744,6 +928,22 @@ This document defines complete step-by-step user journey maps for all workflows 
     - **If** Board Pack and company_id missing, **then** display error "Board Pack requires company_id"
     - **If** non-Board Pack and site_id missing, **then** display error "Pack type requires site_id"
     - **If** no Obligations match filters, **then** display warning "No data matches your filters"
+    - **Evidence Approval Validation (REQUIRED for ALL pack types):**
+      - Queries all obligations in pack date range
+      - For each obligation, queries all linked evidence items
+      - Validates each evidence item has:
+        - `is_approved = true`
+        - `reviewer_id IS NOT NULL`
+        - `approved_at IS NOT NULL`
+      - **If ANY evidence item lacks approval**, **then**:
+        - Display error: "Cannot generate pack: [count] evidence items require approval"
+        - Show list of unapproved evidence items with:
+          - Evidence file name
+          - Linked obligation title
+          - Missing approval fields (reviewer_id, approved_at, or is_approved)
+        - Provide "Approve Evidence" button linking to evidence approval page
+        - Block pack generation until all evidence is approved
+    - **If** pack includes Module 2 (Trade Effluent) data, **then** perform Module 2 pre-generation validation (see Section 3.4)
     - **Else** proceed to generation
 
 8. **System:** Initiates generation
@@ -760,7 +960,64 @@ This document defines complete step-by-step user journey maps for all workflows 
     - **Insurer Pack:** Risk narrative (see PLS Section I.8.5)
     - **Audit Pack:** Full evidence compilation (existing structure)
 
-10. **System:** Generates PDF with pack type-specific formatting
+10. **System:** Generates pack with standardized structure:
+    - **Section 1: Compliance Score**
+      - Site-level compliance score (INTEGER 0-100)
+      - Score breakdown: total_obligations, completed, overdue, module_scores
+      - Color-coded badge (Green/Amber/Red)
+    - **Section 2: Obligation List with Statuses**
+      - All obligations with: ID, title, status, deadline_date, evidence_count
+      - Sorted by: Status priority (OVERDUE first), then deadline
+    - **Section 3: Evidence Attachments (Version-Locked)**
+      - All evidence items linked to obligations
+      - Version-locked snapshots stored in `pack_contents` table
+      - File metadata: name, type, size, hash, upload timestamp
+    - **Section 4: Change Justification & Signoff History**
+      - All changes: OBLIGATION_COMPLETED, EVIDENCE_LINKED, STATUS_CHANGED, etc.
+      - Justification text, signer name, timestamp
+      - Sorted by: Most recent first
+    - **Section 5: Compliance Clock Summary**
+      - Overdue items: [{clock_id, clock_name, days_overdue, criticality, ...}]
+      - Upcoming items (within 30 days): [{clock_id, clock_name, days_remaining, ...}]
+      - Total active clocks count
+    - **Section 6: Pack Provenance Signature**
+      - Generation timestamp (ISO 8601)
+      - Signer: {user_id, user_name, user_email, user_role}
+      - Content hash (SHA-256) for integrity verification
+      - Pack version number
+      - Generation SLA: {target_seconds: 120, actual_seconds: N, compliant: boolean}
+    - **Module-Specific Sections (if applicable):**
+      - Added AFTER the 6 universal sections
+      - Module 1: Permit versions, redline comparisons, enforcement notices
+      - Module 2: Lab results, exceedance history, monthly reconciliations
+      - Module 3: Stack test results, runtime monitoring, AER documents
+      - Module 4: Consignment notes, chain of custody, validation results
+
+11. **System:** Stores pack with all standardized fields:
+    - Updates `audit_packs` table with:
+      - `compliance_score`, `compliance_score_breakdown`
+      - `obligation_summary`, `evidence_summary`
+      - `change_justification_history`, `compliance_clock_summary`
+      - `pack_provenance_signature`
+      - `generation_sla_seconds` (actual generation time)
+    - Stores evidence snapshots in `pack_contents` table (version-locked)
+    - Generates `secure_access_token` (if `recipient_type = 'REGULATOR'`)
+    - Sets `secure_access_expires_at` (if expiry configured)
+
+12. **System:** Creates access log entry (if secure link generated):
+    - Records IP address (required)
+    - Records email if provided (optional)
+    - Records user agent
+    - Initializes view_count = 0
+
+13. **System:** Validates SLA compliance:
+    - IF `generation_sla_seconds > 120` THEN:
+      - Logs warning: "Pack generation exceeded SLA (actual: {seconds}s, target: 120s)"
+      - Still completes generation (does not fail)
+    - ELSE:
+      - Logs success: "Pack generation completed within SLA"
+
+14. **System:** Generates PDF or web-based pack with formatting
 
 11. **System:** Stores completed pack
     - Updates AuditPack record with `pack_type`, file path, `status = COMPLETED`
@@ -780,8 +1037,31 @@ This document defines complete step-by-step user journey maps for all workflows 
 - **Plan Access Denied:** Display upgrade prompt with pack type benefits
 - **Generation Timeout:** Offer retry or background processing
 - **Maximum Evidence Exceeded:** Display error; prompt user to narrow filters
+- **Unapproved Evidence:** Display error with list of unapproved evidence items, provide "Approve Evidence" action
 
-**Reference:** Product Logic Specification Section I.8 (v1.0 Pack Types — Generation Logic)
+**Regulator Access (No Login Required):**
+- If `recipient_type = 'REGULATOR'`:
+  - System generates secure access token
+  - System creates secure link: `https://app.epcompliance.com/packs/{secure_access_token}`
+  - Regulator accesses pack via secure link (no authentication required)
+  - System logs all access in `pack_access_logs`:
+    - IP address (required)
+    - Email (optional, if provided)
+    - User agent
+    - View count, download count, pages viewed
+  - Access tracked for audit compliance
+
+**SLA Enforcement:**
+- Pack generation MUST complete within 120 seconds
+- If exceeded, pack still generates but warning logged
+- Frontend displays SLA status: "Generated in {seconds}s" (green if < 120s, amber if > 120s)
+
+**Module Consistency:**
+- ALL modules (1-4) use the SAME 6 universal sections
+- Module-specific sections are ADDITIONAL (not replacements)
+- No module can omit or modify the 6 universal sections
+
+**Reference:** Product Logic Specification Section B.8.1 (Universal Audit Pack Specification)
 
 ---
 
@@ -911,6 +1191,85 @@ This document defines complete step-by-step user journey maps for all workflows 
 - **Prerequisites:** Consultant assigned to client, Client has active documents
 
 **Step-by-Step Flow:**
+
+1. **Consultant:** Navigates to Audit Packs page or client site
+
+2. **System:** Validates consultant assignment
+   - Checks `consultant_client_assignments` table
+   - **If** consultant not assigned to client, **then** display error "You do not have access to this client" and block pack generation
+   - **Else** proceed to Step 3
+
+3. **Consultant:** Selects pack type and date range
+
+4. **System:** Validates pack generation request
+   - Validates `company_id` against `consultant_client_assignments`
+   - **If** client not assigned, **then** return `403 FORBIDDEN` error
+   - **Else** proceed with pack generation
+
+5. **System:** Generates pack for assigned client only
+
+**End State:** Pack generated successfully for assigned client
+
+**Error Paths:**
+- **403 FORBIDDEN:** Consultant not assigned to client company
+- **Validation Error:** Pack generation blocked if client assignment invalid
+
+**Reference:** RLS Permissions Specification Section 11.5 (Consultant Restrictions)
+
+---
+
+### 2.7.4 Consultant Access Restrictions Workflow
+
+**Purpose:** Defines restrictions and error handling for consultant role to ensure tenant isolation and prevent unauthorized access.
+
+**Consultant Restrictions:**
+
+**Settings & Subscription Access:**
+1. **Consultant:** Attempts to navigate to Settings
+2. **System:** Hides Settings link from navigation (consultant role)
+3. **If** consultant accesses `/settings` directly, **then** return `403 FORBIDDEN` error
+4. **System:** Blocks access to:
+   - Company settings (`/company`)
+   - Site settings (`/sites/[siteId]/settings`)
+   - Subscription management (`/settings/subscription`)
+   - Billing information (`/settings/billing`)
+
+**Multi-Site Access:**
+1. **Consultant:** Views Dashboard or Sites page
+2. **System:** Shows all assigned client sites, grouped by company
+3. **Site Switcher:** Displays sites with company prefix (e.g., "Client Company A - Site 1")
+4. **Consultant:** Can switch between sites across different client companies
+5. **System:** Validates site access via `consultant_client_assignments` on each navigation
+
+**Evidence Isolation:**
+1. **Consultant:** Attempts to upload evidence
+2. **System:** Validates site belongs to assigned client company
+3. **If** site not in assigned client company, **then** block upload with error "You can only upload evidence to assigned client sites"
+4. **Consultant:** Attempts to link evidence to obligation
+5. **System:** Validates evidence and obligation are from same client company
+6. **If** cross-client linking detected, **then** block with error "Evidence cannot be linked across different clients"
+7. **RLS Enforcement:** Database-level policies prevent cross-client evidence linking
+
+**Pack Generation Validation:**
+1. **Consultant:** Initiates pack generation
+2. **System:** Validates client assignment before generation
+3. **If** client not assigned, **then** return `403 FORBIDDEN` with message "You can only generate packs for assigned clients"
+4. **System:** Validates site belongs to assigned client company
+5. **All pack types** (Regulator, Tender, Board, Insurer, Audit) restricted to assigned clients only
+
+**Error Messages:**
+- Settings access: "Consultants cannot access company settings or subscription management"
+- Unassigned client: "You do not have access to this client. Contact the client administrator to request access."
+- Cross-client evidence: "Evidence cannot be linked across different clients. Please select evidence from the same client company."
+- Unassigned site: "You can only access sites from assigned client companies."
+
+**End States:**
+- **Success:** Consultant accesses allowed resources for assigned clients
+- **Blocked:** Consultant receives clear error message explaining restriction
+
+**Reference:** 
+- RLS Permissions Specification Section 11.5 (Consultant Restrictions)
+- Product Logic Specification Section B.10.2.3 (Consultant Data Boundary Rules)
 
 1. **Consultant:** Navigates to Consultant Dashboard → Clients → [Client Name]
 
@@ -1091,19 +1450,21 @@ This document defines complete step-by-step user journey maps for all workflows 
 ## 3.1 Consent Upload & Parameter Extraction
 
 ### Starting Point
-- **Trigger:** User clicks "Upload Consent" after Module 2 activation
-- **Prerequisites:** Module 2 active; Site exists
+- **Trigger:** User navigates to Site → Trade Effluent → Documents → Upload Consent
+- **Prerequisites:** Trade Effluent module active (derived from tenancy entitlements); Site exists
+- **Entry Path:** Site Context → Trade Effluent Module → Documents → Upload
 
 ### Step-by-Step Flow
 
-1. **User:** Clicks "Upload Consent" on Module 2 dashboard
+1. **User:** Navigates to Site → Trade Effluent → Documents
+2. **User:** Clicks "Upload Consent" button
 
 2. **System:** Displays upload modal (same as permit upload)
 
 3. **User:** Uploads Trade Effluent Consent PDF
 
 4. **System:** Performs document ingestion pipeline (same as Section 2.1, Steps 4-10)
-    - Routes to appropriate module by querying `modules` table where `document_types` contains 'TRADE_EFFLUENT_CONSENT' (currently Module 2)
+    - Routes to Trade Effluent module (derived from tenancy entitlements)
 
 5. **System:** Extracts consent metadata
     - Water company name (Thames Water, Severn Trent, etc.)
@@ -1150,18 +1511,51 @@ This document defines complete step-by-step user journey maps for all workflows 
 
 ## 3.2 Lab Result Import & Validation
 
+> [UPDATE – Email Parsing + CSV as Primary Capture Methods – 2025-01-01]
+
+**Primary Capture Methods:**
+- **Email Parsing:** Automated parsing of lab certificate emails with OCR (primary method)
+- **CSV Upload:** Template-based bulk import (primary fallback method)
+- **Manual Entry:** Form-based entry (for corrections or missing data)
+- **PDF Upload:** Direct PDF upload with LLM extraction (secondary method)
+
 ### Starting Point
 - **Trigger:** User clicks "Add Lab Results" OR uploads CSV
 - **Prerequisites:** At least one active Parameter exists
 
 ### Step-by-Step Flow
 
-1. **User:** Clicks "Add Lab Results" on Module 2 dashboard
+1. **User:** Navigates to Site → Trade Effluent → Parameters
+2. **User:** Clicks "Add Lab Results" button
 
 2. **System:** Displays input options:
-    - Manual Entry (form)
-    - CSV Upload (template provided)
-    - PDF Upload (lab report for extraction)
+    - Email Parsing (primary - automated from lab emails)
+    - CSV Upload (primary fallback - template provided)
+    - Manual Entry (form - for corrections)
+    - PDF Upload (secondary - lab report for extraction)
+
+**Email Parsing Path (Primary Method):**
+
+2a. **System:** Monitors designated email inbox for lab certificates
+    - Checks email attachments (PDF, images)
+    - Extracts lab certificate data via OCR
+    - Parses parameter values, sample dates, lab references
+    - Flags extracted data for user review
+
+2b. **System:** Displays extracted lab results for review
+    - Shows extracted values in review table
+    - Highlights low-confidence extractions
+    - User can edit values before acceptance
+
+2c. **User:** Reviews and confirms extracted data
+    - Edits incorrect values if needed
+    - Confirms valid extractions
+    - Clicks "Accept Results"
+
+2d. **System:** Creates LabResult records from confirmed extractions
+    - Links to appropriate Parameter
+    - Stores email metadata (sender, date, subject) for audit trail
+    - Proceeds to Step 10 (anomaly detection)
 
 ### Manual Entry Path:
 
@@ -1233,13 +1627,29 @@ This document defines complete step-by-step user journey maps for all workflows 
     - Calculates `percentage_of_limit` (Value / Limit × 100)
     - Sets `entry_method` (MANUAL, CSV, PDF_EXTRACTION)
 
-11. **System:** Checks for exceedances
-    - **If** value ≥ 100% of limit:
-      - Creates Exceedance record
-      - Sends breach alert (email + SMS + in-app)
-      - Sets Exceedance `status = OPEN`
-    - **If** value ≥ 80% of limit:
-      - Sends warning alert
+11. **System:** Checks for anomalies and exceedances
+    - **Anomaly Detection:**
+      - Checks if value significantly outside historical range (>3 standard deviations)
+      - Checks if parameter value inconsistent with expected units
+      - Checks if lab reference format mismatches
+      - Checks if duplicate sample IDs or dates detected
+      - **If** anomaly detected, **then**:
+        - Flags lab result with `anomaly_detected = true`
+        - Creates corrective action task automatically:
+          - Task type: `LAB_RESULT_ANOMALY`
+          - Task assigned to: Site Manager (or user who submitted result)
+          - Task description: "Anomaly detected in lab result [sample_id]: [anomaly_description]"
+          - Task due date: 7 days from detection
+          - Task requires: Evidence of investigation and resolution
+        - Sends notification to assigned user
+        - Links corrective task to lab result record
+    - **Exceedance Detection:**
+      - **If** value ≥ 100% of limit:
+        - Creates Exceedance record
+        - Sends breach alert (email + SMS + in-app)
+        - Sets Exceedance `status = OPEN`
+      - **If** value ≥ 80% of limit:
+        - Sends warning alert
 
 12. **System:** Updates Parameter trend data
     - Calculates 3-month rolling average
@@ -1258,12 +1668,13 @@ This document defines complete step-by-step user journey maps for all workflows 
 ## 3.3 Parameter Tracking & Monitoring
 
 ### Starting Point
-- **Trigger:** User navigates to Module 2 dashboard
+- **Trigger:** User navigates to Site → Trade Effluent → Dashboard
 - **Prerequisites:** Parameters exist with LabResults
 
 ### Step-by-Step Flow
 
-1. **User:** Views Module 2 dashboard
+1. **User:** Navigates to Site → Trade Effluent → Dashboard
+2. **User:** Views Trade Effluent dashboard
 
 2. **System:** Displays Parameter status cards:
     - For each Parameter:
@@ -1313,7 +1724,130 @@ This document defines complete step-by-step user journey maps for all workflows 
 
 ---
 
-## 3.3 Parameter Limit → Schedule Generation → Exceedance Detection Workflow
+## 3.4 Module 2 Pack Generation Validation Workflow
+
+### Starting Point
+- **Trigger:** User attempts to generate pack that includes Module 2 (Trade Effluent) data
+- **Prerequisites:** Pack generation initiated; Module 2 active; Pack date range specified
+
+### Step-by-Step Flow
+
+1. **System:** Detects Module 2 data in pack scope
+   - Checks if pack date range includes any Trade Effluent consents
+   - Checks if any active parameters exist for those consents
+
+2. **System:** Validates All Sampling Periods Have Results
+   - For each active consent parameter in pack date range:
+     - Calculates all sampling periods based on parameter frequency (daily, weekly, monthly, quarterly)
+     - For each sampling period:
+       - Checks if at least one lab result exists for that period
+       - **If** no lab result found, **then**:
+         - Adds to missing results list
+         - Records: `{parameter_name, period_start, period_end, frequency}`
+
+3. **System:** Validates All Results Have Validated Evidence
+   - For each lab result in pack date range:
+     - Checks if lab result has at least one evidence item linked
+     - Checks if evidence item has `validation_status = 'APPROVED'` or `validation_status = 'VERIFIED'`
+     - **If** no evidence linked, **then**:
+         - Adds to missing evidence list
+         - Records: `{sample_id, parameter_name, sample_date, issue: 'NO_EVIDENCE'}`
+     - **If** evidence exists but `validation_status = 'PENDING'`, **then**:
+         - Adds to unvalidated evidence list
+         - Records: `{sample_id, parameter_name, sample_date, evidence_id, issue: 'PENDING_VALIDATION'}`
+     - **If** evidence exists but `validation_status = 'REJECTED'`, **then**:
+         - Adds to rejected evidence list
+         - Records: `{sample_id, parameter_name, sample_date, evidence_id, issue: 'REJECTED_EVIDENCE'}`
+
+4. **System:** Checks Validation Results
+   - **If** missing results list is empty AND missing evidence list is empty AND unvalidated evidence list is empty AND rejected evidence list is empty, **then**:
+     - Proceed to pack generation (Step 8)
+   - **Else**:
+     - Block pack generation
+     - Display validation error screen (Step 5)
+
+5. **System:** Displays Validation Error Screen
+   - Shows error message: "Cannot generate pack: Trade Effluent evidence requirements not met"
+   - Displays missing results section:
+     - Table with columns: Parameter, Period Start, Period End, Frequency, Status
+     - Each row shows missing period
+     - "Add Lab Result" button for each row
+   - Displays missing/unvalidated evidence section:
+     - Table with columns: Sample ID, Parameter, Sample Date, Evidence Status, Action
+     - Color coding: Red for missing, Amber for pending, Red for rejected
+     - "Link Evidence" button for missing evidence
+     - "Validate Evidence" button for pending evidence
+     - "Replace Evidence" button for rejected evidence
+
+6. **User:** Reviews validation errors and takes action
+   - **Option A:** Upload missing lab results
+     - User clicks "Add Lab Result" for missing period
+     - System opens lab result entry form (see Section 3.2)
+     - User completes and saves
+     - System re-validates (returns to Step 2)
+   - **Option B:** Link evidence to lab results
+     - User clicks "Link Evidence" for lab result
+     - System opens evidence linking modal
+     - User selects existing evidence or uploads new evidence
+     - System links evidence to lab result
+     - System re-validates (returns to Step 3)
+   - **Option C:** Validate pending evidence
+     - User clicks "Validate Evidence" for pending evidence
+     - System opens evidence validation modal
+     - User reviews evidence and selects: Approve or Reject
+     - If Approve: Sets `validation_status = 'APPROVED'`
+     - If Reject: Sets `validation_status = 'REJECTED'`, requires rejection reason
+     - System re-validates (returns to Step 3)
+   - **Option D:** Replace rejected evidence
+     - User clicks "Replace Evidence" for rejected evidence
+     - System opens evidence upload modal
+     - User uploads new evidence
+     - System links new evidence to lab result
+     - System re-validates (returns to Step 3)
+   - **Option E:** Adjust pack date range (if acceptable)
+     - User clicks "Adjust Date Range"
+     - System opens date range picker
+     - User selects new date range that excludes incomplete periods
+     - System re-validates with new date range (returns to Step 2)
+
+7. **System:** Re-validates after user actions
+   - Repeats Steps 2-4 with updated data
+   - **If** all requirements met, **then** proceed to Step 8
+   - **Else** return to Step 5 with updated error list
+
+8. **System:** Proceeds with Pack Generation
+   - All validation checks passed
+   - Pack generation continues with Module 2 data included
+   - Pack includes all validated lab results with evidence links
+   - Evidence items are version-locked at generation time
+
+### End States
+- **Pack Generation Proceeds:** All validation checks passed; pack generation continues
+- **Validation Errors Resolved:** User fixed all issues; pack generation can proceed
+
+### Error Paths
+- **Missing Sampling Periods:** User must add lab results for all periods or adjust date range
+- **Missing Evidence:** User must link evidence to all lab results
+- **Unvalidated Evidence:** User must validate all pending evidence items
+- **Rejected Evidence:** User must replace rejected evidence with approved evidence
+
+### UI Components
+- **Validation Error Screen:**
+  - Error summary card (red background)
+  - Missing results table (with action buttons)
+  - Missing/unvalidated evidence table (with action buttons)
+  - "Retry Validation" button (re-runs validation)
+  - "Adjust Date Range" button (allows date range modification)
+  - "Cancel Pack Generation" button (returns to pack configuration)
+
+### Integration Points
+- **Lab Result Entry:** Links to Section 3.2 (Lab Result Import & Validation)
+- **Evidence Linking:** Links to Section 2.4 (Evidence Linking Workflow)
+- **Evidence Validation:** Uses evidence validation modal (Manager/Admin only)
+
+---
+
+## 3.5 Parameter Limit → Schedule Generation → Exceedance Detection Workflow
 
 ### Starting Point
 - **Trigger:** Parameter extracted from consent document OR user manually creates Parameter
@@ -1410,7 +1944,7 @@ This document defines complete step-by-step user journey maps for all workflows 
     - Message includes: Parameter name, recorded value, limit, percentage
 
 4. **System:** Displays Exceedance in dashboard:
-    - Red alert banner on Module 2 dashboard
+    - Red alert banner on Trade Effluent dashboard
     - Entry in "Exceedance History" widget
 
 5. **User:** Views Exceedance and investigates
@@ -1508,7 +2042,7 @@ This document defines complete step-by-step user journey maps for all workflows 
 
 1. **System:** Auto-generates sampling schedules after consent upload (per Section 3.1)
 
-2. **User:** Views sampling schedules on Module 2 dashboard
+2. **User:** Views sampling schedules on Trade Effluent dashboard
     - Shows each Parameter with next sample due date
     - Shows days until due
 
@@ -1546,24 +2080,65 @@ This document defines complete step-by-step user journey maps for all workflows 
 
 ---
 
+## 3.7 Corrective Action Lifecycle Workflow (Trade Effluent)
+
+> [v1.1 UPDATE – Corrective Action Lifecycle Workflow – 2025-01-01]
+
+### Starting Point
+- **Trigger:** Breach or exceedance event detected
+- **Prerequisites:** Trade Effluent module active (derived from tenancy entitlements); Exceedance or breach exists
+- **Entry Path:** Site Context → Trade Effluent Module → Corrective Actions
+
+### Step-by-Step Flow
+
+1. **System:** Detects breach or exceedance event
+2. **System:** Creates corrective action record
+3. **System:** Displays alert to user
+4. **User:** Views corrective action details
+5. **Investigation Phase:**
+   - **User:** Reviews root cause analysis
+   - **User:** Assesses impact
+   - **User:** Documents investigation findings
+6. **Action Assignment Phase:**
+   - **User:** Creates action items
+   - **User:** Assigns owners
+   - **User:** Sets due dates
+7. **Resolution Phase:**
+   - **User:** Uploads evidence of resolution
+   - **User:** Documents corrective measures taken
+8. **Closure Phase:**
+   - **User:** Reviews all evidence
+   - **User:** Closes corrective action
+   - **User:** Provides regulator justification
+9. **System:** Updates compliance score
+10. **System:** Updates exceedance status
+
+### End States
+- **Resolved:** Corrective action closed, breach resolved
+- **In Progress:** Action items assigned, resolution in progress
+
+---
+
 # 4. MODULE 3: MCPD/GENERATORS
 
 ## 4.1 MCPD Registration Upload
 
 ### Starting Point
-- **Trigger:** User clicks "Upload Registration" after Module 3 activation
-- **Prerequisites:** Module 3 active; Site exists
+- **Trigger:** User navigates to Site → MCPD / Generators → Documents → Upload Registration
+- **Prerequisites:** MCPD / Generators module active (derived from tenancy entitlements); Site exists
+- **Entry Path:** Site Context → MCPD / Generators Module → Documents → Upload
 
 ### Step-by-Step Flow
 
-1. **User:** Clicks "Upload MCPD Registration" on Module 3 dashboard
+1. **User:** Navigates to Site → MCPD / Generators → Documents
+2. **User:** Clicks "Upload MCPD Registration" button
 
 2. **System:** Displays upload modal
 
 3. **User:** Uploads MCPD Registration PDF
 
 4. **System:** Performs document ingestion pipeline
-    - Routes to appropriate module by querying `modules` table where `document_types` contains 'MCPD_REGISTRATION' (currently Module 3)
+    - Routes to MCPD / Generators module (derived from tenancy entitlements)
 
 5. **System:** Extracts registration metadata:
     - Registration reference
@@ -1616,7 +2191,8 @@ This document defines complete step-by-step user journey maps for all workflows 
 
 ### Step-by-Step Flow
 
-1. **User:** Clicks "Log Run Hours" on Generator card or Module 3 dashboard
+1. **User:** Navigates to Site → MCPD / Generators → Run Hours
+2. **User:** Clicks "Log Run Hours" button
 
 2. **System:** Displays entry options:
     - Manual Entry
@@ -1667,7 +2243,7 @@ This document defines complete step-by-step user journey maps for all workflows 
      - Logs breach in audit trail
      - Triggers breach notification workflow (see below)
 
-9. **System:** Calculates overall Module 3 compliance score
+9. **System:** Calculates overall MCPD / Generators module compliance score
    - Aggregates all Generator compliance scores
    - Calculates site-level compliance: `AVG(generator.compliance_score)`
    - Updates `site.module_3_compliance_score`
@@ -1697,7 +2273,7 @@ This document defines complete step-by-step user journey maps for all workflows 
 
 5. **System:** Validates and imports (similar to lab results CSV)
 
-6. **System:** Updates running totals for all affected Generators
+6. **System:** Updates running totals for all affected generators
 
 ### Link from Maintenance Record Path:
 
@@ -1723,12 +2299,13 @@ This document defines complete step-by-step user journey maps for all workflows 
 ## 4.3 Multi-Generator Aggregation
 
 ### Starting Point
-- **Trigger:** User views Module 3 dashboard with multiple Generators
-- **Prerequisites:** Multiple Generators exist
+- **Trigger:** User views MCPD / Generators dashboard with multiple generators
+- **Prerequisites:** Multiple generators exist
 
 ### Step-by-Step Flow
 
-1. **User:** Views Module 3 dashboard
+1. **User:** Navigates to Site → MCPD / Generators → Dashboard
+2. **User:** Views MCPD / Generators dashboard
 
 2. **System:** Displays aggregation views:
     - Per-generator cards (individual tracking)
@@ -1776,7 +2353,7 @@ This document defines complete step-by-step user journey maps for all workflows 
 
 1. **System:** Sends reminder at 60 days before AER deadline
 
-2. **User:** Clicks "Prepare AER" on Module 3 dashboard
+2. **User:** Clicks "Prepare AER" on MCPD / Generators dashboard
     - OR clicks link in reminder notification
 
 3. **System:** Displays AER preparation screen:
@@ -1864,7 +2441,7 @@ This document defines complete step-by-step user journey maps for all workflows 
     - Default frequency: ANNUAL (if not specified in registration)
     - Sets reminders: 60 days, 30 days, 7 days before due
 
-2. **User:** Views stack test schedule on Module 3 dashboard
+2. **User:** Views stack test schedule on Generators dashboard
     - Shows each Generator with next test due
     - Shows days until due
 
@@ -2576,6 +3153,1124 @@ This document defines complete step-by-step user journey maps for all workflows 
    - Processes payment with new card
    - If successful: Removes banner, sends confirmation email
    - If fails again: Shows error, offers contact support option
+
+---
+
+# 5. MODULE 4: HAZARDOUS WASTE CHAIN OF CUSTODY
+
+> [v1.1 UPDATE – Module 4 Workflows – 2025-01-01]
+
+## 5.1 Waste Stream Classification Workflow
+
+### Starting Point
+- **Trigger:** User activates Module 4 and navigates to Waste Streams page
+- **Prerequisites:** Module 4 active; Site exists
+
+### Step-by-Step Flow
+
+1. **User:** Navigates to `/sites/[siteId]/module-4/waste-streams`
+2. **System:** Displays waste streams list (empty if first time)
+3. **User:** Clicks "Create Waste Stream"
+4. **System:** Displays waste stream creation form
+5. **User:** Enters waste stream details:
+   - EWC code (European Waste Catalogue code)
+   - Description
+   - Classification (Hazardous/Non-Hazardous)
+   - Initial volume (optional)
+6. **User:** Clicks "Save"
+7. **System:**
+   - Validates EWC code format
+   - Creates waste stream record
+   - Links to site
+   - Displays success message
+8. **System:** Updates waste streams list
+
+### End States
+- **Success:** Waste stream created and visible in list
+- **Validation Error:** Form displays errors, user corrects and resubmits
+
+---
+
+## 5.2 Consignment Note Creation & Validation Workflow
+
+### Starting Point
+- **Trigger:** User creates consignment note for waste removal
+- **Prerequisites:** Module 4 active; Waste stream exists; Site exists
+
+### Step-by-Step Flow
+
+1. **User:** Navigates to Site → Hazardous Waste → Consignment Notes (`/sites/[siteId]/hazardous-waste/consignment-notes`)
+2. **User:** Clicks "Create Consignment Note"
+3. **System:** Displays consignment note creation form
+4. **User:** Enters consignment note details:
+   - Waste stream selector
+   - Carrier selector (with licence validation)
+   - Volume
+   - Date
+   - Operator photo upload (optional)
+   - QR code scan (optional)
+5. **User:** Clicks "Save"
+6. **System:** Runs pre-submission validation:
+   - Validates waste code
+   - Checks carrier licence validity
+   - Validates volume vs permit limits
+   - Checks storage duration vs regulations
+7. **System:** Displays validation results:
+   - **If** validation passes: Creates consignment note, displays success
+   - **If** validation fails: Displays validation errors, user fixes and resubmits
+8. **System:** Creates chain of custody record
+9. **System:** Updates compliance clock for carrier licence expiry
+
+### End States
+- **Success:** Consignment note created, validation passed
+- **Validation Error:** Validation errors displayed, user corrects
+- **Chain Break Detected:** Alert displayed, corrective action workflow triggered
+
+---
+
+## 5.3 Chain of Custody Tracking Workflow
+
+### Starting Point
+- **Trigger:** User views chain of custody for consignment note
+- **Prerequisites:** Module 4 active; Consignment note exists
+
+### Step-by-Step Flow
+
+1. **User:** Navigates to Site → Hazardous Waste → Chain of Custody (`/sites/[siteId]/hazardous-waste/chain-of-custody`)
+2. **System:** Displays chain of custody list
+3. **User:** Clicks on chain to view details
+4. **System:** Displays chain of custody timeline:
+   - Consignment note creation
+   - Carrier pickup
+   - Transit tracking (if available)
+   - End-point receipt
+   - End-point proof (if uploaded)
+5. **System:** Checks for chain breaks:
+   - Missing evidence alerts
+   - Contractor non-compliance detection
+   - Gap identification
+6. **If** chain break detected:
+   - **System:** Displays chain break alert
+   - **System:** Triggers corrective action workflow
+   - **User:** Views corrective action details
+   - **User:** Resolves chain break (uploads missing evidence, etc.)
+
+### End States
+- **Complete Chain:** All evidence present, chain closed
+- **Chain Break:** Alert displayed, corrective action in progress
+
+---
+
+## 5.4 End-Point Proof Workflow
+
+### Starting Point
+- **Trigger:** User uploads end-point proof (destruction/recycling certificate)
+- **Prerequisites:** Module 4 active; Consignment note exists
+
+### Step-by-Step Flow
+
+1. **User:** Navigates to `/sites/[siteId]/module-4/end-point-proof`
+2. **User:** Clicks "Upload End-Point Proof"
+3. **System:** Displays upload form
+4. **User:** Selects consignment note
+5. **User:** Selects proof type (Destruction/Recycling)
+6. **User:** Uploads certificate document
+7. **User:** Enters date
+8. **User:** Clicks "Save"
+9. **System:**
+   - Validates certificate format
+   - Links to consignment note
+   - Updates chain of custody status
+   - Closes chain of custody if complete
+10. **System:** Updates compliance score
+
+### End States
+- **Success:** End-point proof uploaded, chain closed
+- **Validation Error:** Certificate validation fails, user corrects
+
+---
+
+## 5.5 Corrective Action Lifecycle Workflow (Hazardous Waste)
+
+### Starting Point
+- **Trigger:** Chain-break event detected (missing evidence, contractor non-compliance, validation failure)
+- **Prerequisites:** Module 4 active; Chain break or validation failure
+
+### Step-by-Step Flow
+
+1. **System:** Detects chain-break event
+2. **System:** Creates corrective action record
+3. **System:** Displays alert to user
+4. **User:** Views corrective action details
+5. **Investigation Phase:**
+   - **User:** Reviews gap analysis
+   - **User:** Identifies root cause
+   - **User:** Documents investigation findings
+6. **Action Assignment Phase:**
+   - **User:** Creates action items
+   - **User:** Assigns owners
+   - **User:** Sets due dates
+7. **Resolution Phase:**
+   - **User:** Uploads evidence of resolution
+   - **User:** Documents corrective measures
+8. **Closure Phase:**
+   - **User:** Reviews all evidence
+   - **User:** Closes corrective action
+   - **User:** Provides regulator justification
+9. **System:** Updates chain of custody status
+10. **System:** Updates compliance score
+
+### End States
+- **Resolved:** Corrective action closed, chain restored
+- **In Progress:** Action items assigned, resolution in progress
+
+---
+
+# 6. CROSS-CUTTING WORKFLOWS
+
+> [v1.1 UPDATE – Cross-Cutting Workflows – 2025-01-01]
+
+## 6.1 Compliance Clock Workflow
+
+### Starting Point
+- **Trigger:** User views compliance clocks dashboard
+- **Prerequisites:** Authenticated user
+
+### Step-by-Step Flow
+
+1. **User:** Navigates to `/compliance-clocks`
+2. **System:** Displays compliance clocks dashboard:
+   - Summary cards (Red/Amber/Green counts)
+   - Critical clocks list
+   - Filter options
+3. **User:** Filters by status, module, or site
+4. **System:** Updates displayed clocks
+5. **User:** Clicks on clock to view details
+6. **System:** Displays clock details:
+   - Days remaining
+   - Deadline date
+   - Status indicator
+   - Related entity link
+7. **User:** Clicks "View Related Entity"
+8. **System:** Navigates to related entity (obligation, consent, etc.)
+
+### End States
+- **View Details:** Clock details displayed
+- **Navigate to Entity:** Related entity page displayed
+
+---
+
+## 6.2 Condition-Level Evidence Mapping Workflow (Module 1)
+
+### Starting Point
+- **Trigger:** Admin/Staff configures evidence rules for obligation
+- **Prerequisites:** Module 1 active; Obligation exists; Admin/Staff role
+
+### Step-by-Step Flow
+
+1. **User:** Navigates to `/sites/[siteId]/obligations/[obligationId]/evidence-rules`
+2. **System:** Displays current evidence rules (if any)
+3. **User:** Clicks "Configure Rules"
+4. **System:** Displays evidence rules configuration form
+5. **User:** Configures allowed evidence types:
+   - Selects evidence types (Document, Photo, Measurement, etc.)
+   - Sets completeness scoring thresholds
+   - Configures versioning rules
+6. **User:** Clicks "Save"
+7. **System:**
+   - Saves evidence rules
+   - Applies to obligation
+   - Updates completeness scoring
+8. **System:** Displays updated evidence rules
+
+### End States
+- **Success:** Evidence rules configured, completeness scoring updated
+- **Error:** Validation error, user corrects
+
+---
+
+## 6.3 Recurrence Trigger Configuration Workflow (Module 1)
+
+### Starting Point
+- **Trigger:** Admin/Staff configures recurrence trigger for obligation
+- **Prerequisites:** Module 1 active; Obligation exists; Admin/Staff role
+
+### Step-by-Step Flow
+
+1. **User:** Navigates to `/sites/[siteId]/obligations/[obligationId]/recurrence-triggers`
+2. **System:** Displays current recurrence triggers (if any)
+3. **User:** Clicks "Create Trigger"
+4. **System:** Displays trigger configuration form
+5. **User:** Configures trigger:
+   - Selects trigger type (Dynamic/Event-based/Conditional)
+   - Configures schedule (if dynamic)
+   - Configures event conditions (if event-based)
+   - Configures conditional logic (if conditional)
+6. **User:** Clicks "Save"
+7. **System:**
+   - Creates recurrence trigger
+   - Links to obligation
+   - Schedules first execution
+8. **System:** Displays trigger execution history
+
+### End States
+- **Success:** Recurrence trigger created, scheduled
+- **Error:** Validation error, user corrects
+
+---
+
+## 6.4 Permit Change Tracking Workflow (Module 1)
+
+### Starting Point
+- **Trigger:** User uploads new permit version
+- **Prerequisites:** Module 1 active; Existing permit document exists
+
+### Step-by-Step Flow
+
+1. **User:** Navigates to `/sites/[siteId]/documents/[documentId]/versions`
+2. **User:** Clicks "Upload New Version"
+3. **System:** Displays version upload form
+4. **User:** Uploads new permit version
+5. **User:** Selects change type (Variation/Renewal/Surrender)
+6. **User:** Clicks "Save"
+7. **System:**
+   - Processes new version
+   - Performs redline comparison
+   - Identifies changes
+   - Analyzes impact on obligations
+8. **System:** Displays version comparison:
+   - Added sections
+   - Removed sections
+   - Modified sections
+   - Obligation changes
+9. **User:** Reviews impact analysis
+10. **User:** Clicks "View Impact"
+11. **System:** Displays detailed impact analysis:
+    - New obligations
+    - Removed obligations
+    - Modified obligations
+    - Impact score
+
+### End States
+- **Success:** Version uploaded, comparison displayed
+- **Error:** Processing error, user retries
+
+---
+
+## 6.5 Condition Permissions Management Workflow (Module 1)
+
+> [v1.4 UPDATE – Condition Permissions – 2025-02-01]
+
+### Starting Point
+- **Trigger:** Admin/Staff grants condition-level permission to user
+- **Prerequisites:** Module 1 active; Document exists; User exists; Admin/Staff role
+
+### Step-by-Step Flow
+
+1. **User:** Navigates to `/module-1/condition-permissions`
+2. **System:** Displays list of existing condition permissions
+3. **User:** Clicks "Create Permission"
+4. **System:** Displays permission creation form
+5. **User:** Configures permission:
+   - Selects user
+   - Selects document
+   - Enters condition reference
+   - Selects permission type (VIEW/EDIT/MANAGE/FULL)
+6. **User:** Clicks "Save"
+7. **System:**
+   - Creates condition permission
+   - Grants access to user
+   - Updates RLS policies
+8. **System:** Displays updated permissions list
+
+### End States
+- **Success:** Permission granted, user has access to condition
+- **Error:** Validation error, user corrects
+
+---
+
+## 6.6 Consent State Transition Workflow (Module 2)
+
+> [v1.4 UPDATE – Consent State Machine – 2025-02-01]
+
+### Starting Point
+- **Trigger:** Admin/Staff transitions consent to new state
+- **Prerequisites:** Module 2 active; Consent document exists; Admin/Staff role
+
+### Step-by-Step Flow
+
+1. **User:** Navigates to `/module-2/consent-states`
+2. **System:** Displays list of consent states for documents
+3. **User:** Clicks "Create State" or selects existing state
+4. **System:** Displays state transition form
+5. **User:** Configures state transition:
+   - Selects document
+   - Selects new state (DRAFT/IN_FORCE/SUPERSEDED/EXPIRED)
+   - Sets effective date
+   - Sets expiry date (if applicable)
+   - Enters transition reason
+6. **User:** Clicks "Save"
+7. **System:**
+   - Creates new consent state
+   - Links to previous state (if exists)
+   - Updates document status
+   - Records transition history
+8. **System:** Displays updated state with transition history
+
+### End States
+- **Success:** State transitioned, history recorded
+- **Error:** Invalid transition, user corrects
+
+---
+
+## 6.7 Regulation Threshold Configuration Workflow (Module 3)
+
+> [v1.4 UPDATE – Regulation Thresholds – 2025-02-01]
+
+### Starting Point
+- **Trigger:** Admin/Staff configures regulation threshold
+- **Prerequisites:** Module 3 active; Admin/Staff role
+
+### Step-by-Step Flow
+
+1. **User:** Navigates to `/module-3/regulation-thresholds`
+2. **System:** Displays list of regulation thresholds
+3. **User:** Clicks "Create Threshold"
+4. **System:** Displays threshold configuration form
+5. **User:** Configures threshold:
+   - Selects threshold type (MCPD_1_5MW/MCPD_5_50MW/SPECIFIED_GENERATOR/CUSTOM)
+   - Sets capacity range (min/max MW)
+   - Sets monitoring frequency
+   - Sets stack test frequency
+   - Sets reporting frequency
+   - Enters regulation reference (optional)
+6. **User:** Clicks "Save"
+7. **System:**
+   - Creates regulation threshold
+   - Makes available for frequency calculations
+8. **System:** Displays updated thresholds list
+
+### End States
+- **Success:** Threshold created, available for calculations
+- **Error:** Validation error, user corrects
+
+---
+
+## 6.8 Automatic Frequency Calculation Workflow (Module 3)
+
+> [v1.4 UPDATE – Regulation Thresholds – 2025-02-01]
+
+### Starting Point
+- **Trigger:** Admin/Staff calculates frequencies for generator
+- **Prerequisites:** Module 3 active; Generator exists; Regulation threshold exists; Admin/Staff role
+
+### Step-by-Step Flow
+
+1. **User:** Navigates to generator detail page or `/module-3/generators/[generatorId]/calculate-frequency`
+2. **System:** Displays generator details with capacity
+3. **User:** Clicks "Calculate Frequency"
+4. **System:**
+   - Finds matching regulation threshold based on generator capacity
+   - Calculates monitoring frequency
+   - Calculates stack test frequency
+   - Calculates reporting frequency
+5. **System:** Displays calculation results:
+   - Matching threshold
+   - Calculated frequencies
+   - Calculation details
+6. **User:** Reviews calculation results
+7. **User:** Clicks "Apply" (optional)
+8. **System:**
+   - Saves frequency calculation record
+   - Marks as applied (if user clicked Apply)
+   - Updates generator monitoring schedule (if applied)
+9. **System:** Displays calculation history
+
+### End States
+- **Success:** Frequencies calculated, optionally applied
+- **Error:** No matching threshold found, user creates threshold
+
+---
+
+## 6.9 Regulator Challenge State Machine Workflow
+
+> [v1.7 UPDATE – Regulator Challenge State Machine – 2025-01-XX]
+
+### Starting Point
+- **Trigger:** User needs to handle regulator question/challenge
+- **Prerequisites:** Authenticated user with site access; Regulator question exists or needs to be created
+- **Entry Path:** Site Context → Regulator Questions → Create/View Question
+
+### Step-by-Step Flow
+
+**Question Creation:**
+1. **User:** Navigates to `/sites/[siteId]/regulator-questions`
+2. **User:** Clicks "Create Question" button
+3. **System:** Displays question creation form
+4. **User:** Enters question details:
+   - Question type (OBLIGATION_CLARIFICATION/EVIDENCE_REQUEST/COMPLIANCE_QUERY)
+   - Urgency level (URGENT/INFORMAL/NORMAL)
+   - Question text
+   - Related obligation/document (optional)
+   - Response deadline (auto-calculated based on type)
+5. **User:** Clicks "Submit"
+6. **System:**
+   - Creates `regulator_questions` record
+   - Sets `status = 'OPEN'`
+   - Sets `raised_date = CURRENT_DATE`
+   - Calculates `response_deadline`:
+     - URGENT: 7 days from `raised_date`
+     - INFORMAL: 60 days from `raised_date`
+     - Default: 28 days from `raised_date`
+   - Creates audit log entry: `action_type = 'REGULATOR_QUESTION_RAISED'`
+7. **System:** Displays question detail page with state machine visualization
+
+**State Machine Visualization:**
+8. **System:** Displays state machine diagram:
+   - Shows all possible states (OPEN, RESPONSE_SUBMITTED, RESPONSE_ACKNOWLEDGED, FOLLOW_UP_REQUIRED, CLOSED, RESPONSE_OVERDUE)
+   - Highlights current state (OPEN)
+   - Shows available transitions (arrows to RESPONSE_SUBMITTED)
+   - Displays state descriptions in tooltips
+9. **System:** Displays response deadline countdown:
+   - Days remaining
+   - Deadline status badge (On Time/Approaching/Overdue)
+   - Visual progress bar
+
+**Response Preparation:**
+10. **User:** Reviews related document/obligation (if linked)
+11. **User:** Gathers supporting evidence
+12. **User:** Navigates to question detail page
+13. **User:** Clicks "Prepare Response" button
+
+**Response Submission:**
+14. **User:** Enters response text in rich text editor
+15. **User:** Attaches evidence (if applicable):
+    - Selects evidence items
+    - Uploads new evidence files
+16. **User:** Reviews response
+17. **User:** Clicks "Submit Response"
+18. **System:**
+    - Sets `response_text`
+    - Links `response_evidence_ids` (if provided)
+    - Sets `response_submitted_date = CURRENT_DATE`
+    - Transitions state: `status = 'RESPONSE_SUBMITTED'`
+    - Creates audit log entry: `action_type = 'REGULATOR_RESPONSE_SUBMITTED'`
+19. **System:** Updates state machine visualization:
+    - Highlights new state (RESPONSE_SUBMITTED)
+    - Shows available transitions (to RESPONSE_ACKNOWLEDGED, FOLLOW_UP_REQUIRED)
+    - Displays state history timeline
+
+**Regulator Acknowledgment (Admin/Owner only):**
+20. **User (Admin/Owner):** Reviews submitted response
+21. **User:** Clicks "Mark as Acknowledged" button
+22. **System:**
+    - Sets `regulator_acknowledged = true`
+    - Transitions state: `status = 'RESPONSE_ACKNOWLEDGED'`
+    - Creates audit log entry: `action_type = 'REGULATOR_QUESTION_STATUS_CHANGED'`
+23. **System:** Updates state machine visualization
+
+**Follow-Up Required:**
+24. **User (Admin/Owner):** Clicks "Request Follow-Up" button
+25. **System:** Displays follow-up form
+26. **User:** Enters follow-up details
+27. **User:** Clicks "Submit"
+28. **System:**
+    - Sets `follow_up_required = true`
+    - Transitions state: `status = 'FOLLOW_UP_REQUIRED'`
+    - Creates new question record linked to original
+    - Creates audit log entry
+29. **System:** Updates state machine visualization
+
+**Closure:**
+30. **User:** Reviews question and response
+31. **User:** Clicks "Close Question" button
+32. **System:** Displays closure confirmation
+33. **User:** Confirms closure
+34. **System:**
+    - Sets `closed_date = CURRENT_DATE`
+    - Transitions state: `status = 'CLOSED'`
+    - Creates audit log entry: `action_type = 'REGULATOR_QUESTION_STATUS_CHANGED'`
+35. **System:** Updates state machine visualization
+
+**Overdue Escalation (Automatic):**
+36. **System (Background Job):** Checks response deadlines daily
+37. **If** `response_deadline` within 7 days AND `status = 'OPEN'`:
+    - **System:** Sends reminder notification
+    - **System:** Updates deadline status badge to "Approaching"
+38. **If** `response_deadline` passed AND `status = 'OPEN'`:
+    - **System:** Transitions state: `status = 'RESPONSE_OVERDUE'`
+    - **System:** Escalates to Admin/Owner
+    - **System:** Sends critical alert
+    - **System:** Creates audit log entry
+39. **If** `response_deadline` passed > 14 days:
+    - **System:** Sends critical alert to Owner
+    - **System:** Updates state machine visualization
+
+### End States
+- **Question Closed:** Question resolved, state = CLOSED
+- **Response Submitted:** Response submitted, awaiting acknowledgment, state = RESPONSE_SUBMITTED
+- **Response Acknowledged:** Regulator acknowledged response, state = RESPONSE_ACKNOWLEDGED
+- **Follow-Up Required:** Additional information needed, state = FOLLOW_UP_REQUIRED
+- **Overdue:** Response deadline passed, state = RESPONSE_OVERDUE
+
+### Error Paths
+1. **Invalid State Transition:**
+   - **System:** Displays error "Invalid state transition"
+   - **User:** Reviews state machine diagram
+   - **User:** Corrects action
+
+2. **Response Deadline Passed:**
+   - **System:** Displays warning "Response deadline has passed"
+   - **System:** Requires Admin/Owner approval to submit response
+   - **User:** Provides justification for late response
+
+---
+
+## 6.10 Manual Override Workflow
+
+> [v1.7 UPDATE – Manual Override Workflow – 2025-01-XX]
+
+### Starting Point
+- **Trigger:** Admin/Owner needs to override system-determined value
+- **Prerequisites:** Admin or Owner role; Entity exists (obligation, evidence, deadline, etc.)
+- **Entry Path:** Context-dependent (obligation edit, evidence exemption, deadline adjustment, etc.)
+
+### Step-by-Step Flow
+
+**Override Initiation:**
+1. **User (Admin/Owner):** Navigates to entity detail page (obligation, evidence, deadline, etc.)
+2. **User:** Clicks "Edit" or override-specific button
+3. **System:** Checks user role
+   - **If** Staff/Consultant, **then** display error "Manual overrides require Admin or Owner role"
+   - **If** Admin/Owner, **then** proceed to Step 4
+4. **System:** Displays manual override modal
+
+**Override Context Display:**
+5. **System:** Displays override context:
+   - Entity type (Obligation, Evidence, Deadline, Compliance Status, Schedule)
+   - Entity name/title
+   - Current system-determined value
+   - Previous values (if any overrides exist)
+
+**Override Reason Entry (Required):**
+6. **User:** Enters override reason in textarea:
+   - Minimum 10 characters required
+   - Maximum 500 characters
+   - Placeholder: "e.g., Document interpretation requires manual adjustment"
+7. **System:** Validates reason length in real-time
+   - **If** < 10 characters, **then** disable "Confirm Override" button
+   - **If** ≥ 10 characters, **then** enable "Confirm Override" button
+
+**Override Form (Context-Dependent):**
+
+**Obligation Override:**
+8. **User:** Edits editable fields:
+   - Obligation text (editable)
+   - Category (editable)
+   - Frequency (editable)
+   - Deadline date (editable)
+9. **System:** Displays non-editable fields (read-only):
+   - Subjective flag (system-determined)
+   - Confidence score (system-determined)
+   - Compliance status (partial - can mark complete/N/A, cannot mark overdue as complete without evidence)
+10. **System:** Displays previous value card (shows original system value)
+
+**Evidence Exemption Override:**
+11. **User:** Selects exemption type:
+    - "Temporary Evidence" (sets `is_temporary = true`)
+    - "Enforcement Exempt" (sets `enforcement_exempt = true`)
+12. **System:** Displays evidence info (filename, upload date, etc.)
+
+**Deadline Adjustment Override:**
+13. **User:** Views current deadline
+14. **User:** Enters new deadline date
+15. **System:** Validates new deadline is valid date
+
+**Compliance Status Override:**
+16. **User:** Views current compliance status
+17. **User:** Selects new status from allowed options:
+    - Can mark complete (if evidence present)
+    - Can mark N/A
+    - Cannot mark overdue as complete without evidence
+18. **System:** Validates status change is allowed
+
+**Audit Trail Notice:**
+19. **System:** Displays audit trail notice:
+    - Warning icon
+    - Text: "This override will be logged in the audit trail with your name and timestamp."
+    - Preview: "Audit entry: [Override Type] by [Your Name] at [Timestamp]"
+
+**Override Confirmation:**
+20. **User:** Reviews override details
+21. **User:** Confirms override reason is accurate
+22. **User:** Clicks "Confirm Override" button
+23. **System:**
+    - Validates all override data
+    - Saves override:
+      - Updates entity with new values
+      - Records `edited_by = user_id`
+      - Records `edited_at = CURRENT_TIMESTAMP`
+      - Records `edit_reason = override_reason`
+      - Records `previous_values = JSONB(old_values)`
+    - Creates audit log entry:
+      - `action_type = 'MANUAL_OVERRIDE'`
+      - `entity_type = [entity_type]`
+      - `entity_id = [entity_id]`
+      - `previous_values = [old_values]`
+      - `new_values = [new_values]`
+      - `override_reason = [reason]`
+      - `user_id = [user_id]`
+24. **System:** Displays success message: "Override applied successfully. This change has been logged in the audit trail."
+
+**Override History Viewing:**
+25. **User:** Navigates to entity detail page
+26. **User:** Clicks "View Override History" button
+27. **System:** Displays override history:
+    - Chronological list of all overrides
+    - Each entry shows:
+      - Override timestamp
+      - Override reason
+      - Previous value
+      - New value
+      - Overridden by (user name)
+    - Export option (PDF/CSV)
+
+### End States
+- **Override Applied:** Entity updated, audit trail logged
+- **Override Cancelled:** No changes made, modal closed
+- **Validation Error:** Override reason too short or invalid data, user corrects
+
+### Error Paths
+1. **Insufficient Permissions:**
+   - **System:** Displays error "Manual overrides require Admin or Owner role"
+   - **User:** Contacts Admin/Owner for override
+
+2. **Invalid Override Reason:**
+   - **System:** Displays error "Override reason must be at least 10 characters"
+   - **User:** Enters longer reason
+
+3. **Invalid Override Value:**
+   - **System:** Displays validation error (context-dependent)
+   - **User:** Corrects override value
+
+---
+
+## 6.11 Unlinked Evidence Management Workflow
+
+> [v1.7 UPDATE – Unlinked Evidence Management – 2025-01-XX]
+
+### Starting Point
+- **Trigger:** User needs to manage evidence without obligation links
+- **Prerequisites:** Authenticated user with site access; Evidence items exist
+- **Entry Path:** Site Context → Evidence → Unlinked Evidence
+
+### Step-by-Step Flow
+
+**Accessing Unlinked Evidence:**
+1. **User:** Navigates to `/sites/[siteId]/evidence/unlinked`
+2. **System:** Displays unlinked evidence page:
+   - Header with unlinked count badge
+   - Enforcement status filters
+   - Unlinked evidence list
+
+**Enforcement Status Filtering:**
+3. **User:** Applies filters:
+   - Status filter (UNLINKED_WARNING/UNLINKED_CRITICAL/UNLINKED_ARCHIVED)
+   - Grace period filter (Within Grace/Warning Period/Critical Period)
+   - Date range filter
+4. **System:** Updates displayed evidence list based on filters
+
+**Viewing Unlinked Evidence:**
+5. **System:** Displays unlinked evidence cards:
+   - Evidence preview
+   - Evidence metadata (filename, upload date, uploader, file size)
+   - Enforcement status badge:
+     - UNLINKED_WARNING (7-13 days): Amber badge, "Warning: Link required"
+     - UNLINKED_CRITICAL (14-29 days): Red badge, "Critical: Link required"
+     - UNLINKED_ARCHIVED (30+ days): Gray badge, "Archived: Requires restoration"
+   - Grace period countdown:
+     - Visual progress bar
+     - Days remaining (if within grace period)
+     - Days overdue (if past grace period)
+     - Color-coded: Green (within grace), Amber (warning), Red (critical)
+   - Suggested obligations (if available)
+
+**Linking Evidence to Obligation:**
+6. **User:** Clicks "Link to Obligation" button on evidence card
+7. **System:** Displays obligation selector modal
+8. **User:** Searches/selects obligation
+9. **User:** Clicks "Link"
+10. **System:**
+    - Creates `evidence_obligation_links` record
+    - Sets `evidence.enforcement_status = 'LINKED'`
+    - Removes from unlinked evidence list
+    - Creates audit log entry
+11. **System:** Displays success message: "Evidence linked to obligation successfully"
+
+**Bulk Linking:**
+12. **User:** Selects multiple evidence items (checkboxes)
+13. **User:** Clicks "Bulk Link" button
+14. **System:** Displays bulk link modal
+15. **User:** Selects target obligation
+16. **User:** Clicks "Link All"
+17. **System:**
+    - Links all selected evidence to obligation
+    - Updates enforcement status for all
+    - Creates audit log entries
+18. **System:** Displays success message: "X evidence items linked successfully"
+
+**Evidence Exemption Request (Admin/Owner only):**
+19. **User (Admin/Owner):** Clicks "Request Exemption" button
+20. **System:** Displays exemption modal
+21. **User:** Enters exemption reason (required, min 10 characters)
+22. **User:** Selects exemption type:
+    - "Temporary Evidence" (sets `is_temporary = true`)
+    - "Enforcement Exempt" (sets `enforcement_exempt = true`)
+23. **User:** Clicks "Submit"
+24. **System:**
+    - Updates evidence record
+    - Creates audit log entry: `action_type = 'EVIDENCE_EXEMPTION_REQUESTED'`
+    - Removes from unlinked evidence list (if enforcement exempt)
+25. **System:** Displays success message: "Exemption request logged in audit trail"
+
+**Grace Period Countdown Monitoring:**
+26. **System (Background Job):** Monitors grace period daily
+27. **If** evidence within grace period (0-7 days):
+    - **System:** Displays green progress bar
+    - **System:** Shows days remaining
+28. **If** evidence in warning period (7-13 days):
+    - **System:** Transitions `enforcement_status = 'UNLINKED_WARNING'`
+    - **System:** Displays amber badge and progress bar
+    - **System:** Sends reminder notification
+29. **If** evidence in critical period (14-29 days):
+    - **System:** Transitions `enforcement_status = 'UNLINKED_CRITICAL'`
+    - **System:** Displays red badge and progress bar
+    - **System:** Sends critical alert
+30. **If** evidence past 30 days:
+    - **System:** Transitions `enforcement_status = 'UNLINKED_ARCHIVED'`
+    - **System:** Displays gray badge
+    - **System:** Requires restoration to link
+
+**Viewing Suggested Obligations:**
+31. **System:** Displays suggested obligations for each evidence item:
+    - Obligation title
+    - Match reason (e.g., "Filename match", "Date match")
+    - "Link" button
+32. **User:** Clicks "Link" on suggested obligation
+33. **System:** Links evidence to suggested obligation (same as Step 10)
+
+### End States
+- **Evidence Linked:** Evidence linked to obligation, removed from unlinked list
+- **Evidence Exempted:** Evidence marked as exempt, removed from unlinked list
+- **Evidence Archived:** Evidence archived after 30 days, requires restoration
+
+### Error Paths
+1. **No Obligation Selected:**
+   - **System:** Displays error "Please select an obligation"
+   - **User:** Selects obligation
+
+2. **Exemption Reason Too Short:**
+   - **System:** Displays error "Exemption reason must be at least 10 characters"
+   - **User:** Enters longer reason
+
+---
+
+## 6.12 Module Cascading Deactivation Workflow
+
+> [v1.7 UPDATE – Module Cascading Deactivation – 2025-01-XX]
+
+### Starting Point
+- **Trigger:** Admin/Owner wants to deactivate a module
+- **Prerequisites:** Admin or Owner role; Module is active; Module exists
+- **Entry Path:** Site/Company Settings → Modules → Deactivate Module
+
+### Step-by-Step Flow
+
+**Deactivation Initiation:**
+1. **User (Admin/Owner):** Navigates to module selection/management page
+2. **User:** Clicks "Deactivate" button on active module
+3. **System:** Checks module dependencies:
+   - Queries `modules` table: `SELECT * FROM modules WHERE requires_module_id = [module_id]`
+   - Identifies dependent modules
+
+**Dependency Detection:**
+4. **If** no dependent modules found:
+   - **System:** Displays standard deactivation confirmation modal
+   - Proceed to Step 12 (Standard Deactivation)
+5. **If** dependent modules found:
+   - **System:** Displays cascading deactivation warning modal
+
+**Cascading Warning Display:**
+6. **System:** Displays warning modal:
+   - Warning icon (amber)
+   - Title: "Cascading Deactivation"
+   - Message: "Deactivating [Module Name] will also deactivate the following dependent modules:"
+   - Dependent modules list:
+     - Module name (e.g., "Module 2: Trade Effluent")
+     - Module status: "Active"
+     - Dependency indicator: "Requires [Module Name]"
+   - Dependency visualization:
+     - Visual flow diagram: [Module 1] → [Module 2], [Module 1] → [Module 3]
+     - Flow description: "[Module Name] is required for [Dependent Module Names]"
+   - Data preservation notice:
+     - Text: "Data for [Dependent Modules] will be preserved. Reactivating [Module Name] will restore access to these modules."
+
+**Cascading Confirmation:**
+7. **System:** Displays confirmation checkbox:
+   - Label: "I understand that [Dependent Module Names] will be deactivated"
+   - Required: true (must check to proceed)
+8. **User:** Reviews dependent modules
+9. **User:** Checks confirmation checkbox
+10. **System:** Enables "Deactivate" button (disabled until checkbox checked)
+
+**Deactivation Execution:**
+11. **User:** Clicks "Deactivate" button
+12. **System:**
+    - Deactivates primary module:
+      - Sets `module_activations.is_active = false`
+      - Sets `module_activations.deactivated_at = CURRENT_TIMESTAMP`
+    - Deactivates all dependent modules:
+      - For each dependent module:
+        - Sets `module_activations.is_active = false`
+        - Sets `module_activations.deactivated_at = CURRENT_TIMESTAMP`
+    - Preserves all data (no deletion)
+    - Creates audit log entries:
+      - Primary module: `action_type = 'MODULE_DEACTIVATED'`
+      - Each dependent module: `action_type = 'MODULE_CASCADING_DEACTIVATED'`
+13. **System:** Displays success notification:
+    - Message: "[Module Name] has been deactivated. [Dependent Module Names] have also been deactivated as they require [Module Name]."
+    - Data preservation reminder: "All data has been preserved. Reactivating [Module Name] will restore access to these modules."
+
+**Post-Deactivation:**
+14. **System:** Updates UI:
+    - Removes module routes from navigation
+    - Hides module-specific features
+    - Displays module deactivation status
+15. **User:** Navigates to module selection page
+16. **System:** Displays deactivated modules with "Reactivate" button
+
+**Reactivation:**
+17. **User:** Clicks "Reactivate" on deactivated module
+18. **System:** Checks if prerequisite module is active
+19. **If** prerequisite active:
+    - **System:** Reactivates module
+    - **System:** Restores access to module features
+20. **If** prerequisite inactive:
+    - **System:** Displays error: "Cannot reactivate [Module Name]. [Prerequisite Module Name] must be activated first."
+    - **System:** Offers to activate prerequisite module
+
+### End States
+- **Module Deactivated:** Module and dependent modules deactivated, data preserved
+- **Deactivation Cancelled:** No changes made, modal closed
+- **Reactivation Successful:** Module reactivated, access restored
+
+### Error Paths
+1. **Confirmation Not Checked:**
+   - **System:** Disables "Deactivate" button
+   - **User:** Checks confirmation checkbox
+
+2. **Prerequisite Not Active (Reactivation):**
+   - **System:** Displays error "Prerequisite module must be activated first"
+   - **User:** Activates prerequisite module first
+
+---
+
+## 6.13 Pack Access Logs Viewing Workflow
+
+> [v1.7 UPDATE – Pack Access Logs – 2025-01-XX]
+
+### Starting Point
+- **Trigger:** User wants to view pack access logs
+- **Prerequisites:** Authenticated user with pack access; Pack exists; Secure link generated (for access logs)
+- **Entry Path:** Pack Detail Page → Access Logs Tab
+
+### Step-by-Step Flow
+
+**Accessing Pack Access Logs:**
+1. **User:** Navigates to pack detail page: `/sites/[siteId]/packs/[packId]`
+2. **System:** Displays pack detail page with tabs
+3. **User:** Clicks "Access Logs" tab
+4. **System:** Checks if secure link generated:
+   - **If** no secure link, **then** display message "Access logs available only for packs with secure links"
+   - **If** secure link exists, **then** proceed to Step 5
+
+**Access Logs Display:**
+5. **System:** Displays access logs tab:
+   - Header with total access count and unique accessors count
+   - Filter bar
+   - Access logs table
+   - Access logs summary
+
+**Filtering Access Logs:**
+6. **User:** Applies filters:
+   - Date range filter
+   - Accessor email filter (if provided)
+   - IP address filter
+7. **System:** Updates displayed access logs based on filters
+
+**Viewing Access Logs:**
+8. **System:** Displays access logs table:
+   - Accessor email (if provided)
+   - IP address
+   - User agent
+   - First accessed at (timestamp)
+   - Last accessed at (timestamp)
+   - View count
+   - Download count
+   - Pages viewed (array of page numbers)
+9. **User:** Scrolls through access logs
+10. **System:** Loads more logs (pagination/infinite scroll)
+
+**Access Log Details:**
+11. **User:** Clicks on access log row
+12. **System:** Displays access log detail modal:
+    - Full accessor information
+    - Complete access timeline
+    - All pages viewed
+    - Download history
+    - Geolocation (if IP geolocation available)
+
+**Access Timeline Visualization:**
+13. **System:** Displays access timeline chart:
+    - Timeline showing access frequency over time
+    - Peak access times
+    - Access patterns visualization
+
+**Exporting Access Logs:**
+14. **User:** Clicks "Export Logs" button
+15. **System:** Displays export format selector:
+    - PDF
+    - CSV
+    - JSON
+16. **User:** Selects export format
+17. **User:** Clicks "Export"
+18. **System:**
+    - Generates export file
+    - Includes all filtered logs
+    - Includes summary statistics
+    - Downloads file to user's device
+
+**Access Logs Summary:**
+19. **System:** Displays summary statistics:
+    - Total access count
+    - Unique accessors count
+    - Average views per accessor
+    - Most accessed pages
+    - Access timeline chart
+    - Accessor geolocation map (if available)
+
+### End States
+- **Access Logs Viewed:** Access logs displayed, filters applied
+- **Access Logs Exported:** Export file downloaded
+- **No Access Logs:** Message displayed if no secure link generated
+
+### Error Paths
+1. **No Secure Link:**
+   - **System:** Displays message "Access logs available only for packs with secure links"
+   - **User:** Generates secure link first
+
+2. **Export Failed:**
+   - **System:** Displays error "Export failed. Please try again."
+   - **User:** Retries export
+
+---
+
+## 6.14 Pack Contents Viewing Workflow
+
+> [v1.7 UPDATE – Pack Contents – 2025-01-XX]
+
+### Starting Point
+- **Trigger:** User wants to view pack contents
+- **Prerequisites:** Authenticated user with pack access; Pack exists; Pack generated
+- **Entry Path:** Pack Detail Page → Contents Tab
+
+### Step-by-Step Flow
+
+**Accessing Pack Contents:**
+1. **User:** Navigates to pack detail page: `/sites/[siteId]/packs/[packId]`
+2. **System:** Displays pack detail page with tabs
+3. **User:** Clicks "Contents" tab
+4. **System:** Displays pack contents tab
+
+**Pack Contents Display:**
+5. **System:** Displays pack contents:
+   - Header with total evidence count and total obligations count
+   - Evidence contents list
+   - Contents summary
+
+**Viewing Evidence Contents:**
+6. **System:** Displays evidence contents list:
+   - Evidence snapshot card for each evidence item:
+     - File name (from snapshot)
+     - File type (from snapshot)
+     - File size (from snapshot)
+     - Uploaded at (from snapshot)
+     - Uploaded by (from snapshot)
+     - File hash (from snapshot, for integrity verification)
+     - Version locked badge (indicates immutable snapshot)
+     - Included at (timestamp when added to pack)
+   - Obligation snapshot (if evidence linked to obligation):
+     - Obligation title (from snapshot)
+     - Obligation status (from snapshot)
+     - Deadline date (from snapshot)
+7. **User:** Scrolls through evidence contents
+8. **System:** Loads more contents (pagination/infinite scroll)
+
+**Viewing Obligation Contents:**
+9. **System:** Displays obligation contents (if pack includes obligations):
+   - Obligation snapshot card for each obligation:
+     - Obligation title (from snapshot)
+     - Obligation category (from snapshot)
+     - Obligation frequency (from snapshot)
+     - Deadline date (from snapshot)
+     - Compliance status (from snapshot)
+     - Version locked badge
+     - Included at (timestamp when added to pack)
+
+**Contents Summary:**
+10. **System:** Displays contents summary:
+    - Evidence breakdown:
+      - By type (Document, Photo, Measurement, etc.)
+      - By module (Module 1, Module 2, etc.)
+      - Total count
+    - Obligation breakdown:
+      - By status (Active, Completed, Overdue, etc.)
+      - By module
+      - Total count
+
+**Exporting Pack Contents:**
+11. **User:** Clicks "Export Contents" button
+12. **System:** Displays export format selector:
+    - PDF
+    - CSV
+    - JSON
+13. **User:** Selects export format
+14. **User:** Clicks "Export"
+15. **System:**
+    - Generates export file
+    - Includes all contents with snapshots
+    - Includes summary statistics
+    - Downloads file to user's device
+
+**Integrity Verification:**
+16. **User:** Views file hash for evidence item
+17. **System:** Displays file hash (SHA-256)
+18. **User:** Verifies file integrity (if needed)
+19. **System:** Provides hash verification tool (optional)
+
+### End States
+- **Contents Viewed:** Pack contents displayed, breakdowns shown
+- **Contents Exported:** Export file downloaded
+- **No Contents:** Message displayed if pack has no contents
+
+### Error Paths
+1. **Pack Not Generated:**
+   - **System:** Displays message "Pack contents available after pack generation"
+   - **User:** Generates pack first
+
+2. **Export Failed:**
+   - **System:** Displays error "Export failed. Please try again."
+   - **User:** Retries export
 
 ---
 

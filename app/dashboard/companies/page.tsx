@@ -20,7 +20,7 @@ export default function CompaniesPage() {
 
   const { data: companiesData, isLoading } = useQuery<{ data: Company[] }>({
     queryKey: ['companies'],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Company[] }>('/companies');
     },
   });

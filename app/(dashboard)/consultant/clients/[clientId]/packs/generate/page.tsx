@@ -32,9 +32,9 @@ export default function ConsultantPackGeneratePage() {
   // Get client details to fetch sites
   const { data: clientData } = useQuery({
     queryKey: ['consultant-client', clientId],
-    queryFn: async () => {
+    queryFn: async (): Promise<{ company_name?: string; sites?: Array<{ id: string; site_name: string }> }> => {
       const response = await apiClient.get(`/consultant/clients/${clientId}`);
-      return response.data;
+      return response.data as { company_name?: string; sites?: Array<{ id: string; site_name: string }> };
     },
   });
 

@@ -16,7 +16,7 @@ export default function SitePacksPage() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['site-packs', siteId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const response = await apiClient.get(`/api/v1/packs?filter[site_id]=${siteId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch packs');

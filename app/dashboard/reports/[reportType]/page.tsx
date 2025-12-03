@@ -19,7 +19,7 @@ export default function ReportDetailPage() {
 
   const { data: reportData, isLoading } = useQuery<{ data: ReportData }>({
     queryKey: ['report', reportType],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: ReportData }>(`/reports/${reportType}`);
     },
   });

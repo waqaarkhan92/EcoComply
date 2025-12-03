@@ -10,8 +10,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { userId: string; role: string } }
+  request: NextRequest, props: { params: Promise<{ userId: string; role: string } }
 ) {
   const requestId = getRequestId(request);
 
@@ -89,7 +88,7 @@ export async function DELETE(
     const { data: roleAssignment, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('id')
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .eq('role', role)
       .single();
 
@@ -107,7 +106,7 @@ export async function DELETE(
     const { error: deleteError } = await supabaseAdmin
       .from('user_roles')
       .delete()
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .eq('role', role);
 
     if (deleteError) {

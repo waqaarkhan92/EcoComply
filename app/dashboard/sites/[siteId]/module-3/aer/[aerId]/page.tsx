@@ -49,7 +49,7 @@ export default function AERDetailPage() {
 
   const { data: aerData, isLoading, error } = useQuery<{ data: AERDocument }>({
     queryKey: ['module-3-aer', aerId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: AERDocument }>(`/module-3/aer/${aerId}`);
     },
     enabled: !!aerId,

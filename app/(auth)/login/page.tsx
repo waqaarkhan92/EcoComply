@@ -40,10 +40,14 @@ export default function LoginPage() {
 
       // Now fetch user and company details (tokens are set, so API calls will work)
       let userData = response.data.user;
-      let companyData = {
+      let companyData: {
+        id: string;
+        name: string;
+        subscription_tier: 'core' | 'growth' | 'consultant';
+      } = {
         id: response.data.user.company_id,
         name: '',
-        subscription_tier: 'core' as const,
+        subscription_tier: 'core',
       };
 
       try {

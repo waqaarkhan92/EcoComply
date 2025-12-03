@@ -1,13 +1,16 @@
 # AI Layer Design & Cost Optimization
-## EcoComply Platform — Modules 1–3
+## EcoComply Platform — Modules 1–4
 
-**EcoComply v1.0 — Launch-Ready / Last updated: 2025-01-29**
+**EcoComply v1.0 — Launch-Ready / Last updated: 2025-01-01**
 
-**Document Version:** 1.1  
+**Document Version:** 1.2  
 **Status:** Implemented  
 **Depends On:** Product Logic Specification (PLS), Canonical Dictionary  
 **Purpose:** Technical specification for AI integration layer, prompt engineering, and cost optimization
 
+> [v1.2 UPDATE – Added Module 4 (Hazardous Waste) Support – 2025-01-01]
+> - Updated all module references to include Module 4
+> - Updated cost analytics examples to include Module 4
 > [v1.1 UPDATE – Implementation Complete – 2025-01-29]
 > All core features implemented in:
 > - lib/ai/cost-calculator.ts (cost calculation and token estimation)
@@ -1252,7 +1255,7 @@ function buildSimplifiedPrompt(document: Document): ExtractionPrompt {
 │ STEP 5: MODULE ROUTING                                                       │
 │ - Detect document type via keywords                                          │
 │ - Query modules table: SELECT * FROM modules WHERE document_types @> '["<document_type>"]'::JSONB AND is_active = true
-│ - Route to module returned by query (currently: Environmental Permit → Module 1, Trade Effluent → Module 2, MCPD → Module 3)
+│ - Route to module returned by query (currently: Environmental Permit → Module 1, Trade Effluent → Module 2, MCPD → Module 3, Hazardous Waste → Module 4)
 │ - Ambiguous → Prompt user selection                                          │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -1947,7 +1950,7 @@ async function logExtraction(entry: ExtractionLogEntry): Promise<void> {
 
 interface Rule {
   ruleId: string;
-  module: '1' | '2' | '3';
+  module: '1' | '2' | '3' | '4';
   patternType: string;
   regexPattern: string;
   templateObligation: ObligationTemplate;

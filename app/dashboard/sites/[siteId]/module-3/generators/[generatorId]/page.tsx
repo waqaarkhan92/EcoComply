@@ -41,7 +41,7 @@ export default function GeneratorDetailPage() {
 
   const { data: generatorData, isLoading, error } = useQuery<{ data: Generator }>({
     queryKey: ['module-3-generator', generatorId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Generator }>(`/module-3/generators/${generatorId}`);
     },
     enabled: !!generatorId,

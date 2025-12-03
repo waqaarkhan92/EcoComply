@@ -46,7 +46,7 @@ export default function NotificationsPage() {
     pagination: any;
   }>({
     queryKey: ['notifications', filter],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       if (filter === 'unread') {
         params.append('filter[read_at]', 'null');

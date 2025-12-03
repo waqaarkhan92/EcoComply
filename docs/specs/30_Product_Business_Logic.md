@@ -1,13 +1,59 @@
 # PRODUCT LOGIC SPECIFICATION (PLS)
-## EcoComply Platform — Modules 1–3
+## EcoComply Platform — Modules 1–4
 
-**EcoComply v1.0 — Launch-Ready / Last updated: 2024-12-27**
+**EcoComply v1.0 — Launch-Ready / Last updated: 2025-02-03**
 
-**Document Version:** 1.0  
-**Status:** Complete  
-**Depends On:** Master Commercial Plan (MCP)
+**Document Version:** 1.6
+**Status:** Complete
+**Depends On:**
+- Commercial Master Plan (00)
+- High Level Product Plan (01) - v1.0
+- Database Schema (20) - v1.6
+- Database Canonical Dictionary (22) - v1.3
 
-> [v1 UPDATE – Version Header – 2024-12-27]
+> [v1.6 UPDATE – Module 1 & Module 2 Advanced Business Logic – 2025-02-03]
+> - Added Section C.1.11: Enforcement Notice Workflow Logic
+>   - State machine: ISSUED → IN_RESPONSE → CLOSED/APPEALED
+>   - Escalation logic, evidence linking, reporting KPIs
+> - Added Section C.1.12: Compliance Decision Workflow Logic
+>   - State machine: PENDING → UNDER_REVIEW → APPROVED/REJECTED
+>   - Impact analysis, evidence requirements, permit version management
+> - Added Section C.1.13: Condition Evidence Rules Logic
+>   - Evidence type mapping, frequency logic, validation rules
+>   - Integration with schedule generation
+> - Added Section C.1.14: Evidence Completeness Scoring Algorithm
+>   - Detailed scoring algorithm: (Submitted / Required) × 100
+>   - Score interpretation, triggers, missing evidence detection
+> - Added Section C.1.15: Condition Permissions Logic
+>   - 3-level permissions: VIEW, EDIT, MANAGE
+>   - Permission validation, inheritance, revocation rules
+> - Added Section C.2.11: Sampling Logistics Workflow Logic
+>   - 5-stage workflow: SCHEDULED → SAMPLE_COLLECTED → SUBMITTED_TO_LAB → RESULTS_RECEIVED → CERTIFICATE_LINKED
+>   - Lab accreditation tracking, turnaround time monitoring
+> - Added Section C.2.12: Monthly Statement Reconciliation Logic
+>   - Auto-reconciliation algorithm with ±5% tolerance
+>   - Volume variance calculation, discrepancy investigation
+> - Added Section C.2.13: Consent State Machine Logic
+>   - 10-state machine with validated transitions
+>   - Automated state transitions, obligation impact rules
+> - Added Section C.2.14: Corrective Actions Workflow Logic
+>   - Priority-based tracking (LOW, MEDIUM, HIGH, CRITICAL)
+>   - Root cause analysis, preventive measures, escalation rules
+> [v1.5 UPDATE – Standardized Audit Pack Specification – 2025-01-01]
+> - Added Section B.8.1: Universal Audit Pack Specification
+> - Defined 6 universal pack contents required for all modules
+> - Standardized pack generation SLA: < 2 minutes
+> - Defined regulator access rules (no login required, secure links)
+> - Standardized pack provenance signature requirements
+> [v1.4 UPDATE – Added Compliance Score System – 2025-01-01]
+> - Added Section B.5.4: Compliance Score Calculation
+> - Defined score calculation rules for Site and Module levels
+> - Integrated with Compliance Clock for real-time updates
+> - Defined score boundaries, penalties, and display rules
+> [v1.3 UPDATE – Added Module 4 (Hazardous Waste) and Cross-Cutting Features – 2025-12-01]
+> [v1.2 UPDATE – Added Compliance Clock, Escalation Workflows, Permit Workflows – 2025-12-01]
+> [v1.1 UPDATE – Enhanced Module 1, 2, 3 with new features – 2025-12-01]
+> [v1.0 UPDATE – Version Header – 2024-12-27]
 
 ---
 
@@ -125,6 +171,11 @@ Module activation rules are defined in the `modules` table (see Canonical Dictio
     - Grandfathered: Module 2 remains active
     - But cannot reactivate if deactivated later (will require Module 1)
 
+> **⚠️ IMPLEMENTATION STATUS (2025-02-01):**
+> - **Cascading Deactivation:** ❌ **NOT IMPLEMENTED** - Current implementation only deactivates single module. Cascading deactivation when Module 1 is deactivated is not yet implemented. See `app/api/v1/module-activations/[activationId]/deactivate/route.ts` for current implementation.
+> - **Prerequisite Checking:** ✅ **IMPLEMENTED** - Activation endpoint correctly checks prerequisites.
+> - **Action Required:** Implement cascading deactivation logic in deactivation endpoint.
+
 **Benefits:**
 - New modules can be added without code changes (just insert into `modules` table)
 - Prerequisites are enforced via foreign keys (no hardcoded logic)
@@ -174,20 +225,64 @@ Conditions are the building blocks of obligations. Each permit/consent/registrat
 
 ### A.3.2 Condition Extraction Rules
 
+> [v1.6 UPDATE – AI Fallback Strategy – 2025-01-01]
+> - Primary extraction: model-driven (AI-first approach)
+> - Fallback: manual structured capture
+> - System must remain fully operable if AI offline or poor confidence
+> - Confidence scoring threshold to flag human review
+
+**Primary Extraction: Model-Driven:**
+- **AI-First Approach:** All document extraction attempts use AI model (GPT-4o) as primary method
+- **Rule Library Pre-Check:** Before calling LLM, check rule library for pattern matches (≥90% confidence)
+- **LLM Extraction:** If no rule match, use LLM to extract obligations, parameters, run-hours, or consignment notes
+- **Confidence Scoring:** All extractions receive confidence scores (0-100%)
+- **Auto-Accept Threshold:** Extractions with confidence ≥85% are auto-accepted (user can still edit)
+
+**Fallback: Manual Structured Capture:**
+- **Fallback Triggers:**
+  1. AI offline/unavailable (connection timeout, service unavailable, network issues)
+  2. Poor confidence (confidence score <70%, multiple extraction failures, parsing errors)
+  3. User preference (user explicitly chooses manual entry)
+- **Manual Capture Interface:** Module-specific structured forms for manual data entry
+  - Module 1: Obligation entry form (title, frequency, deadline, category, description)
+  - Module 2: Parameter entry form (name, limit, unit, sampling frequency)
+  - Module 3: Generator and run-hour entry form
+  - Module 4: Consignment note entry form (EWC code, quantity, carrier, dates)
+- **Validation:** Same validation rules apply to manual entries as AI extractions
+- **Data Quality:** Manual entries marked with `import_source = 'MANUAL'` in database
+- **No AI Dependency:** Manual capture works independently of AI service availability
+
+**System Operability Requirements:**
+- **Critical Requirement:** System MUST remain fully operable if AI is offline or confidence is poor
+- **Operability Guarantees:**
+  1. Document upload always works, even if AI unavailable
+  2. Structured manual entry forms always available
+  3. All CRUD operations work without AI
+  4. Pack generation works with manually entered data
+  5. Compliance tracking (clocks, deadlines, evidence) works independently
+  6. All user workflows continue to function
+- **Graceful Degradation:**
+  - AI unavailable: "AI extraction temporarily unavailable. Please use manual entry."
+  - Low confidence: "AI extraction confidence is low. Please review and edit, or use manual entry."
+  - No blocking: System never blocks user actions due to AI unavailability
+
 **Standard Conditions:**
 - Pattern: "Schedule X", "Condition X.X", numbered lists
 - Treatment: Match against standard conditions library first; if match found (confidence ≥90%), use library version
-- Human review trigger: No library match found
+- **If no library match:** Try AI extraction; if AI fails or confidence <70%, fallback to manual entry
+- Human review trigger: No library match found AND AI extraction confidence <85%
 
 **Site-Specific Conditions:**
 - Pattern: Conditions not matching standard library
 - Treatment: Full LLM extraction with mandatory human review
-- Human review trigger: Always flagged
+- **If AI unavailable or confidence <70%:** Fallback to manual structured capture
+- Human review trigger: Always flagged (confidence <85%) OR AI unavailable
 
 **Improvement Conditions:**
 - Pattern: Contains deadline date, "by [date]", "within [timeframe]", "improvement programme"
 - Treatment: Extract deadline date, create one-time schedule
-- Human review trigger: Date parsing uncertainty, ambiguous deadline phrasing
+- **If AI unavailable or confidence <70%:** Fallback to manual entry with date picker
+- Human review trigger: Date parsing uncertainty, ambiguous deadline phrasing, OR confidence <85%
 
 ---
 
@@ -230,8 +325,8 @@ Confidence score (0–100%) represents the LLM's certainty in extraction accurac
 | Threshold | Action | User Experience |
 |-----------|--------|-----------------|
 | **≥85%** | Auto-accept | Extraction shown as "Confirmed"; user can still edit |
-| **70–84%** | Flag for review | Yellow highlight; "Review recommended" label |
-| **<70%** | Require review | Red highlight; cannot proceed without human confirmation |
+| **70–84%** | Flag for review | Yellow highlight; "Review recommended" label; user must review before proceeding |
+| **<70%** | Require review OR fallback to manual | Red highlight; "Low confidence - manual entry recommended"; system suggests manual entry as alternative |
 
 ### A.5.3 Confidence Score Components
 
@@ -536,6 +631,209 @@ if (attempt < RETRY_CONFIG.maxRetries) {
 - Disclaimer appears on every extraction review screen
 - Disclaimer included in all pack headers (all pack types)
 - Users must check "I have reviewed and verified these obligations" before finalising document setup
+
+---
+
+## A.10 Universal Compliance Clock
+
+### A.10.1 Purpose and Scope
+
+The Universal Compliance Clock is a platform-wide countdown mechanism that provides real-time visibility into compliance risks across ALL modules. It tracks days remaining until deadlines/expiry for multiple entity types and calculates criticality using Red/Amber/Green indicators.
+
+**Supported Entity Types:**
+- `OBLIGATION` - Permit/consent obligations (Module 1, 2, 3)
+- `DEADLINE` - Scheduled compliance deadlines (All modules)
+- `PARAMETER` - Trade effluent parameter sampling deadlines (Module 2)
+- `GENERATOR` - Stack test deadlines, runtime limits (Module 3)
+- `CONSENT` - Consent expiry dates (Module 2)
+- `WASTE_STREAM` - Storage duration limits (Module 4)
+- `CONTRACTOR_LICENCE` - Carrier/contractor licence expiry (Module 4)
+
+### A.10.2 Criticality Calculation Rules
+
+**Criticality Thresholds:**
+
+| Status | Condition | Display Color | Dashboard Badge |
+|--------|-----------|---------------|-----------------|
+| **RED** | Overdue (days_remaining < 0) OR days_remaining <= 7 | Red (#DC2626) | "URGENT" |
+| **AMBER** | 8 <= days_remaining <= 30 | Amber (#F59E0B) | "ATTENTION" |
+| **GREEN** | days_remaining > 30 | Green (#10B981) | "ON TRACK" |
+
+**Calculation Formula:**
+```
+days_remaining = (target_date - CURRENT_DATE)
+
+IF days_remaining < 0 THEN
+  criticality = 'RED'
+  status = 'OVERDUE'
+ELSIF days_remaining <= 7 THEN
+  criticality = 'RED'
+  status = 'URGENT'
+ELSIF days_remaining <= 30 THEN
+  criticality = 'AMBER'
+  status = 'ATTENTION'
+ELSE
+  criticality = 'GREEN'
+  status = 'ON_TRACK'
+END IF
+```
+
+### A.10.3 Auto-Update Logic
+
+**Daily Background Job:**
+- Runs daily at 00:01 UTC
+- Updates all compliance clock entries
+- Recalculates days_remaining and criticality for all active entities
+- Updates `last_updated` timestamp
+- Triggers reminder generation for entities crossing thresholds
+
+**Threshold Crossing Detection:**
+- When entity moves from GREEN → AMBER: Generate "Attention Required" reminder
+- When entity moves from AMBER → RED: Generate "Urgent Action Required" reminder
+- When entity becomes OVERDUE: Generate "Overdue Alert" and trigger escalation workflow (if configured)
+
+**Performance Considerations:**
+- Background job processes in batches of 1000 entries
+- Uses materialized view (`compliance_clock_dashboard`) for dashboard aggregation (v1.6 NOTE: Test with regular view first - materialized view may not be needed at V1 scale)
+- Materialized view refreshed after daily update (if materialized view is used)
+
+### A.10.4 Dashboard Aggregation
+
+**Compliance Clock Dashboard View:**
+
+The `compliance_clock_dashboard` materialized view provides aggregated metrics:
+
+```sql
+SELECT
+  company_id,
+  site_id,
+  module_code,
+  COUNT(*) FILTER (WHERE criticality = 'RED') AS red_count,
+  COUNT(*) FILTER (WHERE criticality = 'AMBER') AS amber_count,
+  COUNT(*) FILTER (WHERE criticality = 'GREEN') AS green_count,
+  COUNT(*) FILTER (WHERE days_remaining < 0) AS overdue_count,
+  COUNT(*) AS total_count
+FROM compliance_clocks_universal
+WHERE is_active = true
+GROUP BY company_id, site_id, module_code
+```
+
+**Dashboard Display:**
+- Top-level company dashboard: Aggregated counts across all sites and modules
+- Site-level dashboard: Counts per site, all modules
+- Module-level dashboard: Counts per module, all sites
+- Entity-level drill-down: Click count to see detailed list of entities
+
+**Dashboard Widgets:**
+1. **Compliance Clock Summary Card:** Shows RED/AMBER/GREEN counts with trend indicators
+2. **Overdue Items List:** Sortable list of overdue entities with days overdue
+3. **Upcoming Deadlines:** Next 7 days of critical deadlines
+4. **Criticality Chart:** Visual representation of compliance status across modules
+
+### A.10.5 Reminder Generation Rules
+
+**Automatic Reminders:**
+
+| Days Before Target | Reminder Type | Recipients | Channels |
+|-------------------|---------------|------------|----------|
+| 30 days | Early Warning | Assigned user | Email + In-app |
+| 14 days | Reminder | Assigned user + Site Manager | Email + In-app |
+| 7 days | Urgent Reminder | Assigned user + Site Manager | Email + SMS + In-app |
+| 1 day | Final Reminder | All above + Company Admin | Email + SMS + In-app |
+| 0 days (overdue) | Overdue Alert | All above | Email + SMS + In-app (daily) |
+
+**Reminder Configuration:**
+- Companies can customize reminder intervals per entity type
+- Default intervals: 30, 14, 7, 1 days before target
+- Minimum interval: 1 day (cannot send more frequently)
+- Reminders stored in `reminders` table linked to compliance clock entry
+
+**Reminder Suppression:**
+- If entity is marked complete, suppress all future reminders
+- If entity is marked N/A with reason, suppress all future reminders
+- If entity is in escalation workflow, reminders continue until resolved
+
+### A.10.6 Integration with Escalation Workflows
+
+The Compliance Clock drives escalation workflows (see Section B.10 for escalation logic):
+
+**Escalation Triggers:**
+- When entity becomes overdue (days_remaining < 0), check for escalation workflow match
+- Match criteria: entity type, obligation category (if applicable), company
+- If match found, initiate escalation workflow
+
+**Escalation Status Tracking:**
+- Compliance clock entry includes `escalation_workflow_id` (nullable)
+- When escalation initiated, link clock entry to escalation record
+- Escalation status displayed on dashboard: "In Escalation - Level 2"
+- Clock entry remains active until entity completed or escalation resolved
+
+### A.10.7 Module-Specific Business Rules
+
+**Module 1 (Environmental Permits):**
+- Obligation deadlines tracked via `OBLIGATION` entity type
+- Improvement condition deadlines tracked separately with higher priority
+- Permit renewal deadlines tracked via `DEADLINE` entity type
+- Evidence submission deadlines tracked per obligation
+
+**Module 2 (Trade Effluent):**
+- Sampling deadlines tracked via `PARAMETER` entity type
+- Lab result due dates tracked via `DEADLINE` entity type
+- Consent expiry tracked via `CONSENT` entity type
+- Monthly statement deadlines tracked via `DEADLINE` entity type
+
+**Module 3 (MCPD/Generators):**
+- Stack test deadlines tracked via `GENERATOR` entity type
+- Runtime cap limits tracked via `GENERATOR` entity type (threshold-based, not date-based)
+- Certification expiry tracked via `GENERATOR` entity type
+- AER submission deadlines tracked via `DEADLINE` entity type
+
+**Module 4 (Hazardous Waste):**
+- Carrier licence expiry tracked via `CONTRACTOR_LICENCE` entity type
+- Storage duration limits tracked via `WASTE_STREAM` entity type
+- Consignment note submission deadlines tracked via `DEADLINE` entity type
+- End-point proof deadlines tracked via `WASTE_STREAM` entity type
+
+### A.10.8 User Actions and Permissions
+
+**User Actions:**
+- View compliance clock dashboard (all users with site access)
+- Drill down into entity details (all users)
+- Mark entity as complete (Staff, Admin, Owner only)
+- Mark entity as N/A with reason (Admin, Owner only)
+- Extend deadline (Admin, Owner only - logs extension reason)
+- Snooze reminder (all users - one-time 7-day snooze max)
+
+**Permissions:**
+- Compliance clock respects RLS (Row Level Security)
+- Users only see clock entries for sites/entities they have access to
+- Consultants see aggregated view across all assigned clients
+- Admins/Owners see all entries for their company
+
+### A.10.9 Audit Trail
+
+**All Clock-Related Actions Logged:**
+- Criticality changes: From GREEN → AMBER, AMBER → RED, etc.
+- Deadline extensions: Who, when, new date, reason
+- Entity completion: Who, when, evidence linked
+- Entity marked N/A: Who, when, reason
+- Reminder sent: When, to whom, channel
+- Escalation triggered: When, level, workflow ID
+
+**Log Structure:**
+```json
+{
+  "action_type": "CRITICALITY_CHANGED",
+  "entity_type": "OBLIGATION",
+  "entity_id": "uuid",
+  "previous_criticality": "AMBER",
+  "new_criticality": "RED",
+  "previous_days_remaining": 8,
+  "new_days_remaining": 7,
+  "changed_at": "2025-12-01T00:01:00Z",
+  "changed_by": "SYSTEM"
+}
+```
 
 ---
 
@@ -949,6 +1247,13 @@ For rolling deadlines (next due date based on last completion):
   - Move deadline to previous working day
 - User can configure per-site: "Adjust deadlines to business days"
 
+> **⚠️ IMPLEMENTATION STATUS (2025-02-01):**
+> - **Current Implementation:** Simplified business day handling in `lib/utils/schedule-calculator.ts` - only handles weekends, does not account for UK bank holidays.
+> - **Missing Features:**
+>   - ❌ UK bank holidays library integration
+>   - ❌ Year boundary handling for holidays across years
+> - **Action Required:** Integrate proper UK bank holidays library (e.g., `date-holidays` or similar) for accurate business day calculations.
+
 ---
 
 ## B.4 Evidence Linking Logic
@@ -1038,6 +1343,38 @@ Before link is saved:
 3. Evidence upload date must be ≤ current date
 4. Evidence cannot be linked to obligations on different documents from different sites (cross-site linking prohibited)
 
+### B.4.2.1 Evidence Approval Requirements
+
+**Purpose:** Ensure all evidence items are reviewed and approved before use in pack generation.
+
+**Approval Fields (Required for All Evidence Items):**
+- `reviewer_id` (UUID, REFERENCES users(id)) - User who reviewed/approved the evidence (REQUIRED)
+- `is_approved` (BOOLEAN, NOT NULL, DEFAULT false) - Approval status flag (REQUIRED)
+- `approved_at` (TIMESTAMP WITH TIME ZONE) - Timestamp when evidence was approved (REQUIRED if `is_approved = true`)
+
+**Approval Workflow:**
+1. **Evidence Upload:** Evidence is uploaded with `is_approved = false`, `reviewer_id = NULL`, `approved_at = NULL`
+2. **Review Required:** Evidence cannot be used in pack generation until approved
+3. **Approval Process:**
+   - Manager/Admin/Owner reviews evidence item
+   - Sets `is_approved = true`
+   - Sets `reviewer_id = current_user_id`
+   - Sets `approved_at = NOW()`
+   - System logs approval action in audit trail
+4. **Rejection Process:**
+   - If evidence is rejected, `is_approved` remains `false`
+   - Rejection reason can be stored in `metadata.rejection_reason`
+   - Rejected evidence cannot be used in pack generation
+
+**Pack Generation Blocking Rule:**
+- **ALL evidence items** included in a pack MUST have:
+  - `is_approved = true`
+  - `reviewer_id IS NOT NULL`
+  - `approved_at IS NOT NULL`
+- **If ANY evidence item lacks approval**, pack generation MUST be blocked with error:
+  - "Cannot generate pack: Evidence item [file_name] (ID: [evidence_id]) has not been approved. Please approve all evidence items before generating pack."
+- **Validation Check:** System validates all evidence items linked to obligations in the pack date range before generation proceeds
+
 ### B.4.3 Evidence Unlinking
 
 - Users with edit permissions can unlink evidence
@@ -1112,6 +1449,124 @@ An obligation is "evidence complete" when:
 | No evidence, deadline within 7 days | ⚠️ Due Soon |
 | No evidence, deadline passed | ❌ Overdue |
 | Obligation marked N/A | ➖ Not Applicable |
+
+### B.5.4 Compliance Score Calculation
+
+**Purpose:** Calculate integer compliance score (0-100) at both Site and Module levels based on obligation completion and evidence status.
+
+**Score Formula:**
+```
+compliance_score = (completed_and_evidenced_obligations / total_due_obligations) * 100
+```
+
+> **⚠️ IMPLEMENTATION STATUS (2025-02-01):**
+> - **Current Implementation:** Simplified calculation exists in `lib/jobs/report-generation-job.ts` using `(completed / totalObligations) * 100 - overduePenalty`.
+> - **Missing Features:**
+>   - ❌ Evidence link validation (`obligation_evidence_links.unlinked_at IS NULL`)
+>   - ❌ Compliance period matching for recurring obligations
+>   - ❌ Module-level score calculation per spec (SQL query in spec not implemented)
+>   - ❌ Site-level score calculation as average of module scores
+>   - ❌ Compliance Clock integration penalties (RED: -10, AMBER: -5, GREEN: -2 points)
+>   - ❌ Real-time updates on obligation/evidence changes
+> - **Action Required:** Implement full compliance score calculation per specification including evidence validation, compliance period matching, and module/site-level calculations.
+
+**Calculation Rules:**
+
+1. **Obligation Inclusion:**
+   - Include all obligations with `status IN ('PENDING', 'INCOMPLETE', 'COMPLETE')`
+   - Exclude obligations with `status = 'NOT_APPLICABLE'` or `status = 'CANCELLED'`
+   - Only count obligations that are currently due (deadline_date <= CURRENT_DATE or recurring obligations in current period)
+
+2. **Completed and Evidenced Definition:**
+   - Obligation must have `status = 'COMPLETE'`
+   - Obligation must have at least one active evidence link (`obligation_evidence_links.unlinked_at IS NULL`)
+   - Evidence link must be for current compliance period (if obligation is recurring)
+
+3. **Module-Level Score Calculation:**
+   ```sql
+   -- Calculate module compliance score for a site
+   WITH obligation_counts AS (
+     SELECT 
+       COUNT(*) FILTER (WHERE o.status = 'COMPLETE' 
+                        AND EXISTS (
+                          SELECT 1 FROM obligation_evidence_links oel
+                          WHERE oel.obligation_id = o.id
+                          AND oel.unlinked_at IS NULL
+                          AND oel.compliance_period = CURRENT_COMPLIANCE_PERIOD
+                        )) as completed_count,
+       COUNT(*) FILTER (WHERE o.status IN ('PENDING', 'INCOMPLETE', 'COMPLETE')
+                        AND o.status != 'NOT_APPLICABLE'
+                        AND o.status != 'CANCELLED'
+                        AND (o.deadline_date <= CURRENT_DATE OR o.frequency IS NOT NULL)) as total_due_count
+     FROM obligations o
+     WHERE o.site_id = :site_id
+       AND o.module_id = :module_id
+       AND o.deleted_at IS NULL
+   )
+   SELECT 
+     CASE 
+       WHEN total_due_count = 0 THEN 100
+       ELSE ROUND((completed_count::DECIMAL / total_due_count) * 100)
+     END as compliance_score
+   FROM obligation_counts;
+   ```
+
+4. **Site-Level Score Calculation:**
+   ```sql
+   -- Calculate site compliance score (average of all active module scores)
+   SELECT 
+     CASE 
+       WHEN COUNT(*) = 0 THEN 100
+       ELSE ROUND(AVG(ma.compliance_score))
+     END as site_compliance_score
+   FROM module_activations ma
+   WHERE ma.site_id = :site_id
+     AND ma.status = 'ACTIVE'
+     AND ma.compliance_score IS NOT NULL;
+   ```
+
+5. **Overdue Penalty:**
+   - Overdue obligations (deadline_date < CURRENT_DATE AND status != 'COMPLETE') reduce score
+   - Each overdue obligation reduces score by: `(1 / total_due_obligations) * 100`
+   - Example: If 10 obligations due and 2 are overdue, score reduced by 20 points
+
+6. **Real-Time Updates:**
+   - Score recalculated when:
+     - Obligation status changes to 'COMPLETE'
+     - Evidence is linked/unlinked to obligation
+     - Obligation deadline passes (becomes overdue)
+     - New obligation is created
+     - Obligation is marked NOT_APPLICABLE or CANCELLED
+   - Update triggers:
+     - `UPDATE module_activations SET compliance_score = :new_score, compliance_score_updated_at = NOW() WHERE site_id = :site_id AND module_id = :module_id`
+     - `UPDATE sites SET compliance_score = :new_score, compliance_score_updated_at = NOW() WHERE id = :site_id`
+
+7. **Compliance Clock Integration:**
+   - When compliance clock item becomes overdue (status = 'OVERDUE'):
+     - Module score reduced immediately
+     - Site score recalculated
+   - When compliance clock item is completed:
+     - Module score increased (debounced calculation)
+     - Site score recalculated (debounced calculation)
+   - Clock criticality affects score impact:
+     - RED criticality: -10 points per overdue item
+     - AMBER criticality: -5 points per overdue item
+     - GREEN criticality: -2 points per overdue item
+
+8. **Score Boundaries:**
+   - Minimum score: 0 (all obligations overdue and incomplete)
+   - Maximum score: 100 (all obligations complete and evidenced)
+   - Score is always integer (0-100)
+
+9. **Initial Score:**
+   - New sites/modules start with `compliance_score = 100` (no obligations yet)
+   - Score decreases as obligations are created and not completed
+
+10. **Score Display:**
+    - Color coding:
+      - 90-100: Green (✅ Compliant)
+      - 70-89: Amber (⚠️ Needs Attention)
+      - 0-69: Red (❌ Non-Compliant)
 
 ---
 
@@ -1198,9 +1653,439 @@ An obligation is "evidence complete" when:
 
 ---
 
-## B.7 Monitoring Schedule Generation
+## B.6.4 Configurable Escalation Workflows
 
-### B.7.1 Schedule Auto-Generation
+### B.6.4.1 Purpose and Design Philosophy
+
+**Traditional Problem:**
+Hard-coded escalation logic (Day 0 → User, Day +1 → Manager, Day +3 → Admin, Day +7 → Final) doesn't fit all companies. Different organizations have different escalation requirements based on:
+- Company size and structure
+- Obligation type and risk level
+- Regulatory requirements
+- Internal policies
+
+**Solution:**
+Company-specific escalation workflows stored in `escalation_workflows` table, replacing hard-coded logic with configurable rules.
+
+> **⚠️ IMPLEMENTATION STATUS (2025-02-01):**
+> - **Current Implementation:** Uses hardcoded role-based escalation in `lib/services/escalation-service.ts` (Level 1 = ADMIN/OWNER, Level 2 = ADMIN/OWNER, Level 3 = OWNER) with time-based escalation (24 hours, 48 hours).
+> - **Specification Requirements:** Configurable escalation workflows using `escalation_workflows` table with days-overdue-based matching, configurable recipients per level, and obligation category filtering.
+> - **Missing Features:**
+>   - ❌ Escalation workflow matching logic (days_overdue + obligation_category)
+>   - ❌ Configurable recipients per level (using `escalation_workflows.level_N_recipients`)
+>   - ❌ Days-overdue-based escalation (currently time-based)
+>   - ❌ Escalation record tracking using `escalations` table
+> - **Action Required:** Update `lib/services/escalation-service.ts` and `lib/jobs/escalation-check-job.ts` to implement configurable escalation workflows per this specification.
+
+### B.6.4.2 Escalation Workflow Structure
+
+**Workflow Configuration:**
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `workflow_name` | Descriptive name | "Critical Obligations - Fast Track" |
+| `obligation_category` | Filter by category (nullable) | "MONITORING" or NULL (all categories) |
+| `enabled` | Active/inactive toggle | true |
+| `level_1_threshold_days` | Days overdue to trigger Level 1 | 1 |
+| `level_2_threshold_days` | Days overdue to trigger Level 2 | 3 |
+| `level_3_threshold_days` | Days overdue to trigger Level 3 | 7 |
+| `level_4_threshold_days` | Days overdue to trigger Level 4 | 14 |
+| `level_1_recipients` | User IDs to notify | `["uuid1", "uuid2"]` |
+| `level_2_recipients` | User IDs to notify | `["uuid3", "uuid4"]` |
+| `level_3_recipients` | User IDs to notify | `["uuid5", "uuid6"]` |
+| `level_4_recipients` | User IDs to notify | `["uuid7", "uuid8"]` |
+
+**Example Workflow:**
+```json
+{
+  "workflow_name": "Standard Environmental Permits",
+  "company_id": "uuid",
+  "obligation_category": null,
+  "enabled": true,
+  "level_1_threshold_days": 1,
+  "level_1_recipients": ["assigned_user_id"],
+  "level_2_threshold_days": 3,
+  "level_2_recipients": ["site_manager_id"],
+  "level_3_threshold_days": 7,
+  "level_3_recipients": ["company_admin_id", "compliance_manager_id"],
+  "level_4_threshold_days": 14,
+  "level_4_recipients": ["owner_id", "all_admins"]
+}
+```
+
+### B.6.4.3 Escalation Matching Logic
+
+**Daily Background Job (00:01 UTC):**
+1. Query all overdue obligations/deadlines (from `compliance_clocks_universal` where `days_remaining < 0`)
+2. For each overdue entity:
+   - Calculate `days_overdue = ABS(days_remaining)`
+   - Match to escalation workflow:
+     - **Priority 1:** Match by `obligation_category` (if entity has category AND workflow has category filter)
+     - **Priority 2:** Match by company (if no category-specific workflow found, use company default workflow with `obligation_category = NULL`)
+   - If no workflow match found, use system default workflow (see B.6.2 Default Chain)
+
+3. Determine escalation level based on `days_overdue`:
+   - IF `days_overdue >= level_4_threshold_days` THEN escalation_level = 4
+   - ELSIF `days_overdue >= level_3_threshold_days` THEN escalation_level = 3
+   - ELSIF `days_overdue >= level_2_threshold_days` THEN escalation_level = 2
+   - ELSIF `days_overdue >= level_1_threshold_days` THEN escalation_level = 1
+   - ELSE no escalation (not yet reached threshold)
+
+4. Check current escalation status:
+   - Query `escalation_records` table for active escalation on this entity
+   - IF no active escalation AND escalation_level >= 1, THEN create new escalation record
+   - IF active escalation AND current_level < escalation_level, THEN escalate to next level (cannot skip levels)
+   - IF active escalation AND current_level = escalation_level, THEN no action (already at this level)
+
+### B.6.4.4 Level Progression Rules
+
+**Sequential Level Requirement:**
+- Escalations MUST progress sequentially: Level 1 → 2 → 3 → 4
+- Cannot skip levels (e.g., cannot go from Level 1 directly to Level 3)
+- Each level must be active for at least the threshold duration before advancing
+
+**Level Advancement Logic:**
+```
+IF entity is overdue for 1 day:
+  - Escalate to Level 1
+  - Notify level_1_recipients
+
+IF entity remains overdue for 3 days (total):
+  - Advance from Level 1 → Level 2
+  - Notify level_2_recipients
+  - Keep level_1_recipients in CC
+
+IF entity remains overdue for 7 days (total):
+  - Advance from Level 2 → Level 3
+  - Notify level_3_recipients
+  - Keep level_1 and level_2 recipients in CC
+
+IF entity remains overdue for 14 days (total):
+  - Advance from Level 3 → Level 4 (final)
+  - Notify level_4_recipients
+  - Keep all previous recipients in CC
+  - Create dashboard banner warning
+```
+
+### B.6.4.5 Notification Rules per Level
+
+**Level 1 Notifications:**
+- Primary recipients: `level_1_recipients` (typically assigned user)
+- Channels: Email + In-app
+- Frequency: Daily until resolved or escalated to Level 2
+- Message: "Obligation [text] is 1 day overdue - please complete"
+
+**Level 2 Notifications:**
+- Primary recipients: `level_2_recipients` (typically site manager)
+- CC recipients: `level_1_recipients`
+- Channels: Email + SMS + In-app
+- Frequency: Daily until resolved or escalated to Level 3
+- Message: "ESCALATION LEVEL 2: Obligation [text] is 3 days overdue - immediate action required"
+
+**Level 3 Notifications:**
+- Primary recipients: `level_3_recipients` (typically admin/compliance manager)
+- CC recipients: `level_1_recipients` + `level_2_recipients`
+- Channels: Email + SMS + In-app + Dashboard banner
+- Frequency: Daily until resolved or escalated to Level 4
+- Message: "ESCALATION LEVEL 3: Obligation [text] is 7 days overdue - critical compliance risk"
+
+**Level 4 Notifications (Final):**
+- Primary recipients: `level_4_recipients` (typically owner + all admins)
+- CC recipients: All previous level recipients
+- Channels: Email + SMS + In-app + Dashboard banner (red alert)
+- Frequency: Daily until resolved
+- Message: "FINAL ESCALATION: Obligation [text] is 14 days overdue - URGENT regulatory risk - immediate resolution required"
+
+### B.6.4.6 Escalation Record Structure
+
+**Escalation Record Created When Level 1 Triggered:**
+```json
+{
+  "escalation_id": "uuid",
+  "entity_type": "OBLIGATION",
+  "entity_id": "uuid",
+  "workflow_id": "uuid",
+  "current_level": 1,
+  "initiated_at": "2025-12-01T00:01:00Z",
+  "initiated_by": "SYSTEM",
+  "level_1_triggered_at": "2025-12-01T00:01:00Z",
+  "level_2_triggered_at": null,
+  "level_3_triggered_at": null,
+  "level_4_triggered_at": null,
+  "resolved_at": null,
+  "resolved_by": null,
+  "resolution_notes": null,
+  "status": "ACTIVE"
+}
+```
+
+**Escalation Audit Trail:**
+- Each level advancement creates audit log entry
+- All notifications sent are logged with recipient, channel, timestamp
+- Resolution actions logged with user, timestamp, resolution notes
+- Full history accessible for compliance audits
+
+### B.6.4.7 Resolution Logic
+
+**Escalation Resolved When:**
+1. Entity marked complete (evidence linked), OR
+2. Entity marked N/A with reason (Admin/Owner only), OR
+3. Deadline extended (Admin/Owner only - logs extension reason), OR
+4. Entity no longer overdue (date changed, manually resolved)
+
+**Resolution Actions:**
+1. Set `resolved_at` timestamp
+2. Set `resolved_by` user ID
+3. Require `resolution_notes` (mandatory for audit trail)
+4. Set `status = RESOLVED`
+5. Stop all further notifications
+6. Remove from escalation dashboard
+7. Log resolution in audit trail
+
+**Resolution Notification:**
+- All recipients from all levels notified of resolution
+- Message: "RESOLVED: Obligation [text] escalation resolved - evidence linked / marked N/A / deadline extended"
+- Channels: Email + In-app (no SMS for resolution)
+
+### B.6.4.8 Company Configuration UI
+
+**Escalation Workflow Management Screen:**
+- Accessible by Admin/Owner roles only
+- List all company escalation workflows
+- Create/Edit/Delete workflows
+- Enable/Disable workflows
+- Test workflow (preview notifications)
+
+**Workflow Creation Form:**
+1. Workflow name (required)
+2. Obligation category filter (optional dropdown - null = all categories)
+3. Four escalation levels (each with):
+   - Threshold days (required, integer, must be > previous level)
+   - Recipient selection (multi-select user dropdown)
+   - Preview notification button
+
+**Validation Rules:**
+- Level thresholds must be sequential: level_1 < level_2 < level_3 < level_4
+- At least Level 1 and Level 2 must be configured (Levels 3 and 4 optional)
+- Each level must have at least one recipient
+- Recipients must be valid user IDs with email addresses
+- Cannot delete workflow if actively used by escalations (must disable instead)
+
+### B.6.4.9 System Default Workflow
+
+**If no company-specific workflow configured:**
+Use system default workflow:
+- Level 1: 1 day overdue → Assigned user
+- Level 2: 3 days overdue → Site Manager
+- Level 3: 7 days overdue → Company Admin
+- Level 4: 14 days overdue → Owner + All Admins
+
+**System default workflow cannot be deleted or modified - it's the fallback.**
+
+### B.6.4.10 Edge Cases
+
+**Case 1: Recipient user deleted/deactivated:**
+- System detects invalid user ID during notification send
+- Logs warning: "Escalation recipient [user_id] invalid - skipping notification"
+- Sends notification to remaining valid recipients
+- Admin notified: "Escalation workflow [name] has invalid recipient - please update"
+
+**Case 2: Multiple workflows match (category-specific vs company default):**
+- Category-specific workflow takes priority
+- If entity has no category, use company default (obligation_category = NULL)
+
+**Case 3: Workflow disabled mid-escalation:**
+- Active escalations continue under original workflow rules
+- New escalations use next available workflow or system default
+
+**Case 4: Entity resolved then becomes overdue again:**
+- Previous escalation record archived (status = RESOLVED)
+- New escalation record created with fresh level progression
+- History preserved for audit trail
+
+---
+
+## B.7 SLA Timer Tracking on Deadlines
+
+### B.7.1 Purpose and Design Philosophy
+
+**Problem:**
+Deadlines have two types of targets:
+1. **External Deadline (`due_date`):** Regulatory/contractual deadline (when regulator expects compliance)
+2. **Internal SLA Target (`sla_target_date`):** Internal deadline for staff to complete task (usually earlier than external deadline)
+
+**Example:** External deadline is 30 days to respond to regulator, but internal SLA is 20 days to allow review time.
+
+### B.7.2 SLA vs Due Date Logic
+
+**Relationship:**
+- `sla_target_date` can be **before**, **same as**, or **NULL** (no internal SLA)
+- `due_date` is always the external/regulatory deadline
+- Breaching SLA doesn't change deadline status (can meet external deadline but breach internal SLA)
+
+**Calculation:**
+```
+IF sla_target_date IS NULL THEN
+  sla_status = 'NO_SLA'
+ELSIF CURRENT_DATE > sla_target_date THEN
+  sla_status = 'SLA_BREACHED'
+  sla_breach_duration_hours = (CURRENT_TIMESTAMP - sla_target_date) * 24
+ELSIF CURRENT_DATE <= sla_target_date AND CURRENT_DATE <= due_date THEN
+  sla_status = 'SLA_ON_TRACK'
+ELSE
+  sla_status = 'SLA_AT_RISK'  -- Past SLA but not yet due_date
+END IF
+```
+
+### B.7.3 SLA Breach Tracking
+
+**SLA Breach Record:**
+```json
+{
+  "deadline_id": "uuid",
+  "sla_target_date": "2025-12-01",
+  "sla_breached_at": "2025-12-02T08:00:00Z",
+  "sla_breach_duration_hours": 8,
+  "sla_status": "SLA_BREACHED",
+  "due_date": "2025-12-10",
+  "deadline_status": "PENDING",
+  "sla_breach_reason": "Staff capacity issues",
+  "sla_breach_acknowledged_by": "uuid",
+  "sla_breach_acknowledged_at": "2025-12-02T09:00:00Z"
+}
+```
+
+### B.7.4 SLA Breach Notifications
+
+**SLA Breach Alerts:**
+- When `sla_target_date` passes without completion, send SLA breach alert
+- Recipients: Site Manager + Admin (not just assigned user)
+- Channels: Email + In-app (no SMS for SLA breaches)
+- Message: "SLA BREACH: Deadline [text] breached internal SLA - still on track for external deadline [due_date]"
+
+**SLA Breach vs Deadline Breach:**
+- SLA breach: Internal performance issue, notify managers
+- Deadline breach: Regulatory risk, trigger escalation workflow
+- Both tracked separately for performance metrics
+
+### B.7.5 SLA Performance Metrics
+
+**Company/Site SLA Dashboard:**
+- Total deadlines with SLA tracking
+- SLA compliance rate: `(deadlines met within SLA / total SLA deadlines) * 100%`
+- Average SLA breach duration (hours)
+- Trend: SLA performance over time
+- By module: SLA performance per module
+- By user: Individual SLA performance (for manager review)
+
+**Use Cases:**
+- Internal performance monitoring (not regulatory)
+- Identify capacity issues before regulatory deadlines breached
+- Staff performance reviews
+- Process improvement (identify bottlenecks)
+
+---
+
+## B.8 Recurrence Trigger Execution Log
+
+### B.8.1 Purpose and Design Philosophy
+
+**Problem:**
+Automated recurrence triggers create schedules/deadlines based on events, but users need to understand:
+- WHY was this deadline created?
+- WHEN was the trigger executed?
+- WHAT event triggered it?
+- WHAT was the result?
+
+**Solution:**
+Immutable audit trail of all trigger executions stored in `recurrence_trigger_executions` table.
+
+### B.8.2 Trigger Execution Logic
+
+**When Trigger Executes:**
+1. Event occurs (e.g., permit variation approved, stack test completed, sampling date reached)
+2. System queries `recurrence_trigger_rules` for active rules matching event type
+3. For each matching rule:
+   - Evaluate trigger conditions
+   - If conditions met, execute trigger action (create schedule, deadline, task)
+   - Log execution in `recurrence_trigger_executions`
+
+**Execution Record Structure:**
+```json
+{
+  "execution_id": "uuid",
+  "trigger_rule_id": "uuid",
+  "event_type": "PERMIT_VARIATION_APPROVED",
+  "event_id": "uuid",
+  "executed_at": "2025-12-01T10:00:00Z",
+  "execution_result": "SUCCESS",
+  "schedule_id_created": "uuid",
+  "deadline_id_created": "uuid",
+  "error_message": null,
+  "conditions_evaluated": {
+    "condition_1": true,
+    "condition_2": true,
+    "overall": true
+  },
+  "execution_context": {
+    "permit_id": "uuid",
+    "obligation_id": "uuid",
+    "variation_type": "LIMIT_CHANGE"
+  }
+}
+```
+
+### B.8.3 Execution Result Types
+
+| Result | Description | Actions |
+|--------|-------------|---------|
+| `SUCCESS` | Trigger executed successfully, schedule/deadline created | Log success, link to created entity |
+| `FAILED` | Trigger execution failed (error) | Log error, notify admin |
+| `SKIPPED` | Conditions not met, trigger skipped | Log reason, no action taken |
+| `DUPLICATE` | Schedule/deadline already exists, skip creation | Log duplicate detection |
+
+### B.8.4 Audit Trail Usage
+
+**User Questions Answered:**
+1. "Why was this deadline created?" → Look up `execution_id` linked to deadline, show trigger rule and event
+2. "When was the last time this trigger executed?" → Query executions by `trigger_rule_id`, show most recent
+3. "How many times has this trigger executed?" → Count executions by `trigger_rule_id`
+4. "What events triggered this deadline?" → Show event type and event details from execution log
+
+**UI Display:**
+- Deadline detail page: "Created by trigger: [rule name] on [execution_date] due to [event_type]"
+- Click "View trigger details" → Show full execution log
+- Trigger rule management: "Last executed: [date], Total executions: [count], Success rate: [%]"
+
+### B.8.5 Retention Policy
+
+**Audit Trail Retention:**
+- Keep forever (no deletion)
+- Immutable (cannot edit after creation)
+- Used for regulatory audits and debugging
+- System-only writes (no manual editing)
+
+### B.8.6 Debugging Failed Executions
+
+**Failed Execution Handling:**
+1. Log error message and stack trace
+2. Notify admin: "Trigger execution failed: [rule name] - [error message]"
+3. Admin can:
+   - View error details
+   - Manually retry trigger execution
+   - Disable trigger rule if consistently failing
+   - Create schedule/deadline manually if trigger fix will take time
+
+**Error Examples:**
+- "Obligation not found: obligation_id [uuid] does not exist"
+- "Invalid date calculation: base_date + 90 days results in invalid date"
+- "Schedule already exists: duplicate schedule detected for obligation_id [uuid]"
+
+---
+
+## B.9 Monitoring Schedule Generation
+
+### B.9.1 Schedule Auto-Generation
 
 When obligation is created with frequency:
 1. System creates schedule record
@@ -1208,7 +2093,7 @@ When obligation is created with frequency:
 3. First deadline calculated from base date
 4. Subsequent deadlines auto-generated on rolling basis
 
-### B.7.2 Schedule Record Structure
+### B.9.2 Schedule Record Structure
 
 ```json
 {
@@ -1278,6 +2163,138 @@ A pack is a compiled PDF document containing (applies to all pack types):
 - Evidence for each obligation
 - Compliance status summary
 - Gap analysis
+
+### B.8.1 Universal Audit Pack Specification
+
+**Purpose:** Define standardized audit pack structure that applies to ALL modules (Modules 1-4)
+
+**Pack SLA:** < 2 minutes (< 120 seconds) generation time for packs with 100+ evidence items
+
+**Universal Pack Contents (Required for ALL modules):**
+
+1. **Compliance Score:**
+   - Site-level compliance score (INTEGER 0-100) at generation time
+   - Score breakdown: `{total_obligations, completed_obligations, overdue_count, module_scores: [{module_id, module_name, score}]}`
+   - Score timestamp: When score was calculated
+   - Color coding: Green (90-100), Amber (70-89), Red (0-69)
+
+2. **Obligation List with Statuses:**
+   - All obligations included in pack with:
+     - Obligation ID, title, summary
+     - Status: PENDING, INCOMPLETE, COMPLETE, OVERDUE, NOT_APPLICABLE
+     - Deadline date (if applicable)
+     - Frequency (if recurring)
+     - Evidence count (number of linked evidence items)
+     - Module association
+   - Sorted by: Status priority (OVERDUE first), then deadline date
+
+3. **Evidence Attachments (Version-Locked):**
+   - All evidence items linked to obligations in pack
+   - Version-locked snapshot at generation time:
+     - File name, type, size
+     - Upload timestamp and uploader
+     - File hash (SHA-256) for integrity verification
+     - Linked obligation IDs
+     - Evidence metadata (compliance period, GPS coordinates if applicable)
+   - Evidence items stored in `pack_contents` table with immutable snapshots
+
+4. **Change Justification & Signoff History:**
+   - All changes to obligations, evidence, or compliance decisions:
+     - Change type: OBLIGATION_COMPLETED, EVIDENCE_LINKED, EVIDENCE_UNLINKED, STATUS_CHANGED, etc.
+     - Justification text (why change was made)
+     - Signed by: User ID and name
+     - Signed at: Timestamp
+     - Previous value and new value (for status changes)
+   - Sorted by: Most recent first
+
+5. **Compliance Clock Summary:**
+   - Overdue items: `[{clock_id, clock_name, days_overdue, criticality, module_id, ...}]`
+   - Upcoming items (within 30 days): `[{clock_id, clock_name, days_remaining, criticality, target_date, ...}]`
+   - Total active clocks count
+   - Criticality breakdown: Red count, Amber count, Green count
+
+6. **Pack Provenance Signature:**
+   - Generation timestamp: ISO 8601 format
+   - Signer: `{user_id, user_name, user_email, user_role}`
+   - Content hash: SHA-256 hash of all pack contents (for integrity verification)
+   - Pack version: Incremental version number
+   - Generation method: MANUAL, SCHEDULED, PRE_INSPECTION, DEADLINE_BASED
+   - Generation SLA compliance: `{target_seconds: 120, actual_seconds: N, compliant: boolean}`
+
+**Regulator Access (No Login Required):**
+- Secure access token: Unique, cryptographically secure token (UUID v4 + random suffix)
+- Access via secure link: `https://app.epcompliance.com/packs/{secure_access_token}`
+- No authentication required for regulators
+- Identity tracking mandatory:
+  - IP address (required)
+  - Email address (optional but recommended)
+  - User agent (browser/client identifier)
+- Access logging: All views, downloads, and page views tracked in `pack_access_logs`
+- Optional expiry: `secure_access_expires_at` (if set, link expires at specified time)
+
+**Pack Generation Process:**
+
+1. **Pre-Generation Validation:**
+   - Verify site_id exists and is accessible
+   - Verify user has permission to generate pack
+   - Check if pack generation is already in progress (prevent duplicates)
+
+2. **Data Snapshot (Version-Lock):**
+   - Capture current compliance score (site-level and module-level)
+   - Snapshot all obligations matching filters
+   - Snapshot all evidence items linked to obligations
+   - Snapshot compliance clock items (overdue + upcoming)
+   - Snapshot change justification history
+   - All snapshots stored in JSONB fields (immutable after generation)
+
+3. **Pack Assembly:**
+   - Generate PDF or web-based pack
+   - Include all 6 required sections (in order listed above)
+   - Apply formatting and branding
+   - Generate table of contents with page numbers
+
+4. **Pack Storage:**
+   - Store PDF in Supabase Storage (if PDF format)
+   - Store pack metadata in `audit_packs` table
+   - Store evidence snapshots in `pack_contents` table
+   - Generate secure access token
+   - Calculate content hash for provenance signature
+
+5. **SLA Tracking:**
+   - Record generation start time
+   - Record generation end time
+   - Calculate `generation_sla_seconds = (end_time - start_time) / 1000`
+   - Store in `audit_packs.generation_sla_seconds`
+   - If > 120 seconds, log warning but still complete generation
+
+6. **Post-Generation:**
+   - Create pack access log entry (if shared link generated)
+   - Send notification to pack generator
+   - Update pack distribution record (if email sent)
+
+**Module-Specific Additions:**
+- Modules may add module-specific sections AFTER the 6 universal sections
+- Module-specific sections must not replace or modify universal sections
+- Examples:
+  - Module 1: Permit versions, redline comparisons, enforcement notices
+  - Module 2: Lab results, exceedance history, monthly reconciliations
+  - Module 3: Stack test results, runtime monitoring, AER documents
+  - Module 4: Consignment notes, chain of custody, validation results
+
+**Pack Types:**
+All pack types (AUDIT_PACK, REGULATOR_INSPECTION, TENDER_CLIENT_ASSURANCE, BOARD_MULTI_SITE_RISK, INSURER_BROKER) must include the 6 universal sections. Pack type only affects:
+- Recipient and distribution method
+- Additional module-specific sections
+- Formatting and branding
+
+**Enforcement:**
+- Pack generation MUST fail if any of the 6 universal sections cannot be generated
+- Pack generation MUST include all 6 sections (no optional sections)
+- Pack generation MUST meet SLA (< 120 seconds) or log warning
+- Secure access token MUST be generated for regulator packs
+- Access logging MUST be enabled for all secure links
+
+---
 
 ### B.8.2 Pack Generation Triggers
 
@@ -1550,6 +2567,8 @@ Users can filter pack content:
 | Manage users | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Billing access | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Company settings | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Subscription management | ✅ | ❌ | ❌ | ❌ | ❌ |
+| View settings | ✅ | ✅ | ❌ | ❌ | ❌ |
 
 ### B.10.2.1 Entity × Role CRUD Permissions Matrix
 
@@ -1577,6 +2596,8 @@ Users can filter pack content:
 | **Rule Library Patterns** | CRUD | R | R | - | - |
 | **Extraction Logs** | CRUD | CRUD | R | R | R (client logs only) |
 | **System Settings** | CRUD | R | - | - | - |
+| **Company Settings** | CRUD | CRU | - | - | - (read-only, cannot modify) |
+| **Subscription/Billing** | CRUD | - | - | - | - (no access) |
 
 **Special Rules:**
 - **Owner:** Full access to all entities within their company
@@ -1640,12 +2661,21 @@ Users can filter pack content:
 
 **Data Isolation Rules:**
 - **RLS Enforcement:** Consultants can only access data for companies/sites they are assigned to (via `consultant_client_assignments` table)
+- **Multi-Site Access:** Consultants can view multiple assigned sites across different client companies
+  - Site switcher shows all assigned client sites grouped by company
+  - All sites within assigned client companies are accessible
 - **Upload Restrictions:** Consultants can only upload documents/evidence to assigned client companies/sites
-- **Cross-Client Prohibition:** Consultants cannot:
+- **Settings/Subscription Restrictions:** Consultants CANNOT:
+  - Access company settings or subscription management
+  - View or modify subscription/billing information
+  - Change company configuration
+  - Access settings navigation (hidden in UI)
+- **Cross-Client Prohibition (Tenant Isolation):** Consultants cannot:
   - View data from unassigned clients
   - Upload documents to unassigned clients
-  - Link evidence across different clients
+  - Link evidence across different clients (strict tenant isolation enforced at RLS level)
   - Generate packs for unassigned clients (all pack types restricted to assigned clients)
+  - Evidence cannot leak across clients - evidence and obligations must be from same company
 
 **Assignment Logic:**
 - Consultants are assigned to specific client companies via `consultant_client_assignments` table
@@ -1683,42 +2713,51 @@ Users can filter pack content:
 
 ---
 
-## B.11 Obligation Versioning and History
+## B.11 Obligation Change Tracking
+
+> [v1.6 UPDATE – Obligation Versioning Simplified – 2025-01-01]
+> - Removed `obligation_versions` table
+> - Obligation change history now tracked via `audit_logs` table
+> - `audit_logs` provides comprehensive change tracking with `entity_type = 'obligation'`, `action_type`, `changes` (JSONB)
 
 **Purpose:** Track all changes to obligations over time to maintain audit trail and enable "what obligation existed at time of breach" queries.
 
-**Versioning Logic:**
-- **Initial Version:** When obligation is extracted, `version_number = 1`, `version_history = []`
+**Change Tracking Logic:**
+- **Initial Creation:** When obligation is extracted, create `audit_logs` entry:
+  - `entity_type = 'obligation'`
+  - `action_type = 'OBLIGATION_CREATED'`
+  - `entity_id = obligation.id`
+  - `changes`: JSONB with initial obligation state
 - **On Edit:** When obligation is modified:
-  1. Increment `version_number` (1 → 2 → 3, etc.)
-  2. Create version history entry:
-     - `version_number`: Previous version number
-     - `edited_by`: User who made the change
-     - `edited_at`: Timestamp of change
-     - `previous_values`: JSON snapshot of all fields before change
-     - `new_values`: JSON snapshot of all fields after change
-     - `edit_reason`: Reason for change (required)
-  3. Append entry to `version_history` array (immutable append)
-  4. Update current obligation fields with new values
+  1. Create `audit_logs` entry:
+     - `entity_type = 'obligation'`
+     - `action_type = 'OBLIGATION_UPDATED'`
+     - `entity_id = obligation.id`
+     - `user_id`: User who made the change
+     - `changes`: JSONB with `previous_values` and `new_values`
+     - `metadata.edit_reason`: Reason for change (required)
+  2. Update current obligation fields with new values
+  3. Update `obligations.updated_at` timestamp
 
-**Version History Query:**
-- **Query by Version:** `SELECT * FROM obligations WHERE id = :id AND version_number = :version`
-- **Query by Date:** System can reconstruct obligation state at any point in time by querying version_history
-- **Diff Between Versions:** System can generate diff showing what changed between any two versions
+**Change History Query:**
+- **Query by Change:** `SELECT * FROM audit_logs WHERE entity_type = 'obligation' AND entity_id = :id ORDER BY created_at DESC`
+- **Query by Date:** System can reconstruct obligation state at any point in time by querying `audit_logs` entries chronologically
+- **Diff Between Changes:** System can generate diff showing what changed between any two `audit_logs` entries using `changes.previous_values` and `changes.new_values`
 
 **Regeneration vs Retention Policy:**
-- **Retention:** All obligation versions retained indefinitely (never deleted)
+- **Retention:** All audit log entries retained indefinitely (never deleted)
 - **Regeneration:** When document is updated, system attempts to match obligations to new document version
-  - **If** match found, **then** obligation continues with same version_number (no new version created)
-  - **If** no match, **then** old obligation archived, new obligation created (version_number = 1)
+  - **If** match found, **then** obligation continues (no new audit log entry needed)
+  - **If** no match, **then** old obligation archived, new obligation created (new audit log entry with `OBLIGATION_CREATED`)
 - **Override Exceptions:** Admin/Owner can override obligation regeneration (keep old obligation, create new obligation separately)
 
 **Audit Trail:**
-- All version changes logged in `audit_logs`:
-  - `action_type = 'OBLIGATION_VERSION_CREATED'`
-  - `previous_values`: Full obligation state before change
-  - `new_values`: Full obligation state after change
-  - `version_number`: New version number
+- All changes logged in `audit_logs`:
+  - `action_type IN ('OBLIGATION_CREATED', 'OBLIGATION_UPDATED', 'OBLIGATION_DELETED', 'OBLIGATION_ARCHIVED')`
+  - `previous_values`: Full obligation state before change (in `changes` JSONB)
+  - `new_values`: Full obligation state after change (in `changes` JSONB)
+  - `user_id`: User who made the change
+  - `created_at`: Timestamp of change
 
 ## B.12 Manual Override Rules
 
@@ -1968,7 +3007,184 @@ Improvement conditions are time-bound requirements with specific deadlines.
 5. Old permit marked "Superseded"
 6. Evidence history migrated where obligations match
 
-### C.1.9 Module 1 Pack Structure (Legacy — See Section I.8 for v1.0 Pack Types)
+### C.1.9 Permit Workflows (Variations, Renewals, Surrenders)
+
+### C.1.9.1 Purpose and Scope
+
+Permit workflows track formal changes to permits through a structured state machine. Three workflow types supported:
+- **VARIATION:** Modifying permit conditions (e.g., changing emission limits, adding/removing activities)
+- **RENEWAL:** Renewing expiring permit (creates new permit version, supersedes old)
+- **SURRENDER:** Formally surrendering permit (triggers closure workflow)
+
+### C.1.9.2 Workflow State Machine
+
+**States:**
+
+| State | Description | Allowed Transitions |
+|-------|-------------|-------------------|
+| `DRAFT` | Workflow initiated, preparing submission | → SUBMITTED, → CANCELLED |
+| `SUBMITTED` | Submitted to regulator, awaiting response | → UNDER_REVIEW, → CANCELLED |
+| `UNDER_REVIEW` | Regulator reviewing application | → APPROVED, → REJECTED, → ADDITIONAL_INFO_REQUIRED |
+| `ADDITIONAL_INFO_REQUIRED` | Regulator needs more information | → UNDER_REVIEW (after info provided) |
+| `APPROVED` | Regulator approved, awaiting final steps | → COMPLETED |
+| `REJECTED` | Regulator rejected application | Final state |
+| `COMPLETED` | Workflow complete, changes applied | Final state |
+| `CANCELLED` | User cancelled workflow | Final state |
+
+**State Transition Logic:**
+```
+DRAFT → SUBMITTED:
+  - Requires: submission_date, regulator_reference, impact_analysis_completed
+  - Actions: Send notification to regulat or, create compliance clock entry for response deadline
+
+SUBMITTED → UNDER_REVIEW:
+  - Requires: regulator_acknowledgement_date
+  - Actions: Update response_deadline based on regulator timeline
+
+UNDER_REVIEW → APPROVED:
+  - Requires: approved_date, approved_by (regulator name)
+  - Actions: Generate draft updated permit, flag affected obligations for review
+
+APPROVED → COMPLETED:
+  - Requires: All affected obligations reviewed, evidence requirements updated
+  - Actions: Update permit version, migrate obligations, trigger compliance clock updates
+```
+
+### C.1.9.3 Workflow Type-Specific Business Rules
+
+**VARIATION Workflows:**
+
+1. **Impact Analysis Required Before Submission:**
+   - User must complete impact analysis identifying affected obligations
+   - System prompts: "Which obligations will be affected by this variation?"
+   - User selects obligations from list OR marks "All obligations" OR "No obligations affected"
+   - Impact analysis stored in `permit_workflows.impact_analysis` (JSONB)
+
+2. **Obligation Linking:**
+   - Variations MUST link to affected obligations
+   - System creates `permit_workflow_obligations` records for each affected obligation
+   - Obligations flagged with "Pending Variation" badge in UI
+
+3. **Approval Workflow:**
+   - When regulator approves, system:
+     - Creates new permit version (increments minor version: 1.0 → 1.1)
+     - Flags affected obligations for review
+     - Prompts user: "Review obligation changes and update evidence requirements"
+
+4. **Completion Triggers:**
+   - User reviews all affected obligations
+   - User confirms evidence requirements updated (if needed)
+   - System marks workflow `COMPLETED`
+   - Compliance clock entries updated for affected obligations
+
+**RENEWAL Workflows:**
+
+1. **Auto-Creation at 90 Days Before Expiry:**
+   - System auto-creates renewal workflow at 90 days before `permit_expiry_date`
+   - Status: `DRAFT`
+   - Reminder sent to Admin/Owner: "Permit [reference] expires in 90 days - renewal workflow created"
+
+2. **Renewal Submission Requirements:**
+   - User must attach renewal application documents
+   - User must confirm all obligations currently compliant (or note exceptions)
+   - User must update any changed site/activity details
+
+3. **Approval and New Permit Version:**
+   - When regulator approves renewal:
+     - System creates new permit version (increments major version: 1.x → 2.0)
+     - Old permit marked "SUPERSEDED"
+     - System attempts to match obligations between old and new versions (see C.1.8 Renewal Logic)
+     - Evidence history migrated for matched obligations
+
+4. **Renewal Deadline Tracking:**
+   - `permit_workflows.regulator_response_deadline` tracked in compliance clock
+   - If renewal not approved before expiry, critical alert to Owner
+   - Expired permit flagged on dashboard until renewal completed
+
+**SURRENDER Workflows:**
+
+1. **Surrender Requirements:**
+   - User must provide surrender reason (dropdown + free text)
+   - User must confirm all outstanding obligations completed OR document exceptions
+   - Final inspection evidence required before completion
+
+2. **Final Inspection Requirement:**
+   - System requires evidence of final inspection/site clearance
+   - Evidence type: "Final Inspection Report" or "Site Clearance Certificate"
+   - Cannot mark `COMPLETED` until final inspection evidence attached
+
+3. **Surrender Approval:**
+   - When regulator approves surrender:
+     - System marks all active obligations as "CLOSED - PERMIT SURRENDERED"
+     - Permit status set to "SURRENDERED"
+     - Compliance clock entries deactivated
+     - All future deadlines cancelled
+
+4. **Surrender Completion:**
+   - After final inspection evidence attached and approved:
+     - Workflow status set to `COMPLETED`
+     - Permit archived (not deleted - retained for audit trail)
+     - Dashboard no longer shows permit in active list
+
+### C.1.9.4 Regulator Response Deadline Tracking
+
+**Response Deadline Alerts:**
+- Submission creates compliance clock entry for regulator response
+- Default response deadline: 13 weeks (91 days) from submission_date (per EA guidelines)
+- Alerts at: 4 weeks remaining, 2 weeks remaining, 1 week remaining, overdue
+- If response overdue, escalate to Owner with message: "Regulator response overdue for [workflow_type] - contact regulator"
+
+**Deadline Extension:**
+- If regulator requests additional info (`ADDITIONAL_INFO_REQUIRED` state):
+  - System extends response_deadline by X days (user configurable, default 28 days)
+  - New deadline tracked in compliance clock
+  - User notified: "Regulator response deadline extended to [new_date] - additional information required"
+
+### C.1.9.5 Evidence Linking for Workflows
+
+**Workflow Evidence Types:**
+- **Submission Evidence:** Application documents, impact assessments, supporting studies
+- **Regulator Correspondence:** Emails, letters, acknowledgement notices
+- **Approval Evidence:** Approval letter, updated permit (if issued separately)
+- **Final Evidence:** Completion certificate, final inspection report (surrenders only)
+
+**Evidence Requirements by State:**
+- DRAFT → SUBMITTED: Submission application evidence required
+- SUBMITTED → UNDER_REVIEW: Regulator acknowledgement evidence required (optional but recommended)
+- APPROVED → COMPLETED: Approval letter evidence required
+- Surrender APPROVED → COMPLETED: Final inspection evidence required (mandatory)
+
+### C.1.9.6 Workflow Permissions
+
+**Who Can:**
+- **Initiate Workflow (DRAFT):** Admin, Owner only
+- **Submit Workflow (DRAFT → SUBMITTED):** Admin, Owner only
+- **Update Status (SUBMITTED → UNDER_REVIEW, etc.):** Admin, Owner only
+- **Complete Workflow (APPROVED → COMPLETED):** Admin, Owner only (after all requirements met)
+- **Cancel Workflow:** Owner only
+
+**Audit Trail:**
+- All state transitions logged with user, timestamp, reason
+- Evidence attachments logged
+- Regulator correspondence logged
+- Obligation updates logged
+
+### C.1.9.7 Dashboard and UI Integration
+
+**Permit Workflows Dashboard Widget:**
+- Active workflows count (by status)
+- Overdue regulator responses (red badge)
+- Workflows pending user action (amber badge)
+- Click to drill down into workflow details
+
+**Workflow Detail Page:**
+- Timeline view showing state progression
+- Document attachments panel
+- Affected obligations list (variations only)
+- Regulator correspondence history
+- Evidence checklist with completion status
+
+### C.1.10 Module 1 Pack Structure (Legacy — See Section I.8 for v1.0 Pack Types)
 
 > **v1.0 Update:** This section describes Module 1 pack structure. For v1.0 pack types (Regulator, Tender, Board, Insurer, Audit), see Section I.8. Module 1 data is used in all pack types.
 
@@ -1982,6 +3198,377 @@ Improvement conditions are time-bound requirements with specific deadlines.
 - Regulator contact information
 
 ---
+
+### C.1.11 Enforcement Notice Workflow Logic
+
+**Purpose:** Track and manage regulatory enforcement notices with full lifecycle management.
+
+**State Machine:**
+```
+ISSUED (initial) → IN_RESPONSE (user submitting response) → CLOSED (resolved) or APPEALED (contesting)
+```
+
+**Business Rules:**
+
+1. **Notice Creation Logic:**
+   - Notice number must be unique per company
+   - Notice date cannot be future date
+   - Response deadline must be after notice date
+   - Regulator must be one of: EA, SEPA, NRW
+   - Notice types: WARNING, NOTICE, VARIATION, SUSPENSION, REVOCATION, PROSECUTION
+   - Severity ranking: PROSECUTION > REVOCATION > SUSPENSION > NOTICE > VARIATION > WARNING
+
+2. **State Transition Rules:**
+   - **ISSUED → IN_RESPONSE:** Triggered when user submits response via "Submit Response" action
+     - Requires: response_text (max 5000 characters)
+     - Optional: response_document_url
+     - Sets: response_submitted_at = NOW()
+     - Validation: Must be before response_deadline
+   - **IN_RESPONSE → CLOSED:** Triggered when user closes notice via "Close Notice" action
+     - Requires: closure_notes explaining resolution
+     - Sets: closed_at = NOW(), closed_by = current_user_id
+     - Business Logic: System checks if all required corrective actions have evidence linked
+   - **CLOSED → APPEALED:** Triggered when user appeals via "Appeal" action
+     - Requires: appeal_reason
+     - Optional: legal_representative_details
+     - Sets: appealed_at = NOW()
+     - Business Logic: Creates notification to company administrators
+
+3. **Escalation Logic:**
+   - If status = ISSUED and response_deadline in 7 days: Send HIGH priority notification
+   - If status = ISSUED and response_deadline in 3 days: Send CRITICAL priority notification
+   - If status = ISSUED and response_deadline passed: Send CRITICAL overdue notification (daily)
+   - If notice_type IN (SUSPENSION, REVOCATION, PROSECUTION): Send immediate CRITICAL notification
+
+4. **Evidence Linking Logic:**
+   - User can link corrective action evidence to enforcement notice
+   - Field: corrective_action_evidence_ids (UUID array)
+   - Business Rule: Cannot close notice with status = CLOSED unless at least one evidence item linked for notice_type IN (SUSPENSION, REVOCATION, PROSECUTION)
+   - Evidence types expected: CORRECTIVE_ACTION_REPORT, IMPROVEMENT_EVIDENCE, CORRESPONDENCE
+
+5. **Reporting Logic:**
+   - Dashboard widget: Count of ISSUED notices with response_deadline < 30 days
+   - KPI: Average response time (response_submitted_at - notice_date) per regulator
+   - KPI: Notice closure rate (CLOSED / Total notices) per site
+   - Audit pack inclusion: All enforcement notices for site with status, response, closure details
+
+---
+
+### C.1.12 Compliance Decision Workflow Logic
+
+**Purpose:** Track compliance decisions from regulators (permit applications, variations, transfers, surrenders) with evidence management.
+
+**State Machine:**
+```
+PENDING (initial) → UNDER_REVIEW (internal review) → APPROVED or REJECTED (final decision)
+```
+
+**Business Rules:**
+
+1. **Decision Creation Logic:**
+   - Decision reference must be unique per company
+   - Decision date cannot be future date
+   - Decision types: PERMIT_APPLICATION, VARIATION, TRANSFER, SURRENDER
+   - Regulator required (EA, SEPA, NRW)
+   - Status must be PENDING on creation
+
+2. **State Transition Rules:**
+   - **PENDING → UNDER_REVIEW:** Triggered when compliance manager reviews decision
+     - Requires: reviewer_id (user who initiated review)
+     - Sets: review_started_at = NOW()
+     - Business Logic: Sends notification to all users with Module 1 MANAGE permission
+   - **PENDING/UNDER_REVIEW → APPROVED:** Triggered when decision approved
+     - Requires: approval_notes
+     - Sets: approved_at = NOW(), approved_by = current_user_id
+     - Business Logic: 
+       - If decision_type = PERMIT_APPLICATION: Prompt user to create new permit document
+       - If decision_type = VARIATION: Prompt user to link to existing permit and create new permit version
+       - If decision_type = TRANSFER: Update permit ownership
+       - If decision_type = SURRENDER: Archive permit (soft delete with surrendered_at timestamp)
+   - **PENDING/UNDER_REVIEW → REJECTED:** Triggered when decision rejected
+     - Requires: rejection_reason
+     - Sets: rejected_at = NOW(), rejected_by = current_user_id
+     - Business Logic: Archives decision, sends notification to stakeholders
+
+3. **Evidence Linking Logic:**
+   - User can link multiple evidence items to compliance decision
+   - Relationship: compliance_decisions ↔ evidence_items (many-to-many)
+   - Evidence types expected: APPLICATION_FORM, REGULATOR_CORRESPONDENCE, DECISION_LETTER, SUPPORTING_DOCUMENTS
+   - Business Rule: Must have at least one evidence item of type DECISION_LETTER before status can be APPROVED or REJECTED
+
+4. **Impact Analysis Logic:**
+   - When decision_type = VARIATION and status = APPROVED:
+     - System identifies affected obligations by comparing old vs new permit version
+     - Flags affected obligations with change_type: MODIFIED, ADDED, REMOVED
+     - Generates obligation change audit trail
+   - When decision_type = SURRENDER and status = APPROVED:
+     - System marks all obligations for surrendered permit as ARCHIVED
+     - Sets archived_at = decision.approved_at
+     - Stops all deadline escalations for archived obligations
+
+5. **Reporting Logic:**
+   - Dashboard widget: Count of PENDING decisions awaiting review
+   - KPI: Average decision processing time (approved_at - decision_date) per decision_type
+   - KPI: Approval rate (APPROVED / Total decisions) per regulator
+   - Audit pack inclusion: All compliance decisions for site with linked evidence
+
+---
+
+### C.1.13 Condition Evidence Rules Logic
+
+**Purpose:** Define evidence requirements at individual condition level to calculate evidence completeness scores.
+
+**Business Rules:**
+
+1. **Rule Creation Logic:**
+   - Condition evidence rule maps: permit_condition (obligation) → required_evidence_type + frequency
+   - Fields:
+     - condition_id (FK to obligations table where is_permit_condition = true)
+     - evidence_type: CERTIFICATE, REPORT, LOG, PHOTO, INVOICE, CORRESPONDENCE, PERMIT, OTHER
+     - frequency: ONCE, DAILY, WEEKLY, MONTHLY, QUARTERLY, ANNUALLY, AD_HOC
+     - mandatory: boolean (true = required for completeness, false = optional)
+     - required_fields: JSONB (e.g., {"fields": ["date", "signature", "lab_accreditation"]})
+     - format_validation: TEXT (e.g., "PDF, max 10MB")
+     - expiry_duration_days: INTEGER (e.g., 365 = evidence expires after 1 year)
+   - Validation: One condition can have multiple evidence rules (different evidence types)
+
+2. **Evidence Type Logic:**
+   - CERTIFICATE: Lab certificates, ISO certificates, accreditation certificates
+     - Typical frequency: ANNUALLY
+     - Typically has expiry_duration_days = 365
+   - REPORT: Monitoring reports, inspection reports, compliance reports
+     - Typical frequency: MONTHLY, QUARTERLY, ANNUALLY
+     - May require specific sections present
+   - LOG: Daily logs, run hour logs, maintenance logs
+     - Typical frequency: DAILY, WEEKLY
+     - Format validation: Excel, CSV, PDF
+   - PHOTO: Visual evidence, site photos, equipment photos
+     - Typical frequency: AD_HOC
+     - Format validation: JPG, PNG
+   - INVOICE: Payment invoices, disposal invoices
+     - Typical frequency: AD_HOC
+     - Required fields: date, amount, vendor
+
+3. **Frequency Mapping to Obligation Schedule:**
+   - When evidence rule frequency = DAILY/WEEKLY/MONTHLY/QUARTERLY/ANNUALLY:
+     - System automatically generates schedule instances for linked obligation
+     - Schedule due_date = obligation.due_date
+     - Evidence submission expected per schedule instance
+   - When evidence rule frequency = ONCE:
+     - One evidence item required (no recurring schedule)
+   - When evidence rule frequency = AD_HOC:
+     - No automatic schedule generation
+     - Evidence submitted as needed (user-initiated)
+
+4. **Validation Logic:**
+   - When user links evidence to obligation:
+     - System checks if evidence_type matches any active evidence rule for that condition
+     - If required_fields defined: Validates evidence metadata contains required fields
+     - If format_validation defined: Validates file type and size
+     - If expiry_duration_days defined: Calculates expiry_date = upload_date + expiry_duration_days
+   - If validation fails: Shows error message, prevents linking
+
+5. **Completeness Scoring Logic (See C.1.14):**
+   - Evidence rules where mandatory = true contribute to completeness score
+   - System calculates: (Evidence submitted / Evidence required) × 100
+
+---
+
+### C.1.14 Evidence Completeness Scoring Algorithm
+
+**Purpose:** Automated calculation of evidence completeness per condition (0-100 integer score).
+
+**Scoring Algorithm:**
+
+```typescript
+function calculateCompletenessScore(condition_id: UUID): integer {
+  // Step 1: Get all mandatory evidence rules for this condition
+  const mandatoryRules = db.query(`
+    SELECT id, evidence_type, frequency 
+    FROM condition_evidence_rules 
+    WHERE condition_id = $1 
+      AND mandatory = true 
+      AND status = 'ACTIVE'
+      AND deleted_at IS NULL
+  `, [condition_id]);
+  
+  if (mandatoryRules.length === 0) {
+    return 100; // No evidence required = 100% complete
+  }
+  
+  // Step 2: Count evidence required
+  let evidenceRequired = 0;
+  for (const rule of mandatoryRules) {
+    if (rule.frequency === 'ONCE') {
+      evidenceRequired += 1;
+    } else if (rule.frequency IN ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'ANNUALLY']) {
+      // Count schedule instances in last 12 months
+      const scheduleCount = db.query(`
+        SELECT COUNT(*) 
+        FROM schedules 
+        WHERE obligation_id IN (
+          SELECT id FROM obligations WHERE condition_id = $1
+        )
+        AND due_date >= NOW() - INTERVAL '12 months'
+        AND due_date <= NOW()
+      `, [condition_id]).count;
+      evidenceRequired += scheduleCount;
+    }
+    // AD_HOC frequency does not contribute to required count
+  }
+  
+  // Step 3: Count evidence submitted
+  let evidenceSubmitted = 0;
+  for (const rule of mandatoryRules) {
+    const linkedEvidence = db.query(`
+      SELECT COUNT(*) 
+      FROM evidence_items ei
+      JOIN obligation_evidence oe ON ei.id = oe.evidence_id
+      JOIN obligations o ON oe.obligation_id = o.id
+      WHERE o.condition_id = $1
+        AND ei.evidence_type = $2
+        AND ei.deleted_at IS NULL
+        AND (ei.expiry_date IS NULL OR ei.expiry_date > NOW())
+    `, [condition_id, rule.evidence_type]).count;
+    
+    evidenceSubmitted += linkedEvidence;
+  }
+  
+  // Step 4: Calculate score
+  const score = Math.round((evidenceSubmitted / evidenceRequired) * 100);
+  return Math.min(score, 100); // Cap at 100
+}
+```
+
+**Score Interpretation:**
+
+| Score Range | Status | Badge Color | Meaning |
+|-------------|--------|-------------|---------|
+| 80-100 | COMPLETE | Green | Evidence requirements met |
+| 50-79 | PARTIAL | Yellow | Some evidence missing |
+| 0-49 | MISSING | Red | Significant evidence gaps |
+
+**Business Rules:**
+
+1. **Score Calculation Triggers:**
+   - Recalculate score when:
+     - Evidence linked to obligation for this condition
+     - Evidence unlinked from obligation for this condition
+     - Evidence expires (expiry_date passes)
+     - Evidence rule created/updated/deleted for this condition
+     - Evidence rule status changed (ACTIVE ↔ INACTIVE)
+
+2. **Score Storage:**
+   - Table: evidence_completeness_scores
+   - Fields: condition_id, score (0-100), evidence_required_count, evidence_submitted_count, missing_evidence_types (TEXT[]), last_calculated_at
+   - Updated via background job (runs daily) or on-demand via API
+
+3. **Missing Evidence Types Logic:**
+   - System identifies which evidence_types are missing:
+     ```sql
+     SELECT DISTINCT cer.evidence_type
+     FROM condition_evidence_rules cer
+     WHERE cer.condition_id = $1
+       AND cer.mandatory = true
+       AND NOT EXISTS (
+         SELECT 1 FROM evidence_items ei
+         JOIN obligation_evidence oe ON ei.id = oe.evidence_id
+         JOIN obligations o ON oe.obligation_id = o.id
+         WHERE o.condition_id = cer.condition_id
+           AND ei.evidence_type = cer.evidence_type
+           AND (ei.expiry_date IS NULL OR ei.expiry_date > NOW())
+       )
+     ```
+   - Stored in missing_evidence_types array for dashboard display
+
+4. **Aggregation Logic:**
+   - Site-level completeness score:
+     ```
+     AVG(evidence_completeness_scores.score) 
+     WHERE condition_id IN (site's permit conditions)
+     ```
+   - Module 1 dashboard widget: Distribution of scores (count of COMPLETE, PARTIAL, MISSING)
+
+---
+
+### C.1.15 Condition Permissions Logic
+
+**Purpose:** Granular permission management at individual condition level (beyond role-based access).
+
+**Permission Levels:**
+
+| Level | Capabilities |
+|-------|-------------|
+| VIEW | View condition details, linked evidence, schedules (read-only) |
+| EDIT | VIEW + Link/unlink evidence, update obligation details, create schedules |
+| MANAGE | EDIT + Create/delete obligations, assign permissions to others, delete condition |
+
+**Business Rules:**
+
+1. **Permission Assignment Logic:**
+   - Permissions can be assigned to:
+     - Individual users (user_id)
+     - Roles (role_id) - applies to all users with that role
+   - One condition can have multiple permissions (many-to-many)
+   - Permission precedence: User-specific permission > Role permission > Company default permission
+   - Example: If user has EDIT via user_id and VIEW via role_id, EDIT takes precedence
+
+2. **Permission Validation Logic:**
+   - On every API request for condition-related action:
+     ```typescript
+     function hasConditionPermission(user_id: UUID, condition_id: UUID, required_level: 'VIEW' | 'EDIT' | 'MANAGE'): boolean {
+       // Check user-specific permission
+       const userPermission = db.query(`
+         SELECT permission_level FROM condition_permissions
+         WHERE condition_id = $1 AND user_id = $2 AND deleted_at IS NULL
+       `, [condition_id, user_id]).permission_level;
+       
+       if (userPermission && meetsLevel(userPermission, required_level)) {
+         return true;
+       }
+       
+       // Check role-based permission
+       const rolePermissions = db.query(`
+         SELECT permission_level FROM condition_permissions cp
+         JOIN user_roles ur ON cp.role_id = ur.role_id
+         WHERE cp.condition_id = $1 AND ur.user_id = $2 AND cp.deleted_at IS NULL
+       `, [condition_id, user_id]);
+       
+       for (const perm of rolePermissions) {
+         if (meetsLevel(perm.permission_level, required_level)) {
+           return true;
+         }
+       }
+       
+       return false; // No permission found
+     }
+     
+     function meetsLevel(granted: string, required: string): boolean {
+       const hierarchy = { VIEW: 1, EDIT: 2, MANAGE: 3 };
+       return hierarchy[granted] >= hierarchy[required];
+     }
+     ```
+
+3. **Permission Inheritance Logic:**
+   - Condition permissions DO NOT inherit from site/company permissions
+   - Rationale: Conditions may contain sensitive data requiring explicit access control
+   - Users with company ADMIN role automatically have MANAGE permission on all conditions
+   - Site MANAGER role automatically has EDIT permission on all conditions for their site
+
+4. **Permission Revocation Logic:**
+   - When permission revoked (deleted_at = NOW()):
+     - User immediately loses access
+     - Any in-progress edits by that user are saved with audit trail
+     - User sees "Access Denied" message on next page load
+   - When user role changes:
+     - System recalculates effective permissions
+     - If user had MANAGE via role and role downgraded to VIEW: User loses MANAGE
+
+5. **Audit Trail:**
+   - All permission grants/revocations logged in audit_trail table
+   - Fields logged: action (GRANT_PERMISSION, REVOKE_PERMISSION), permission_level, target_user_id, granted_by_user_id, timestamp
+   - Permission usage tracked: Every condition access logs user_id, condition_id, action (VIEW, EDIT, MANAGE), timestamp
+
 
 ## C.2 Module 2 — Trade Effluent Consents
 
@@ -2094,10 +3681,22 @@ Improvement conditions are time-bound requirements with specific deadlines.
 
 ### C.2.7 Lab Result Ingestion Logic
 
-**Input Methods:**
-1. **Manual Entry:** Form with parameter dropdowns, value input
-2. **CSV Upload:** Template provided; maps columns to parameters
-3. **PDF Upload:** LLM extracts values from lab reports (flagged for review)
+**Primary Capture Methods (V1 Requirements):**
+1. **Email Parsing (Primary):** Automated parsing of lab certificate emails with OCR text extraction
+   - System monitors designated email inbox for lab certificates
+   - Attachments (PDF, images) automatically extracted and processed
+   - OCR extracts parameter values, sample dates, lab references
+   - Extracted data flagged for user review before acceptance
+   - Email metadata (sender, date, subject) stored for audit trail
+2. **CSV Upload (Primary Fallback):** Template provided; maps columns to parameters
+   - Standard CSV template with required columns
+   - Bulk import support for multiple samples
+   - Validation and error reporting before import
+   - CSV import traceability via `csv_import_id` for audit trail
+
+**Secondary Capture Methods:**
+3. **Manual Entry:** Form with parameter dropdowns, value input (for corrections or missing data)
+4. **PDF Upload:** Direct PDF upload with LLM extraction (flagged for review)
 
 **CSV Template Columns:**
 - Sample Date (required)
@@ -2112,6 +3711,29 @@ Improvement conditions are time-bound requirements with specific deadlines.
 - Unit must match parameter expected unit
 - Date must not be future
 - Duplicate sample dates flagged for review
+
+**Anomaly Detection and Auto-Flagging:**
+- **Anomaly Detection:** System automatically flags lab submissions with anomalies:
+  - Values significantly outside historical range (>3 standard deviations)
+  - Missing required parameters for sampling period
+  - Duplicate sample IDs or dates
+  - Parameter values inconsistent with expected units
+  - Lab reference format mismatches
+- **Auto-Create Corrective Task:** When anomalies detected:
+  - System creates corrective action task automatically
+  - Task type: `LAB_RESULT_ANOMALY`
+  - Task assigned to: Site Manager (or user who submitted result)
+  - Task description: "Anomaly detected in lab result [sample_id]: [anomaly_description]"
+  - Task requires: Evidence of investigation and resolution
+  - Task due date: 7 days from anomaly detection
+  - Notification sent to assigned user
+  - Corrective task linked to lab result record for traceability
+
+**Integration Fallback Strategy:**
+- **V1 MUST:** Email parsing and CSV upload are the primary capture methods
+- Any integration with lab portals is a future enhancement and must not delay V1 release
+- Pack generation remains fully functional using email/CSV captured data
+- Completeness scoring ensures operational defensibility regardless of integration availability
 
 ### C.2.8 Water Company Report Formatting
 
@@ -2132,7 +3754,26 @@ Improvement conditions are time-bound requirements with specific deadlines.
 - CSV data export
 - Formatted per water company requirements (template library)
 
-### C.2.9 Module 2 Audit Pack Structure
+### C.2.9 Corrective Action Workflows (Module 2)
+
+**Purpose:** Structured response to parameter exceedances and breaches.
+
+**Integration with Module 2:**
+- Trade Effluent exceedances (parameter limits breached) automatically trigger corrective action creation
+- Corrective action lifecycle: TRIGGER → INVESTIGATION → ACTION → RESOLUTION → CLOSURE (see Section C.4.6 for detailed lifecycle)
+- Corrective action items track remediation tasks (e.g., "Repair grease trap", "Update sampling procedure")
+- Resolution evidence required before moving to CLOSURE phase
+- If `regulator_notification_required = true`, must attach water company notification evidence
+
+**Module 2-Specific Triggers:**
+- Parameter value exceeds limit (100%+)
+- 3 consecutive results >80% of limit (trend warning escalation)
+- Consent breach (volume or quality)
+- Sampling chain break (missed sampling window)
+
+**See Section C.4.6 (Corrective Action Lifecycle) and C.4.7 (Corrective Action Items) for complete business logic.**
+
+### C.2.10 Module 2 Audit Pack Structure
 
 **Additional Module 2 Elements:**
 - Consent summary (water company, consent number)
@@ -2140,8 +3781,475 @@ Improvement conditions are time-bound requirements with specific deadlines.
 - Exceedance history
 - Trend charts (3-month, 12-month)
 - Lab result appendix
+- Corrective action history (breaches and resolutions)
+
+### C.2.11 Module 2 Pack Generation Requirements
+
+**Purpose:** Ensure Trade Effluent packs can only be generated when all required evidence is complete and validated.
+
+**Pre-Generation Validation (Module 2 Specific):**
+Before generating any pack type (Regulator, Tender, Board, Insurer, Audit) for Module 2, system MUST validate:
+
+1. **All Sampling Periods Have Results:**
+   - For each active consent parameter with a sampling frequency requirement:
+     - System checks all sampling periods within the pack date range
+     - Each sampling period MUST have at least one lab result record
+     - Missing results block pack generation with error: "Cannot generate pack: Missing lab results for [parameter_name] in period [period_start] to [period_end]"
+   - Sampling periods are calculated based on:
+     - Parameter sampling frequency (daily, weekly, monthly, quarterly)
+     - Pack date range specified by user
+     - Consent effective dates
+   - Example: If parameter requires weekly sampling and pack covers 4 weeks, all 4 weekly periods must have results
+
+2. **All Results Have Validated Evidence:**
+   - For each lab result included in the pack:
+     - Lab result MUST have at least one evidence item linked
+     - Evidence item MUST have `is_approved = true`, `reviewer_id IS NOT NULL`, and `approved_at IS NOT NULL`
+     - Evidence items with `is_approved = false` or missing approval fields do not satisfy requirement
+     - Missing or unapproved evidence blocks pack generation with error: "Cannot generate pack: Lab result [sample_id] for [parameter_name] on [sample_date] lacks approved evidence"
+   - Evidence approval workflow:
+     - Lab certificates uploaded via email parsing or CSV import are initially unapproved (`is_approved = false`)
+     - Manager/Admin must review and approve evidence (sets `is_approved = true`, `reviewer_id`, `approved_at`)
+     - System can auto-approve evidence from trusted sources (sets `is_approved = true`, `reviewer_id = system_user_id`, `approved_at = NOW()`)
+     - Unapproved evidence cannot be used in packs
+
+**Pack Generation Blocking Logic:**
+```
+FOR ALL pack types:
+  FOR EACH obligation in pack date range DO
+    FOR EACH evidence item linked to obligation DO
+      IF evidence.is_approved = false THEN
+        BLOCK generation with error: "Evidence [file_name] not approved"
+      END IF
+      IF evidence.reviewer_id IS NULL THEN
+        BLOCK generation with error: "Evidence [file_name] missing reviewer"
+      END IF
+      IF evidence.approved_at IS NULL THEN
+        BLOCK generation with error: "Evidence [file_name] missing approval timestamp"
+      END IF
+    END FOR
+  END FOR
+END FOR
+
+IF pack_type includes Module 2 data THEN
+  FOR EACH consent parameter in pack date range DO
+    FOR EACH sampling period DO
+      IF no lab result exists THEN
+        BLOCK generation with error message
+      END IF
+      FOR EACH lab result DO
+        IF no approved evidence linked THEN
+          BLOCK generation with error message
+        END IF
+      END FOR
+    END FOR
+  END FOR
+END IF
+```
+
+**Error Messages:**
+- "Cannot generate pack: Missing lab results for [parameter_name] in period [period_start] to [period_end]"
+- "Cannot generate pack: Lab result [sample_id] for [parameter_name] on [sample_date] lacks approved evidence"
+- "Cannot generate pack: [count] sampling periods missing results. Please complete all sampling requirements before generating pack."
+- "Cannot generate pack: Evidence item [file_name] (ID: [evidence_id]) has not been approved. Please approve all evidence items before generating pack."
+- "Cannot generate pack: Evidence item [file_name] (ID: [evidence_id]) is missing reviewer information. Please approve evidence with reviewer details."
+- "Cannot generate pack: Evidence item [file_name] (ID: [evidence_id]) is missing approval timestamp. Please approve evidence to record approval time."
+
+**User Actions When Blocked:**
+- System displays list of missing results and unapproved evidence
+- User can:
+  1. Upload missing lab results
+  2. Link evidence to existing lab results
+  3. Approve pending evidence items (sets `is_approved = true`, `reviewer_id`, `approved_at`)
+  4. Adjust pack date range to exclude incomplete periods (if acceptable)
+- Once all requirements met (all evidence approved with reviewer_id and approved_at), pack generation proceeds
+
+**Pack Generation Success:**
+- When all validation checks pass, pack generation proceeds normally
+- Pack includes all validated lab results with evidence links
+- Evidence items are version-locked at generation time
+- Pack provenance signature includes evidence completeness validation timestamp
 
 ---
+
+
+### C.2.11 Sampling Logistics Workflow Logic
+
+**Purpose:** Track lab sampling from scheduling through certificate linking with 5-stage workflow.
+
+**State Machine:**
+```
+SCHEDULED (initial) → SAMPLE_COLLECTED → SUBMITTED_TO_LAB → RESULTS_RECEIVED → CERTIFICATE_LINKED (final)
+```
+
+**Business Rules:**
+
+1. **Sampling Record Creation Logic:**
+   - Sample ID must be unique per company
+   - Sampling date cannot be more than 30 days in future
+   - Lab must be from approved labs list
+   - Parameters must match consent parameters
+   - Initial status = SCHEDULED
+
+2. **State Transition Rules:**
+   - **SCHEDULED → SAMPLE_COLLECTED:**
+     - Triggered by: User clicks "Mark Collected" button
+     - Sets: collection_time = user input, collector_name = user input
+     - Optional: Chain of custody document upload
+     - Validation: collection_time must be <= NOW()
+   
+   - **SAMPLE_COLLECTED → SUBMITTED_TO_LAB:**
+     - Triggered by: User clicks "Submit to Lab" button
+     - Requires: lab_reference_number (provided by lab)
+     - Sets: submitted_to_lab_at = NOW()
+     - Optional: expected_turnaround_date (calculated as submitted_to_lab_at + lab.typical_turnaround_days)
+     - Business Logic: Sends email notification to lab contact (if email provided)
+   
+   - **SUBMITTED_TO_LAB → RESULTS_RECEIVED:**
+     - Triggered by: Lab results imported (either manual upload or API integration)
+     - Sets: results_received_at = NOW()
+     - Business Logic: 
+       - System matches lab results to sampling record by lab_reference_number or sample_id
+       - Creates lab_results records for each parameter tested
+       - Flags exceedances if result > consent limit
+   
+   - **RESULTS_RECEIVED → CERTIFICATE_LINKED:**
+     - Triggered by: User clicks "Link Certificate" button
+     - Requires: certificate_document_id (FK to evidence_items)
+     - Sets: certificate_linked_at = NOW()
+     - Validation: Certificate must be PDF, max 10MB
+     - Business Logic:
+       - Links certificate as evidence to related obligation
+       - Creates obligation_evidence relationship
+       - Marks sampling workflow as COMPLETE
+
+3. **Lab Accreditation Tracking:**
+   - Each lab has: lab_name, accreditation_body (UKAS, MCERTS, etc.), accreditation_number, accreditation_expiry_date
+   - Business Rule: System displays warning if lab.accreditation_expiry_date < NOW() + 30 days
+   - Business Rule: Cannot submit to lab if lab.accreditation_expiry_date < NOW() (expired accreditation)
+
+4. **Turnaround Time Tracking:**
+   - Calculated: turnaround_time = results_received_at - submitted_to_lab_at (in days)
+   - KPI: Average turnaround time per lab (rolling 12 months)
+   - Alert: If turnaround_time > expected_turnaround_date + 3 days: Send notification to site manager
+
+5. **Parameter Testing Logic:**
+   - When sampling record created, user selects parameters to be tested
+   - System validates parameters match consent parameters
+   - When results received:
+     - System creates lab_results record for each parameter
+     - Fields: parameter_name, result_value, unit, test_method, test_date, lab_reference
+     - Exceedance detection: If result_value > consent_parameter.limit_value: Set exceedance_flag = true
+
+---
+
+### C.2.12 Monthly Statement Reconciliation Logic
+
+**Purpose:** Reconcile water company monthly statements (billed volumes) with actual discharge volumes recorded in system.
+
+**Auto-Reconciliation Algorithm:**
+
+```typescript
+async function autoReconcileMonthlyStatement(statement_id: UUID) {
+  // Step 1: Get statement details
+  const statement = await db.query(`
+    SELECT site_id, consent_id, month, year, volume_billed_m3, concentration_billed_mg_l
+    FROM monthly_statements
+    WHERE id = $1
+  `, [statement_id]);
+  
+  // Step 2: Get discharge volumes for same month/year
+  const dischargeVolumes = await db.query(`
+    SELECT SUM(volume_m3) as total_discharged, AVG(concentration_mg_l) as avg_concentration
+    FROM discharge_volumes
+    WHERE site_id = $1 
+      AND consent_id = $2
+      AND EXTRACT(MONTH FROM discharge_date) = $3
+      AND EXTRACT(YEAR FROM discharge_date) = $4
+      AND deleted_at IS NULL
+  `, [statement.site_id, statement.consent_id, statement.month, statement.year]);
+  
+  // Step 3: Calculate variance
+  const volumeBilled = statement.volume_billed_m3;
+  const volumeDischarged = dischargeVolumes.total_discharged || 0;
+  const variance = volumeBilled - volumeDischarged;
+  const variancePercentage = (variance / volumeBilled) * 100;
+  
+  // Step 4: Determine reconciliation status
+  let reconciliationStatus: string;
+  if (Math.abs(variancePercentage) <= 5) {
+    reconciliationStatus = 'MATCHED'; // Within ±5% tolerance
+  } else {
+    reconciliationStatus = 'DISCREPANCY'; // Outside tolerance
+  }
+  
+  // Step 5: Create reconciliation record
+  await db.query(`
+    INSERT INTO monthly_statement_reconciliations (
+      statement_id, volume_billed_m3, volume_discharged_m3, 
+      variance_m3, variance_percentage, status, reconciled_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+  `, [statement_id, volumeBilled, volumeDischarged, variance, variancePercentage, reconciliationStatus]);
+  
+  // Step 6: Update statement status
+  await db.query(`
+    UPDATE monthly_statements 
+    SET reconciliation_status = $1, reconciled_at = NOW()
+    WHERE id = $2
+  `, [reconciliationStatus, statement_id]);
+  
+  // Step 7: Send notification if DISCREPANCY
+  if (reconciliationStatus === 'DISCREPANCY') {
+    await sendNotification({
+      type: 'RECONCILIATION_DISCREPANCY',
+      severity: 'HIGH',
+      message: `Monthly statement variance ${variancePercentage.toFixed(1)}% exceeds tolerance`,
+      statement_id,
+      site_id: statement.site_id
+    });
+  }
+  
+  return { reconciliationStatus, variance, variancePercentage };
+}
+```
+
+**Business Rules:**
+
+1. **Tolerance Logic:**
+   - Tolerance = ±5% variance between billed and discharged volumes
+   - Rationale: Allows for measurement uncertainty, meter calibration differences, rounding
+   - Status mapping:
+     - |variance_percentage| ≤ 5%: MATCHED (green badge)
+     - |variance_percentage| > 5%: DISCREPANCY (red badge)
+
+2. **Discrepancy Investigation Logic:**
+   - When status = DISCREPANCY:
+     - User must provide investigation_notes explaining variance
+     - User can mark as RESOLVED with resolution_notes
+     - Common reasons: Meter calibration error, data entry error, unmetered discharge, billing error
+   - Business Rule: Cannot archive statement until status = MATCHED or RESOLVED
+
+3. **Volume Breakdown Logic:**
+   - Reconciliation detail page shows daily discharge volume breakdown for month:
+     - Table: Date | Volume Discharged (m³) | Meter Reading | Notes
+     - Chart: Bar chart showing daily volumes
+   - Helps user identify missing days or anomalies
+
+4. **Concentration Reconciliation (Optional):**
+   - If both concentration_billed_mg_l and lab results available:
+     - Calculate avg_concentration_discharged from lab_results for month
+     - Compare billed vs lab results
+     - Status: CONCENTRATION_MATCHED or CONCENTRATION_DISCREPANCY
+   - Note: Less critical than volume reconciliation (volume determines billing)
+
+5. **Reporting Logic:**
+   - Dashboard widget: Count of DISCREPANCY statements awaiting investigation
+   - KPI: Reconciliation rate (MATCHED / Total statements) per site
+   - KPI: Average variance percentage per site (rolling 12 months)
+   - Alert: If 3 consecutive months show DISCREPANCY: Escalate to senior management
+
+---
+
+### C.2.13 Consent State Machine Logic
+
+**Purpose:** Track consent lifecycle through 10 defined states with validated transitions.
+
+**State Machine Definition:**
+
+```
+States (10):
+1. DRAFT - Consent being prepared (not yet submitted)
+2. APPLICATION_SUBMITTED - Consent application submitted to water company
+3. UNDER_REVIEW - Water company reviewing application
+4. APPROVED - Water company approved consent (not yet active)
+5. ACTIVE - Consent is active and in force
+6. SUSPENDED - Consent temporarily suspended by water company
+7. EXPIRED - Consent expiry date passed
+8. RENEWED - Consent renewed (creates new consent version)
+9. SURRENDERED - Site voluntarily surrendered consent
+10. REVOKED - Water company revoked consent
+```
+
+**Allowed Transitions (State Machine):**
+
+| From State | To States (Allowed) |
+|------------|---------------------|
+| DRAFT | APPLICATION_SUBMITTED |
+| APPLICATION_SUBMITTED | UNDER_REVIEW |
+| UNDER_REVIEW | APPROVED, DRAFT (if rejected) |
+| APPROVED | ACTIVE |
+| ACTIVE | SUSPENDED, EXPIRED, RENEWED, SURRENDERED, REVOKED |
+| SUSPENDED | ACTIVE, REVOKED |
+| EXPIRED | RENEWED |
+| RENEWED | ACTIVE |
+| SURRENDERED | (terminal state) |
+| REVOKED | (terminal state) |
+
+**Business Rules:**
+
+1. **State Transition Validation:**
+   - System enforces allowed transitions via database constraint or API validation
+   - Attempting invalid transition returns error: "Cannot transition from {current_state} to {new_state}"
+   - Example: Cannot go from DRAFT directly to ACTIVE (must go through APPLICATION_SUBMITTED → UNDER_REVIEW → APPROVED → ACTIVE)
+
+2. **Transition Requirements:**
+   - **DRAFT → APPLICATION_SUBMITTED:**
+     - Requires: application_document_id (evidence item)
+     - Sets: application_submitted_date = NOW()
+   - **UNDER_REVIEW → APPROVED:**
+     - Requires: approval_document_id (consent document)
+     - Sets: approved_date = NOW(), consent_start_date, consent_expiry_date
+   - **APPROVED → ACTIVE:**
+     - Requires: consent_start_date <= NOW()
+     - Sets: activated_date = NOW()
+     - Business Logic: Activates all obligations linked to consent
+   - **ACTIVE → EXPIRED:**
+     - Triggered automatically: Background job checks if consent_expiry_date < NOW()
+     - Sets: expired_date = NOW()
+     - Business Logic: Deactivates all obligations, sends expiry notification
+   - **ACTIVE → RENEWED:**
+     - Requires: new_consent_version_id (FK to new consent record)
+     - Sets: renewed_date = NOW()
+     - Business Logic: Creates new consent version, copies obligations to new version
+   - **ACTIVE → SUSPENDED:**
+     - Requires: suspension_reason, suspension_document_id
+     - Sets: suspended_date = NOW()
+     - Business Logic: Pauses all obligation deadlines (deadline_paused = true)
+   - **SUSPENDED → ACTIVE:**
+     - Requires: reactivation_document_id
+     - Sets: reactivated_date = NOW()
+     - Business Logic: Resumes all obligation deadlines (deadline_paused = false), recalculates due dates
+   - **ACTIVE → REVOKED:**
+     - Requires: revocation_reason, revocation_document_id
+     - Sets: revoked_date = NOW()
+     - Business Logic: Archives all obligations, sends critical notification
+
+3. **State Change Audit Trail:**
+   - Table: consent_state_history (or consent_states as per database schema)
+   - Fields: consent_id, previous_state, new_state, transition_date, reason, triggered_by_user_id, document_id
+   - Every state transition creates audit record
+
+4. **Automated State Transitions:**
+   - Background job runs daily (cron: 00:00 UTC):
+     - Check all consents where state = ACTIVE AND consent_expiry_date < NOW()
+     - Transition to EXPIRED
+     - Send expiry notifications 90 days, 60 days, 30 days, 14 days, 7 days before expiry
+
+5. **Obligation Impact Logic:**
+   - State changes affect obligations:
+     - ACTIVE: Obligations active, deadlines enforced
+     - SUSPENDED: Obligations paused, deadlines frozen
+     - EXPIRED: Obligations deactivated, no new deadlines
+     - REVOKED: Obligations archived, compliance monitoring stops
+     - SURRENDERED: Obligations archived, site closed
+
+---
+
+### C.2.14 Corrective Actions Workflow Logic
+
+**Purpose:** Manage corrective actions for parameter exceedances with priority-based tracking.
+
+**State Machine:**
+```
+PLANNED (initial) → IN_PROGRESS → COMPLETED → VERIFIED (final) or CANCELLED
+```
+
+**Business Rules:**
+
+1. **Corrective Action Creation Logic:**
+   - Created in response to exceedance event
+   - Required fields:
+     - exceedance_id (FK to exceedances table)
+     - description (what action will be taken)
+     - priority: LOW, MEDIUM, HIGH, CRITICAL
+     - due_date (deadline for completion)
+     - assigned_to_user_id (responsible person)
+   - Optional fields:
+     - estimated_cost
+     - root_cause_analysis
+     - preventive_measures
+
+2. **Priority Assignment Logic:**
+   - Auto-determined based on exceedance severity:
+     ```typescript
+     function determineActionPriority(exceedance: Exceedance): Priority {
+       const exceedanceRatio = exceedance.measured_value / exceedance.limit_value;
+       
+       if (exceedanceRatio >= 2.0) {
+         return 'CRITICAL'; // Value ≥ 2x limit
+       } else if (exceedanceRatio >= 1.5) {
+         return 'HIGH'; // Value ≥ 1.5x limit
+       } else if (exceedanceRatio >= 1.2) {
+         return 'MEDIUM'; // Value ≥ 1.2x limit
+       } else {
+         return 'LOW'; // Value slightly over limit
+       }
+     }
+     ```
+   - User can override auto-assigned priority with justification
+
+3. **State Transition Rules:**
+   - **PLANNED → IN_PROGRESS:**
+     - Triggered by: assigned user clicks "Start Action"
+     - Sets: started_at = NOW()
+     - Business Logic: Sends notification to site manager
+   
+   - **IN_PROGRESS → COMPLETED:**
+     - Triggered by: assigned user clicks "Mark Complete"
+     - Requires: completion_notes, evidence_document_ids (proof of completion)
+     - Sets: completed_at = NOW(), completed_by = current_user_id
+     - Validation: Must have at least one evidence document
+   
+   - **COMPLETED → VERIFIED:**
+     - Triggered by: site manager/supervisor clicks "Verify"
+     - Requires: verification_notes
+     - Sets: verified_at = NOW(), verified_by = current_user_id
+     - Business Logic: Links evidence to related obligation for audit trail
+   
+   - **PLANNED/IN_PROGRESS → CANCELLED:**
+     - Triggered by: manager clicks "Cancel Action"
+     - Requires: cancellation_reason
+     - Sets: cancelled_at = NOW(), cancelled_by = current_user_id
+     - Use case: Action no longer needed, duplicate action, alternative solution implemented
+
+4. **Escalation Logic:**
+   - If priority = CRITICAL and status = PLANNED for > 24 hours:
+     - Send escalation to site director
+   - If priority = HIGH and status = PLANNED for > 3 days:
+     - Send escalation to site manager
+   - If due_date < NOW() + 3 days and status != COMPLETED:
+     - Send daily reminders to assigned_to_user_id
+   - If due_date < NOW() and status != COMPLETED:
+     - Mark as OVERDUE
+     - Send critical notification to site manager and assigned user
+
+5. **Root Cause Analysis Logic:**
+   - After completion, system prompts for root cause:
+     - Equipment failure
+     - Process upset
+     - Human error
+     - External factors (weather, supply issue)
+     - Design limitation
+     - Maintenance issue
+   - User selects root cause category and provides detailed description
+   - System tracks root cause distribution for trend analysis
+
+6. **Preventive Measures Tracking:**
+   - User documents preventive measures taken to avoid recurrence
+   - Common measures:
+     - Equipment upgrade/replacement
+     - Process modification
+     - Additional training
+     - Enhanced monitoring
+     - Maintenance schedule adjustment
+   - System links preventive measures to obligations for future reference
+
+7. **Reporting Logic:**
+   - Dashboard widget: Count of IN_PROGRESS and OVERDUE actions per site
+   - KPI: Average completion time (completed_at - created_at) per priority level
+   - KPI: Verification rate (VERIFIED / COMPLETED) per site
+   - Trend chart: Corrective actions count per month (indicates process stability)
+   - Root cause distribution pie chart (last 12 months)
 
 ## C.3 Module 3 — MCPD/Generator Compliance
 
@@ -2295,13 +4403,436 @@ Site: Factory A
 - AER generated documents retained indefinitely (archived after submission)
 - Historical AERs accessible for comparison and audit purposes
 
-### C.3.9 Module 3 Audit Pack Structure
+### C.3.9 Fuel Usage Logs & Sulphur Content Reporting
+
+**Purpose:** Track detailed fuel consumption and sulphur content for each generator to ensure compliance with fuel quality regulations and for accurate AER reporting.
+
+**Data Capture:**
+- **Manual Entry:** Users can manually log fuel usage (date, fuel type, quantity, unit, sulphur content).
+- **Automated Integration (Future):** Integration with fuel management systems to automatically import data.
+- **Sulphur Content Reports:** Dedicated entries for lab test results of fuel sulphur content.
+
+**Key Fields:**
+- `fuel_usage_logs`: `log_date`, `fuel_type`, `quantity`, `unit`, `sulphur_content_percentage`, `sulphur_content_mg_per_kg`, `evidence_id`
+- `sulphur_content_reports`: `test_date`, `fuel_type`, `batch_reference`, `sulphur_content_percentage`, `sulphur_content_mg_per_kg`, `regulatory_limit_percentage`, `regulatory_limit_mg_per_kg`, `compliance_status`, `evidence_id`
+
+**Validation Rules:**
+- `quantity` must be non-negative.
+- `sulphur_content_percentage` must be between 0 and 100.
+- `sulphur_content_mg_per_kg` calculated from percentage if not provided, and vice-versa.
+- `compliance_status` for sulphur reports derived by comparing `sulphur_content` to `regulatory_limit`.
+
+**Integration with AER:**
+- AER generation job will aggregate fuel usage logs for the reporting period.
+- The most recent sulphur content report for each fuel type used in the period will be included in the AER.
+- `aer_documents.fuel_consumption_data` will be populated from aggregated `fuel_usage_logs`.
+- `aer_documents.fuel_usage_log_id` will link to the relevant fuel usage log entry if a single log is the source for the AER's fuel data.
+
+**Compliance Monitoring:**
+- System can trigger alerts if sulphur content exceeds regulatory limits.
+- Fuel usage data contributes to overall emissions calculations in the AER.
+
+**Reference:** High Level Product Plan Module 3 (Fuel usage logs + sulphur content reporting)
+
+### C.3.10 Module 3 Audit Pack Structure
 
 **Additional Module 3 Elements:**
+- Generator registrations and permits
+- Runtime monitoring compliance data
+- Stack test results and certification
+- Exemption evidence and tracking
+- Regulation threshold compliance
+- Annual emissions reports (AERs)
+
+### C.3.11 Runtime Monitoring Reason Codes
+
+**Purpose:** Structured reason codes for manual runtime entries to maintain audit trail defensibility.
+
+**Reason Codes:**
+
+| Code | Description | Validation Status | Notes Required |
+|------|-------------|------------------|----------------|
+| `TESTING` | Generator testing/commissioning | PENDING | Optional |
+| `EMERGENCY` | Emergency operation (power outage, backup) | PENDING | Recommended |
+| `MAINTENANCE` | Maintenance/repair runtime | PENDING | Optional |
+| `ROUTINE` | Routine scheduled operation | APPROVED | Optional |
+| `OTHER` | Other reason (specify) | PENDING | **MANDATORY** |
+
+**Business Rules:**
+
+1. **Manual Entry Requirements:**
+   - `entry_reason_code` REQUIRED for all `data_source = 'MANUAL'` entries
+   - If `entry_reason_code = 'OTHER'`, then `entry_reason_notes` MANDATORY (explain reason)
+   - CSV imports auto-link to `csv_import_id` for traceability
+
+2. **Validation Workflow:**
+   - Manual entries default to `validation_status = 'PENDING'`
+   - Managers can APPROVE/REJECT manual entries
+   - REJECTED entries don't count toward runtime limits
+   - APPROVED entries count normally
+
+3. **Approval Logic:**
+   - TESTING, EMERGENCY, MAINTENANCE: Require manager approval before counting toward limits
+   - ROUTINE: Auto-approved (still tracked for audit)
+   - OTHER: Require manager approval + justification notes
+
+4. **Audit Pack Inclusion:**
+   - All manual entries included in Module 3 audit packs
+   - Reason codes displayed with entry
+   - Validation status shown (APPROVED/PENDING/REJECTED)
+   - Used to justify manual data entry during audits
 
 ---
 
-## C.4 Module Extension Pattern
+## C.4 Module 4 — Hazardous Waste Chain of Custody
+
+### C.4.1 Supported Document Types
+
+| Document Type | Pattern | Purpose |
+|---------------|---------|---------|
+| Waste Transfer Note (WTN) | "Waste Transfer Note", "WTN", "Consignment Note" | Track waste movements |
+| Hazardous Waste Consignment Note | "Hazardous Waste", "Consignment", "HWCN" | Track hazardous waste specifically |
+| Carrier Licence | "Waste Carrier Licence", "Carrier Registration" | Track carrier authorizations |
+| Treatment/Disposal Certificate | "Certificate of Destruction", "Treatment Certificate" | End-point proof |
+
+### C.4.2 Waste Stream Classification
+
+**EWC Code System:**
+- European Waste Catalogue (EWC) codes classify waste types
+- Format: 6-digit code (e.g., 16 01 03 = End-of-life tyres)
+- Hazardous wastes marked with asterisk (*) in official list
+- System validates EWC codes against official catalogue
+
+**Classification Business Rules:**
+1. User enters/selects EWC code when creating waste stream
+2. System validates code exists in EWC catalogue
+3. System auto-determines if hazardous based on code
+4. If hazardous, additional validation rules apply (carrier licence, volume limits, storage duration)
+
+### C.4.3 Consignment Note Validation Rules Engine
+
+**Purpose:** Configurable pre-submission validation prevents compliance violations before waste leaves site.
+
+**Rule Types:**
+
+| Rule Type | Description | Config Example | Severity |
+|-----------|-------------|----------------|----------|
+| `CARRIER_LICENCE` | Validate carrier licence valid and matches waste type | `{"check_expiry": true, "check_waste_type_match": true}` | ERROR |
+| `VOLUME_LIMIT` | Check volume against permit limits | `{"max_volume_tonnes": 100, "check_against_permit": true}` | ERROR |
+| `STORAGE_DURATION` | Check waste not stored beyond limit | `{"max_days": 30, "check_ewc_specific_limits": true}` | WARNING |
+| `EWC_CODE` | Validate EWC code correct for waste description | `{"validate_against_catalogue": true, "check_hazardous_flag": true}` | ERROR |
+| `DESTINATION` | Check destination site authorized for waste type | `{"check_permit_authorisation": true}` | ERROR |
+| `CUSTOM` | Company-specific custom rule | User-defined JSONB | Configurable |
+
+**Severity Levels:**
+
+| Severity | Pre-Validation Effect | User Experience |
+|----------|---------------------|-----------------|
+| `ERROR` | Blocks submission | Cannot submit until fixed |
+| `WARNING` | Allows submission, flags for review | Can submit but warned |
+| `INFO` | Informational only | No blocking, just notification |
+
+### C.4.4 Validation Execution Logic
+
+**When Validation Runs:**
+1. **Auto-validation on save:** When user saves consignment note (DRAFT status)
+2. **Pre-submission validation:** Before user marks consignment note SUBMITTED
+3. **Manual re-validation:** User clicks "Re-validate" after fixing issues
+
+**Validation Process:**
+```
+FOR EACH active validation_rule WHERE company_id = consignment.company_id:
+  1. Evaluate rule based on rule_type and rule_config
+  2. Determine result: PASS, FAIL, WARNING
+  3. If FAIL and severity = ERROR:
+     - Set pre_validation_status = 'FAILED'
+     - Block submission
+  4. If WARNING:
+     - Set pre_validation_status = 'WARNING'
+     - Allow submission but flag for review
+  5. Log execution in validation_executions table
+END FOR
+
+IF any rule result = FAIL AND severity = ERROR THEN
+  pre_validation_status = 'FAILED'
+  Display: "Consignment validation failed - fix errors before submission"
+ELSIF any rule result = WARNING THEN
+  pre_validation_status = 'WARNING'
+  Display: "Consignment has warnings - review before submission"
+ELSE
+  pre_validation_status = 'PASSED'
+  Allow submission
+END IF
+```
+
+**Rule Execution Order:**
+1. ERROR severity rules first (most critical)
+2. WARNING severity rules second
+3. INFO severity rules last
+
+### C.4.5 Validation Execution Audit Log
+
+**Purpose:** Immutable log of all validation checks for compliance audits and debugging.
+
+**Execution Record:**
+```json
+{
+  "execution_id": "uuid",
+  "validation_rule_id": "uuid",
+  "consignment_note_id": "uuid",
+  "executed_at": "2025-12-01T10:00:00Z",
+  "result": "FAIL",
+  "validation_data": {
+    "carrier_licence_expiry": "2025-11-01",
+    "consignment_date": "2025-12-01",
+    "days_expired": 30,
+    "rule": "Carrier licence expired"
+  },
+  "error_message": "Carrier licence expired 30 days ago - cannot accept waste"
+}
+```
+
+**Business Rules:**
+- System-only writes (no manual editing)
+- One record per rule per validation run
+- Results: PASS, FAIL, WARNING
+- `validation_data` (JSONB) stores context: actual vs limit, dates, etc.
+- Used for compliance audits and debugging
+- Retention: Keep forever
+
+### C.4.6 Corrective Action Lifecycle (Modules 2 & 4)
+
+**Purpose:** Structured workflow for responding to breaches, exceedances, and chain-breaks.
+
+**Five-Phase Lifecycle:**
+
+| Phase | Description | Entry Criteria | Exit Criteria |
+|-------|-------------|----------------|---------------|
+| `TRIGGER` | Automatically created when issue detected | Breach/exceedance/chain-break detected | Investigation initiated |
+| `INVESTIGATION` | Root cause analysis and impact assessment | User starts investigation | Root cause documented |
+| `ACTION` | Corrective action items assigned and tracked | Investigation complete | All action items completed |
+| `RESOLUTION` | Evidence of resolution documented | All actions complete | Evidence approved |
+| `CLOSURE` | Formal closure (approval required if config set) | Resolution approved | Closure approved (if required) |
+
+**Phase Progression Rules:**
+```
+TRIGGER → INVESTIGATION:
+  - Requires: investigation_initiated_by, investigation_start_date
+  - User action: Click "Start Investigation"
+
+INVESTIGATION → ACTION:
+  - Requires: root_cause_analysis (text), impact_assessment (text), at least 1 action item created
+  - User action: Complete investigation, create action items
+
+ACTION → RESOLUTION:
+  - Requires: ALL action items status = COMPLETED, resolution evidence attached
+  - Cannot progress if any action item PENDING or IN_PROGRESS
+
+RESOLUTION → CLOSURE:
+  - IF closure_requires_approval = true:
+    - Requires: closure_approved_by (Admin/Owner), closure_approval_date
+  - IF regulator_notification_required = true:
+    - Requires: regulator_notification_sent_date, regulator_notification_evidence
+  - User action: Submit for closure approval (if required) OR mark closed (if no approval required)
+```
+
+**Cannot Skip Phases:** Must progress sequentially TRIGGER → INVESTIGATION → ACTION → RESOLUTION → CLOSURE
+
+### C.4.7 Corrective Action Items (Sub-tasks)
+
+**Purpose:** Individual trackable tasks within corrective action with cross-site visibility.
+
+**Item Structure:**
+```json
+{
+  "item_id": "uuid",
+  "corrective_action_id": "uuid",
+  "item_description": "Replace faulty pH sensor",
+  "assigned_user_id": "uuid",
+  "due_date": "2025-12-15",
+  "status": "IN_PROGRESS",
+  "completion_evidence_id": "uuid",
+  "completed_by": null,
+  "completed_at": null
+}
+```
+
+**Business Rules:**
+
+1. **Cross-Site Visibility:**
+   - Assigned users can see and update their action items across all sites
+   - Action item visible on user's personal dashboard regardless of site
+   - RLS respects site boundaries but action items assigned to user always visible to that user
+
+2. **Due Date Tracking:**
+   - Each action item has individual due_date
+   - Compliance clock tracks action item deadlines separately
+   - Alerts: 3 days before due, 1 day before due, overdue
+
+3. **Completion Requirements:**
+   - Completion requires evidence attachment
+   - Evidence type: Photo, document, or data record
+   - Assigned user marks item COMPLETED
+   - Completion logged with timestamp and user
+
+4. **Parent Dependency:**
+   - Parent corrective action cannot move to RESOLUTION until ALL items COMPLETED
+   - If any item PENDING or IN_PROGRESS, parent stuck in ACTION phase
+   - System displays: "X action items remaining before resolution"
+
+5. **Notification Rules:**
+   - Auto-notify assigned user on creation
+   - Reminder 3 days before due date
+   - Overdue alert daily until completed
+
+### C.4.8 Chain of Custody Tracking
+
+**Purpose:** Trace waste from generation through disposal/recovery with complete evidence trail.
+
+**Chain Stages:**
+
+| Stage | Description | Required Evidence | Compliance Clock Entity |
+|-------|-------------|------------------|------------------------|
+| Generation | Waste produced on site | Waste description, EWC code | N/A |
+| Storage | Waste stored awaiting collection | Storage location, storage date | WASTE_STREAM (storage duration limit) |
+| Collection | Carrier collects waste | Signed consignment note | N/A |
+| Transport | Waste in transit | Carrier tracking (optional) | N/A |
+| Reception | Destination receives waste | Destination signature | N/A |
+| Treatment/Disposal | Final treatment/disposal | Certificate of destruction/recycling | WASTE_STREAM (end-point proof deadline) |
+
+**Chain-Break Detection:**
+
+Chains break when:
+1. Consignment note not returned within X days (default: 30 days)
+2. End-point proof not received within Y days of collection (default: 90 days)
+3. Carrier licence expires mid-transport
+4. Validation rule fails (blocked consignment)
+
+**Chain-Break Triggers:**
+- Automatic corrective action created (see C.4.6)
+- Dashboard alert: "Chain break detected - [reason]"
+- Escalation to Site Manager + Admin
+- Cannot close waste stream until chain complete
+
+### C.4.9 Carrier/Contractor Licence Tracking
+
+**Purpose:** Ensure all carriers/contractors have valid licences before accepting waste.
+
+**Licence Validation:**
+1. **Pre-Consignment Check:**
+   - When creating consignment note, system checks carrier licence
+   - If expired: Validation rule FAIL, blocks submission
+   - If expiring within 30 days: WARNING, flag for user attention
+
+2. **Compliance Clock Integration:**
+   - Carrier licence expiry tracked via `CONTRACTOR_LICENCE` entity type
+   - Alerts: 90 days, 30 days, 7 days before expiry
+   - Overdue: RED criticality, block new consignments
+
+3. **Licence-Waste Type Matching:**
+   - Licence specifies authorized waste types (EWC codes)
+   - System validates consignment EWC code matches carrier authorization
+   - If mismatch: Validation FAIL, blocks submission
+
+### C.4.10 Volume Limits Tracking
+
+**Purpose:** Track cumulative waste volumes against permit limits.
+
+**Volume Calculation:**
+```
+site_cumulative_volume = SUM(consignment_notes.volume_tonnes)
+  WHERE consignment_notes.site_id = site.id
+  AND consignment_notes.collection_date >= permit_anniversary_date
+  AND consignment_notes.collection_date < permit_anniversary_date + 1 year
+
+volume_remaining = permit.annual_volume_limit - site_cumulative_volume
+
+volume_percentage = (site_cumulative_volume / permit.annual_volume_limit) * 100
+```
+
+**Volume Alerts:**
+
+| Threshold | Alert Level | Action |
+|-----------|-------------|--------|
+| 70% | Warning | Email to Site Manager |
+| 85% | Urgent | Email + SMS to Site Manager + Admin |
+| 95% | Critical | Email + SMS + Dashboard banner (all users) |
+| 100% | Breach | Block new consignments, escalate to Owner |
+
+### C.4.11 Storage Duration Limits
+
+**Purpose:** Ensure waste not stored beyond regulatory limits.
+
+**Storage Rules:**
+- Hazardous waste: Default max 30 days storage
+- EWC-specific limits: Some waste types have shorter limits (e.g., 7 days for certain hazardous liquids)
+- Company-specific limits: Companies can set stricter limits
+
+**Storage Calculation:**
+```
+storage_duration_days = CURRENT_DATE - waste_stream.generated_date
+
+IF storage_duration_days > max_storage_days THEN
+  storage_status = 'OVERDUE'
+  Create corrective action (TRIGGER phase)
+ELSIF storage_duration_days >= (max_storage_days * 0.8) THEN
+  storage_status = 'AT_RISK'
+  Send warning alert
+ELSE
+  storage_status = 'OK'
+END IF
+```
+
+**Compliance Clock Integration:**
+- Storage deadline tracked via `WASTE_STREAM` entity type
+- Target date = generated_date + max_storage_days
+- Criticality calculated per universal compliance clock rules
+
+### C.4.12 End-Point Proof (Return Evidence)
+
+**Purpose:** Close chain of custody with destruction/recycling certificate.
+
+**End-Point Proof Requirements:**
+- Certificate of destruction (for disposal)
+- Certificate of recycling/recovery (for recycling)
+- Must include: waste description, quantity received, treatment method, date, authorisation details
+- Must be signed by authorized treatment facility
+
+**Chain Closure Logic:**
+1. **Upload End-Point Proof:**
+   - User uploads certificate
+   - System links to consignment note(s)
+   - System validates: quantity matches consignment, dates align, facility authorized
+
+2. **Chain Completion:**
+   - All stages complete: Generation → Storage → Collection → Transport → Reception → Treatment
+   - End-point proof received and validated
+   - Chain status: `COMPLETE`
+   - Compliance clock entry deactivated
+
+3. **Missing End-Point Proof:**
+   - If not received within 90 days: Chain-break corrective action created
+   - Escalate to Site Manager: "End-point proof overdue for consignment [ref]"
+   - Cannot close waste stream until proof received
+
+### C.4.13 Module 4 Audit Pack Structure
+
+**Module 4 Audit Pack Contents:**
+- Waste stream classifications (EWC codes)
+- All consignment notes with validation status
+- Complete chain of custody documentation
+- End-point proof certificates
+- Carrier licence validity evidence
+- Volume tracking (cumulative vs permit limits)
+- Storage duration compliance
+- Chain-break alerts and resolutions (corrective actions)
+- Validation rule execution logs
+
+**Pack Generation SLA:** <2 minutes for 100+ consignment notes
+
+---
+
+## C.5 Module Extension Pattern
 
 This section defines the pattern for adding new modules to the platform (e.g., Module 4 - Packaging Regulations, Module 5 - Asbestos Management, Module 6 - Fire Safety).
 
@@ -3776,7 +6307,7 @@ function canGeneratePackType(userPlan: string, packType: string): boolean {
 **Shared Link Security:**
 - Time-limited (default: 30 days)
 - Access-controlled (requires authentication or password)
-- Tracked (views logged in `pack_distributions` table)
+- Tracked (views logged in `pack_sharing` table)
 
 ---
 
@@ -3851,7 +6382,7 @@ function canConsultantAccessCompany(consultantId: UUID, companyId: UUID): boolea
 **Client Pack Distribution:**
 - Consultant can email packs directly to client contacts
 - Consultant can generate shareable links for clients
-- Distribution tracked in `pack_distributions` table
+- Distribution tracked in `pack_sharing` table
 - Client receives notification when pack is distributed
 
 ## C.5.5 Consultant Permissions Matrix
@@ -4103,6 +6634,129 @@ User uploads new permit version while obligations from old version are incomplet
 
 **END OF PRODUCT LOGIC SPECIFICATION**
 
-*Document Version: 1.0*  
-*Generated for: EcoComply Platform*  
+*Document Version: 1.3*
+*Generated for: EcoComply Platform*
+*Last Updated: 2025-12-01*
+
+---
+
+# CHANGELOG
+
+## Version 1.3 (2025-12-01)
+
+### Major Additions
+
+**Cross-Cutting Features (All Modules):**
+1. **Universal Compliance Clock (Section A.10):**
+   - Platform-wide countdown mechanism for ALL modules
+   - Supports 7 entity types: OBLIGATION, DEADLINE, PARAMETER, GENERATOR, CONSENT, WASTE_STREAM, CONTRACTOR_LICENCE
+   - Red/Amber/Green criticality calculation (RED: ≤7 days, AMBER: 8-30 days, GREEN: >30 days)
+   - Automatic daily background job updates at 00:01 UTC
+   - Dashboard aggregation with drill-down capability
+   - Reminder generation at configurable intervals
+   - Audit trail for all clock-related actions
+
+2. **Configurable Escalation Workflows (Section B.6.4):**
+   - Company-specific escalation rules replacing hard-coded logic
+   - Four escalation levels with configurable day thresholds
+   - Recipient lists per level (user IDs to notify)
+   - Optional obligation_category filtering
+   - Sequential level progression (cannot skip levels)
+   - Resolution tracking and notification
+   - System default workflow as fallback
+
+3. **SLA Timer Tracking on Deadlines (Section B.7):**
+   - Separate internal SLA tracking from external deadlines
+   - sla_target_date can differ from due_date
+   - Track breach time separately: sla_breached_at, sla_breach_duration_hours
+   - SLA performance metrics dashboard
+   - Used for internal performance monitoring
+
+4. **Recurrence Trigger Execution Log (Section B.8):**
+   - Immutable audit trail of all trigger executions
+   - Answers: "Why was this deadline created?"
+   - System-only writes, retained forever
+   - Used for debugging and regulatory audits
+
+**Module 1 (Environmental Permits):**
+5. **Permit Workflows (Section C.1.9):**
+   - State machine for variations, renewals, surrenders
+   - States: DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED/REJECTED → COMPLETED
+   - Impact analysis required for variations
+   - Auto-creation of renewal workflows 90 days before expiry
+   - Final inspection evidence required for surrenders
+   - Regulator response deadline tracking in compliance clock
+
+**Module 2 (Trade Effluent):**
+6. **Corrective Action Workflows (Section C.2.9):**
+   - Five-phase lifecycle: TRIGGER → INVESTIGATION → ACTION → RESOLUTION → CLOSURE
+   - Automatically triggered by exceedances
+   - Corrective action items (sub-tasks) with cross-site visibility
+   - Resolution evidence required, optional closure approval
+   - Referenced from Section C.4.6 (full lifecycle documentation)
+
+**Module 3 (MCPD/Generators):**
+7. **Runtime Monitoring Reason Codes (Section C.3.10):**
+   - Structured reason codes for manual runtime entries
+   - Codes: TESTING, EMERGENCY, MAINTENANCE, ROUTINE, OTHER
+   - Validation workflow: PENDING → APPROVED/REJECTED
+   - REJECTED entries don't count toward runtime limits
+   - Mandatory notes for OTHER reason code
+   - CSV import traceability via csv_import_id
+
+**Module 4 (Hazardous Waste) - NEW MODULE (Section C.4):**
+8. **Validation Rules Engine (Section C.4.3-C.4.5):**
+   - Configurable pre-submission validation for consignment notes
+   - Rule types: CARRIER_LICENCE, VOLUME_LIMIT, STORAGE_DURATION, EWC_CODE, DESTINATION, CUSTOM
+   - Severity levels: ERROR (blocks), WARNING (flags), INFO (notifies)
+   - Immutable validation execution audit log
+   - Rule execution order: ERROR → WARNING → INFO
+
+9. **Corrective Action Lifecycle (Section C.4.6-C.4.7):**
+   - Five-phase lifecycle (applies to Modules 2 & 4)
+   - Corrective action items (sub-tasks) with due dates and evidence requirements
+   - Cross-site visibility for assigned users
+   - Parent-child dependency: Cannot move to RESOLUTION until all items COMPLETED
+   - Auto-notify assigned users on creation and before due dates
+
+10. **Chain of Custody Tracking (Section C.4.8-C.4.12):**
+    - Six chain stages: Generation → Storage → Collection → Transport → Reception → Treatment/Disposal
+    - Chain-break detection with automatic corrective action creation
+    - Carrier/contractor licence tracking with compliance clock integration
+    - Volume limits tracking with threshold alerts (70%, 85%, 95%, 100%)
+    - Storage duration limits with EWC-specific rules
+    - End-point proof requirements (certificates of destruction/recycling)
+    - Complete audit trail for regulatory inspections
+
+### Document Structure Changes
+
+- Updated document title: "Modules 1–3" → "Modules 1–4"
+- Updated version: 1.0 → 1.3
+- Updated dependencies to reference Database Schema v1.3 and Canonical Dictionary v1.3
+- Added Module 4 section (C.4) with 13 subsections
+- Renumbered Module Extension Pattern from C.4 → C.5
+
+### Cross-References Added
+
+- Universal Compliance Clock referenced in all module sections
+- Corrective Action Lifecycle documented once (C.4.6) and referenced from Module 2 (C.2.9)
+- Escalation Workflows integrated with Compliance Clock (Section A.10.6)
+- SLA Timer Tracking documented separately from deadline tracking
+
+### Audit Trail & Compliance Enhancements
+
+- All new features include comprehensive audit trail requirements
+- Immutable logs for trigger executions and validation executions
+- Complete chain-of-custody documentation for Module 4
+- Enhanced pack generation requirements across all modules
+
+---
+
+## Version 1.0 (2024-12-27)
+
+- Initial version covering Modules 1-3
+- Core business logic for Environmental Permits, Trade Effluent, MCPD/Generators
+- Audit pack generation logic (5 pack types)
+- Cross-module logic and prerequisites
+- AI extraction boundaries and retry policies  
 *Source Documents: Master Commercial Plan (MCP), Master Build Order*

@@ -47,7 +47,7 @@ export default function ExceedanceDetailPage() {
 
   const { data, isLoading, error } = useQuery<ExceedanceResponse>({
     queryKey: ['module-2-exceedance', exceedanceId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       // Note: We'll need to fetch from the list endpoint and filter, or create a detail endpoint
       // For now, we'll use the list endpoint with a filter
       const response = await apiClient.get<{ data: Exceedance[] }>(`/module-2/exceedances?filter[id]=${exceedanceId}`);

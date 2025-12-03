@@ -29,7 +29,7 @@ export default function UpcomingDeadlinesPage() {
 
   const { data: deadlinesData, isLoading } = useQuery<DeadlinesResponse>({
     queryKey: ['upcoming-deadlines', siteId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       params.append('filter[site_id]', siteId);
       params.append('filter[due_date][gte]', today.toISOString().split('T')[0]);

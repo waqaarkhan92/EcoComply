@@ -32,7 +32,7 @@ export default function DischargeVolumeDetailPage() {
 
   const { data, isLoading, error } = useQuery<DischargeVolumeResponse>({
     queryKey: ['module-2-discharge-volume', volumeId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<DischargeVolumeResponse>(`/module-2/discharge-volumes/${volumeId}`);
     },
     enabled: !!volumeId,

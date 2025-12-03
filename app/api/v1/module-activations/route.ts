@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
       company_id: activation.company_id,
       site_id: activation.site_id,
       module_id: activation.module_id,
-      module_name: activation.modules?.module_name || null,
+      module_name: (activation.modules as any)?.module_name || null,
       status: activation.status,
       activated_at: activation.activated_at,
       activated_by: activation.activated_by,

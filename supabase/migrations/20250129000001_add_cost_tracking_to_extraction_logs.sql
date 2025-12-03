@@ -11,7 +11,11 @@ ALTER TABLE extraction_logs
 
 -- Add indexes for cost analytics
 CREATE INDEX IF NOT EXISTS idx_extraction_logs_estimated_cost ON extraction_logs(estimated_cost);
-CREATE INDEX IF NOT EXISTS idx_extraction_logs_created_month ON extraction_logs(DATE_TRUNC('month', created_at));
+-- Index for monthly analytics (using extract for immutability)
+CREATE INDEX IF NOT EXISTS idx_extraction_logs_created_month ON extraction_logs(
+  EXTRACT(YEAR FROM created_at),
+  EXTRACT(MONTH FROM created_at)
+);
 CREATE INDEX IF NOT EXISTS idx_extraction_logs_rule_library_hits ON extraction_logs(rule_library_hits);
 
 -- Migrate existing data from metadata JSONB to dedicated columns

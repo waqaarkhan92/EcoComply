@@ -53,7 +53,7 @@ export default function ObligationDetailPage({
 
   const { data: obligation, isLoading: obligationLoading } = useQuery<Obligation>({
     queryKey: ['obligation', id],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const response = await apiClient.get<Obligation>(`/obligations/${id}`);
       return response.data;
     },
@@ -61,7 +61,7 @@ export default function ObligationDetailPage({
 
   const { data: evidence, isLoading: evidenceLoading } = useQuery<Evidence[]>({
     queryKey: ['obligation-evidence', id],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       try {
         const response = await apiClient.get<Evidence[]>(`/obligations/${id}/evidence`);
         return response.data || [];
@@ -79,7 +79,7 @@ export default function ObligationDetailPage({
 
   const { data: deadlines } = useQuery<Deadline[]>({
     queryKey: ['obligation-deadlines', id],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       // TODO: Create endpoint to get deadlines for an obligation
       return [];
     },

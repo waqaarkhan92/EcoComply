@@ -33,7 +33,7 @@ export default function RegulatorQuestionsPage() {
 
   const { data: questionsData, isLoading } = useQuery<QuestionsResponse>({
     queryKey: ['regulator-questions', siteId, cursor],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       params.append('filter[site_id]', siteId);
       if (cursor) params.append('cursor', cursor);

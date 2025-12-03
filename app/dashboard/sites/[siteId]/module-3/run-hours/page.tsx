@@ -42,7 +42,7 @@ export default function RunHoursPage() {
 
   const { data: runHoursData, isLoading, error } = useQuery<RunHoursResponse>({
     queryKey: ['module-3-run-hours', siteId, cursor],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
       // Note: We'll need to filter by generators that belong to this site
       // For now, we'll fetch all and filter client-side or use a different approach

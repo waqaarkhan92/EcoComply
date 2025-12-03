@@ -20,7 +20,7 @@ interface ConsultantDashboard {
 export default function ConsultantDashboardPage() {
   const { data: dashboardData, isLoading } = useQuery<{ data: ConsultantDashboard }>({
     queryKey: ['consultant-dashboard'],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: ConsultantDashboard }>('/consultant/dashboard');
     },
   });

@@ -38,7 +38,7 @@ export default function ParameterDetailPage() {
 
   const { data, isLoading, error } = useQuery<ParameterResponse>({
     queryKey: ['module-2-parameter', parameterId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       return apiClient.get<ParameterResponse>(`/module-2/parameters/${parameterId}`);
     },
     enabled: !!parameterId,

@@ -1,17 +1,44 @@
 # EcoComply UI/UX Design System Specification
 
-**EcoComply v1.0 — Launch-Ready / Last updated: 2025-01-29**
+**EcoComply v1.0 — Launch-Ready / Last updated: 2025-01-01**
 
-**Document Version:** 1.1  
-**Status:** Implemented  
+**Document Version:** 2.1  
+**Status:** Updated - Compliance Score System  
 **Created by:** Cursor  
 **Depends on:**
 - ✅ User Workflow Maps (1.3) - Complete
-- ✅ Frontend Routes & Component Map (2.6) - Complete
-- ✅ Onboarding Flow Specification (2.7) - Complete
+- ✅ Frontend Routes & Component Map (1.2) - Complete
+- ✅ Onboarding Flow Specification (1.1) - Complete
+- ✅ High Level Product Plan (01) - Complete
+- ✅ Product Logic Specification (1.4) - Complete
+- ✅ Backend API Specification (1.4) - Complete
 
 **Purpose:** Defines the complete UI/UX design system for the EcoComply platform, including design tokens, component specifications, navigation patterns, mobile responsiveness, accessibility guidelines, and implementation details. This document ensures world-class design, Procore-inspired aesthetics, and optimal user experience across all devices.
 
+> [v2.1 UPDATE – Added Compliance Score Components – 2025-01-01]
+> - Added Section 3.5: Compliance Score Components
+> - Added ComplianceScoreBadge, ComplianceScoreCard, ComplianceScoreProgressBar, ComplianceScoreTrendChart, ComplianceScoreUpdateIndicator
+> - Updated site switcher to show compliance scores
+> - Updated dashboard components to include compliance score displays
+> [v2.0 UPDATE – Site-First Dynamic Module Model – 2025-01-01]
+> Complete refactoring to site-first navigation:
+> - Global Navigation: Dashboard, Sites, Audit Packs, Compliance Clock, Tasks & Actions, Evidence Library, Settings
+> - Site-Level Navigation: Site Overview, Permits (always), Trade Effluent (if purchased), MCPD / Generators (if purchased), Hazardous Waste (if purchased)
+> - Site-switcher in header with compliance score and risk badges
+> - Visual distinction for active vs inactive modules
+> - Module visibility derived from tenancy entitlements
+> 
+> [v1.2 UPDATE – Added Module 4 and New Feature Components – 2025-01-01]
+> New components added:
+> - Module 4 (Hazardous Waste) screen components
+> - Compliance Clock components
+> - Condition-level evidence mapping components
+> - Recurrence trigger configuration components
+> - Permit change tracking components
+> - Enhanced corrective action lifecycle components
+> - Consultant Mode components
+> - Validation rules UI components (Module 4)
+> - Chain of custody UI components (Module 4)
 > [v1.1 UPDATE – Implementation Complete – 2025-01-29]
 > All components implemented in:
 > - components/ui/ (Button, Input, Dropdown, Modal, Checkbox, etc.)
@@ -546,7 +573,540 @@ interface ImportRow {
 - **Message:** Error message (e.g., "File too large")
 - **Retry Button:** Retry upload button
 
-## 3.5 Audit Pack View
+## 3.5 Compliance Score Components
+
+### 3.5.1 Compliance Score Badge
+
+**Component:** `ComplianceScoreBadge`
+
+**Purpose:** Display compliance score as a color-coded badge (0-100 integer)
+
+**Props:**
+```typescript
+interface ComplianceScoreBadgeProps {
+  score: number; // 0-100 integer
+  size?: 'sm' | 'md' | 'lg';
+  showLabel?: boolean;
+  showTrend?: boolean; // Show up/down arrow if score changed
+  trendValue?: number; // Change from previous period
+}
+```
+
+**Visual Design:**
+- **Score Ranges:**
+  - 90-100: Green badge (#10B981) - "Compliant"
+  - 70-89: Amber badge (#F59E0B) - "Needs Attention"
+  - 0-69: Red badge (#EF4444) - "Non-Compliant"
+- **Size Variants:**
+  - Small: 24px height, text-xs (12px)
+  - Medium: 32px height, text-sm (14px)
+  - Large: 40px height, text-base (16px)
+- **Display Format:** "{score}%" (e.g., "85%")
+- **Trend Indicator:** Up arrow (green) if improved, down arrow (red) if declined
+
+**Usage:**
+- Site switcher header
+- Site overview cards
+- Module headers
+- Dashboard widgets
+- Audit pack summaries
+
+### 3.5.2 Compliance Score Card
+
+**Component:** `ComplianceScoreCard`
+
+**Purpose:** Display compliance score in a card format with additional context
+
+**Props:**
+```typescript
+interface ComplianceScoreCardProps {
+  score: number; // 0-100 integer
+  title: string; // "Site Compliance" or "Module Compliance"
+  subtitle?: string; // "Last updated: 2 hours ago"
+  totalObligations?: number;
+  completedObligations?: number;
+  overdueCount?: number;
+  showBreakdown?: boolean;
+  onViewDetails?: () => void;
+}
+```
+
+**Visual Design:**
+- Large score display (text-4xl, font-bold)
+- Color-coded background (subtle tint matching badge color)
+- Breakdown section showing:
+  - Total obligations
+  - Completed obligations
+  - Overdue count
+- "View Details" link/button
+- Last updated timestamp
+
+**Usage:**
+- Global Dashboard
+- Site Overview page
+- Module detail pages
+
+### 3.5.3 Compliance Score Progress Bar
+
+**Component:** `ComplianceScoreProgressBar`
+
+**Purpose:** Display compliance score as a progress bar
+
+**Props:**
+```typescript
+interface ComplianceScoreProgressBarProps {
+  score: number; // 0-100 integer
+  showLabel?: boolean;
+  showValue?: boolean;
+  size?: 'sm' | 'md' | 'lg';
+  animated?: boolean; // Animate on mount/update
+}
+```
+
+**Visual Design:**
+- Progress bar with color coding:
+  - 90-100: Green fill (#10B981)
+  - 70-89: Amber fill (#F59E0B)
+  - 0-69: Red fill (#EF4444)
+- Background: Light gray (#E5E7EB)
+- Height: sm (4px), md (6px), lg (8px)
+- Smooth animation on score update
+- Optional label: "Compliance Score" above bar
+- Optional value: "{score}%" at end of bar
+
+**Usage:**
+- Consultant client list table
+- Site list views
+- Module comparison views
+
+### 3.5.4 Compliance Score Trend Chart
+
+**Component:** `ComplianceScoreTrendChart`
+
+**Purpose:** Display compliance score trends over time
+
+**Props:**
+```typescript
+interface ComplianceScoreTrendChartProps {
+  scores: Array<{
+    date: string; // ISO date string
+    score: number; // 0-100 integer
+    moduleId?: string; // Optional: filter by module
+  }>;
+  period?: '7d' | '30d' | '90d' | '1y';
+  showModuleBreakdown?: boolean;
+}
+```
+
+**Visual Design:**
+- Line chart showing score over time
+- Color-coded zones:
+  - Green zone: 90-100
+  - Amber zone: 70-89
+  - Red zone: 0-69
+- Hover tooltip showing exact score and date
+- Optional module breakdown (stacked area or multiple lines)
+
+**Usage:**
+- Site dashboard
+- Module detail pages
+- Compliance reports
+
+### 3.5.5 Real-Time Score Update Indicator
+
+**Component:** `ComplianceScoreUpdateIndicator`
+
+**Purpose:** Show when compliance score is being updated in real-time
+
+**Props:**
+```typescript
+interface ComplianceScoreUpdateIndicatorProps {
+  isUpdating: boolean;
+  lastUpdated?: Date;
+}
+```
+
+**Visual Design:**
+- Spinner icon when `isUpdating = true`
+- "Updated {time} ago" text when not updating
+- Subtle pulse animation during update
+- Position: Top-right corner of score display
+
+**Usage:**
+- All compliance score displays
+- Automatically shows when score is recalculating
+
+---
+
+## 3.5.6 Confidence Score Visualization Components
+
+> [v1.7 UPDATE – Enhanced Confidence Score Visualization – 2025-01-XX]
+
+### 3.5.6.1 Confidence Score Badge
+
+**Component:** `ConfidenceScoreBadge`
+
+**Purpose:** Display AI extraction confidence score (0-100% or 0-1 decimal) with visual indicators
+
+**Props:**
+```typescript
+interface ConfidenceScoreBadgeProps {
+  score: number; // 0-1 decimal (0.95 = 95%) or 0-100 integer
+  size?: 'sm' | 'md' | 'lg';
+  showPercentage?: boolean;
+  showThresholdIndicators?: boolean; // Show visual thresholds
+  threshold?: {
+    high: number; // Default: 0.85 (85%)
+    medium: number; // Default: 0.70 (70%)
+  };
+  onHover?: (score: number) => void;
+  showReviewFlag?: boolean; // Show flag if below threshold
+}
+```
+
+**Visual Design:**
+- **Score Ranges:**
+  - 85-100% (0.85-1.0): Green badge (#10B981) - "High Confidence"
+  - 70-84% (0.70-0.84): Amber badge (#F59E0B) - "Medium Confidence"
+  - <70% (<0.70): Red badge (#EF4444) - "Low Confidence"
+- **Badge Variants:**
+  - **Circular Badge:** Circle with score percentage
+  - **Pill Badge:** Rounded rectangle with label
+  - **Indicator Dot:** Small colored dot (for inline use)
+- **Threshold Indicators:**
+  - Visual marker at 85% threshold (high confidence line)
+  - Visual marker at 70% threshold (review required line)
+- **Review Flag:**
+  - Small red flag icon if score < 70% (requires review)
+  - Tooltip: "Low confidence - review recommended"
+
+**Usage:**
+- Obligation extraction results
+- Review queue items
+- Document extraction summary
+- Evidence items with AI-extracted metadata
+
+---
+
+### 3.5.6.2 Confidence Score Progress Ring
+
+**Component:** `ConfidenceScoreProgressRing`
+
+**Purpose:** Display confidence score as a circular progress ring (donut chart style)
+
+**Props:**
+```typescript
+interface ConfidenceScoreProgressRingProps {
+  score: number; // 0-1 decimal or 0-100 integer
+  size?: number; // Diameter in pixels (default: 64px)
+  strokeWidth?: number; // Ring thickness (default: 6px)
+  showPercentage?: boolean;
+  showThresholdArcs?: boolean; // Show threshold arcs
+  animated?: boolean; // Animate on mount/update
+  showLabel?: boolean;
+  label?: string; // Custom label (default: "Confidence")
+}
+```
+
+**Visual Design:**
+- Circular ring with colored fill based on score
+- **Color Gradient:**
+  - Green (85-100%): Full green ring
+  - Amber-Green gradient (70-84%): Gradient from amber to green
+  - Red-Amber gradient (<70%): Gradient from red to amber
+- **Threshold Arcs:**
+  - Subtle dashed lines at 85% and 70% thresholds
+  - Color-coded threshold markers
+- **Center Display:**
+  - Large percentage text (score %)
+  - Optional label below percentage
+- **Animation:**
+  - Smooth ring fill animation on mount
+  - Smooth transition when score updates
+
+**Usage:**
+- Document extraction overview
+- Obligation detail pages
+- Batch extraction results
+
+---
+
+### 3.5.6.3 Confidence Score Distribution Chart
+
+**Component:** `ConfidenceScoreDistributionChart`
+
+**Purpose:** Display distribution of confidence scores across multiple extractions
+
+**Props:**
+```typescript
+interface ConfidenceScoreDistributionChartProps {
+  scores: Array<{
+    id: string;
+    score: number;
+    label?: string; // e.g., "Obligation 1", "Evidence Item 2"
+    type?: string; // e.g., "obligation", "evidence", "schedule"
+  }>;
+  groupBy?: 'type' | 'category' | 'none';
+  showStatistics?: boolean;
+  onItemClick?: (itemId: string) => void;
+}
+```
+
+**Visual Design:**
+- **Chart Types:**
+  - **Histogram:** Distribution of scores in buckets (0-50%, 50-70%, 70-85%, 85-100%)
+  - **Scatter Plot:** Individual scores plotted over time/order
+  - **Box Plot:** Statistical distribution (min, Q1, median, Q3, max)
+- **Color Coding:**
+  - Each bucket/point colored by confidence level
+  - Hover shows detailed information (score, label, type)
+- **Statistics Panel:**
+  - Mean confidence score
+  - Median confidence score
+  - Standard deviation
+  - Count by confidence level (high/medium/low)
+- **Interactive Features:**
+  - Click item to navigate to detail
+  - Filter by confidence level
+  - Group by type/category
+
+**Usage:**
+- Document extraction summary page
+- Batch import results
+- Review queue overview
+
+---
+
+### 3.5.6.4 Confidence Score Heatmap
+
+**Component:** `ConfidenceScoreHeatmap`
+
+**Purpose:** Visual heatmap showing confidence scores across multiple dimensions (e.g., by obligation category, by document section)
+
+**Props:**
+```typescript
+interface ConfidenceScoreHeatmapProps {
+  data: Array<{
+    x: string; // e.g., "Category" or "Section"
+    y: string; // e.g., "Document" or "Module"
+    score: number; // 0-1 decimal
+    count?: number; // Number of items in this cell
+  }>;
+  xLabel?: string;
+  yLabel?: string;
+  showTooltip?: boolean;
+  onClick?: (x: string, y: string) => void;
+}
+```
+
+**Visual Design:**
+- Grid of colored cells
+- **Color Scale:**
+  - Green: High confidence (85-100%)
+  - Yellow-Green: Medium-High (75-84%)
+  - Yellow: Medium (70-74%)
+  - Orange: Low-Medium (60-69%)
+  - Red: Low (<60%)
+- **Cell Size:**
+  - Proportional to count (if count provided)
+  - Or fixed size
+- **Tooltip:**
+  - Shows x, y labels
+  - Average confidence score
+  - Count of items
+- **Interactive:**
+  - Click cell to filter/view items
+  - Hover for detailed tooltip
+
+**Usage:**
+- Document extraction analysis
+- Module-level confidence overview
+- Category-based confidence analysis
+
+---
+
+### 3.5.6.5 Confidence Score Inline Indicator
+
+**Component:** `ConfidenceScoreInlineIndicator`
+
+**Purpose:** Compact inline confidence indicator for use in tables and lists
+
+**Props:**
+```typescript
+interface ConfidenceScoreInlineIndicatorProps {
+  score: number; // 0-1 decimal or 0-100 integer
+  variant?: 'badge' | 'dot' | 'bar' | 'text';
+  showTooltip?: boolean;
+  tooltipContent?: React.ReactNode;
+}
+```
+
+**Visual Design:**
+- **Variants:**
+  - **Badge:** Small pill badge (e.g., "85%")
+  - **Dot:** Colored dot indicator (for tables)
+  - **Bar:** Mini progress bar (4px height)
+  - **Text:** Colored text (e.g., "High", "Medium", "Low")
+- **Compact Size:**
+  - Minimal space usage
+  - Color-coded for quick scanning
+- **Tooltip:**
+  - Detailed score information on hover
+  - Review recommendations if low
+
+**Usage:**
+- Obligation list tables
+- Evidence item lists
+- Review queue items
+- Extraction result tables
+
+---
+
+### 3.5.6.6 Confidence Score Comparison View
+
+**Component:** `ConfidenceScoreComparisonView`
+
+**Purpose:** Compare confidence scores across multiple items (e.g., before/after re-extraction, different extraction methods)
+
+**Props:**
+```typescript
+interface ConfidenceScoreComparisonViewProps {
+  comparisons: Array<{
+    label: string; // e.g., "Original Extraction", "Re-extraction"
+    score: number;
+    items: Array<{
+      id: string;
+      label: string;
+      score: number;
+    }>;
+  }>;
+  showDiff?: boolean; // Show score difference
+  highlightImprovements?: boolean; // Highlight improved scores
+}
+```
+
+**Visual Design:**
+- Side-by-side comparison layout
+- **Comparison Bars:**
+  - Bar chart showing scores for each comparison
+  - Color-coded by confidence level
+  - Show percentage labels
+- **Diff Indicators:**
+  - Green arrow up if improved
+  - Red arrow down if decreased
+  - Gray dash if unchanged
+  - Show numeric difference
+- **Item-Level Comparison:**
+  - Expandable list showing individual item scores
+  - Highlight items that improved/deteriorated
+
+**Usage:**
+- Before/after re-extraction comparison
+- Extraction method comparison
+- A/B testing extraction prompts
+
+---
+
+### 3.5.6.7 Confidence Score Alert Banner
+
+**Component:** `ConfidenceScoreAlertBanner`
+
+**Purpose:** Alert banner when confidence scores fall below threshold or require attention
+
+**Props:**
+```typescript
+interface ConfidenceScoreAlertBannerProps {
+  lowConfidenceItems: Array<{
+    id: string;
+    label: string;
+    score: number;
+    type: 'obligation' | 'evidence' | 'schedule';
+  }>;
+  threshold?: number; // Default: 0.70 (70%)
+  onReviewClick?: () => void;
+  dismissible?: boolean;
+}
+```
+
+**Visual Design:**
+- Alert banner at top of page/section
+- **Alert Variants:**
+  - **Warning:** Amber banner for medium confidence items (70-84%)
+  - **Error:** Red banner for low confidence items (<70%)
+- **Content:**
+  - Alert icon
+  - Count of low-confidence items
+  - Brief message: "{count} items require review"
+  - "Review Items" button
+  - Dismiss button (if dismissible)
+- **Expandable:**
+  - Click to expand and see list of items
+  - Each item shows label, score, type
+  - Click item to navigate to detail
+
+**Usage:**
+- Document extraction completion
+- Batch import completion
+- Dashboard alerts
+
+---
+
+### 3.5.6.8 Confidence Score Tooltip
+
+**Component:** `ConfidenceScoreTooltip`
+
+**Purpose:** Detailed tooltip explaining confidence score with recommendations
+
+**Props:**
+```typescript
+interface ConfidenceScoreTooltipProps {
+  score: number;
+  explanation?: string; // Custom explanation
+  recommendations?: string[]; // Array of recommendation strings
+  showThresholds?: boolean;
+}
+```
+
+**Visual Design:**
+- Rich tooltip with multiple sections
+- **Score Display:**
+  - Large score percentage
+  - Color-coded background
+- **Explanation:**
+  - Brief explanation of what confidence score means
+- **Recommendations:**
+  - Bulleted list of recommendations
+  - Action items based on score level
+- **Thresholds:**
+  - Show where score falls relative to thresholds
+  - Visual indicator on threshold scale
+
+**Tooltip Content Examples:**
+
+**High Confidence (85-100%):**
+- "High confidence - AI extraction is likely accurate"
+- "Review recommended but not required"
+- "Can proceed with normal workflow"
+
+**Medium Confidence (70-84%):**
+- "Medium confidence - review recommended"
+- "Check extracted fields against original document"
+- "Verify dates, frequencies, and categories"
+
+**Low Confidence (<70%):**
+- "Low confidence - manual review required"
+- "Extraction may contain errors"
+- "Compare against source document carefully"
+- "Consider manual entry if extraction is inaccurate"
+
+**Usage:**
+- Hover over any confidence score badge
+- Context-sensitive help
+- Review queue item details
+
+---
+
+## 3.6 Audit Pack View
 
 ### Preview
 
@@ -597,6 +1157,1073 @@ interface ImportRow {
 - **Message:** Error message
 - **Retry Button:** Retry generation button
 - **Support Link:** Contact support link
+
+---
+
+## 3.7 Recurrence Trigger Visual Builder Components
+
+> [v1.7 UPDATE – Recurrence Trigger Visual Builder – 2025-01-XX]
+
+### 3.7.1 Visual Trigger Builder Canvas
+
+**Component:** `VisualTriggerBuilder`
+**Purpose:** Drag-and-drop interface for building recurrence triggers visually
+
+**Props:**
+```typescript
+interface VisualTriggerBuilderProps {
+  triggerDefinition: TriggerDefinition;
+  onUpdate: (newDefinition: TriggerDefinition) => void;
+  availableNodes: TriggerNode[];
+  readOnly?: boolean;
+}
+```
+
+**Visual Design:**
+- **Canvas Area:** Large interactive canvas (min 800px × 600px)
+- **Background:** Grid pattern (20px grid) for alignment
+- **Zoom Controls:** +/- buttons, mouse wheel support
+- **Pan Controls:** Click and drag background, arrow keys
+- **Node Snapping:** Nodes snap to grid for alignment
+
+**Node Types:**
+- **Start Node:** Green circle (32px), "START" label
+- **Condition Nodes:** Diamond shape (48px × 48px), condition name, input/output ports
+- **Action Nodes:** Rectangle (64px × 48px), action name, input port only
+- **End Node:** Red circle (32px), "END" label
+
+**Connection Lines:**
+- **Visual:** Curved lines connecting output port to input port
+- **Color:** Primary teal (#026A67), 2px stroke
+- **Hover:** Highlight connection on hover
+- **Validation:** Red line for invalid connections
+
+**Node Palette:**
+- **Sidebar:** Left panel (200px width) with draggable node types
+- **Node Cards:** Each node type as draggable card
+- **Drag Preview:** Visual feedback when dragging
+
+**Node Properties Panel:**
+- **Right Panel:** 300px width, appears when node selected
+- **Properties Form:** Node-specific configuration options
+- **Real-time Validation:** Visual indicators (green/yellow/red)
+- **Remove Button:** "Remove Node" with confirmation
+
+---
+
+### 3.7.2 Schedule Preview Timeline
+
+**Component:** `SchedulePreviewTimeline`
+**Purpose:** Visual calendar view showing projected trigger executions
+
+**Props:**
+```typescript
+interface SchedulePreviewTimelineProps {
+  schedule: ScheduleConfig;
+  nextDeadlines: DeadlinePreview[];
+  onDeadlineClick?: (deadline: DeadlinePreview) => void;
+}
+```
+
+**Visual Design:**
+- **Timeline View:** Horizontal calendar timeline
+- **Deadline Markers:** Colored dots on timeline
+  - Green: Upcoming
+  - Amber: Approaching (within 7 days)
+  - Red: Overdue
+- **Hover Tooltip:** Shows deadline details
+- **Click Action:** Navigate to deadline detail
+
+**Deadline Preview List:**
+- **List View:** Vertical list of next 5 deadlines
+- **Deadline Item:**
+  - Date (formatted)
+  - Status badge
+  - Calculation method (tooltip)
+
+---
+
+## 3.8 Background Jobs Admin Dashboard Components
+
+> [v1.7 UPDATE – Background Jobs Admin Dashboard – 2025-01-XX]
+
+### 3.8.1 Jobs Metrics Cards
+
+**Component:** `JobsMetrics`
+**Purpose:** Display key performance indicators for background jobs
+
+**Props:**
+```typescript
+interface JobsMetricsProps {
+  totalJobs: number;
+  activeJobs: number;
+  successRate: number;
+  failedJobs: number;
+  avgProcessingTime: number;
+  queueHealth: 'healthy' | 'degraded' | 'unhealthy';
+}
+```
+
+**Visual Design:**
+- **Card Layout:** Grid of 6 metric cards (3 columns desktop, 2 tablet, 1 mobile)
+- **Card Design:**
+  - Large number (48px font, bold)
+  - Label (14px font, gray)
+  - Trend indicator (sparkline chart)
+  - Color-coded border (green/yellow/red based on status)
+- **Card Sizes:** Equal width, 200px height
+
+**Metric Cards:**
+1. **Total Jobs:** Total count, trend over time
+2. **Active Jobs:** Current running jobs, trend
+3. **Success Rate:** Percentage, color-coded (green > 95%, yellow 90-95%, red < 90%)
+4. **Failed Jobs:** Count, trend
+5. **Avg Processing Time:** Milliseconds, trend
+6. **Queue Health:** Status badge, health indicator
+
+---
+
+### 3.8.2 Jobs Analytics Charts
+
+**Component:** `JobsAnalytics`
+**Purpose:** Visual analytics on job performance and trends
+
+**Props:**
+```typescript
+interface JobsAnalyticsProps {
+  jobsOverTime: TimeSeriesData[];
+  jobTypeDistribution: DistributionData[];
+  processingTimeData: TimeSeriesData[];
+  failureRateData: TimeSeriesData[];
+}
+```
+
+**Visual Design:**
+- **Chart Container:** Full width, 400px height
+- **Chart Types:**
+  - Line chart: Jobs Over Time, Processing Time
+  - Bar/Pie chart: Job Type Distribution
+  - Line chart: Failure Rate
+- **Interactive:** Tooltips, drill-down capabilities
+- **Responsive:** Adapts to container width
+
+---
+
+### 3.8.3 Job Detail Modal Enhancements
+
+**Component:** `JobDetailModal`
+**Purpose:** Enhanced job detail view with tabs
+
+**Props:**
+```typescript
+interface JobDetailModalProps {
+  jobId: string;
+  tabs?: ('details' | 'logs' | 'timeline' | 'retry-history')[];
+}
+```
+
+**Visual Design:**
+- **Tabs:** Horizontal tabs at top
+  - Details Tab
+  - Logs Tab
+  - Timeline Tab (NEW)
+  - Retry History Tab (NEW)
+
+**Timeline Tab:**
+- **Visual Timeline:** Vertical timeline showing job lifecycle
+- **Timeline Events:**
+  - Queued (timestamp)
+  - Started (timestamp)
+  - Retried (timestamp, if applicable)
+  - Completed/Failed (timestamp)
+- **Event Markers:** Colored dots on timeline
+- **Event Details:** Expandable cards for each event
+
+**Retry History Tab:**
+- **Table View:** List of retry attempts
+- **Columns:**
+  - Attempt Number
+  - Timestamp
+  - Error Message
+  - Delay (time before retry)
+- **Status Badge:** Success/Failed for each attempt
+
+---
+
+### 3.8.4 Job Progress Indicator
+
+**Component:** `JobProgressIndicator`
+**Purpose:** Show progress for running jobs
+
+**Props:**
+```typescript
+interface JobProgressIndicatorProps {
+  progress?: number; // 0-100
+  status: 'queued' | 'active' | 'completed' | 'failed';
+  estimatedTimeRemaining?: number; // seconds
+}
+```
+
+**Visual Design:**
+- **Progress Bar:** Horizontal progress bar
+- **Progress Percentage:** Display percentage (if available)
+- **Status Badge:** Queued/Active/Completed/Failed
+- **Estimated Time:** "~X minutes remaining" (if active)
+
+---
+
+## 3.9 Unlinked Evidence Widget Components
+
+> [v1.7 UPDATE – Unlinked Evidence Widget – 2025-01-XX]
+
+### 3.9.1 Unlinked Evidence Dashboard Widget
+
+**Component:** `UnlinkedEvidenceWidget`
+**Purpose:** Dashboard widget showing unlinked evidence status
+
+**Props:**
+```typescript
+interface UnlinkedEvidenceWidgetProps {
+  unlinkedCount: number;
+  warningCount: number;
+  criticalCount: number;
+  archivedCount: number;
+  recentItems: UnlinkedEvidenceItem[];
+  onViewAll: () => void;
+}
+```
+
+**Visual Design:**
+- **Widget Card:** Standard dashboard card (full width)
+- **Header:**
+  - Title: "Unlinked Evidence"
+  - Count Badge: Color-coded (green if 0, amber if 1-5, red if >5)
+  - View All Button: Link to unlinked evidence page
+- **Status Breakdown:**
+  - Three mini cards: Warning, Critical, Archived
+  - Each with count and color-coded background
+- **Recent Items List:**
+  - Last 5 items
+  - Each item: Filename (truncated), days since upload, status badge, link button
+
+---
+
+### 3.9.2 Enforcement Status Badge
+
+**Component:** `EnforcementStatusBadge`
+**Purpose:** Display evidence enforcement status
+
+**Props:**
+```typescript
+interface EnforcementStatusBadgeProps {
+  status: 'PENDING_LINK' | 'UNLINKED_WARNING' | 'UNLINKED_CRITICAL' | 'UNLINKED_ARCHIVED' | 'LINKED';
+  daysSinceUpload: number;
+}
+```
+
+**Visual Design:**
+- **Badge Colors:**
+  - PENDING_LINK: Gray (#6B7280)
+  - UNLINKED_WARNING (7-13 days): Amber (#D4A017)
+  - UNLINKED_CRITICAL (14-29 days): Red (#C44536)
+  - UNLINKED_ARCHIVED (30+ days): Dark gray (#374151)
+  - LINKED: Green (#2E7D32)
+- **Badge Text:** Status label + days count
+- **Size:** Small badge (24px height)
+
+---
+
+### 3.9.3 Grace Period Countdown
+
+**Component:** `GracePeriodCountdown`
+**Purpose:** Visual countdown showing grace period status
+
+**Props:**
+```typescript
+interface GracePeriodCountdownProps {
+  daysRemaining?: number;
+  daysOverdue?: number;
+  gracePeriodDays: number; // default 7
+}
+```
+
+**Visual Design:**
+- **Progress Bar:** Horizontal progress bar
+- **Color Coding:**
+  - Green: Within grace period (0-7 days)
+  - Amber: Warning period (7-14 days)
+  - Red: Critical period (14-30 days)
+- **Text Display:**
+  - "X days remaining" (if within grace)
+  - "X days overdue" (if past grace)
+- **Tooltip:** "Evidence must be linked within 7 days of upload"
+
+---
+
+### 3.9.4 Suggested Obligations Card
+
+**Component:** `SuggestedObligationsCard`
+**Purpose:** Display suggested obligations for linking evidence
+
+**Props:**
+```typescript
+interface SuggestedObligationsCardProps {
+  suggestions: SuggestedObligation[];
+  onLink: (obligationId: string) => void;
+}
+```
+
+**Visual Design:**
+- **Card Container:** Light background card
+- **Suggestion Items:**
+  - Obligation title
+  - Match reason badge (e.g., "Filename match", "Date match")
+  - Link button
+- **Layout:** Vertical list, max 3 items visible
+
+---
+
+## 3.10 Manual Override Modal Components
+
+> [v1.7 UPDATE – Manual Override Modal – 2025-01-XX]
+
+### 3.10.1 Manual Override Modal
+
+**Component:** `ManualOverrideModal`
+**Purpose:** Context-dependent modal for manual overrides
+
+**Props:**
+```typescript
+interface ManualOverrideModalProps {
+  entityType: 'obligation' | 'evidence' | 'deadline' | 'compliance_status' | 'schedule';
+  entityId: string;
+  currentValue: any;
+  onOverride: (override: OverrideData) => void;
+  onCancel: () => void;
+}
+```
+
+**Visual Design:**
+- **Modal Size:** Large (800px width, max-height 90vh)
+- **Modal Header:**
+  - Title: "Manual Override"
+  - Override Type Badge
+  - Close Button
+- **Modal Content:**
+  - Override Context Section
+  - Override Form (context-dependent)
+  - Audit Trail Notice
+- **Modal Footer:**
+  - Cancel Button
+  - Confirm Override Button (disabled if reason < 10 chars)
+
+**Override Context Display:**
+- **Entity Info Card:**
+  - Entity type
+  - Entity name/title
+  - Current system-determined value
+- **Previous Values:** Collapsible section showing override history
+
+**Override Reason Input:**
+- **Textarea:** Multi-line input (min 10, max 500 characters)
+- **Character Count:** Display "X/500 characters"
+- **Placeholder:** "e.g., Document interpretation requires manual adjustment"
+- **Validation:** Real-time validation, disable submit if < 10 chars
+
+**Audit Trail Notice:**
+- **Warning Banner:** Amber background
+- **Warning Icon:** Alert icon
+- **Warning Text:** "This override will be logged in the audit trail with your name and timestamp."
+- **Preview Text:** "Audit entry: [Override Type] by [Your Name] at [Timestamp]"
+
+---
+
+### 3.10.2 Override Form Variants
+
+**Obligation Override Form:**
+- **Editable Fields:**
+  - Obligation text (textarea)
+  - Category (dropdown)
+  - Frequency (dropdown)
+  - Deadline date (date picker)
+- **Non-Editable Fields (Read-only):**
+  - Subjective flag (grayed out, tooltip: "System-determined")
+  - Confidence score (grayed out, tooltip: "System-determined")
+  - Compliance status (partial - can mark complete/N/A, cannot mark overdue as complete)
+
+**Evidence Exemption Form:**
+- **Exemption Type Selector:** Radio buttons
+  - "Temporary Evidence"
+  - "Enforcement Exempt"
+- **Evidence Info Display:** Read-only card showing evidence details
+
+**Deadline Adjustment Form:**
+- **Current Deadline:** Display current deadline
+- **New Deadline Input:** Date picker
+- **Validation:** Ensure new deadline is valid date
+
+**Compliance Status Override Form:**
+- **Current Status:** Display current status badge
+- **New Status Selector:** Dropdown with allowed options
+- **Restrictions Notice:** "Cannot mark overdue as complete without evidence"
+
+---
+
+## 3.11 Regulator Challenge State Machine Components
+
+> [v1.7 UPDATE – Regulator Challenge State Machine – 2025-01-XX]
+
+### 3.11.1 State Machine Diagram
+
+**Component:** `StateMachineDiagram`
+**Purpose:** Visual representation of regulator question state machine
+
+**Props:**
+```typescript
+interface StateMachineDiagramProps {
+  currentState: RegulatorQuestionState;
+  availableTransitions: RegulatorQuestionState[];
+  onTransition: (newState: RegulatorQuestionState) => void;
+}
+```
+
+**Visual Design:**
+- **Diagram Container:** Large interactive diagram (min 600px × 400px)
+- **State Nodes:**
+  - Circle nodes (64px diameter)
+  - State name label
+  - Color-coded:
+    - OPEN: Blue (#0056A6)
+    - RESPONSE_SUBMITTED: Amber (#D4A017)
+    - RESPONSE_ACKNOWLEDGED: Green (#2E7D32)
+    - FOLLOW_UP_REQUIRED: Orange (#F97316)
+    - CLOSED: Gray (#6B7280)
+    - RESPONSE_OVERDUE: Red (#C44536)
+- **Current State Highlight:** Thick border (4px) on current state
+- **Transition Arrows:**
+  - Curved arrows between states
+  - Color: Primary teal (#026A67)
+  - Hover: Highlight available transitions
+- **State Descriptions:** Tooltips on hover showing state description
+
+---
+
+### 3.11.2 State Transition Buttons
+
+**Component:** `StateTransitionButtons`
+**Purpose:** Context-dependent buttons for state transitions
+
+**Props:**
+```typescript
+interface StateTransitionButtonsProps {
+  currentState: RegulatorQuestionState;
+  onTransition: (newState: RegulatorQuestionState) => void;
+  userRole: 'owner' | 'admin' | 'staff';
+}
+```
+
+**Visual Design:**
+- **Button Layout:** Horizontal button group
+- **Buttons (Context-Dependent):**
+  - If OPEN: "Submit Response" button
+  - If RESPONSE_SUBMITTED: "Mark as Acknowledged" (Admin/Owner only)
+  - If RESPONSE_ACKNOWLEDGED: "Request Follow-Up" (Admin/Owner), "Close Question"
+  - If FOLLOW_UP_REQUIRED: "Close Question"
+- **Button Styling:** Primary button style, disabled if transition not allowed
+
+---
+
+### 3.11.3 State History Timeline
+
+**Component:** `StateHistoryTimeline`
+**Purpose:** Chronological timeline of state transitions
+
+**Props:**
+```typescript
+interface StateHistoryTimelineProps {
+  transitions: StateTransition[];
+}
+```
+
+**Visual Design:**
+- **Timeline:** Vertical timeline (left-aligned)
+- **Timeline Events:**
+  - Event icon (colored dot)
+  - Event timestamp
+  - From state → To state
+  - Transitioned by (user name)
+  - Transition reason (if provided)
+- **Event Cards:** Expandable cards for each transition
+
+---
+
+## 3.12 Pack Access Logs Components
+
+> [v1.7 UPDATE – Pack Access Logs – 2025-01-XX]
+
+### 3.12.1 Access Logs Table
+
+**Component:** `AccessLogsTable`
+**Purpose:** Display pack access logs in table format
+
+**Props:**
+```typescript
+interface AccessLogsTableProps {
+  logs: PackAccessLog[];
+  filters: AccessLogFilters;
+  onFilterChange: (filters: AccessLogFilters) => void;
+  onExport: (format: 'pdf' | 'csv' | 'json') => void;
+}
+```
+
+**Visual Design:**
+- **Table Layout:** Standard data table
+- **Columns:**
+  - Accessor Email (if provided)
+  - IP Address
+  - User Agent (truncated, expandable)
+  - First Accessed At
+  - Last Accessed At
+  - View Count
+  - Download Count
+  - Pages Viewed (array, expandable)
+- **Row Actions:** Click row to view details modal
+- **Pagination:** Bottom pagination (25 items per page)
+
+---
+
+### 3.12.2 Access Logs Filters
+
+**Component:** `AccessLogsFilters`
+**Purpose:** Filter access logs
+
+**Props:**
+```typescript
+interface AccessLogsFiltersProps {
+  filters: AccessLogFilters;
+  onFilterChange: (filters: AccessLogFilters) => void;
+}
+```
+
+**Visual Design:**
+- **Filter Bar:** Horizontal filter bar above table
+- **Filters:**
+  - Date Range Picker
+  - Accessor Email Input (if provided)
+  - IP Address Input
+- **Clear Filters Button:** Reset all filters
+
+---
+
+### 3.12.3 Access Timeline Chart
+
+**Component:** `AccessTimelineChart`
+**Purpose:** Visual timeline of access frequency
+
+**Props:**
+```typescript
+interface AccessTimelineChartProps {
+  accessData: TimeSeriesData[];
+  timeRange: 'day' | 'week' | 'month';
+}
+```
+
+**Visual Design:**
+- **Chart Type:** Line chart
+- **X-Axis:** Time (dates)
+- **Y-Axis:** Access count
+- **Data Points:** Access events plotted on timeline
+- **Interactive:** Tooltips showing exact access times
+
+---
+
+### 3.12.4 Accessor Geolocation
+
+**Component:** `AccessorGeolocation`
+**Purpose:** Display accessor geolocation (if IP geolocation available)
+
+**Props:**
+```typescript
+interface AccessorGeolocationProps {
+  ipAddress: string;
+  geolocation?: GeolocationData;
+}
+```
+
+**Visual Design:**
+- **Map View:** Small map (300px × 200px) showing location
+- **Location Marker:** Pin on map
+- **Location Info:** Country, city (if available)
+- **Fallback:** "Location not available" if geolocation unavailable
+
+---
+
+## 3.13 Pack Contents Components
+
+> [v1.7 UPDATE – Pack Contents – 2025-01-XX]
+
+### 3.13.1 Pack Contents List
+
+**Component:** `PackContentsList`
+**Purpose:** Display pack contents with version-locked snapshots
+
+**Props:**
+```typescript
+interface PackContentsListProps {
+  contents: PackContent[];
+  onExport: () => void;
+}
+```
+
+**Visual Design:**
+- **List Layout:** Vertical list of content items
+- **Content Item Card:**
+  - Evidence/Obligation preview
+  - Snapshot metadata
+  - Version locked badge
+  - Included at timestamp
+
+---
+
+### 3.13.2 Evidence Snapshot Card
+
+**Component:** `EvidenceSnapshotCard`
+**Purpose:** Display evidence snapshot from pack
+
+**Props:**
+```typescript
+interface EvidenceSnapshotCardProps {
+  snapshot: EvidenceSnapshot;
+  includedAt: string;
+}
+```
+
+**Visual Design:**
+- **Card Layout:** Horizontal card layout
+- **Left Side:** Evidence preview thumbnail
+- **Right Side:**
+  - File name (from snapshot)
+  - File type, file size
+  - Uploaded at, uploaded by
+  - File hash (collapsible, for integrity)
+  - Version locked badge
+  - Included at timestamp
+
+---
+
+### 3.13.3 Obligation Snapshot Card
+
+**Component:** `ObligationSnapshotCard`
+**Purpose:** Display obligation snapshot from pack
+
+**Props:**
+```typescript
+interface ObligationSnapshotCardProps {
+  snapshot: ObligationSnapshot;
+  includedAt: string;
+}
+```
+
+**Visual Design:**
+- **Card Layout:** Similar to evidence snapshot
+- **Content:**
+  - Obligation title (from snapshot)
+  - Category, frequency
+  - Deadline date
+  - Compliance status
+  - Version locked badge
+  - Included at timestamp
+
+---
+
+### 3.13.4 Version Locked Badge
+
+**Component:** `VersionLockedBadge`
+**Purpose:** Indicate immutable snapshot
+
+**Props:**
+```typescript
+interface VersionLockedBadgeProps {
+  locked: boolean;
+}
+```
+
+**Visual Design:**
+- **Badge:** Small badge (24px height)
+- **Icon:** Lock icon
+- **Text:** "Version Locked"
+- **Color:** Gray (#6B7280)
+- **Tooltip:** "This snapshot is immutable and cannot be modified"
+
+---
+
+### 3.13.5 Contents Summary Breakdowns
+
+**Component:** `ContentsSummary`
+**Purpose:** Display breakdowns of pack contents
+
+**Props:**
+```typescript
+interface ContentsSummaryProps {
+  evidenceBreakdown: BreakdownData;
+  obligationBreakdown: BreakdownData;
+}
+```
+
+**Visual Design:**
+- **Summary Cards:** Two cards side-by-side
+  - Evidence Breakdown Card
+  - Obligation Breakdown Card
+- **Breakdown Charts:**
+  - Pie chart or bar chart
+  - By type (evidence) or by status (obligations)
+  - By module
+- **Total Counts:** Large numbers at top of each card
+
+---
+
+## 3.14 Evidence Chain-of-Custody Report Components
+
+> [v1.7 UPDATE – Chain-of-Custody Report – 2025-01-XX]
+
+### 3.14.1 Chain-of-Custody Timeline
+
+**Component:** `ChainOfCustodyTimeline`
+**Purpose:** Chronological timeline of all evidence actions
+
+**Props:**
+```typescript
+interface ChainOfCustodyTimelineProps {
+  events: ChainOfCustodyEvent[];
+  onExport: (format: 'pdf' | 'csv' | 'json') => void;
+}
+```
+
+**Visual Design:**
+- **Timeline:** Vertical timeline (left-aligned)
+- **Timeline Events:**
+  - Event type icon (colored dot)
+  - Event timestamp
+  - Event actor (user name, role, email)
+  - Event details (action description, IP address, etc.)
+  - File hash at time of event
+- **Event Cards:** Expandable cards for each event
+- **Chronological Order:** Most recent at top
+
+---
+
+### 3.14.2 Chain Event Card
+
+**Component:** `ChainEventCard`
+**Purpose:** Display individual chain-of-custody event
+
+**Props:**
+```typescript
+interface ChainEventCardProps {
+  event: ChainOfCustodyEvent;
+  expanded?: boolean;
+  onToggleExpand: () => void;
+}
+```
+
+**Visual Design:**
+- **Card Layout:** Horizontal card
+- **Left Side:**
+  - Event type icon
+  - Event timestamp
+- **Right Side:**
+  - Event actor info
+  - Event details (collapsible)
+  - File hash (collapsible)
+
+**Event Type Icons:**
+- EVIDENCE_UPLOADED: Upload icon (green)
+- EVIDENCE_LINKED: Link icon (blue)
+- EVIDENCE_UNLINKED: Unlink icon (amber)
+- EVIDENCE_ACCESSED: Eye icon (gray)
+- EVIDENCE_DOWNLOADED: Download icon (blue)
+- EVIDENCE_APPROVED: Checkmark icon (green)
+- EVIDENCE_MODIFICATION_ATTEMPTED: Alert icon (red)
+
+---
+
+### 3.14.3 Chain-of-Custody Summary
+
+**Component:** `ChainOfCustodySummary`
+**Purpose:** Display summary statistics
+
+**Props:**
+```typescript
+interface ChainOfCustodySummaryProps {
+  totalEvents: number;
+  uniqueActors: number;
+  accessCount: number;
+  downloadCount: number;
+  modificationAttempts: number;
+}
+```
+
+**Visual Design:**
+- **Summary Cards:** Grid of 5 metric cards
+- **Metrics:**
+  - Total Events Count
+  - Unique Actors Count
+  - Access Count
+  - Download Count
+  - Modification Attempts Count
+- **Card Design:** Standard metric card style
+
+---
+
+### 3.14.4 Chain-of-Custody Export
+
+**Component:** `ChainOfCustodyExport`
+**Purpose:** Export chain-of-custody report
+
+**Props:**
+```typescript
+interface ChainOfCustodyExportProps {
+  onExport: (format: 'pdf' | 'csv' | 'json') => void;
+}
+```
+
+**Visual Design:**
+- **Export Button:** Primary button
+- **Format Selector:** Dropdown with PDF/CSV/JSON options
+- **Export Action:** Triggers download
+
+---
+
+## 3.15 Validation Execution History Components
+
+> [v1.7 UPDATE – Validation Execution History – 2025-01-XX]
+
+### 3.15.1 Execution History Table
+
+**Component:** `ExecutionHistoryTable`
+**Purpose:** Display validation execution history
+
+**Props:**
+```typescript
+interface ExecutionHistoryTableProps {
+  executions: ValidationExecution[];
+  filters: ExecutionFilters;
+  onFilterChange: (filters: ExecutionFilters) => void;
+}
+```
+
+**Visual Design:**
+- **Table Layout:** Standard data table
+- **Columns:**
+  - Execution Timestamp
+  - Consignment Note Link
+  - Execution Status Badge
+  - Execution Result
+  - Execution Duration
+  - View Details Button
+- **Row Actions:** Click row to view details modal
+
+---
+
+### 3.15.2 Execution Stats Cards
+
+**Component:** `ExecutionStatsCards`
+**Purpose:** Display execution statistics
+
+**Props:**
+```typescript
+interface ExecutionStatsCardsProps {
+  totalExecutions: number;
+  successRate: number;
+  failureRate: number;
+  avgExecutionTime: number;
+}
+```
+
+**Visual Design:**
+- **Card Grid:** 4 cards in grid
+- **Cards:**
+  - Total Executions
+  - Success Rate (percentage, color-coded)
+  - Failure Rate (percentage, color-coded)
+  - Average Execution Time (milliseconds)
+
+---
+
+### 3.15.3 Execution Detail Modal
+
+**Component:** `ExecutionDetailModal`
+**Purpose:** Detailed view of single execution
+
+**Props:**
+```typescript
+interface ExecutionDetailModalProps {
+  executionId: string;
+  onClose: () => void;
+}
+```
+
+**Visual Design:**
+- **Modal Size:** Large (800px width)
+- **Tabs:**
+  - Details Tab
+  - Logs Tab
+- **Details Tab:**
+  - Execution ID
+  - Timestamp
+  - Status
+  - Duration
+  - Triggered by
+- **Logs Tab:**
+  - Chronological log entries
+  - Expandable log details
+
+---
+
+## 3.16 Module Cascading Deactivation Components
+
+> [v1.7 UPDATE – Module Cascading Deactivation – 2025-01-XX]
+
+### 3.16.1 Cascading Deactivation Modal
+
+**Component:** `CascadingDeactivationModal`
+**Purpose:** Warning modal for cascading deactivation
+
+**Props:**
+```typescript
+interface CascadingDeactivationModalProps {
+  module: Module;
+  dependentModules: Module[];
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+```
+
+**Visual Design:**
+- **Modal Size:** Medium (600px width)
+- **Modal Header:**
+  - Warning Icon (amber)
+  - Title: "Cascading Deactivation"
+- **Modal Content:**
+  - Warning Message
+  - Dependent Modules List
+  - Dependency Visualization
+  - Data Preservation Notice
+  - Confirmation Checkbox
+- **Modal Footer:**
+  - Cancel Button
+  - Deactivate Button (disabled until checkbox checked)
+
+---
+
+### 3.16.2 Dependency Visualization
+
+**Component:** `DependencyVisualization`
+**Purpose:** Visual flow showing module dependencies
+
+**Props:**
+```typescript
+interface DependencyVisualizationProps {
+  primaryModule: Module;
+  dependentModules: Module[];
+}
+```
+
+**Visual Design:**
+- **Flow Diagram:** Horizontal flow
+- **Primary Module:** Large card on left
+- **Dependent Modules:** Cards on right
+- **Connection Arrows:** Arrows from primary to dependents
+- **Flow Description:** Text below diagram
+
+---
+
+### 3.16.3 Dependent Modules List
+
+**Component:** `DependentModulesList`
+**Purpose:** List of modules that will be deactivated
+
+**Props:**
+```typescript
+interface DependentModulesListProps {
+  modules: Module[];
+}
+```
+
+**Visual Design:**
+- **List Layout:** Vertical list
+- **Module Card:**
+  - Module name
+  - Module status: "Active"
+  - Dependency indicator: "Requires [Module Name]"
+- **Card Styling:** Light background, border
+
+---
+
+### 3.16.4 Data Preservation Notice
+
+**Component:** `DataPreservationNotice`
+**Purpose:** Notice about data preservation
+
+**Props:**
+```typescript
+interface DataPreservationNoticeProps {
+  dependentModules: Module[];
+  primaryModule: Module;
+}
+```
+
+**Visual Design:**
+- **Notice Banner:** Light background banner
+- **Icon:** Info icon
+- **Text:** "Data for [Dependent Modules] will be preserved. Reactivating [Primary Module] will restore access to these modules."
+
+---
+
+## 3.17 Business Day Adjustment Components
+
+> [v1.7 UPDATE – Business Day Adjustment – 2025-01-XX]
+
+### 3.17.1 Business Day Toggle
+
+**Component:** `BusinessDayToggle`
+**Purpose:** Toggle for business day adjustment setting
+
+**Props:**
+```typescript
+interface BusinessDayToggleProps {
+  enabled: boolean;
+  onToggle: (enabled: boolean) => void;
+}
+```
+
+**Visual Design:**
+- **Toggle Switch:** Standard toggle switch component
+- **Label:** "Adjust deadlines to business days"
+- **Help Text:** "When enabled, deadlines falling on weekends or UK bank holidays will be moved to the previous working day"
+- **Layout:** Horizontal layout with toggle on right
+
+---
+
+### 3.17.2 Business Day Info
+
+**Component:** `BusinessDayInfo`
+**Purpose:** Information about business day adjustment
+
+**Props:**
+```typescript
+interface BusinessDayInfoProps {
+  showDetails?: boolean;
+}
+```
+
+**Visual Design:**
+- **Info Card:** Light background card
+- **Info Icon:** Question mark icon
+- **Info Text:** "Business days exclude weekends and UK bank holidays. This setting applies to all deadlines for this site."
+- **Collapsible:** Can expand for more details
+
+---
 
 ---
 
@@ -779,12 +2406,37 @@ function MainContent({ children }: { children: React.ReactNode }) {
 ### Navigation Links
 
 **Position:** Center-left of header (after logo)  
-**Items:** Dashboard, Sites, Documents, Obligations, Evidence, Modules, Audit Packs  
+**Items:** Dashboard, Sites, Audit Packs, Compliance Clock, Tasks & Actions, Evidence Library, Settings  
 **Styling:** White text (#FFFFFF), font size 14px, font weight 500  
 **Hover:** Primary Teal (#026A67) underline, cursor pointer  
 **Active State:** Primary Teal underline (2px), bold font weight  
 **Spacing:** 24px between items (desktop)  
 **Mobile:** Hidden (moved to sidebar)
+
+### Site Switcher in Header
+
+**Position:** Right side of header, before search/notifications  
+**Design:** Dropdown button showing current site name  
+**Components:**
+- Current site name (truncated if long)
+- Site compliance score badge (Red/Amber/Green)
+- Risk badge indicator
+- Dropdown arrow icon
+
+**Site Switcher Dropdown:**
+- List of all accessible sites
+- Each site shows: Name, compliance score, risk badge
+- "Add Site" option at bottom
+- Search/filter sites in dropdown
+- Current site highlighted
+
+**Site Compliance Score Display:**
+- Badge next to site name in switcher
+- Color-coded: Red (0-69), Amber (70-89), Green (90-100)
+- Shows integer percentage (0-100): "{score}%"
+- Real-time updates when obligations are completed/evidenced
+- Click to navigate to site dashboard
+- Tooltip shows: "Compliance Score: {score}% - {status text}"
 
 ### Site Switcher Component
 
@@ -831,6 +2483,8 @@ interface SiteSwitcherProps {
 
 ## 5.2 Sidebar Navigation
 
+> [v2.0 UPDATE – Site-First Dynamic Module Model – 2025-01-01]
+
 ### Sidebar Structure
 
 **Background:** Dark Charcoal (#101314) - Procore-inspired dark sidebar  
@@ -847,7 +2501,7 @@ interface SiteSwitcherProps {
 **Animation:** Smooth 200ms transition  
 **Mobile:** Always collapsed (drawer overlay)
 
-### Navigation Menu Items
+### Global Navigation Menu Items (Top-Level, Always Visible)
 
 **Layout:** Vertical list, icon + text (expanded), icon only (collapsed)  
 **Spacing:** 8px between items  
@@ -857,6 +2511,75 @@ interface SiteSwitcherProps {
 **Icon Size:** 20px × 20px  
 **Text:** White (#FFFFFF), font size 14px, font weight 500
 
+**Global Navigation Items (Always Visible):**
+1. **Dashboard** - `/dashboard`
+2. **Sites** - `/sites`
+3. **Audit Packs** - `/packs` (global with site/module filters)
+4. **Compliance Clock** - `/compliance-clocks` (global with obligations deep-links)
+5. **Tasks & Actions** - `/tasks` (global, linked to modules)
+6. **Evidence Library** - `/evidence` (global with context filters)
+7. **Settings** - `/settings`
+
+**Key Principles:**
+- Global navigation items are always visible (not dependent on module activation)
+- Audit Packs and Compliance Clock are never hidden under any module
+- All global features support site and module filtering
+
+### Site-Level Navigation (When Inside a Site)
+
+**Site Switcher:** In header, shows current site name with dropdown
+- Click to switch between sites
+- Shows site name, compliance score, risk badge
+- "Add Site" option in dropdown
+
+**Site-Level Navigation Items:**
+1. **Site Overview** - `/sites/[siteId]/dashboard` (always available)
+2. **Permits** - `/sites/[siteId]/permits` (always present)
+   - Documents
+   - Obligations
+   - Workflows
+3. **Trade Effluent** - `/sites/[siteId]/trade-effluent` (if purchased)
+   - Parameters
+   - Exceedances
+   - Corrective Actions
+4. **MCPD / Generators** - `/sites/[siteId]/generators` (if purchased)
+   - Run Hours
+   - Runtime Monitoring
+   - AER
+5. **Hazardous Waste** - `/sites/[siteId]/hazardous-waste` (if purchased)
+   - Waste Streams
+   - Consignment Notes
+   - Chain of Custody
+   - Validation Rules
+   - End-Point Proofs
+   - Corrective Actions
+
+**Module Visibility:**
+- Derived from tenancy entitlements (`tenancy_entitlements` table)
+- Active modules: Full color, clickable, normal font weight
+- Inactive modules: Grayed out (50% opacity), show upsell hook on hover/click
+- Upsell hooks: "Upgrade to access [Module Name]" with CTA button
+
+### Visual Distinction for Active vs Inactive Modules
+
+**Active Module:**
+- Full color icon and text
+- Normal font weight (500)
+- Clickable, full functionality
+- No visual indicators needed
+
+**Inactive Module:**
+- Grayed out: 50% opacity on icon and text
+- Lighter font weight (400)
+- Clickable but shows upsell modal
+- Upsell indicator: Small badge "Upgrade" or lock icon
+- Hover state: Shows tooltip "Upgrade to access [Module Name]"
+
+**Upsell Hook Display:**
+- On hover: Tooltip with module description and "Upgrade" CTA
+- On click: Modal with module benefits, pricing, and "Upgrade Now" button
+- Context-aware: Only shows if module is supported by site context (e.g., Trade Effluent for sites with water company)
+
 ### Nested Navigation
 
 **Expandable Sections:** Chevron icon indicates expandable  
@@ -864,18 +2587,70 @@ interface SiteSwitcherProps {
 **Animation:** Smooth expand/collapse (200ms)  
 **Active Sub-item:** Primary Teal text, bold font weight
 
-### Module-Specific Navigation
-
-**Conditional Display:** Show Module 2/3 items only if module activated  
-**Module Indicators:** Badge showing "Module 2" or "Module 3" next to item  
-**Module Items:** Parameters (Module 2), Lab Results (Module 2), Generators (Module 3), Run Hours (Module 3)
-
 ### Role-Based Navigation
 
 **Owner/Admin:** All menu items visible  
 **Staff:** Hide "User Management", "System Settings"  
 **Viewer:** Show read-only items only (no create/edit actions)  
-**Consultant:** Show client-specific items only
+**Consultant:** Show client-specific items only (Settings hidden)
+
+### Consultant-Specific Navigation Example
+
+**Purpose:** Consultants have multi-company access but cannot modify settings or subscription. Navigation reflects this restriction.
+
+**Consultant Sidebar Navigation Structure:**
+```
+Sidebar (Consultant Role)
+├── Dashboard - `/dashboard`
+│   └── Shows all assigned client sites, grouped by company
+├── Sites - `/sites`
+│   └── Shows all assigned client sites, grouped by company
+│       └── Site Switcher shows: "Client Company A - Site 1", "Client Company B - Site 2", etc.
+├── Audit Packs - `/packs`
+│   └── Can generate packs for assigned clients only
+│       └── Pack generation validates client assignment before proceeding
+├── Compliance Clock - `/compliance-clocks`
+│   └── Shows compliance status for all assigned client sites
+├── Tasks & Actions - `/tasks`
+│   └── Shows tasks across all assigned client sites
+├── Evidence Library - `/evidence`
+│   └── Shows evidence for all assigned client sites
+│       └── Evidence isolated by client company (no cross-client linking)
+└── [Settings - HIDDEN]
+    └── Consultants cannot access settings, subscription, or billing
+```
+
+**Consultant Site Switcher Example:**
+```
+Site Switcher (Consultant Role)
+├── Current Site: "Client Company A - Site 1"
+├── Dropdown:
+│   ├── Group: "Client Company A"
+│   │   ├── Site 1 (current) ✓
+│   │   ├── Site 2
+│   │   └── Site 3
+│   ├── ─────────────────────
+│   ├── Group: "Client Company B"
+│   │   ├── Site 1
+│   │   └── Site 2
+│   └── ─────────────────────
+└── [Add Site - HIDDEN for consultants]
+```
+
+**Consultant Navigation Restrictions:**
+- **Settings Link:** Hidden from sidebar navigation
+- **Subscription/Billing:** No access (returns 403 FORBIDDEN if accessed directly)
+- **Company Settings:** Read-only access (cannot modify)
+- **Site Settings:** Blocked (returns 403 FORBIDDEN)
+- **Pack Generation:** Validates client assignment before generation
+- **Evidence Upload:** Restricted to assigned client sites only
+- **Cross-Client Evidence Linking:** Blocked at RLS level
+
+**Visual Indicators:**
+- Site names prefixed with client company name in site switcher
+- Pack generation shows client selector (only assigned clients available)
+- Evidence upload shows site selector (only assigned client sites available)
+- Settings icon/link completely hidden from navigation
 
 ### Mobile Sidebar (Drawer)
 
@@ -1145,7 +2920,288 @@ interface BreadcrumbProps {
 **Chart Visualization:** Line chart showing run hours over time  
 **Mobile:** Full-screen form, simplified chart
 
-## 6.7 Admin Screens
+### Fuel Usage Logs
+
+**Design:** List of fuel usage entries with generator, date, fuel type, quantity, sulphur content  
+**Form:** Fuel usage log creation/edit form with generator selector, date picker, fuel type dropdown, quantity input, unit selector, sulphur content fields  
+**Sulphur Content Display:** Percentage and mg/kg values with compliance badge  
+**Evidence Link:** Optional evidence item selector for fuel delivery receipts, invoices, test certificates  
+**Mobile:** Card layout, stacked form
+
+### Sulphur Content Reports
+
+**Design:** List of sulphur content test reports with generator, test date, fuel type, compliance status  
+**Form:** Sulphur content report creation/edit form with generator selector, test date picker, fuel type dropdown, batch reference, sulphur content inputs, regulatory limit inputs, compliance status selector  
+**Compliance Badge:** COMPLIANT, NON_COMPLIANT, EXCEEDED, PENDING status indicators  
+**Evidence Link:** Required evidence item selector for test certificate PDF/image  
+**Mobile:** Card layout, stacked form
+
+## 6.7 Module 4 Screens (Hazardous Waste)
+
+> [v1.2 UPDATE – Module 4 Screens – 2025-01-01]
+
+### Waste Stream Management
+
+**Design:** List of waste streams with EWC code, description, classification, volume  
+**Form:** Waste stream creation/edit form with EWC code validation  
+**Classification Badge:** Hazardous/Non-Hazardous indicator  
+**Volume Tracking:** Current volume vs permit limits  
+**Mobile:** Card layout, stacked form
+
+### Consignment Note Interface
+
+**Design:** List of consignment notes with number, waste stream, carrier, date, validation status  
+**Form:** Consignment note creation form with:
+  - Waste stream selector
+  - Carrier selector (with licence validation)
+  - Volume input
+  - Date picker
+  - Photo upload (operator photo)
+  - QR code scan button
+**Validation Status:** Visual indicator (Pass/Fail) with error details  
+**Pre-Submission Validation:** Runs automatically on save, displays errors inline  
+**Mobile:** Full-screen form, simplified validation display
+
+### Chain of Custody Timeline
+
+**Design:** Timeline view showing:
+  - Consignment note creation
+  - Carrier pickup
+  - Transit tracking (if available)
+  - End-point receipt
+  - End-point proof
+**Chain Break Alerts:** Red alert cards for missing evidence or gaps  
+**Completion Indicator:** Progress bar showing chain completion percentage  
+**Mobile:** Vertical timeline, stacked cards
+
+### Validation Rules Configuration
+
+**Design:** List of validation rules with name, type, status, actions  
+**Form:** Rule configuration form with:
+  - Rule name input
+  - Rule type selector (WASTE_CODE_CHECK, QUANTITY_LIMIT, CONTRACTOR_LICENCE_CHECK, CHAIN_OF_CUSTODY, CUSTOM)
+  - Rule config editor (JSONB editor)
+  - Active toggle
+**Test Button:** Test rule against sample data  
+**Mobile:** Full-screen form, simplified editor
+
+### End-Point Proof Interface
+
+**Design:** List of end-point proofs with consignment number, proof type, certificate, date  
+**Form:** End-point proof upload form with:
+  - Consignment note selector
+  - Proof type selector (Destruction/Recycling)
+  - Certificate upload
+  - Date picker
+**Certificate Viewer:** PDF/document viewer for certificates  
+**Mobile:** Full-screen form, simplified viewer
+
+### Corrective Action Lifecycle (Module 4)
+
+**Design:** Lifecycle view with sections:
+  - Trigger (chain-break event)
+  - Investigation (gap analysis, root cause)
+  - Action Items (assigned owners, due dates)
+  - Evidence (resolution documentation)
+  - Closure (regulator justification)
+**Status Badge:** Color-coded by lifecycle stage  
+**Mobile:** Stacked sections, full-screen view
+
+## 6.8 Compliance Clock Components
+
+> [v1.2 UPDATE – Compliance Clock Components – 2025-01-01]
+
+### Compliance Clock Dashboard
+
+**Design:** Dashboard with:
+  - Summary cards (Red/Amber/Green counts)
+  - Critical clocks list
+  - Filter bar (status, module, site)
+**Clock Card:** Shows clock title, module badge, site name, days remaining, status indicator, deadline date  
+**Status Indicator:** Color-coded (Red/Amber/Green) with countdown  
+**Mobile:** Stacked cards, simplified filters
+
+### Compliance Clock Detail View
+
+**Design:** Detail view showing:
+  - Clock title and status
+  - Module and site information
+  - Countdown section (days remaining, deadline date, progress bar)
+  - Related entity link
+  - History timeline
+**Progress Bar:** Visual indicator of time remaining  
+**Mobile:** Stacked sections, full-width progress bar
+
+## 6.9 Condition-Level Evidence Mapping Components (Module 1)
+
+> [v1.2 UPDATE – Condition-Level Evidence Mapping – 2025-01-01]
+
+### Evidence Rules Configuration
+
+**Design:** List of evidence rules with allowed types, completeness score, version history  
+**Form:** Evidence rules configuration form with:
+  - Allowed evidence types selector (multi-select)
+  - Completeness scoring configuration
+  - Versioning rules
+**Completeness Score Display:** Visual indicator showing completeness percentage  
+**Version History:** Timeline of evidence rule changes  
+**Mobile:** Full-screen form, simplified selector
+
+## 6.10 Recurrence Trigger Components (Module 1)
+
+> [v1.2 UPDATE – Recurrence Trigger Components – 2025-01-01]
+
+### Recurrence Trigger Configuration
+
+**Design:** List of recurrence triggers with name, type, schedule, last execution, next execution  
+**Form:** Trigger configuration form with:
+  - Trigger name input
+  - Trigger type selector (Dynamic/Event-based/Conditional)
+  - Schedule configuration (if dynamic)
+  - Event conditions (if event-based)
+  - Conditional logic (if conditional)
+**Execution History:** Timeline of trigger executions  
+**Mobile:** Full-screen form, simplified configuration
+
+## 6.11 Permit Change Tracking Components (Module 1)
+
+> [v1.2 UPDATE – Permit Change Tracking – 2025-01-01]
+
+### Permit Versions List
+
+**Design:** List of permit versions with version number, date, change type, summary  
+**Version Card:** Shows version number, date, change type badge, change summary  
+**Actions:** View version, compare versions, view impact  
+**Mobile:** Card layout, stacked actions
+
+### Version Comparison View
+
+**Design:** Side-by-side comparison with:
+  - Version selector (From/To)
+  - Redline comparison view:
+    - Added sections (green highlight)
+    - Removed sections (red highlight)
+    - Modified sections (yellow highlight)
+  - Impact analysis section:
+    - Obligation changes
+    - Impact summary
+**Mobile:** Stacked comparison, simplified highlights
+
+### Version Impact Analysis
+
+**Design:** Impact analysis view showing:
+  - New obligations
+  - Removed obligations
+  - Modified obligations
+  - Impact score
+**Obligation Change History:** Timeline of obligation changes  
+**Mobile:** Stacked sections, simplified history
+
+## 6.12 Condition Permissions Components (Module 1)
+
+> [v1.4 UPDATE – Condition Permissions – 2025-02-01]
+
+### Condition Permissions Management
+
+**Design:** List of condition permissions with user, document, condition reference, permission type  
+**Permission Card:** Shows user name, document name, condition reference, permission type badge, active status, granted by/at  
+**Form:** Permission creation/editing form with:
+  - User selector (autocomplete)
+  - Document selector (filtered by site)
+  - Condition reference input
+  - Permission type selector (VIEW/EDIT/MANAGE/FULL)
+  - Active toggle
+**Actions:** Edit, revoke, delete permissions  
+**Mobile:** Card layout, stacked actions
+
+## 6.13 SLA Timer Tracking Components (Cross-Cutting)
+
+> [v1.4 UPDATE – SLA Timer Tracking – 2025-02-01]
+
+### SLA Tracking Display
+
+**Design:** Inline SLA information in deadline detail pages  
+**SLA Badge:** Shows SLA status (COMPLIANT/BREACHED) with color coding  
+**SLA Metrics:** Displays:
+  - SLA target date
+  - Breach timestamp (if breached)
+  - Breach duration (hours)
+  - Escalation status (if breached > 24h)
+**SLA History:** Timeline of SLA events (breach start, escalation, resolution)  
+**Mobile:** Stacked metrics, simplified timeline
+
+## 6.14 Consent State Machine Components (Module 2)
+
+> [v1.4 UPDATE – Consent State Machine – 2025-02-01]
+
+### Consent States List
+
+**Design:** List of consent states with document, state badge, effective date, transition info  
+**State Card:** Shows document name, state badge (DRAFT/IN_FORCE/SUPERSEDED/EXPIRED), effective date, expiry date, transitioned by/at  
+**State Transition Form:** Form for creating state transitions with:
+  - Document selector
+  - State selector (with validation based on current state)
+  - Effective date input
+  - Expiry date input (optional)
+  - Transition reason textarea
+**State History:** Timeline of state transitions showing progression  
+**Mobile:** Card layout, simplified transition form
+
+## 6.15 Regulation Thresholds Components (Module 3)
+
+> [v1.4 UPDATE – Regulation Thresholds – 2025-02-01]
+
+### Regulation Thresholds List
+
+**Design:** List of regulation thresholds with type, capacity range, frequencies  
+**Threshold Card:** Shows threshold type badge, capacity range (min-max MW), monitoring frequency, stack test frequency, reporting frequency, active status  
+**Threshold Form:** Form for creating/editing thresholds with:
+  - Threshold type selector
+  - Capacity range inputs (min/max MW)
+  - Monitoring frequency selector
+  - Stack test frequency selector
+  - Reporting frequency selector
+  - Regulation reference input
+**Frequency Calculation:** Automatic frequency calculation based on generator capacity:
+  - Generator selector
+  - Capacity display
+  - Matching threshold display
+  - Calculated frequencies display
+  - Apply button
+**Mobile:** Card layout, simplified form
+
+## 6.16 Consultant Mode Components
+
+> [v1.2 UPDATE – Consultant Mode Components – 2025-01-01]
+
+### Consultant Clients List
+
+**Design:** List of clients with name, sites count, active modules, last activity  
+**Client Card:** Shows client name, sites count, active modules badges, last activity, actions  
+**Actions:** View client, generate pack, manage access  
+**Mobile:** Card layout, stacked actions
+
+### Consultant Client View
+
+**Design:** Client detail view with:
+  - Client name and info
+  - Sites list
+  - Activity feed
+**Pack Generation:** Consultant-branded pack generation  
+**Access Management:** Read/write permission management  
+**Mobile:** Stacked sections, simplified management
+
+### Consultant Pack Generation
+
+**Design:** Pack generation form with:
+  - Client selector
+  - Site selector
+  - Pack type selector
+  - Consultant branding toggle
+**Pack List:** List of generated packs with consultant branding (if enabled)  
+**Mobile:** Full-screen form, simplified branding
+
+## 6.13 Admin Screens
 
 ### User Management Interface
 
