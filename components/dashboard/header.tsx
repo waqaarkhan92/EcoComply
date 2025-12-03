@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { Search, Bell, User, ChevronDown, LogOut, Settings, HelpCircle, Menu } from 'lucide-react';
 import Link from 'next/link';
 import { NotificationDropdown } from './notification-dropdown';
+import { SiteSwitcher } from './site-switcher';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -45,7 +46,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   return (
     <header className="bg-charcoal border-b border-border-gray px-4 md:px-6 h-16 flex items-center relative z-50">
       <div className="flex items-center justify-between w-full">
-        {/* Left: Hamburger Menu (Mobile) + Company Name */}
+        {/* Left: Hamburger Menu (Mobile) + Site Switcher */}
         <div className="flex items-center gap-3 md:gap-4">
           {/* Hamburger Menu Button (Mobile Only) */}
           <button
@@ -55,7 +56,10 @@ export function Header({ onMenuClick }: HeaderProps) {
           >
             <Menu className="h-6 w-6" />
           </button>
-          <h2 className="text-base md:text-lg font-semibold text-white truncate">
+          {/* Site Switcher (shows on site pages) */}
+          <SiteSwitcher />
+          {/* Company Name (shows when not on site page) */}
+          <h2 className="text-base md:text-lg font-semibold text-white truncate hidden md:block">
             {company?.name || 'Dashboard'}
           </h2>
         </div>
