@@ -86,19 +86,19 @@ export function ProblemSection() {
           ))}
         </div>
 
-        {/* Bottom Quote */}
+        {/* Bottom - Industry Reality */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.5 }}
           className="mt-16 text-center"
         >
-          <blockquote className="text-xl lg:text-2xl text-gray-300 italic max-w-3xl mx-auto">
-            "We spent 3 days preparing for an EA inspection, only to find we'd missed a monthly
-            monitoring requirement buried on page 47 of our permit."
-          </blockquote>
+          <p className="text-xl lg:text-2xl text-gray-300 max-w-3xl mx-auto">
+            Environmental permits can contain 50+ obligations spread across hundreds of pages.
+            Missing just one requirement can result in enforcement action.
+          </p>
           <div className="mt-4 text-gray-500">
-            — Operations Manager, UK Waste Facility
+            EcoComply extracts every obligation automatically in under 60 seconds.
           </div>
         </motion.div>
       </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { useAuthStore } from '@/lib/store/auth-store';
@@ -8,6 +8,7 @@ import { useToast } from '@/lib/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NoPacksState } from '@/components/ui/empty-state';
+import { ProgressIndicator, useProgressSteps } from '@/components/ui/progress-indicator';
 import { Package, Download, Share2, FileText, Calendar, Filter, X, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
@@ -63,6 +64,16 @@ export default function PacksPage() {
   const [dateRangeEnd, setDateRangeEnd] = useState('');
   const [recipientName, setRecipientName] = useState('');
   const [purpose, setPurpose] = useState('');
+  const [generatingPackId, setGeneratingPackId] = useState<string | null>(null);
+
+  // Progress steps for pack generation
+  const progressSteps = useProgressSteps([
+    { id: 'validating', label: 'Validating request', description: 'Checking requirements' },
+    { id: 'gathering', label: 'Gathering obligations', description: 'Collecting compliance data' },
+    { id: 'evidence', label: 'Collecting evidence', description: 'Compiling documents' },
+    { id: 'generating', label: 'Generating document', description: 'Creating pack file' },
+    { id: 'finalizing', label: 'Finalizing pack', description: 'Completing generation' },
+  ]);
 
   // Fetch packs
   const { data: packsData, isLoading: packsLoading } = useQuery<{
@@ -117,20 +128,28 @@ export default function PacksPage() {
   // Pack generation mutation
   const generateMutation = useMutation({
     mutationFn: async (packData: any) => {
+      // Start progress
+      progressSteps.startStep('validating');
+
       const response = await apiClient.post('/packs/generate', packData);
+
+      // Complete validation, start gathering
+      progressSteps.completeStep('validating');
+      progressSteps.startStep('gathering');
+
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Store the pack ID to track its progress
+      setGeneratingPackId(data.id);
+
+      // Complete gathering, start evidence collection
+      progressSteps.completeStep('gathering');
+      progressSteps.startStep('evidence');
+
       queryClient.invalidateQueries({ queryKey: ['packs'] });
-      setShowGenerateModal(false);
-      // Reset form
-      setSelectedPackType(null);
-      setSelectedSite('');
-      setSelectedDocument('');
-      setDateRangeStart('');
-      setDateRangeEnd('');
-      setRecipientName('');
-      setPurpose('');
+
+      // Don't close modal yet - we'll keep it open to show progress
       // Show success toast
       toast({
         title: 'Pack Generation Started',
@@ -139,6 +158,12 @@ export default function PacksPage() {
       });
     },
     onError: (error: any) => {
+      // Mark current active step as failed
+      const activeStep = progressSteps.steps.find(s => s.status === 'active');
+      if (activeStep) {
+        progressSteps.failStep(activeStep.id);
+      }
+
       toast({
         title: 'Pack Generation Failed',
         description: error?.message || 'An error occurred while generating the pack.',
@@ -148,6 +173,53 @@ export default function PacksPage() {
   });
 
   const packs: any[] = packsData?.data || [];
+
+  // Monitor pack generation progress
+  useEffect(() => {
+    if (!generatingPackId) return;
+
+    const generatingPack = packs.find(p => p.id === generatingPackId);
+    if (!generatingPack) return;
+
+    const status = generatingPack.status;
+
+    if (status === 'GENERATING') {
+      // Update progress based on simulated stages
+      progressSteps.completeStep('evidence');
+      progressSteps.startStep('generating');
+    } else if (status === 'COMPLETED') {
+      // Complete all steps
+      progressSteps.completeStep('generating');
+      progressSteps.startStep('finalizing');
+
+      // Small delay before completing finalization and closing modal
+      setTimeout(() => {
+        progressSteps.completeStep('finalizing');
+
+        // Close modal after a short delay to show completion
+        setTimeout(() => {
+          setShowGenerateModal(false);
+          setGeneratingPackId(null);
+
+          // Reset form
+          setSelectedPackType(null);
+          setSelectedSite('');
+          setSelectedDocument('');
+          setDateRangeStart('');
+          setDateRangeEnd('');
+          setRecipientName('');
+          setPurpose('');
+          progressSteps.resetSteps();
+        }, 1000);
+      }, 500);
+    } else if (status === 'FAILED') {
+      // Mark as failed
+      const activeStep = progressSteps.steps.find(s => s.status === 'active');
+      if (activeStep) {
+        progressSteps.failStep(activeStep.id);
+      }
+    }
+  }, [packs, generatingPackId, progressSteps]);
 
   // Filter pack types based on subscription tier
   const availablePackTypes = PACK_TYPES.filter(pt => {
@@ -345,6 +417,16 @@ export default function PacksPage() {
             </div>
 
             <div className="p-6 space-y-6">
+              {/* Progress Indicator - shown during generation */}
+              {(generateMutation.isPending || generatingPackId) && (
+                <div className="bg-background-tertiary/50 rounded-lg p-6 border border-input-border">
+                  <h3 className="text-lg font-semibold text-text-primary mb-4">
+                    Generating Pack
+                  </h3>
+                  <ProgressIndicator steps={progressSteps.steps} />
+                </div>
+              )}
+
               {/* Pack Type Selection */}
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-3">
@@ -535,20 +617,29 @@ export default function PacksPage() {
               <Button
                 variant="outline"
                 size="md"
-                onClick={() => setShowGenerateModal(false)}
+                onClick={() => {
+                  setShowGenerateModal(false);
+                  if (generatingPackId) {
+                    // Reset state if closing during generation
+                    setGeneratingPackId(null);
+                    progressSteps.resetSteps();
+                  }
+                }}
                 disabled={generateMutation.isPending}
               >
-                Cancel
+                {generatingPackId ? 'Close' : 'Cancel'}
               </Button>
-              <Button
-                variant="primary"
-                size="md"
-                onClick={handleGenerate}
-                disabled={generateMutation.isPending || !selectedPackType}
-                loading={generateMutation.isPending}
-              >
-                Generate Pack
-              </Button>
+              {!generatingPackId && (
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={handleGenerate}
+                  disabled={generateMutation.isPending || !selectedPackType}
+                  loading={generateMutation.isPending}
+                >
+                  Generate Pack
+                </Button>
+              )}
             </div>
           </div>
         </div>

@@ -2,9 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useAuthStore } from '@/lib/store/auth-store';
-import { Sidebar } from '@/components/dashboard/sidebar';
+import { SidebarSkeleton } from '@/components/ui/loading-skeletons';
 import { Header } from '@/components/dashboard/header';
+
+// Lazy load heavy components
+const Sidebar = dynamic(() => import('@/components/dashboard/sidebar').then(mod => ({ default: mod.Sidebar })), {
+  loading: () => <SidebarSkeleton />,
+  ssr: true,
+});
 
 export default function DashboardLayout({
   children,

@@ -1,12 +1,37 @@
 /**
  * Queue Manager
- * Manages BullMQ queues and workers
+ * Manages BullMQ queues and workers with configurable concurrency and priority
  * Reference: docs/specs/41_Backend_Background_Jobs.md Section 1.1
  */
 
-import { Queue, QueueOptions } from 'bullmq';
+import { Queue, QueueOptions, JobsOptions } from 'bullmq';
 import { Redis } from 'ioredis';
 import { env } from '../env';
+
+// Job priority levels (lower number = higher priority)
+export const JOB_PRIORITY = {
+  CRITICAL: 1, // System-critical jobs (alerts, breaches)
+  HIGH: 2, // User-facing operations (extraction, pack generation)
+  NORMAL: 3, // Standard background tasks
+  LOW: 4, // Batch operations, cleanup
+  BULK: 5, // Bulk imports, large batch jobs
+} as const;
+
+export type JobPriorityLevel = keyof typeof JOB_PRIORITY;
+
+// Concurrency configuration (from environment or defaults)
+export const QUEUE_CONCURRENCY = {
+  // Document processing - CPU intensive, limit concurrency
+  'document-processing': parseInt(process.env.QUEUE_CONCURRENCY_DOCUMENT || '3', 10),
+  // Deadline alerts - quick jobs, can run more concurrently
+  'deadline-alerts': parseInt(process.env.QUEUE_CONCURRENCY_ALERTS || '10', 10),
+  // Pack generation - memory intensive
+  'audit-pack-generation': parseInt(process.env.QUEUE_CONCURRENCY_PACKS || '2', 10),
+  // Monitoring tasks
+  'monitoring-schedule': parseInt(process.env.QUEUE_CONCURRENCY_MONITORING || '5', 10),
+  // Default for unspecified queues
+  default: parseInt(process.env.QUEUE_CONCURRENCY_DEFAULT || '5', 10),
+} as const;
 
 // Queue names
 export const QUEUE_NAMES = {
@@ -130,5 +155,97 @@ export async function closeAllQueues(): Promise<void> {
     await redisConnection.quit();
     redisConnection = null;
   }
+}
+
+/**
+ * Get concurrency setting for a queue
+ */
+export function getQueueConcurrency(queueName: string): number {
+  return (QUEUE_CONCURRENCY as Record<string, number>)[queueName] ?? QUEUE_CONCURRENCY.default;
+}
+
+/**
+ * Create job options with priority
+ */
+export function createJobOptions(
+  priority: JobPriorityLevel = 'NORMAL',
+  additionalOptions?: Partial<JobsOptions>
+): JobsOptions {
+  return {
+    priority: JOB_PRIORITY[priority],
+    ...additionalOptions,
+  };
+}
+
+/**
+ * Add a job to a queue with priority support
+ */
+export async function addJobWithPriority<T>(
+  queueName: string,
+  jobName: string,
+  data: T,
+  priority: JobPriorityLevel = 'NORMAL',
+  options?: Partial<JobsOptions>
+): Promise<string> {
+  const queue = getQueue<T>(queueName);
+  const jobOptions = createJobOptions(priority, options);
+  const job = await queue.add(jobName, data, jobOptions);
+  return job.id || '';
+}
+
+/**
+ * Add a critical job (highest priority, immediate execution)
+ */
+export async function addCriticalJob<T>(
+  queueName: string,
+  jobName: string,
+  data: T,
+  options?: Partial<JobsOptions>
+): Promise<string> {
+  return addJobWithPriority(queueName, jobName, data, 'CRITICAL', options);
+}
+
+/**
+ * Add a bulk job (lowest priority, background processing)
+ */
+export async function addBulkJob<T>(
+  queueName: string,
+  jobName: string,
+  data: T,
+  options?: Partial<JobsOptions>
+): Promise<string> {
+  return addJobWithPriority(queueName, jobName, data, 'BULK', options);
+}
+
+/**
+ * Get queue health stats
+ */
+export async function getQueueStats(queueName: string): Promise<{
+  waiting: number;
+  active: number;
+  completed: number;
+  failed: number;
+  delayed: number;
+}> {
+  const queue = getQueue(queueName);
+  const [waiting, active, completed, failed, delayed] = await Promise.all([
+    queue.getWaitingCount(),
+    queue.getActiveCount(),
+    queue.getCompletedCount(),
+    queue.getFailedCount(),
+    queue.getDelayedCount(),
+  ]);
+  return { waiting, active, completed, failed, delayed };
+}
+
+/**
+ * Get all queue stats (for health check endpoint)
+ */
+export async function getAllQueueStats(): Promise<Record<string, Awaited<ReturnType<typeof getQueueStats>>>> {
+  const stats: Record<string, Awaited<ReturnType<typeof getQueueStats>>> = {};
+  for (const [name] of queues) {
+    stats[name] = await getQueueStats(name);
+  }
+  return stats;
 }
 

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
-import { Search, Plus, AlertTriangle, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { ExportButton } from '@/components/ui/export-button';
+import { Search, Plus, AlertTriangle, CheckCircle2, Clock, XCircle, Download } from 'lucide-react';
 import Link from 'next/link';
 
 interface CorrectiveAction {
@@ -80,6 +81,28 @@ export default function CorrectiveActionsPage() {
     );
   });
 
+  // Export config for the ExportButton
+  const exportConfig = useMemo(() => ({
+    data: filteredActions.map((action) => ({
+      title: action.action_title,
+      type: action.action_type.replace('_', ' '),
+      status: action.status,
+      lifecycle_phase: action.lifecycle_phase || '—',
+      due_date: new Date(action.due_date).toLocaleDateString(),
+      description: action.action_description,
+    })),
+    filename: 'corrective-actions',
+    columns: {
+      title: 'Title',
+      type: 'Type',
+      status: 'Status',
+      lifecycle_phase: 'Lifecycle Phase',
+      due_date: 'Due Date',
+      description: 'Description',
+    },
+    title: 'Corrective Actions Report',
+  }), [filteredActions]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -89,12 +112,20 @@ export default function CorrectiveActionsPage() {
             Track and manage corrective actions for exceedances and breaches
           </p>
         </div>
-        <Button asChild>
-          <Link href="/dashboard/module-2/corrective-actions/new">
-            <Plus className="w-4 h-4 mr-2" />
-            New Corrective Action
-          </Link>
-        </Button>
+        <div className="flex items-center gap-3">
+          <ExportButton
+            config={exportConfig}
+            variant="outline"
+            size="sm"
+            formats={['csv', 'json']}
+          />
+          <Button asChild>
+            <Link href="/dashboard/module-2/corrective-actions/new">
+              <Plus className="w-4 h-4 mr-2" />
+              New Corrective Action
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}

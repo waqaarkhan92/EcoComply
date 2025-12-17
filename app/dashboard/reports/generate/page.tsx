@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +36,7 @@ export default function GenerateReportPage() {
       if (reportUrl) {
         window.open(reportUrl, '_blank');
       } else {
-        alert('Report generated successfully!');
+        toast.success('Report generated successfully!');
       }
     },
   });
@@ -43,7 +44,7 @@ export default function GenerateReportPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!startDate || !endDate) {
-      alert('Please select a date range');
+      toast.error('Please select a date range');
       return;
     }
     generateReport.mutate({

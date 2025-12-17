@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,7 +44,7 @@ export default function ProfilePage() {
       return apiClient.put(`/users/${user?.id}`, data);
     },
     onSuccess: () => {
-      alert('Profile updated successfully');
+      toast.success('Profile updated successfully');
     },
   });
 
@@ -52,7 +53,7 @@ export default function ProfilePage() {
       return apiClient.put(`/users/${user?.id}/password`, data);
     },
     onSuccess: () => {
-      alert('Password changed successfully');
+      toast.success('Password changed successfully');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -67,7 +68,7 @@ export default function ProfilePage() {
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      alert('New passwords do not match');
+      toast.error('New passwords do not match');
       return;
     }
     changePassword.mutate({

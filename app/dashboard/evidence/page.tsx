@@ -13,6 +13,7 @@ import { NoEvidenceState } from '@/components/ui/empty-state';
 import { Modal } from '@/components/ui/modal';
 import { Search, Download, Link as LinkIcon, Unlink, Eye, Upload, Check } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { toast } from 'sonner';
 
 interface EvidenceItem {
@@ -363,10 +364,12 @@ function EvidenceCard({
       {/* Preview */}
       <div className="aspect-video bg-background-secondary flex items-center justify-center relative group">
         {isImage(item.mime_type) && item.file_url ? (
-          <img
+          <Image
             src={previewUrl}
             alt={item.file_name}
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
+            unoptimized
             onError={(e) => {
               // Fallback if image fails to load
               (e.target as HTMLImageElement).style.display = 'none';
@@ -428,12 +431,14 @@ function EvidenceRow({
   return (
     <tr className="border-b border-border/50 hover:bg-muted/50 transition-colors">
       <td className="py-3 px-4">
-        <div className="w-16 h-16 bg-background-secondary rounded flex items-center justify-center">
+        <div className="w-16 h-16 bg-background-secondary rounded flex items-center justify-center relative">
           {isImage(item.mime_type) && item.file_url ? (
-            <img
+            <Image
               src={previewUrl}
               alt={item.file_name}
-              className="w-full h-full object-cover rounded"
+              fill
+              className="object-cover rounded"
+              unoptimized
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';
               }}

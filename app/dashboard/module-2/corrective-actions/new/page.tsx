@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,11 +36,14 @@ export default function NewCorrectiveActionPage() {
     },
     onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ['module-2-corrective-actions'] });
+      toast.success('Corrective action created successfully');
       router.push(`/dashboard/module-2/corrective-actions/${response.data.id}`);
     },
     onError: (error: any) => {
       console.error('Failed to create corrective action:', error);
-      alert('Failed to create corrective action. Please try again.');
+      toast.error('Failed to create corrective action', {
+        description: error?.message || 'Please try again.',
+      });
     },
     onSettled: () => {
       setIsSubmitting(false);
