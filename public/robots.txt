@@ -1,0 +1,16 @@
+# Robots.txt for EcoComply
+# https://ecocomply.io
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://ecocomply.io/sitemap.xml
+
+# Disallow private/authenticated areas
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /onboarding/
+
+# Disallow utility pages
+Disallow: /offline

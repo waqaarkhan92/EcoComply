@@ -104,12 +104,13 @@ export function PricingSection() {
           </p>
 
           {/* Billing Toggle */}
-          <div className="inline-flex items-center gap-4 bg-white rounded-full p-1.5 shadow-sm border border-gray-100">
+          <div className="inline-flex items-center gap-4 bg-white rounded-full p-1.5 shadow-sm border border-gray-100" role="group" aria-label="Billing period">
             <button
               onClick={() => setShowAnnual(false)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 !showAnnual ? 'bg-primary text-white' : 'text-text-secondary hover:text-charcoal'
               }`}
+              aria-pressed={!showAnnual}
             >
               Monthly
             </button>
@@ -118,6 +119,7 @@ export function PricingSection() {
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 showAnnual ? 'bg-primary text-white' : 'text-text-secondary hover:text-charcoal'
               }`}
+              aria-pressed={showAnnual}
             >
               Annual
               <span className="ml-1 text-xs text-success">Save 20%</span>
@@ -182,18 +184,21 @@ export function PricingSection() {
               </Link>
 
               {/* Features */}
-              <ul className="space-y-3">
+              <ul className="space-y-3" aria-label={`${plan.name} plan features`}>
                 {plan.features.map((feature, j) => (
                   <li key={j} className="flex items-center gap-3">
                     {feature.included ? (
-                      <Check className="w-5 h-5 text-success flex-shrink-0" />
+                      <Check className="w-5 h-5 text-success flex-shrink-0" aria-hidden="true" />
                     ) : (
-                      <X className="w-5 h-5 text-gray-300 flex-shrink-0" />
+                      <X className="w-5 h-5 text-gray-300 flex-shrink-0" aria-hidden="true" />
                     )}
                     <span
                       className={feature.included ? 'text-charcoal' : 'text-text-tertiary'}
                     >
                       {feature.name}
+                      <span className="sr-only">
+                        {feature.included ? ' - included' : ' - not included'}
+                      </span>
                     </span>
                   </li>
                 ))}
@@ -210,8 +215,8 @@ export function PricingSection() {
           className="bg-white rounded-2xl p-8 border border-gray-100"
         >
           <h3 className="text-xl font-bold text-charcoal mb-6 flex items-center gap-2">
-            Add-ons & Modules
-            <HelpCircle className="w-5 h-5 text-text-tertiary" />
+            Add-ons &amp; Modules
+            <HelpCircle className="w-5 h-5 text-text-tertiary" aria-hidden="true" />
           </h3>
           <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {addons.map((addon, i) => (

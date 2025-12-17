@@ -156,11 +156,9 @@ export function Footer() {
             © {new Date().getFullYear()} EcoComply Ltd. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
-            <span className="text-gray-400 text-sm">UK Data Residency</span>
+            <span className="text-gray-400 text-sm">UK/EU Data Residency</span>
             <span className="text-gray-500">•</span>
             <span className="text-gray-400 text-sm">GDPR Compliant</span>
-            <span className="text-gray-500">•</span>
-            <span className="text-gray-400 text-sm">ISO 27001</span>
           </div>
         </div>
       </div>

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useInView } from 'framer-motion';
 import { useRef } from 'react';
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2, Shield, Clock, FileText } from 'lucide-react';
+import { ArrowRight, Shield, Clock, FileText } from 'lucide-react';
 
 const benefits = [
   { icon: Clock, text: '14-day free trial' },
@@ -85,7 +85,7 @@ export function CTASection() {
           <div className="flex flex-wrap justify-center items-center gap-6">
             {benefits.map((benefit, i) => (
               <div key={i} className="flex items-center gap-2 text-white/80">
-                <benefit.icon className="w-5 h-5" />
+                <benefit.icon className="w-5 h-5" aria-hidden="true" />
                 <span>{benefit.text}</span>
               </div>
             ))}

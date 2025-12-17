@@ -30,12 +30,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
+      - name: Security audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
       - name: Setup test environment
         run: |
           cp .env.example .env.test
@@ -55,11 +59,9 @@ jobs:
       
       - name: Run unit tests
         run: npm test -- --coverage
-        continue-on-error: true
-      
+
       - name: Run integration tests
         run: npm test -- tests/integration --coverage
-        continue-on-error: true
       
       - name: Run E2E tests
         run: npm run test:e2e
@@ -95,11 +97,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
       
       - name: Install dependencies
@@ -115,11 +117,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
       
       - name: Install dependencies

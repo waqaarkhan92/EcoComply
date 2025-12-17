@@ -32,6 +32,7 @@ export function Navbar() {
 
   return (
     <nav
+      aria-label="Main navigation"
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
           ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100'
@@ -41,7 +42,7 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2" aria-label="EcoComply - Go to homepage">
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <svg
                 viewBox="0 0 24 24"
@@ -49,6 +50,7 @@ export function Navbar() {
                 className="w-6 h-6 text-white"
                 stroke="currentColor"
                 strokeWidth="2"
+                aria-hidden="true"
               >
                 <path d="M12 2L2 7l10 5 10-5-10-5z" />
                 <path d="M2 17l10 5 10-5" />
@@ -66,10 +68,12 @@ export function Navbar() {
                   <button
                     onClick={() => setIsResourcesOpen(!isResourcesOpen)}
                     onMouseEnter={() => setIsResourcesOpen(true)}
+                    aria-expanded={isResourcesOpen}
+                    aria-haspopup="true"
                     className="flex items-center gap-1 text-text-secondary hover:text-charcoal transition-colors font-medium"
                   >
                     {item.name}
-                    <ChevronDown className={`w-4 h-4 transition-transform ${isResourcesOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-4 h-4 transition-transform ${isResourcesOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
                   </button>
                 ) : (
                   <Link
@@ -130,8 +134,10 @@ export function Navbar() {
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="lg:hidden p-2 text-charcoal"
+            aria-expanded={isMobileMenuOpen}
+            aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
           >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {isMobileMenuOpen ? <X className="w-6 h-6" aria-hidden="true" /> : <Menu className="w-6 h-6" aria-hidden="true" />}
           </button>
         </div>
       </div>

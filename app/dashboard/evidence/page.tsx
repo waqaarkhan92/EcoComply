@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
@@ -10,8 +10,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { PageHeader } from '@/components/ui/page-header';
 import { NoEvidenceState } from '@/components/ui/empty-state';
-import { Search, Download, Link as LinkIcon, Unlink, Eye, Upload } from 'lucide-react';
+import { Modal } from '@/components/ui/modal';
+import { Search, Download, Link as LinkIcon, Unlink, Eye, Upload, Check } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 interface EvidenceItem {
   id: string;
@@ -29,11 +31,25 @@ interface EvidenceItem {
   uploaded_by?: string;
 }
 
+interface Obligation {
+  id: string;
+  obligation_title: string;
+  condition_reference?: string;
+  site_id: string;
+  sites?: { name: string };
+}
+
 export default function EvidencePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSite, setSelectedSite] = useState<string>('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  // Evidence linking modal state
+  const [linkingEvidence, setLinkingEvidence] = useState<EvidenceItem | null>(null);
+  const [obligationSearch, setObligationSearch] = useState('');
+  const [selectedObligation, setSelectedObligation] = useState<string | null>(null);
 
   // Fetch evidence items
   const { data: evidenceData, isLoading } = useQuery<{
@@ -53,6 +69,49 @@ export default function EvidencePage() {
   });
 
   const evidenceItems: any[] = evidenceData?.data || [];
+
+  // Fetch obligations for linking (only when modal is open)
+  const { data: obligationsData, isLoading: obligationsLoading } = useQuery<{
+    data: Obligation[];
+  }>({
+    queryKey: ['obligations', obligationSearch, linkingEvidence?.site_id],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (obligationSearch) params.append('filter[obligation_title]', obligationSearch);
+      // Filter by same site as evidence for better UX
+      if (linkingEvidence?.site_id) params.append('filter[site_id]', linkingEvidence.site_id);
+      params.append('page_size', '20');
+
+      const response = await apiClient.get<Obligation[]>(`/obligations?${params.toString()}`);
+      return response;
+    },
+    enabled: !!linkingEvidence,
+  });
+
+  const obligations = obligationsData?.data || [];
+
+  // Link evidence mutation
+  const linkMutation = useMutation({
+    mutationFn: async ({ evidenceId, obligationId }: { evidenceId: string; obligationId: string }) => {
+      return apiClient.post(`/evidence/${evidenceId}/link`, { obligation_id: obligationId });
+    },
+    onSuccess: () => {
+      toast.success('Evidence linked to obligation');
+      queryClient.invalidateQueries({ queryKey: ['evidence'] });
+      setLinkingEvidence(null);
+      setSelectedObligation(null);
+      setObligationSearch('');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to link evidence');
+    },
+  });
+
+  const handleLinkEvidence = () => {
+    if (linkingEvidence && selectedObligation) {
+      linkMutation.mutate({ evidenceId: linkingEvidence.id, obligationId: selectedObligation });
+    }
+  };
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
@@ -143,11 +202,12 @@ export default function EvidencePage() {
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {evidenceItems.map((item) => (
-        <EvidenceCard 
-          key={item.id} 
-          item={item} 
-          formatFileSize={formatFileSize} 
+        <EvidenceCard
+          key={item.id}
+          item={item}
+          formatFileSize={formatFileSize}
           isImage={isImage}
+          onLink={() => setLinkingEvidence(item)}
         />
       ))}
         </div>
@@ -166,17 +226,119 @@ export default function EvidencePage() {
             </thead>
             <tbody>
               {evidenceItems.map((item) => (
-                <EvidenceRow 
-                  key={item.id} 
-                  item={item} 
-                  formatFileSize={formatFileSize} 
+                <EvidenceRow
+                  key={item.id}
+                  item={item}
+                  formatFileSize={formatFileSize}
                   isImage={isImage}
+                  onLink={() => setLinkingEvidence(item)}
                 />
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      {/* Evidence Linking Modal */}
+      <Modal
+        isOpen={!!linkingEvidence}
+        onClose={() => {
+          setLinkingEvidence(null);
+          setSelectedObligation(null);
+          setObligationSearch('');
+        }}
+        title="Link Evidence to Obligation"
+        size="lg"
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setLinkingEvidence(null);
+                setSelectedObligation(null);
+                setObligationSearch('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleLinkEvidence}
+              disabled={!selectedObligation || linkMutation.isPending}
+            >
+              {linkMutation.isPending ? 'Linking...' : 'Link Evidence'}
+            </Button>
+          </>
+        }
+      >
+        {linkingEvidence && (
+          <div className="space-y-4">
+            {/* Evidence being linked */}
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm text-text-secondary mb-1">Linking evidence:</p>
+              <p className="font-medium text-text-primary">{linkingEvidence.file_name}</p>
+            </div>
+
+            {/* Search obligations */}
+            <div>
+              <label htmlFor="obligation-search" className="block text-sm font-medium text-text-secondary mb-2">
+                Search obligations
+              </label>
+              <Input
+                id="obligation-search"
+                type="text"
+                placeholder="Search by title..."
+                value={obligationSearch}
+                onChange={(e) => setObligationSearch(e.target.value)}
+                leftIcon={<Search className="h-4 w-4" />}
+              />
+            </div>
+
+            {/* Obligations list */}
+            <div className="border border-border rounded-lg max-h-64 overflow-y-auto">
+              {obligationsLoading ? (
+                <div className="p-4 space-y-2">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : obligations.length === 0 ? (
+                <div className="p-8 text-center text-text-secondary">
+                  No obligations found
+                </div>
+              ) : (
+                <ul className="divide-y divide-border" role="listbox" aria-label="Select obligation">
+                  {obligations.map((obligation) => (
+                    <li key={obligation.id}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedObligation(obligation.id)}
+                        className={`w-full p-4 text-left hover:bg-muted transition-colors flex items-center justify-between ${
+                          selectedObligation === obligation.id ? 'bg-primary/10' : ''
+                        }`}
+                        role="option"
+                        aria-selected={selectedObligation === obligation.id}
+                      >
+                        <div>
+                          <p className="font-medium text-text-primary">{obligation.obligation_title}</p>
+                          {obligation.condition_reference && (
+                            <p className="text-sm text-text-secondary">
+                              Ref: {obligation.condition_reference}
+                            </p>
+                          )}
+                        </div>
+                        {selectedObligation === obligation.id && (
+                          <Check className="h-5 w-5 text-primary" aria-hidden="true" />
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
@@ -185,10 +347,12 @@ function EvidenceCard({
   item,
   formatFileSize,
   isImage,
+  onLink,
 }: {
   item: EvidenceItem;
   formatFileSize: (bytes: number) => string;
   isImage: (mimeType: string) => boolean;
+  onLink: () => void;
 }) {
   // Use file_url from API if available, otherwise use download endpoint
   const previewUrl = item.file_url || `/api/v1/evidence/${item.id}/download`;
@@ -210,24 +374,24 @@ function EvidenceCard({
           />
         ) : (
           <div className="text-text-tertiary">
-            <Download className="h-12 w-12 mx-auto" />
+            <Download className="h-12 w-12 mx-auto" aria-hidden="true" />
             <p className="text-xs mt-2">{item.file_type || item.mime_type.split('/')[1]?.toUpperCase() || 'FILE'}</p>
           </div>
         )}
         {/* Hover Overlay */}
         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
           <Link href={`/dashboard/evidence/${item.id}`}>
-            <Button variant="ghost" size="sm" className="text-white hover:bg-white/20">
-              <Eye className="h-4 w-4" />
+            <Button variant="ghost" size="sm" className="text-white hover:bg-white/20" aria-label="View details">
+              <Eye className="h-4 w-4" aria-hidden="true" />
             </Button>
           </Link>
           <a href={downloadUrl} download>
-            <Button variant="ghost" size="sm" className="text-white hover:bg-white/20">
-              <Download className="h-4 w-4" />
+            <Button variant="ghost" size="sm" className="text-white hover:bg-white/20" aria-label="Download file">
+              <Download className="h-4 w-4" aria-hidden="true" />
             </Button>
           </a>
-          <Button variant="ghost" size="sm" className="text-white hover:bg-white/20">
-            <LinkIcon className="h-4 w-4" />
+          <Button variant="ghost" size="sm" className="text-white hover:bg-white/20" onClick={onLink} aria-label="Link to obligation">
+            <LinkIcon className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       </div>
@@ -251,10 +415,12 @@ function EvidenceRow({
   item,
   formatFileSize,
   isImage,
+  onLink,
 }: {
   item: EvidenceItem;
   formatFileSize: (bytes: number) => string;
   isImage: (mimeType: string) => boolean;
+  onLink: () => void;
 }) {
   const previewUrl = item.file_url || `/api/v1/evidence/${item.id}/download`;
   const downloadUrl = `/api/v1/evidence/${item.id}/download`;
@@ -273,7 +439,7 @@ function EvidenceRow({
               }}
             />
           ) : (
-            <Download className="h-6 w-6 text-text-tertiary" />
+            <Download className="h-6 w-6 text-text-tertiary" aria-hidden="true" />
           )}
         </div>
       </td>
@@ -299,17 +465,17 @@ function EvidenceRow({
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
           <Link href={`/dashboard/evidence/${item.id}`}>
-            <Button variant="ghost" size="sm" title="View">
-              <Eye className="h-4 w-4" />
+            <Button variant="ghost" size="sm" title="View" aria-label="View details">
+              <Eye className="h-4 w-4" aria-hidden="true" />
             </Button>
           </Link>
           <a href={downloadUrl} download>
-            <Button variant="ghost" size="sm" title="Download">
-              <Download className="h-4 w-4" />
+            <Button variant="ghost" size="sm" title="Download" aria-label="Download file">
+              <Download className="h-4 w-4" aria-hidden="true" />
             </Button>
           </a>
-          <Button variant="ghost" size="sm" title="Link to Obligation">
-            <LinkIcon className="h-4 w-4" />
+          <Button variant="ghost" size="sm" title="Link to Obligation" onClick={onLink} aria-label="Link to obligation">
+            <LinkIcon className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       </td>

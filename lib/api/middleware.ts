@@ -36,7 +36,7 @@ export function extractToken(request: NextRequest): string | null {
 
 /**
  * Verify JWT token and get user info
- * Optimized to reduce database queries by fetching user data with roles in a single query
+ * Optimized to reduce database queries by fetching user data with roles and consultant status in a single query
  */
 export async function verifyToken(token: string): Promise<AuthenticatedUser | null> {
   try {
@@ -50,14 +50,16 @@ export async function verifyToken(token: string): Promise<AuthenticatedUser | nu
       return null;
     }
 
-    // Fetch user details with roles in a single query using joins
+    // Fetch user details with roles AND consultant status in a single query using joins
+    // This eliminates the N+1 query by combining both lookups
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
       .select(`
         id,
         email,
         company_id,
-        user_roles (role)
+        user_roles (role),
+        consultant_client_assignments!consultant_id (consultant_id, status)
       `)
       .eq('id', user.id)
       .single();
@@ -69,21 +71,16 @@ export async function verifyToken(token: string): Promise<AuthenticatedUser | nu
     // Extract roles from the joined data
     const roleNames = (userData.user_roles as { role: string }[] | null)?.map((r) => r.role) || [];
 
-    // Check consultant status - use maybeSingle to avoid error if no record
-    const { data: consultantAssignment } = await supabaseAdmin
-      .from('consultant_client_assignments')
-      .select('consultant_id')
-      .eq('consultant_id', user.id)
-      .eq('status', 'ACTIVE')
-      .limit(1)
-      .maybeSingle();
+    // Check consultant status from the joined data - filter for active assignments
+    const consultantAssignments = userData.consultant_client_assignments as { consultant_id: string; status: string }[] | null;
+    const isConsultant = consultantAssignments?.some((a) => a.status === 'ACTIVE') ?? false;
 
     return {
       id: userData.id,
       email: userData.email,
       company_id: userData.company_id,
       roles: roleNames,
-      is_consultant: !!consultantAssignment,
+      is_consultant: isConsultant,
     };
   } catch (error) {
     console.error('Token verification error:', error);

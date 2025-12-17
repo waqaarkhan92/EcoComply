@@ -147,6 +147,8 @@ export function FeaturesSection() {
                     animate={isInView ? { opacity: 1, x: 0 } : {}}
                     transition={{ duration: 0.6, delay: i * 0.1 }}
                     onClick={() => setActiveFeature(feature.id)}
+                    aria-selected={activeFeature === feature.id}
+                    aria-controls="feature-panel"
                     className={`w-full text-left p-4 rounded-xl transition-all ${
                       activeFeature === feature.id
                         ? 'bg-white shadow-md border-l-4 border-primary'
@@ -161,7 +163,7 @@ export function FeaturesSection() {
                             : 'bg-gray-100 text-text-secondary'
                         }`}
                       >
-                        <feature.icon className="w-5 h-5" />
+                        <feature.icon className="w-5 h-5" aria-hidden="true" />
                       </div>
                       <div>
                         <div
@@ -186,25 +188,28 @@ export function FeaturesSection() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
                 className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100"
+                id="feature-panel"
+                role="tabpanel"
+                aria-label={currentFeature.title}
               >
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
-                    <currentFeature.icon className="w-6 h-6 text-primary" />
+                    <currentFeature.icon className="w-6 h-6 text-primary" aria-hidden="true" />
                   </div>
-                  <Zap className="w-5 h-5 text-primary" />
+                  <Zap className="w-5 h-5 text-primary" aria-hidden="true" />
                 </div>
 
                 <h3 className="text-2xl font-bold text-charcoal mb-4">{currentFeature.headline}</h3>
                 <p className="text-lg text-text-secondary mb-6">{currentFeature.description}</p>
 
-                <div className="grid sm:grid-cols-2 gap-3">
+                <ul className="grid sm:grid-cols-2 gap-3" aria-label="Feature benefits">
                   {currentFeature.benefits.map((benefit, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
+                    <li key={i} className="flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" aria-hidden="true" />
                       <span className="text-charcoal">{benefit}</span>
-                    </div>
+                    </li>
                   ))}
-                </div>
+                </ul>
 
                 {/* Feature Visual Placeholder */}
                 <div className="mt-8 bg-gray-50 rounded-xl p-8 border border-gray-100">
@@ -228,7 +233,7 @@ export function FeaturesSection() {
               className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
             >
               <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center mb-4">
-                <feature.icon className="w-6 h-6 text-primary" />
+                <feature.icon className="w-6 h-6 text-primary" aria-hidden="true" />
               </div>
               <h3 className="text-lg font-semibold text-charcoal mb-2">{feature.title}</h3>
               <p className="text-text-secondary text-sm">{feature.description}</p>

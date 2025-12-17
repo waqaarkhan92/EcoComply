@@ -1,7 +1,7 @@
 /**
  * Login Endpoint
  * POST /api/v1/auth/login
- * 
+ *
  * Authenticate user and receive access/refresh tokens
  */
 
@@ -11,6 +11,7 @@ import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { getRequestId } from '@/lib/api/middleware';
 import { validateRequestBody } from '@/lib/validation/middleware';
 import { loginSchema } from '@/lib/validation/schemas';
+import { authRateLimitMiddleware } from '@/lib/api/rate-limit';
 
 export async function POST(request: NextRequest) {
   const requestId = getRequestId(request);
@@ -22,6 +23,12 @@ export async function POST(request: NextRequest) {
       return validation.error;
     }
     const body = validation.data;
+
+    // Check rate limit (IP + email based)
+    const rateLimitResponse = await authRateLimitMiddleware(request, body.email);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
 
     // Authenticate with Supabase Auth - use regular client (not service role)
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({

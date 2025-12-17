@@ -9,6 +9,7 @@ import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 import { parseFilterParams, parseSortParams } from '@/lib/api/pagination';
+import { addCacheHeaders, checkConditionalRequest, notModifiedResponse, generateETag } from '@/lib/api/cache-headers';
 
 export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
@@ -70,7 +71,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const response = successResponse(modules || [], 200, { request_id: requestId });
+    const responseData = modules || [];
+
+    // Generate ETag for conditional requests
+    const etag = generateETag(responseData);
+
+    // Check if client has valid cached version (304 Not Modified)
+    if (checkConditionalRequest(request, etag)) {
+      return notModifiedResponse(etag);
+    }
+
+    // Build response with cache headers (modules rarely change)
+    let response = successResponse(responseData, 200, { request_id: requestId });
+    response = addCacheHeaders(response, 'public-long', { etag, data: responseData });
     return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Get modules error:', error);

@@ -7,6 +7,7 @@ import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { getRequestId } from '@/lib/api/middleware';
+import { authRateLimitMiddleware } from '@/lib/api/rate-limit';
 import { z } from 'zod';
 
 const resetPasswordSchema = z.object({
@@ -23,6 +24,12 @@ export async function POST(request: NextRequest) {
   const requestId = getRequestId(request);
 
   try {
+    // Check rate limit first (IP-based)
+    const rateLimitResponse = await authRateLimitMiddleware(request);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     // Parse and validate request body
     let body;
     try {

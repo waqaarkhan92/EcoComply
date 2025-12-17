@@ -102,12 +102,16 @@ export function FAQSection() {
               <button
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
                 className="w-full text-left px-6 py-5 flex items-center justify-between gap-4"
+                aria-expanded={openIndex === i}
+                aria-controls={`faq-answer-${i}`}
+                id={`faq-question-${i}`}
               >
                 <span className="font-medium text-charcoal">{faq.question}</span>
                 <ChevronDown
                   className={`w-5 h-5 text-text-secondary transition-transform flex-shrink-0 ${
                     openIndex === i ? 'rotate-180' : ''
                   }`}
+                  aria-hidden="true"
                 />
               </button>
               {openIndex === i && (
@@ -117,6 +121,9 @@ export function FAQSection() {
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.2 }}
                   className="px-6 pb-5"
+                  id={`faq-answer-${i}`}
+                  role="region"
+                  aria-labelledby={`faq-question-${i}`}
                 >
                   <p className="text-text-secondary leading-relaxed">{faq.answer}</p>
                 </motion.div>
@@ -133,7 +140,7 @@ export function FAQSection() {
           className="mt-12 bg-primary-100 rounded-2xl p-8 text-center"
         >
           <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center mx-auto mb-4">
-            <MessageCircle className="w-6 h-6 text-white" />
+            <MessageCircle className="w-6 h-6 text-white" aria-hidden="true" />
           </div>
           <h3 className="text-xl font-semibold text-charcoal mb-2">Still have questions?</h3>
           <p className="text-text-secondary mb-4">

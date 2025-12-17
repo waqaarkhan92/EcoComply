@@ -120,6 +120,47 @@ export function paginatedResponse<T>(
 }
 
 /**
+ * Add cache control headers to a response
+ * @param response - The NextResponse to add headers to
+ * @param maxAge - Cache duration in seconds (default: 60)
+ * @param staleWhileRevalidate - Stale-while-revalidate duration (default: 30)
+ * @returns The response with cache headers
+ */
+export function addCacheHeaders<T>(
+  response: NextResponse<T>,
+  maxAge: number = 60,
+  staleWhileRevalidate: number = 30
+): NextResponse<T> {
+  response.headers.set(
+    'Cache-Control',
+    `private, max-age=${maxAge}, stale-while-revalidate=${staleWhileRevalidate}`
+  );
+  return response;
+}
+
+/**
+ * Create a cached success response (for GET endpoints with relatively static data)
+ */
+export function cachedSuccessResponse<T>(
+  data: T,
+  status: number = 200,
+  meta?: { request_id?: string },
+  cacheSeconds: number = 60
+): NextResponse<ApiResponse<T>> {
+  const response = NextResponse.json(
+    {
+      data,
+      meta: {
+        request_id: meta?.request_id,
+        timestamp: new Date().toISOString(),
+      },
+    },
+    { status }
+  );
+  return addCacheHeaders(response, cacheSeconds, Math.floor(cacheSeconds / 2));
+}
+
+/**
  * Standard error codes
  */
 export const ErrorCodes = {

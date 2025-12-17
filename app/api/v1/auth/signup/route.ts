@@ -1,7 +1,7 @@
 /**
  * Signup Endpoint
  * POST /api/v1/auth/signup
- * 
+ *
  * Register new user account with company creation
  * - Creates Supabase Auth user
  * - Creates company record
@@ -15,6 +15,7 @@ import { NextRequest } from 'next/server';
 import { supabaseAdmin, supabase } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { getRequestId } from '@/lib/api/middleware';
+import { authRateLimitMiddleware } from '@/lib/api/rate-limit';
 
 interface SignupRequest {
   email: string;
@@ -27,6 +28,12 @@ export async function POST(request: NextRequest) {
   const requestId = getRequestId(request);
 
   try {
+    // Check rate limit first (IP-based for signup)
+    const rateLimitResponse = await authRateLimitMiddleware(request);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     // Parse request body - handle potential JSON parsing errors
     let body: SignupRequest;
     try {

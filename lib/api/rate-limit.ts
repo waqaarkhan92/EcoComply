@@ -17,6 +17,19 @@ export const RATE_LIMIT_CONFIG = {
     limit: 100,
     windowMs: 60 * 1000, // 1 minute
   },
+  // Auth endpoints - strict limits to prevent brute force attacks
+  auth_login: {
+    limit: 5,
+    windowMs: 60 * 1000, // 5 attempts per minute
+  },
+  auth_signup: {
+    limit: 3,
+    windowMs: 60 * 1000, // 3 signups per minute per IP
+  },
+  auth_password_reset: {
+    limit: 3,
+    windowMs: 60 * 1000, // 3 reset requests per minute
+  },
   document_upload: {
     limit: 10,
     windowMs: 60 * 1000, // 1 minute
@@ -45,6 +58,16 @@ export type RateLimitType = keyof typeof RATE_LIMIT_CONFIG;
  * Get endpoint type from request path
  */
 function getEndpointType(pathname: string): RateLimitType {
+  // Auth endpoints - check first for security
+  if (pathname.includes('/auth/login')) {
+    return 'auth_login';
+  }
+  if (pathname.includes('/auth/signup')) {
+    return 'auth_signup';
+  }
+  if (pathname.includes('/auth/forgot-password') || pathname.includes('/auth/reset-password')) {
+    return 'auth_password_reset';
+  }
   if (pathname.includes('/documents') && pathname.match(/\/documents$/)) {
     return 'document_upload';
   }
@@ -62,6 +85,152 @@ function getEndpointType(pathname: string): RateLimitType {
     return 'audit_pack_generation';
   }
   return 'default';
+}
+
+/**
+ * Check if the endpoint is an auth endpoint that requires IP-based rate limiting
+ */
+export function isAuthEndpoint(pathname: string): boolean {
+  return (
+    pathname.includes('/auth/login') ||
+    pathname.includes('/auth/signup') ||
+    pathname.includes('/auth/forgot-password') ||
+    pathname.includes('/auth/reset-password')
+  );
+}
+
+/**
+ * Get client IP address from request
+ */
+export function getClientIp(request: NextRequest): string {
+  // Check various headers for client IP (in order of preference)
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    // Take the first IP in the chain (original client)
+    return forwardedFor.split(',')[0].trim();
+  }
+
+  const realIp = request.headers.get('x-real-ip');
+  if (realIp) {
+    return realIp;
+  }
+
+  const cfConnectingIp = request.headers.get('cf-connecting-ip');
+  if (cfConnectingIp) {
+    return cfConnectingIp;
+  }
+
+  // Fallback to a generic identifier
+  return 'unknown-ip';
+}
+
+/**
+ * Check rate limit for auth endpoints using IP + optional email
+ * This is specifically for unauthenticated endpoints where userId is not available
+ */
+export async function checkAuthRateLimit(
+  request: NextRequest,
+  email?: string
+): Promise<{ allowed: boolean; remaining: number; resetAt: number; limit: number }> {
+  const pathname = request.nextUrl.pathname;
+  const endpointType = getEndpointType(pathname);
+  const config = RATE_LIMIT_CONFIG[endpointType];
+
+  const clientIp = getClientIp(request);
+
+  // Create rate limit key based on IP and optionally email
+  // This prevents both IP-based brute force and targeted email attacks
+  const ipKey = `auth:ip:${clientIp}:${endpointType}`;
+  const emailKey = email ? `auth:email:${email.toLowerCase()}:${endpointType}` : null;
+
+  // Check IP-based rate limit
+  const hasRedis =
+    (process.env.UPSTASH_REDIS_REST_URL || process.env.REDIS_URL) &&
+    (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.REDIS_TOKEN);
+
+  let ipResult: { allowed: boolean; remaining: number; resetAt: number };
+  let emailResult: { allowed: boolean; remaining: number; resetAt: number } | null = null;
+
+  if (hasRedis) {
+    try {
+      ipResult = await rateLimitRedis(ipKey, config.limit, config.windowMs);
+      if (emailKey) {
+        // Also check email-specific limit (same limit applies)
+        emailResult = await rateLimitRedis(emailKey, config.limit, config.windowMs);
+      }
+    } catch (error) {
+      // Fall back to memory store
+      ipResult = rateLimitMemory(ipKey, config.limit, config.windowMs);
+      if (emailKey) {
+        emailResult = rateLimitMemory(emailKey, config.limit, config.windowMs);
+      }
+    }
+  } else {
+    ipResult = rateLimitMemory(ipKey, config.limit, config.windowMs);
+    if (emailKey) {
+      emailResult = rateLimitMemory(emailKey, config.limit, config.windowMs);
+    }
+  }
+
+  // Block if either IP or email limit is exceeded
+  const blocked = !ipResult.allowed || (emailResult && !emailResult.allowed);
+  const remaining = emailResult
+    ? Math.min(ipResult.remaining, emailResult.remaining)
+    : ipResult.remaining;
+  const resetAt = emailResult
+    ? Math.max(ipResult.resetAt, emailResult.resetAt)
+    : ipResult.resetAt;
+
+  return {
+    allowed: !blocked,
+    remaining,
+    resetAt,
+    limit: config.limit,
+  };
+}
+
+/**
+ * Rate limiting middleware for auth endpoints
+ * Uses IP-based limiting instead of userId
+ */
+export async function authRateLimitMiddleware(
+  request: NextRequest,
+  email?: string
+): Promise<NextResponse | null> {
+  const requestId = getRequestId(request);
+
+  try {
+    const result = await checkAuthRateLimit(request, email);
+
+    if (!result.allowed) {
+      const resetSeconds = Math.ceil((result.resetAt - Date.now()) / 1000);
+
+      const response = errorResponse(
+        ErrorCodes.RATE_LIMIT_EXCEEDED,
+        'Too many attempts. Please try again later.',
+        429,
+        {
+          limit: result.limit,
+          reset_at: new Date(result.resetAt).toISOString(),
+          retry_after_seconds: resetSeconds,
+        },
+        { request_id: requestId }
+      );
+
+      response.headers.set('X-Rate-Limit-Limit', String(result.limit));
+      response.headers.set('X-Rate-Limit-Remaining', '0');
+      response.headers.set('X-Rate-Limit-Reset', String(Math.floor(result.resetAt / 1000)));
+      response.headers.set('Retry-After', String(resetSeconds));
+
+      return response;
+    }
+
+    return null;
+  } catch (error: any) {
+    console.error('Auth rate limit check error:', error);
+    // On error, allow the request (fail open)
+    return null;
+  }
 }
 
 /**

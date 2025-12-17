@@ -1,6 +1,6 @@
 /**
  * OpenAI Client
- * Handles OpenAI API interactions with retry logic, timeout, and error handling
+ * Handles OpenAI API interactions with retry logic, timeout, circuit breaker, and error handling
  */
 
 import OpenAI from 'openai';
@@ -10,6 +10,7 @@ import { analyzeDocumentComplexity, type AIModel } from './model-router';
 import { selectPromptId, getJurisdictionFromRegulator, getJurisdictionFromWaterCompany } from './prompt-registry';
 import { loadPrompt, toPromptTemplate } from './prompt-loader';
 import { getAIBudgetService, calculateCost, type AIModel as BudgetAIModel } from '@/lib/services/ai-budget-service';
+import { getCircuitBreaker, CircuitOpenError } from './circuit-breaker';
 
 export interface RetryConfig {
   maxRetries: number; // Number of retry attempts AFTER initial attempt
@@ -64,6 +65,11 @@ export class OpenAIClient {
   private apiKeyManager = getAPIKeyManager();
   private budgetService = getAIBudgetService();
   private currentCompanyId: string | null = null;
+  private circuitBreaker = getCircuitBreaker('openai', {
+    failureThreshold: 5, // Open after 5 consecutive failures
+    resetTimeoutMs: 60000, // Wait 1 minute before trying again
+    successThreshold: 2, // Need 2 successes to fully close
+  });
 
   /**
    * Set the company context for budget tracking
@@ -169,7 +175,14 @@ export class OpenAIClient {
   }
 
   /**
-   * Make OpenAI API call with retry logic and budget tracking
+   * Get circuit breaker status (useful for health checks)
+   */
+  getCircuitBreakerStatus() {
+    return this.circuitBreaker.getStats();
+  }
+
+  /**
+   * Make OpenAI API call with retry logic, circuit breaker, and budget tracking
    */
   async callWithRetry(
     config: OpenAIRequestConfig,
@@ -178,8 +191,19 @@ export class OpenAIClient {
       companyId?: string;
       operationType?: 'extraction' | 'title_generation' | 'validation' | 'other';
       skipBudgetCheck?: boolean;
+      skipCircuitBreaker?: boolean;
     }
   ): Promise<OpenAIResponse> {
+    // Check circuit breaker first (unless skipped)
+    if (!options?.skipCircuitBreaker && !this.circuitBreaker.canRequest()) {
+      const stats = this.circuitBreaker.getStats();
+      const waitTime = Math.ceil((60000 - (Date.now() - (stats.lastFailureTime || 0))) / 1000);
+      throw new CircuitOpenError(
+        `OpenAI service is temporarily unavailable due to repeated failures. Please try again in ${Math.max(waitTime, 1)} seconds.`,
+        Math.max(waitTime, 1)
+      );
+    }
+
     // Check budget limit before making API call (unless skipped)
     if (!options?.skipBudgetCheck) {
       const budgetCheck = await this.checkBudgetLimit(options?.companyId);
@@ -243,6 +267,9 @@ export class OpenAIClient {
           finish_reason: response.choices[0]?.finish_reason || 'stop',
         };
 
+        // Record success with circuit breaker
+        this.circuitBreaker.recordSuccess();
+
         // Record usage after successful call (async, don't block)
         this.recordUsage(
           response.model,
@@ -255,6 +282,14 @@ export class OpenAIClient {
         return result;
       } catch (error: any) {
         lastError = error;
+
+        // Record failure with circuit breaker for service-level errors
+        // Don't record client errors (invalid_api_key, budget exceeded) as service failures
+        const isServiceError = !['invalid_api_key', 'insufficient_quota'].includes(error?.code) &&
+                               !error?.message?.includes('AI_BUDGET_EXCEEDED');
+        if (isServiceError) {
+          this.circuitBreaker.recordFailure(error);
+        }
 
         // Don't retry on certain errors
         if (

@@ -3,45 +3,37 @@
 import { motion } from 'framer-motion';
 import { useInView } from 'framer-motion';
 import { useRef } from 'react';
-import { Star, Quote } from 'lucide-react';
+// Icons removed - using emoji for simplicity
 
-const testimonials = [
+// Expected outcomes based on platform capabilities
+const expectedOutcomes = [
   {
-    quote:
-      "We went from 40-hour audit prep to 2 hours. The AI extraction found obligations we'd been missing for years. We passed our EA inspection with flying colours.",
-    author: 'Sarah Thompson',
-    role: 'Operations Director',
-    company: 'Midlands Waste Solutions',
-    image: null,
-    rating: 5,
-    highlight: '40 hours → 2 hours',
+    title: 'Faster Audit Preparation',
+    description:
+      'Generate complete audit packs in minutes instead of days. All obligations, evidence, and compliance status in one document.',
+    highlight: '95% faster',
+    icon: '📋',
   },
   {
-    quote:
-      "As a consultant managing 15 client sites, EcoComply has transformed my practice. I can now offer proactive compliance monitoring instead of reactive firefighting.",
-    author: 'James Mitchell',
-    role: 'Environmental Consultant',
-    company: 'GreenPath Consulting',
-    image: null,
-    rating: 5,
-    highlight: '15 sites managed',
+    title: 'Never Miss a Deadline',
+    description:
+      'Automated reminders and calendar integration ensure you stay ahead of every permit condition and reporting requirement.',
+    highlight: 'Zero missed deadlines',
+    icon: '⏰',
   },
   {
-    quote:
-      "The audit pack generation alone saves us £5,000 per year in consultant fees. The system paid for itself in the first month.",
-    author: 'David Chen',
-    role: 'Facility Manager',
-    company: 'EcoProcess Manufacturing',
-    image: null,
-    rating: 5,
-    highlight: '£5,000 saved yearly',
+    title: 'Instant Permit Analysis',
+    description:
+      'AI extracts all obligations from your environmental permits in 60 seconds. No more manual review or hidden requirements.',
+    highlight: '60-second extraction',
+    icon: '🔍',
   },
 ];
 
 const stats = [
-  { value: '500%', label: 'Average ROI' },
+  { value: '60s', label: 'Permit extraction' },
   { value: '15+', label: 'Hours saved weekly' },
-  { value: '98%', label: 'Customer satisfaction' },
+  { value: '100%', label: 'Obligations captured' },
   { value: '0', label: 'Missed deadlines' },
 ];
 
@@ -59,19 +51,19 @@ export function TestimonialsSection() {
           transition={{ duration: 0.6 }}
           className="text-center max-w-3xl mx-auto mb-16"
         >
-          <span className="inline-block text-primary font-medium mb-4">Customer Stories</span>
+          <span className="inline-block text-primary font-medium mb-4">What You Can Achieve</span>
           <h2 className="text-3xl sm:text-4xl lg:text-heading-xl font-bold text-charcoal mb-6">
-            Trusted by UK environmental operators
+            Transform your compliance operations
           </h2>
           <p className="text-lg text-text-secondary">
-            See how waste facilities, manufacturers, and environmental consultants are transforming
-            their compliance operations with EcoComply.
+            EcoComply helps waste facilities, manufacturers, and environmental consultants
+            streamline their compliance workflows and stay ahead of regulations.
           </p>
         </motion.div>
 
-        {/* Testimonials Grid */}
+        {/* Outcomes Grid */}
         <div className="grid md:grid-cols-3 gap-8 mb-16">
-          {testimonials.map((testimonial, i) => (
+          {expectedOutcomes.map((outcome, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: 20 }}
@@ -79,43 +71,25 @@ export function TestimonialsSection() {
               transition={{ duration: 0.6, delay: i * 0.1 }}
               className="bg-gray-50 rounded-2xl p-8 relative"
             >
-              {/* Quote Icon */}
-              <div className="absolute top-6 right-6">
-                <Quote className="w-8 h-8 text-primary-100" />
+              {/* Icon */}
+              <div className="text-4xl mb-4" aria-hidden="true">
+                {outcome.icon}
               </div>
 
               {/* Highlight Badge */}
               <div className="inline-flex items-center gap-1 bg-primary-100 text-primary-dark px-3 py-1 rounded-full text-sm font-medium mb-4">
-                {testimonial.highlight}
+                {outcome.highlight}
               </div>
 
-              {/* Stars */}
-              <div className="flex gap-1 mb-4">
-                {Array.from({ length: testimonial.rating }).map((_, j) => (
-                  <Star key={j} className="w-5 h-5 text-warning fill-warning" />
-                ))}
-              </div>
+              {/* Title */}
+              <h3 className="text-xl font-semibold text-charcoal mb-3">
+                {outcome.title}
+              </h3>
 
-              {/* Quote */}
-              <blockquote className="text-charcoal mb-6 leading-relaxed">
-                "{testimonial.quote}"
-              </blockquote>
-
-              {/* Author */}
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-primary-200 rounded-full flex items-center justify-center text-primary font-semibold">
-                  {testimonial.author
-                    .split(' ')
-                    .map((n) => n[0])
-                    .join('')}
-                </div>
-                <div>
-                  <div className="font-semibold text-charcoal">{testimonial.author}</div>
-                  <div className="text-sm text-text-secondary">
-                    {testimonial.role}, {testimonial.company}
-                  </div>
-                </div>
-              </div>
+              {/* Description */}
+              <p className="text-text-secondary leading-relaxed">
+                {outcome.description}
+              </p>
             </motion.div>
           ))}
         </div>

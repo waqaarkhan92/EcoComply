@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { motion, Variants } from 'framer-motion';
-import { ArrowRight, Play, CheckCircle2, Shield, Clock, FileText, Leaf, Recycle, Factory, Truck } from 'lucide-react';
+import { ArrowRight, Play, CheckCircle2, Shield, Clock, FileText } from 'lucide-react';
 
 const stats = [
   { value: '60s', label: 'Obligation extraction' },
@@ -10,12 +10,6 @@ const stats = [
   { value: '£50k', label: 'Average fine risk' },
 ];
 
-const trustedBy = [
-  { name: 'EnviroWaste UK', icon: Recycle },
-  { name: 'GreenProcess Ltd', icon: Leaf },
-  { name: 'CleanFactory Co', icon: Factory },
-  { name: 'EcoTransport', icon: Truck },
-];
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -134,8 +128,11 @@ export function Hero() {
                 Book a Demo
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <button className="group inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-charcoal px-8 py-4 rounded-xl font-semibold text-lg border border-gray-200 transition-all hover:border-gray-300 hover:shadow-md">
-                <Play className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+              <button
+                className="group inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-charcoal px-8 py-4 rounded-xl font-semibold text-lg border border-gray-200 transition-all hover:border-gray-300 hover:shadow-md"
+                aria-label="Watch demo video"
+              >
+                <Play className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" aria-hidden="true" />
                 Watch Demo
               </button>
             </motion.div>
@@ -146,15 +143,15 @@ export function Hero() {
               className="flex flex-wrap items-center gap-6 text-sm text-text-secondary"
             >
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-success" />
+                <CheckCircle2 className="w-5 h-5 text-success" aria-hidden="true" />
                 <span>No credit card required</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-success" />
+                <CheckCircle2 className="w-5 h-5 text-success" aria-hidden="true" />
                 <span>14-day free trial</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-success" />
+                <CheckCircle2 className="w-5 h-5 text-success" aria-hidden="true" />
                 <span>UK data residency</span>
               </div>
             </motion.div>
@@ -241,7 +238,7 @@ export function Hero() {
                     >
                       <div className={`w-2 h-2 rounded-full ${item.color}`} />
                       <span className="text-sm text-charcoal flex-1">{item.name}</span>
-                      <FileText className="w-4 h-4 text-text-tertiary" />
+                      <FileText className="w-4 h-4 text-text-tertiary" aria-hidden="true" />
                     </motion.div>
                   ))}
                 </div>
@@ -257,7 +254,7 @@ export function Hero() {
             >
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-primary" />
+                  <Shield className="w-5 h-5 text-primary" aria-hidden="true" />
                 </div>
                 <div className="text-sm font-medium text-charcoal">Audit Pack Ready</div>
               </div>
@@ -272,7 +269,7 @@ export function Hero() {
             >
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-success" />
+                  <Clock className="w-5 h-5 text-success" aria-hidden="true" />
                 </div>
                 <div className="text-sm font-medium text-charcoal">15 hrs saved</div>
               </div>
@@ -304,32 +301,16 @@ export function Hero() {
           </div>
         </motion.div>
 
-        {/* Trusted By - with logos */}
+        {/* Built for UK Compliance */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.9 }}
           className="mt-16 text-center"
         >
-          <p className="text-sm text-text-tertiary mb-8 uppercase tracking-wider">Trusted by leading UK environmental operators</p>
-          <div className="flex flex-wrap justify-center items-center gap-10 lg:gap-16">
-            {trustedBy.map((company, i) => {
-              const Icon = company.icon;
-              return (
-                <motion.div
-                  key={i}
-                  className="flex items-center gap-2 text-text-secondary/60 hover:text-text-secondary transition-colors"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.0 + i * 0.1 }}
-                  whileHover={{ scale: 1.05 }}
-                >
-                  <Icon className="w-6 h-6" />
-                  <span className="text-lg font-semibold">{company.name}</span>
-                </motion.div>
-              );
-            })}
-          </div>
+          <p className="text-sm text-text-tertiary uppercase tracking-wider">
+            Built specifically for UK environmental permits • EA, SEPA &amp; NRW compliant
+          </p>
         </motion.div>
       </div>
     </section>
