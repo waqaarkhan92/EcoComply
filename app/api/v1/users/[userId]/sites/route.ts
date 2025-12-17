@@ -11,7 +11,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ userId: string } }
+  request: NextRequest, props: { params: Promise<{ userId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -21,9 +21,10 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user: currentUser } = authResult;
+  const { user: currentUser } = authResult;
 
-    const { userId } = params;
+    const params = await props.params;
+  const { userId } = params;
 
     // Users can view their own sites, or Admins can view any user's sites in their company
     if (userId !== currentUser.id && !currentUser.roles.includes('OWNER') && !currentUser.roles.includes('ADMIN')) {
@@ -37,7 +38,7 @@ export async function GET(
     }
 
     // Check if user exists
-    const { data: user, error: userError } = await supabaseAdmin
+  const { data: user, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, company_id')
       .eq('id', userId)
@@ -66,7 +67,7 @@ export async function GET(
     }
 
     // Get user's site assignments with site details
-    const { data: assignments, error: assignmentsError } = await supabaseAdmin
+  const { data: assignments, error: assignmentsError } = await supabaseAdmin
       .from('user_site_assignments')
       .select(`
         site_id,
@@ -111,7 +112,7 @@ export async function GET(
 }
 
 export async function POST(
-  request: NextRequest, props: { params: Promise<{ userId: string } }
+  request: NextRequest, props: { params: Promise<{ userId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -121,9 +122,10 @@ export async function POST(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user: currentUser } = authResult;
+  const { user: currentUser } = authResult;
 
-    const { userId } = params;
+    const params = await props.params;
+  const { userId } = params;
 
     // Parse request body
     const body = await request.json();
@@ -140,7 +142,7 @@ export async function POST(
     }
 
     // Check if user exists
-    const { data: user, error: userError } = await supabaseAdmin
+  const { data: user, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, company_id')
       .eq('id', userId)
@@ -169,7 +171,7 @@ export async function POST(
     }
 
     // Check if site exists and belongs to same company
-    const { data: site, error: siteError } = await supabaseAdmin
+  const { data: site, error: siteError } = await supabaseAdmin
       .from('sites')
       .select('id, company_id')
       .eq('id', body.site_id)
@@ -198,7 +200,7 @@ export async function POST(
     }
 
     // Check if assignment already exists
-    const { data: existingAssignment } = await supabaseAdmin
+  const { data: existingAssignment } = await supabaseAdmin
       .from('user_site_assignments')
       .select('id')
       .eq('user_id', user.id)
@@ -216,7 +218,7 @@ export async function POST(
     }
 
     // Create assignment
-    const { data: assignment, error: assignmentError } = await supabaseAdmin
+  const { data: assignment, error: assignmentError } = await supabaseAdmin
       .from('user_site_assignments')
       .insert({
         user_id: userId,

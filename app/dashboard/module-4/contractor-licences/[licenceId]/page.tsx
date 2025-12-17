@@ -32,7 +32,7 @@ export default function ContractorLicenceDetailPage({
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const { data: licence, isLoading } = useQuery<ContractorLicence>({
+  const { data: licence, isLoading } = useQuery({
     queryKey: ['contractor-licence', licenceId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<ContractorLicence>(`/module-4/contractor-licences/${licenceId}`);
@@ -211,7 +211,7 @@ export default function ContractorLicenceDetailPage({
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-semibold text-text-primary mb-4">Waste Types Allowed</h2>
           <div className="flex flex-wrap gap-2">
-            {licence.waste_types_allowed.map((wasteType) => (
+            {licence.waste_types_allowed.map((wasteType: string) => (
               <span
                 key={wasteType}
                 className="inline-flex items-center px-3 py-1 rounded-md text-sm bg-blue-50 text-blue-700 border border-blue-200"

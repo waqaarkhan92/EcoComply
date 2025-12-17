@@ -63,7 +63,7 @@ export default function UnlinkedEvidencePage() {
     },
   });
 
-  const evidenceItems = evidenceData?.data || [];
+  const evidenceItems: any[] = evidenceData?.data || [];
   const isAdminOrOwner = roles?.includes('OWNER') || roles?.includes('ADMIN');
 
   const getEnforcementStatusBadge = (status: string, daysSinceUpload: number) => {
@@ -188,7 +188,7 @@ export default function UnlinkedEvidencePage() {
                       <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                         <div className="text-sm font-medium text-blue-900 mb-2">Suggested Obligations</div>
                         <div className="space-y-2">
-                          {evidence.suggested_obligations.map((obligation) => (
+                          {evidence.suggested_obligations.map((obligation: { id: string; title: string; match_reason: string }) => (
                             <div key={obligation.id} className="flex items-center justify-between">
                               <div>
                                 <div className="text-sm text-blue-800">{obligation.title}</div>

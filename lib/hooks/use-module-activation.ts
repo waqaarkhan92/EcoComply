@@ -24,7 +24,7 @@ interface Module {
 /**
  * Check if a module is activated for the user's company
  */
-export function useModuleActivation(moduleCode: 'MODULE_2' | 'MODULE_3') {
+export function useModuleActivation(moduleCode: 'MODULE_2' | 'MODULE_3' | 'MODULE_4') {
   const { user } = useAuthStore();
 
   return useQuery<boolean>({
@@ -57,8 +57,8 @@ export function useModuleActivation(moduleCode: 'MODULE_2' | 'MODULE_3') {
           return false;
         }
 
-        // For Module 3, ensure it's company-level (site_id is null)
-        if (moduleCode === 'MODULE_3') {
+        // For Module 3 and 4, ensure it's company-level (site_id is null)
+        if (moduleCode === 'MODULE_3' || moduleCode === 'MODULE_4') {
           return activationsResponse.data.some(activation => activation.site_id === null);
         }
 

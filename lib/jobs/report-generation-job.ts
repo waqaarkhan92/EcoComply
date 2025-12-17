@@ -401,7 +401,7 @@ async function collectObligationReportData(companyId: string, siteId?: string, f
         .eq('obligation_id', obligation.id)
         .is('deleted_at', null);
 
-      obligation.evidence_count = count || 0;
+      (obligation as any).evidence_count = count || 0;
     }
   }
 
@@ -453,7 +453,7 @@ async function collectEvidenceReportData(companyId: string, siteId?: string, fil
         .eq('evidence_id', item.id)
         .is('deleted_at', null);
 
-      item.linked_obligations = links?.map((l: any) => l.obligations) || [];
+      (item as any).linked_obligations = links?.map((l: any) => l.obligations) || [];
     }
   }
 
@@ -669,7 +669,7 @@ function generateDeadlineReportCSV(reportData: any): string {
       d.sites?.name || '',
     ]),
   ];
-  return rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+  return rows.map(row => row.map((cell: any) => `"${cell}"`).join(',')).join('\n');
 }
 
 function generateObligationReportCSV(reportData: any): string {
@@ -684,7 +684,7 @@ function generateObligationReportCSV(reportData: any): string {
       o.evidence_count || 0,
     ]),
   ];
-  return rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+  return rows.map(row => row.map((cell: any) => `"${cell}"`).join(',')).join('\n');
 }
 
 function generateEvidenceReportCSV(reportData: any): string {
@@ -700,14 +700,14 @@ function generateEvidenceReportCSV(reportData: any): string {
       e.sites?.name || '',
     ]),
   ];
-  return rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+  return rows.map(row => row.map((cell: any) => `"${cell}"`).join(',')).join('\n');
 }
 
 /**
  * Upload report to Supabase Storage
  */
 async function uploadReportToStorage(reportId: string, fileBuffer: Buffer, format: string): Promise<string> {
-  const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY);
   
   const extension = format.toLowerCase();
   const fileName = `report-${reportId}.${extension}`;

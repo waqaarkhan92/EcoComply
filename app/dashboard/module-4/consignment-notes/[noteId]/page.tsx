@@ -53,7 +53,7 @@ export default function ConsignmentNoteDetailPage({
   const queryClient = useQueryClient();
   const [isValidating, setIsValidating] = useState(false);
 
-  const { data: consignmentNote, isLoading } = useQuery<ConsignmentNote>({
+  const { data: consignmentNote, isLoading } = useQuery({
     queryKey: ['consignment-note', noteId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<ConsignmentNote>(`/module-4/consignment-notes/${noteId}`);
@@ -61,7 +61,7 @@ export default function ConsignmentNoteDetailPage({
     },
   });
 
-  const { data: chainOfCustody } = useQuery<ChainOfCustody>({
+  const { data: chainOfCustody } = useQuery({
     queryKey: ['consignment-note-chain', noteId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<ChainOfCustody>(`/module-4/consignment-notes/${noteId}/chain-of-custody`);
@@ -231,7 +231,7 @@ export default function ConsignmentNoteDetailPage({
         </div>
         {chainOfCustody && chainOfCustody.chain_steps.length > 0 ? (
           <div className="space-y-4">
-            {chainOfCustody.chain_steps.map((step, index) => (
+            {chainOfCustody.chain_steps.map((step: ChainOfCustody['chain_steps'][0], index: number) => (
               <div
                 key={step.id}
                 className="border border-gray-200 rounded-lg p-4"

@@ -40,17 +40,17 @@ export function ChainOfCustodyVisualization({
   wasteStreamId,
   consignmentNoteId
 }: ChainOfCustodyVisualizationProps) {
-  const { data, isLoading } = useQuery<{ data: ChainOfCustody }>({
+  const { data, isLoading } = useQuery({
     queryKey: ['chain-of-custody', wasteStreamId, consignmentNoteId],
     queryFn: async () => {
       const endpoint = consignmentNoteId
         ? '/module-4/consignment-notes/' + consignmentNoteId + '/chain'
         : '/module-4/waste-streams/' + wasteStreamId + '/chain';
-      return apiClient.get(endpoint);
+      return apiClient.get<ChainOfCustody>(endpoint);
     },
   });
 
-  const chain = data?.data;
+  const chain: ChainOfCustody | undefined = data?.data;
 
   if (isLoading) {
     return (

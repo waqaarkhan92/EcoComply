@@ -28,7 +28,7 @@ export default function ComplianceClockDetailPage() {
   const router = useRouter();
   const clockId = params.clockId as string;
 
-  const { data: clockData, isLoading, error } = useQuery<{ data: ComplianceClock }>({
+  const { data: clockData, isLoading, error } = useQuery({
     queryKey: ['compliance-clock', clockId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: ComplianceClock }>(`/compliance-clocks/${clockId}`);

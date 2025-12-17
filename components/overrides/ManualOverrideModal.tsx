@@ -79,7 +79,7 @@ export default function ManualOverrideModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} size="large">
+    <Modal isOpen={isOpen} onClose={handleClose} size="lg">
       <div className="p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

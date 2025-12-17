@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import BusinessDayAdjustment from '@/components/sites/BusinessDayAdjustment';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 
 interface Site {
   id: string;
@@ -41,7 +42,7 @@ export default function SiteSettingsPage() {
   const [gracePeriodDays, setGracePeriodDays] = useState(0);
   const [isActive, setIsActive] = useState(true);
 
-  const { data: siteData, isLoading } = useQuery<{ data: Site }>({
+  const { data: siteData, isLoading } = useQuery({
     queryKey: ['site', siteId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Site }>(`/sites/${siteId}`);
@@ -93,8 +94,17 @@ export default function SiteSettingsPage() {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
   }
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Sites', href: '/dashboard/sites' },
+    { label: name || 'Site', href: `/dashboard/sites/${siteId}/dashboard` },
+    { label: 'Settings' },
+  ];
+
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={breadcrumbItems} />
+
       <div className="flex items-center space-x-4">
         <Link href={`/dashboard/sites/${siteId}`}>
           <Button variant="ghost" size="sm">

@@ -45,7 +45,7 @@ async function test(name: string, fn: () => Promise<void>): Promise<void> {
 async function runPhase4Tests() {
   console.log('🚀 Phase 4 Comprehensive Test Suite\n');
   console.log('Testing with real connections:');
-  console.log(`- Redis: ${redisUrl.replace(/:[^:@]+@/, ':****@')}`);
+  console.log(`- Redis: ${redisUrl!.replace(/:[^:@]+@/, ':****@')}`);
   console.log(`- Supabase: ${process.env.SUPABASE_URL?.substring(0, 30)}...`);
   console.log(`- OpenAI: ${process.env.OPENAI_API_KEY ? '✅ Configured' : '❌ Missing'}\n`);
 
@@ -56,7 +56,7 @@ async function runPhase4Tests() {
   try {
     // Setup Redis connection
     console.log('📡 Setting up connections...\n');
-    redis = new Redis(redisUrl, {
+    redis = new Redis(redisUrl!, {
       maxRetriesPerRequest: null,
       retryStrategy: () => null,
     });
@@ -104,6 +104,7 @@ async function runPhase4Tests() {
     // Test 4: Test Data Creation
     let testData: any = null;
     await test('Test Data Creation', async () => {
+      // @ts-ignore - test-data module may not exist
       const { createTestData } = await import('../tests/helpers/test-data');
       testData = await createTestData();
       if (!testData.company || !testData.site || !testData.user || !testData.module) {

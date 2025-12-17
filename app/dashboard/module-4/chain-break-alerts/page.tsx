@@ -47,7 +47,7 @@ export default function ChainBreakAlertsPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<ChainBreakAlertsResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-4-chain-break-alerts', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -73,7 +73,7 @@ export default function ChainBreakAlertsPage() {
     },
   });
 
-  const alerts = data?.data || [];
+  const alerts: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

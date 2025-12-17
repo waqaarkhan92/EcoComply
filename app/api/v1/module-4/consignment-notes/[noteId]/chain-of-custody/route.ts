@@ -12,23 +12,23 @@ import { requireModule } from '@/lib/api/module-check';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ noteId: string } }
+  request: NextRequest, props: { params: Promise<{ noteId: string }> }
 ) {
   const requestId = getRequestId(request);
 
   try {
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) return authResult;
-    const { user } = authResult;
+  const { user } = authResult;
 
     const moduleCheck = await requireModule(user.company_id, 'MODULE_4');
     if (moduleCheck) return moduleCheck;
 
     const params = await props.params;
-    const { noteId } = params;
+  const { noteId } = params;
 
     // Verify consignment note exists and user has access
-    const { data: consignmentNote, error: noteError } = await supabaseAdmin
+  const { data: consignmentNote, error: noteError } = await supabaseAdmin
       .from('consignment_notes')
       .select('id, company_id')
       .eq('id', noteId)
@@ -55,7 +55,7 @@ export async function GET(
     }
 
     // Get chain of custody steps
-    const { data: chainSteps, error } = await supabaseAdmin
+  const { data: chainSteps, error } = await supabaseAdmin
       .from('chain_of_custody')
       .select('*')
       .eq('consignment_note_id', noteId)
@@ -94,20 +94,20 @@ export async function GET(
 }
 
 export async function POST(
-  request: NextRequest, props: { params: Promise<{ noteId: string } }
+  request: NextRequest, props: { params: Promise<{ noteId: string }> }
 ) {
   const requestId = getRequestId(request);
 
   try {
     const authResult = await requireRole(request, ['OWNER', 'ADMIN', 'STAFF']);
     if (authResult instanceof NextResponse) return authResult;
-    const { user } = authResult;
+  const { user } = authResult;
 
     const moduleCheck = await requireModule(user.company_id, 'MODULE_4');
     if (moduleCheck) return moduleCheck;
 
     const params = await props.params;
-    const { noteId } = params;
+  const { noteId } = params;
     const body = await request.json();
 
     // Validate required fields
@@ -140,7 +140,7 @@ export async function POST(
     }
 
     // Verify consignment note exists and user has access
-    const { data: consignmentNote, error: noteError } = await supabaseAdmin
+  const { data: consignmentNote, error: noteError } = await supabaseAdmin
       .from('consignment_notes')
       .select('id, company_id, site_id')
       .eq('id', noteId)
@@ -167,7 +167,7 @@ export async function POST(
     }
 
     // Get current max chain position
-    const { data: existingSteps } = await supabaseAdmin
+  const { data: existingSteps } = await supabaseAdmin
       .from('chain_of_custody')
       .select('chain_position')
       .eq('consignment_note_id', noteId)
@@ -179,7 +179,7 @@ export async function POST(
       : 1;
 
     // Create chain of custody step
-    const { data: chainStep, error: createError } = await supabaseAdmin
+  const { data: chainStep, error: createError } = await supabaseAdmin
       .from('chain_of_custody')
       .insert({
         consignment_note_id: noteId,

@@ -39,7 +39,7 @@ export default function ConditionPermissionDetailPage({
   const { permissionId } = use(params);
   const queryClient = useQueryClient();
 
-  const { data: permission, isLoading } = useQuery<ConditionPermission>({
+  const { data: permission, isLoading } = useQuery({
     queryKey: ['condition-permission', permissionId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<ConditionPermission>(`/module-1/condition-permissions/${permissionId}`);

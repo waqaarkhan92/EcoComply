@@ -12,7 +12,7 @@ import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 import { getQueue, QUEUE_NAMES } from '@/lib/queue/queue-manager';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ jobId: string } }
+  request: NextRequest, props: { params: Promise<{ jobId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -22,13 +22,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { jobId } = params;
+  const { jobId } = params;
 
     // Get job - RLS will enforce access control
-    const { data: job, error } = await supabaseAdmin
+  const { data: job, error } = await supabaseAdmin
       .from('background_jobs')
       .select('id, job_type, status, priority, entity_type, entity_id, result, error_message, started_at, completed_at, created_at, updated_at')
       .eq('id', jobId)

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
@@ -29,21 +29,23 @@ export default function PermitSurrenderPage() {
   const [finalReportRequired, setFinalReportRequired] = useState<boolean>(true);
   const [regulatorSignOffRequired, setRegulatorSignOffRequired] = useState<boolean>(true);
 
-  const { data: surrenderData, isLoading } = useQuery<{ data: SurrenderDetails }>({
+  const { data: surrenderData, isLoading } = useQuery({
     queryKey: ['permit-workflow-surrender', workflowId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: SurrenderDetails }>(`/module-1/permit-workflows/${workflowId}/surrender`);
     },
     enabled: !!workflowId,
-    onSuccess: (data) => {
-      if (data?.data) {
-        setSurrenderReason(data.data.surrender_reason || '');
-        setSiteClosureDate(data.data.site_closure_date || '');
-        setFinalReportRequired(data.data.final_site_condition_report_required ?? true);
-        setRegulatorSignOffRequired(data.data.regulator_sign_off_required ?? true);
-      }
-    },
   });
+
+  // Update local state when surrender data loads
+  useEffect(() => {
+    if (surrenderData?.data) {
+      setSurrenderReason(surrenderData.data.surrender_reason || '');
+      setSiteClosureDate(surrenderData.data.site_closure_date || '');
+      setFinalReportRequired(surrenderData.data.final_site_condition_report_required ?? true);
+      setRegulatorSignOffRequired(surrenderData.data.regulator_sign_off_required ?? true);
+    }
+  }, [surrenderData]);
 
   const updateSurrender = useMutation({
     mutationFn: async (data: SurrenderDetails) => {

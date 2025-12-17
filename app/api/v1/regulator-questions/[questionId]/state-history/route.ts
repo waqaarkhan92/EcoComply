@@ -12,7 +12,7 @@ import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ questionId: string } }
+  request: NextRequest, props: { params: Promise<{ questionId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -22,13 +22,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { questionId } = params;
+  const { questionId } = params;
 
     // Get question - RLS will enforce access control
-    const { data: question, error: questionError } = await supabaseAdmin
+  const { data: question, error: questionError } = await supabaseAdmin
       .from('regulator_questions')
       .select('id, site_id, company_id')
       .eq('id', questionId)
@@ -54,7 +54,7 @@ export async function GET(
     }
 
     // Get state history from audit logs
-    const { data: auditLogs, error: auditError } = await supabaseAdmin
+  const { data: auditLogs, error: auditError } = await supabaseAdmin
       .from('audit_logs')
       .select(`
         id,

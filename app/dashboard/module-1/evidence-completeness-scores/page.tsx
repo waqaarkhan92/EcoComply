@@ -41,7 +41,7 @@ export default function EvidenceCompletenessScoresPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<EvidenceCompletenessScoresResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['evidence-completeness-scores', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -55,7 +55,7 @@ export default function EvidenceCompletenessScoresPage() {
     },
   });
 
-  const scores = data?.data || [];
+  const scores: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

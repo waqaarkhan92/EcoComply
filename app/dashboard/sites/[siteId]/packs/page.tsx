@@ -9,6 +9,7 @@ import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import Link from 'next/link';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 
 export default function SitePacksPage() {
   const params = useParams();
@@ -17,11 +18,7 @@ export default function SitePacksPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['site-packs', siteId],
     queryFn: async (): Promise<any> => {
-      const response = await apiClient.get(`/api/v1/packs?filter[site_id]=${siteId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch packs');
-      }
-      return response.json();
+      return apiClient.get(`/packs?filter[site_id]=${siteId}`);
     },
     enabled: !!siteId,
   });
@@ -46,10 +43,19 @@ export default function SitePacksPage() {
     );
   }
 
-  const packs = data?.data || [];
+  const packs: any[] = data?.data || [];
+
+  const breadcrumbItems = [
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Sites', href: '/dashboard/sites' },
+    { label: 'Site', href: `/dashboard/sites/${siteId}/dashboard` },
+    { label: 'Audit Packs' },
+  ];
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <Breadcrumbs items={breadcrumbItems} className="mb-6" />
+
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Audit Packs</h1>
         <Link

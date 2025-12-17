@@ -33,7 +33,7 @@ export default function EditConditionEvidenceRulePage({
     is_active: true,
   });
 
-  const { data: rule, isLoading } = useQuery<ConditionEvidenceRule>({
+  const { data: rule, isLoading } = useQuery({
     queryKey: ['condition-evidence-rule', ruleId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<ConditionEvidenceRule>(`/module-1/condition-evidence-rules/${ruleId}`);

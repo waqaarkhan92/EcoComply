@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface DropdownOption {
   value: string;
@@ -129,46 +130,57 @@ export function Dropdown({
         <p className="mt-1 text-sm text-danger">{error}</p>
       )}
 
-      {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-input-border rounded-lg shadow-lg max-h-60 overflow-auto">
-          {searchable && (
-            <div className="p-2 border-b border-input-border">
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search..."
-                className="w-full px-3 py-2 border border-input-border rounded-md focus:ring-2 focus:ring-primary focus:border-primary outline-none"
-              />
-            </div>
-          )}
-          <ul role="listbox" className="py-1">
-            {filteredOptions.length === 0 ? (
-              <li className="px-4 py-2 text-sm text-text-tertiary">No options found</li>
-            ) : (
-              filteredOptions.map((option) => (
-                <li
-                  key={option.value}
-                  role="option"
-                  aria-selected={value === option.value}
-                  onClick={() => handleOptionClick(option.value)}
-                  className={cn(
-                    'px-4 py-2 cursor-pointer flex items-center gap-2 transition-colors',
-                    value === option.value
-                      ? 'bg-primary text-white'
-                      : 'hover:bg-background-tertiary text-text-primary',
-                    option.disabled && 'opacity-50 cursor-not-allowed'
-                  )}
-                >
-                  {option.icon && <span className="flex-shrink-0">{option.icon}</span>}
-                  <span className="flex-1">{option.label}</span>
-                </li>
-              ))
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.96 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="absolute z-50 w-full mt-1 bg-white border border-input-border rounded-lg shadow-lg max-h-60 overflow-auto"
+          >
+            {searchable && (
+              <div className="p-2 border-b border-input-border">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search..."
+                  className="w-full px-3 py-2 border border-input-border rounded-md focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                />
+              </div>
             )}
-          </ul>
-        </div>
-      )}
+            <ul role="listbox" className="py-1">
+              {filteredOptions.length === 0 ? (
+                <li className="px-4 py-2 text-sm text-text-tertiary">No options found</li>
+              ) : (
+                filteredOptions.map((option, index) => (
+                  <motion.li
+                    key={option.value}
+                    role="option"
+                    aria-selected={value === option.value}
+                    onClick={() => handleOptionClick(option.value)}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.15, delay: index * 0.02 }}
+                    className={cn(
+                      'px-4 py-2 cursor-pointer flex items-center gap-2 transition-colors',
+                      value === option.value
+                        ? 'bg-primary text-white'
+                        : 'hover:bg-background-tertiary text-text-primary',
+                      option.disabled && 'opacity-50 cursor-not-allowed'
+                    )}
+                  >
+                    {option.icon && <span className="flex-shrink-0">{option.icon}</span>}
+                    <span className="flex-1">{option.label}</span>
+                  </motion.li>
+                ))
+              )}
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

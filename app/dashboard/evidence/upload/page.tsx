@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Upload, X, File, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, X, File, CheckCircle, AlertCircle, Smartphone, Monitor } from 'lucide-react';
 import Link from 'next/link';
+import { MobileEvidenceUpload } from '@/components/enhanced-features';
 
 interface Obligation {
   id: string;
@@ -23,6 +24,7 @@ export default function EvidenceUploadPage() {
   const [description, setDescription] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadMode, setUploadMode] = useState<'standard' | 'mobile'>('standard');
 
   // Fetch obligations for multi-select
   const { data: obligationsData, isLoading: obligationsLoading } = useQuery<{
@@ -30,12 +32,12 @@ export default function EvidenceUploadPage() {
   }>({
     queryKey: ['obligations'],
     queryFn: async (): Promise<any> => {
-      const response = await apiClient.get('/obligations?limit=100');
-      return response.data;
+      // apiClient.get returns {data: [...], pagination: {...}}
+      return apiClient.get('/obligations?limit=100');
     },
   });
 
-  const obligations = obligationsData?.data || [];
+  const obligations: any[] = obligationsData?.data || [];
 
   // Upload mutation
   const uploadMutation = useMutation({
@@ -164,9 +166,92 @@ export default function EvidenceUploadPage() {
         </Link>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* File Upload Section */}
-        <div className="bg-white rounded-lg shadow-base p-6">
+      {/* Upload Mode Toggle */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setUploadMode('standard')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            uploadMode === 'standard'
+              ? 'bg-primary text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          <Monitor className="w-4 h-4" />
+          Standard Upload
+        </button>
+        <button
+          onClick={() => setUploadMode('mobile')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            uploadMode === 'mobile'
+              ? 'bg-primary text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          <Smartphone className="w-4 h-4" />
+          Mobile Capture
+        </button>
+      </div>
+
+      {/* Mobile Upload Mode */}
+      {uploadMode === 'mobile' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Mobile Uploader */}
+          <MobileEvidenceUpload
+            obligationIds={selectedObligations}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['evidence'] });
+              router.push('/dashboard/evidence');
+            }}
+          />
+
+          {/* Obligation Selection for Mobile */}
+          <div className="bg-white rounded-lg shadow-base p-6">
+            <h2 className="text-xl font-semibold text-text-primary mb-4">
+              Select Obligations <span className="text-danger">*</span>
+            </h2>
+            <p className="text-sm text-text-secondary mb-4">
+              Select obligations to link the captured evidence to
+            </p>
+
+            {obligationsLoading ? (
+              <div className="text-center py-8 text-text-secondary">Loading...</div>
+            ) : obligations.length === 0 ? (
+              <div className="text-center py-8 text-text-secondary">
+                <p>No obligations found.</p>
+              </div>
+            ) : (
+              <div className="border border-input-border rounded-lg max-h-96 overflow-y-auto">
+                {obligations.map((obligation) => (
+                  <label
+                    key={obligation.id}
+                    className="flex items-center gap-3 p-4 border-b border-input-border/50 last:border-b-0 hover:bg-background-tertiary cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedObligations.includes(obligation.id)}
+                      onChange={() => toggleObligation(obligation.id)}
+                      className="w-4 h-4 text-primary border-input-border rounded focus:ring-primary"
+                    />
+                    <span className="flex-1 text-text-primary">{obligation.obligation_title}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            {selectedObligations.length > 0 && (
+              <div className="mt-4 p-3 bg-primary/10 rounded-lg">
+                <p className="text-sm text-primary font-medium">
+                  {selectedObligations.length} obligation{selectedObligations.length !== 1 ? 's' : ''} selected
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* Standard Upload Mode */
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* File Upload Section */}
+          <div className="bg-white rounded-lg shadow-base p-6">
           <h2 className="text-xl font-semibold text-text-primary mb-4">Select File</h2>
           
           {!selectedFile ? (
@@ -346,7 +431,8 @@ export default function EvidenceUploadPage() {
             Upload Evidence
           </Button>
         </div>
-      </form>
+        </form>
+      )}
     </div>
   );
 }

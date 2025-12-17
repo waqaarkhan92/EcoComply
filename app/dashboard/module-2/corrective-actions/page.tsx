@@ -52,7 +52,7 @@ export default function CorrectiveActionsPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<CorrectiveActionsResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-2-corrective-actions', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -66,7 +66,7 @@ export default function CorrectiveActionsPage() {
     },
   });
 
-  const actions = data?.data || [];
+  const actions: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

@@ -41,7 +41,7 @@ export default function MaintenanceRecordsPage() {
   const siteId = params.siteId as string;
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
-  const { data: recordsData, isLoading, error } = useQuery<MaintenanceRecordsResponse>({
+  const { data: recordsData, isLoading, error } = useQuery({
     queryKey: ['module-3-maintenance-records', siteId, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -54,7 +54,7 @@ export default function MaintenanceRecordsPage() {
     enabled: !!siteId,
   });
 
-  const records = recordsData?.data || [];
+  const records: any[] = recordsData?.data || [];
   const hasMore = recordsData?.pagination?.has_more || false;
   const nextCursor = recordsData?.pagination?.cursor;
 

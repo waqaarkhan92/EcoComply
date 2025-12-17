@@ -12,9 +12,10 @@ import { requireModule } from '@/lib/api/module-check';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ testId: string } }
+  request: NextRequest, props: { params: Promise<{ testId: string }> }
 ) {
   const requestId = getRequestId(request);
+  const params = await props.params;
   const { testId } = params;
 
   try {
@@ -23,7 +24,7 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     // Check Module 3 is activated
     const moduleCheck = await requireModule(user.company_id, 'MODULE_3');
@@ -32,7 +33,7 @@ export async function GET(
     }
 
     // Fetch stack test
-    const { data: test, error } = await supabaseAdmin
+  const { data: test, error } = await supabaseAdmin
       .from('stack_tests')
       .select(`
         id,
@@ -103,11 +104,11 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ testId: string } }
+  request: NextRequest, props: { params: Promise<{ testId: string }> }
 ) {
   const requestId = getRequestId(request);
   const params = await props.params;
-    const { testId } = params;
+  const { testId } = params;
 
   try {
     // Require authentication and appropriate role
@@ -115,7 +116,7 @@ export async function PUT(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     // Check Module 3 is activated
     const moduleCheck = await requireModule(user.company_id, 'MODULE_3');
@@ -124,7 +125,7 @@ export async function PUT(
     }
 
     // Verify test exists and user has access
-    const { data: existingTest, error: fetchError } = await supabaseAdmin
+  const { data: existingTest, error: fetchError } = await supabaseAdmin
       .from('stack_tests')
       .select('id, company_id, generator_id')
       .eq('id', testId)
@@ -192,7 +193,7 @@ export async function PUT(
     }
 
     // Update stack test
-    const { data: updatedTest, error: updateError } = await supabaseAdmin
+  const { data: updatedTest, error: updateError } = await supabaseAdmin
       .from('stack_tests')
       .update(updateData)
       .eq('id', testId)

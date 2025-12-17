@@ -17,7 +17,7 @@ export default function Module3Layout({
   const { user } = useAuthStore();
 
   // Check if Module 3 is activated - try to access a Module 3 endpoint to verify
-  const { data, isLoading, error } = useQuery<{ data: any[] }>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-3-check', user?.company_id],
     queryFn: async (): Promise<any> => {
       // Try to fetch generators - if Module 3 is not activated, this will return 403

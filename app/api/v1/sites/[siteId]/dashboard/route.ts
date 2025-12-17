@@ -10,7 +10,8 @@ import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ siteId: string } }
+  request: NextRequest,
+  props: { params: Promise<{ siteId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,13 +21,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { siteId } = params;
+  const { siteId } = params;
 
     // Verify site exists and user has access
-    const { data: site, error: siteError } = await supabaseAdmin
+  const { data: site, error: siteError } = await supabaseAdmin
       .from('sites')
       .select('id, name, company_id, regulator, is_active')
       .eq('id', siteId)
@@ -77,14 +78,13 @@ export async function GET(
       .eq('status', 'OVERDUE')
       .is('deleted_at', null);
 
-    // Count upcoming deadlines (next 7 days)
-    const { count: upcomingDeadlinesCount } = await supabaseAdmin
-      .from('deadlines')
+    // Count due_soon obligations
+    const { count: dueSoonCount } = await supabaseAdmin
+      .from('obligations')
       .select('id', { count: 'exact', head: true })
       .eq('site_id', siteId)
-      .in('status', ['PENDING', 'DUE_SOON'])
-      .gte('due_date', now.toISOString().split('T')[0])
-      .lte('due_date', sevenDaysFromNow.toISOString().split('T')[0]);
+      .eq('status', 'DUE_SOON')
+      .is('deleted_at', null);
 
     // Count total obligations
     const { count: totalObligationsCount } = await supabaseAdmin
@@ -93,13 +93,54 @@ export async function GET(
       .eq('site_id', siteId)
       .is('deleted_at', null);
 
-    // Count completed obligations
+    // Count completed obligations (on track / compliant)
     const { count: completedObligationsCount } = await supabaseAdmin
       .from('obligations')
       .select('id', { count: 'exact', head: true })
       .eq('site_id', siteId)
-      .eq('status', 'COMPLETED')
+      .in('status', ['COMPLETED', 'PENDING', 'IN_PROGRESS'])
       .is('deleted_at', null);
+
+    // Count total documents for this site
+    const { count: totalDocsCount } = await supabaseAdmin
+      .from('documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('site_id', siteId)
+      .is('deleted_at', null);
+
+    // Count pending review documents
+    const { count: pendingReviewDocsCount } = await supabaseAdmin
+      .from('documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('site_id', siteId)
+      .in('extraction_status', ['PENDING', 'REVIEW_REQUIRED'])
+      .is('deleted_at', null);
+
+    // Count approved documents
+    const { count: approvedDocsCount } = await supabaseAdmin
+      .from('documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('site_id', siteId)
+      .eq('extraction_status', 'COMPLETED')
+      .is('deleted_at', null);
+
+    // Get upcoming deadlines with obligation details
+    const { data: upcomingDeadlines } = await supabaseAdmin
+      .from('deadlines')
+      .select(`
+        id,
+        due_date,
+        status,
+        obligations:obligation_id (
+          id,
+          obligation_title
+        )
+      `)
+      .eq('site_id', siteId)
+      .in('status', ['PENDING', 'DUE_SOON'])
+      .gte('due_date', now.toISOString().split('T')[0])
+      .order('due_date', { ascending: true })
+      .limit(10);
 
     // Get recent activity (last 10 obligations)
     const { data: recentObligations } = await supabaseAdmin
@@ -112,18 +153,30 @@ export async function GET(
 
     // Calculate compliance score
     const totalObligations = totalObligationsCount || 0;
-    const completedObligations = completedObligationsCount || 0;
-    const complianceScore = totalObligations > 0 
-      ? Math.round((completedObligations / totalObligations) * 100) 
+    const completed = completedObligationsCount || 0;
+    const overdue = overdueCount || 0;
+    // Compliant = total minus overdue minus due_soon
+    const compliant = Math.max(0, totalObligations - overdue - (dueSoonCount || 0));
+    const complianceScore = totalObligations > 0
+      ? Math.round(((totalObligations - overdue) / totalObligations) * 100)
       : 100;
 
     // Determine compliance status
     let complianceStatus = 'COMPLIANT';
-    if (overdueCount && overdueCount > 0) {
+    if (overdue > 0) {
       complianceStatus = 'NON_COMPLIANT';
-    } else if (upcomingDeadlinesCount && upcomingDeadlinesCount > 0) {
+    } else if ((dueSoonCount || 0) > 0) {
       complianceStatus = 'AT_RISK';
     }
+
+    // Transform upcoming_deadlines for frontend
+    const transformedDeadlines = (upcomingDeadlines || []).map((d: any) => ({
+      id: d.id,
+      obligation_id: d.obligations?.id || '',
+      obligation_title: d.obligations?.obligation_title || 'Unknown',
+      due_date: d.due_date,
+      status: d.status,
+    }));
 
     const response = successResponse(
       {
@@ -133,11 +186,25 @@ export async function GET(
           regulator: site.regulator,
           is_active: site.is_active,
         },
+        // New structure that matches frontend expectations
+        obligations: {
+          total: totalObligations,
+          overdue: overdue,
+          due_soon: dueSoonCount || 0,
+          compliant: compliant,
+        },
+        documents: {
+          total: totalDocsCount || 0,
+          pending_review: pendingReviewDocsCount || 0,
+          approved: approvedDocsCount || 0,
+        },
+        upcoming_deadlines: transformedDeadlines,
+        // Keep legacy structure for backwards compatibility
         statistics: {
           total_obligations: totalObligations,
-          completed_obligations: completedObligations,
-          overdue_obligations: overdueCount || 0,
-          upcoming_deadlines: upcomingDeadlinesCount || 0,
+          completed_obligations: completed,
+          overdue_obligations: overdue,
+          upcoming_deadlines: transformedDeadlines.length,
           compliance_score: complianceScore,
           compliance_status: complianceStatus,
         },

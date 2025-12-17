@@ -9,6 +9,7 @@ import { I18nProvider } from '@/lib/providers/i18n-provider';
 import { HelpModal } from '@/components/help/HelpModal';
 import { KeyboardShortcutsHandler } from '@/components/keyboard-shortcuts/KeyboardShortcutsHandler';
 import { WorkerInitializer } from '@/components/system/WorkerInitializer';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -45,21 +46,23 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
       <body className={`${inter.className} bg-slate text-charcoal`}>
-        <WorkerInitializer />
-        <QueryProvider>
-          <I18nProvider>
-            <PWAProvider>
-              <KeyboardShortcutsProvider>
-                <ContextualHelpProvider>
-                  {children}
-                  <HelpModal />
-                  <KeyboardShortcutsHandler />
-                  <Toaster position="top-right" richColors expand={true} />
-                </ContextualHelpProvider>
-              </KeyboardShortcutsProvider>
-            </PWAProvider>
-          </I18nProvider>
-        </QueryProvider>
+        <ErrorBoundary>
+          <WorkerInitializer />
+          <QueryProvider>
+            <I18nProvider>
+              <PWAProvider>
+                <KeyboardShortcutsProvider>
+                  <ContextualHelpProvider>
+                    {children}
+                    <HelpModal />
+                    <KeyboardShortcutsHandler />
+                    <Toaster position="top-right" richColors expand={true} />
+                  </ContextualHelpProvider>
+                </KeyboardShortcutsProvider>
+              </PWAProvider>
+            </I18nProvider>
+          </QueryProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

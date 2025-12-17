@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
@@ -31,22 +31,24 @@ export default function PermitVariationPage() {
   const [regulatorConsultation, setRegulatorConsultation] = useState<boolean>(false);
   const [publicConsultation, setPublicConsultation] = useState<boolean>(false);
 
-  const { data: variationData, isLoading } = useQuery<{ data: VariationDetails }>({
+  const { data: variationData, isLoading } = useQuery({
     queryKey: ['permit-workflow-variation', workflowId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: VariationDetails }>(`/module-1/permit-workflows/${workflowId}/variation`);
     },
     enabled: !!workflowId,
-    onSuccess: (data) => {
-      if (data?.data) {
-        setVariationType(data.data.variation_type || '');
-        setProposedChanges(data.data.proposed_changes || '');
-        setImpactAssessment(data.data.impact_assessment || '');
-        setRegulatorConsultation(data.data.regulator_consultation_required || false);
-        setPublicConsultation(data.data.public_consultation_required || false);
-      }
-    },
   });
+
+  // Update local state when variation data loads
+  useEffect(() => {
+    if (variationData?.data) {
+      setVariationType(variationData.data.variation_type || '');
+      setProposedChanges(variationData.data.proposed_changes || '');
+      setImpactAssessment(variationData.data.impact_assessment || '');
+      setRegulatorConsultation(variationData.data.regulator_consultation_required || false);
+      setPublicConsultation(variationData.data.public_consultation_required || false);
+    }
+  }, [variationData]);
 
   const updateVariation = useMutation({
     mutationFn: async (data: VariationDetails) => {

@@ -41,7 +41,7 @@ export default function GeneratorsPage() {
   const siteId = params.siteId as string;
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
-  const { data: generatorsData, isLoading, error } = useQuery<GeneratorsResponse>({
+  const { data: generatorsData, isLoading, error } = useQuery({
     queryKey: ['module-3-generators', siteId, cursor],
     queryFn: async (): Promise<any> => {
       // Get site's document IDs first to filter generators
@@ -55,7 +55,7 @@ export default function GeneratorsPage() {
     enabled: !!siteId,
   });
 
-  const generators = generatorsData?.data || [];
+  const generators: any[] = generatorsData?.data || [];
   const hasMore = generatorsData?.pagination?.has_more || false;
   const nextCursor = generatorsData?.pagination?.cursor;
 

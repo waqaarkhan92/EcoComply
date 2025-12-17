@@ -30,14 +30,14 @@ export default function DocumentObligationsPage() {
   const siteId = params.siteId as string;
   const documentId = params.documentId as string;
 
-  const { data: obligationsData, isLoading } = useQuery<ObligationsResponse>({
+  const { data: obligationsData, isLoading } = useQuery({
     queryKey: ['document-obligations', documentId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<ObligationsResponse>(`/documents/${documentId}/obligations`);
     },
   });
 
-  const obligations = obligationsData?.data || [];
+  const obligations: any[] = obligationsData?.data || [];
 
   if (isLoading) {
     return (

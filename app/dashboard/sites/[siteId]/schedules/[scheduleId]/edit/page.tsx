@@ -28,7 +28,7 @@ export default function EditSchedulePage() {
   const [startDate, setStartDate] = useState('');
   const [adjustForBusinessDays, setAdjustForBusinessDays] = useState(false);
 
-  const { data: scheduleData, isLoading } = useQuery<{ data: Schedule }>({
+  const { data: scheduleData, isLoading } = useQuery({
     queryKey: ['schedule', scheduleId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Schedule }>(`/schedules/${scheduleId}`);

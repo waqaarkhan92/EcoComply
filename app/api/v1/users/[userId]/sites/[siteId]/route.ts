@@ -10,7 +10,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function DELETE(
-  request: NextRequest, props: { params: Promise<{ userId: string; siteId: string } }
+  request: NextRequest, props: { params: Promise<{ userId: string; siteId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,12 +20,13 @@ export async function DELETE(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user: currentUser } = authResult;
+  const { user: currentUser } = authResult;
 
-    const { userId, siteId } = params;
+    const params = await props.params;
+  const { userId, siteId } = params;
 
     // Check if user exists
-    const { data: user, error: userError } = await supabaseAdmin
+  const { data: user, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, company_id')
       .eq('id', userId)
@@ -54,7 +55,7 @@ export async function DELETE(
     }
 
     // Check if assignment exists
-    const { data: assignment, error: assignmentError } = await supabaseAdmin
+  const { data: assignment, error: assignmentError } = await supabaseAdmin
       .from('user_site_assignments')
       .select('id')
       .eq('user_id', user.id)
@@ -72,7 +73,7 @@ export async function DELETE(
     }
 
     // Delete assignment
-    const { error: deleteError } = await supabaseAdmin
+  const { error: deleteError } = await supabaseAdmin
       .from('user_site_assignments')
       .delete()
       .eq('user_id', user.id)

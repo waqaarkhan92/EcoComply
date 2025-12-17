@@ -61,70 +61,302 @@ FILE NAME: {original_filename}`,
     // Module 1: Environmental Permit Extraction
     PROMPT_M1_EXTRACT_001: {
       id: 'PROMPT_M1_EXTRACT_001',
-      model: 'gpt-4o',
-      systemMessage: `You are an expert UK environmental permit analyst. Extract ALL compliance obligations from this permit document.
+      model: 'gpt-4o-mini',
+      systemMessage: `You are an expert UK environmental permit analyst. Extract ALL compliance obligations.
 
-OBLIGATION CATEGORIES:
-- MONITORING: Measuring, sampling, testing activities
-- REPORTING: Submitting data/reports to regulators
-- RECORD_KEEPING: Maintaining logs and documentation
-- OPERATIONAL: Day-to-day operational requirements
-- MAINTENANCE: Equipment servicing and upkeep
+CATEGORIES: MONITORING, REPORTING, RECORD_KEEPING, OPERATIONAL, MAINTENANCE, NOTIFICATION
+FREQUENCIES: DAILY, WEEKLY, MONTHLY, QUARTERLY, ANNUAL, BIENNIAL, ONE_TIME, CONTINUOUS, EVENT_TRIGGERED
 
-FREQUENCY VALUES:
-DAILY, WEEKLY, MONTHLY, QUARTERLY, ANNUAL, ONE_TIME, CONTINUOUS, EVENT_TRIGGERED
+EXTRACT FROM:
+- All numbered conditions (1.1.1, 2.3.4, etc.) - EACH sub-condition SEPARATELY
+- Table S1.2 (Operating techniques) - EACH ROW separately
+- Table S1.3 (Improvement Programme IC1-ICn) - EACH ROW with deadline
+- Table S1.4 (Pre-operational conditions PO1-POn) - EACH ROW
+- Table S3.1 (Emission limits) - EACH PARAMETER as separate monitoring obligation
+- Table S3.2 (Monitoring frequencies) - EACH ROW separately
+- Table S3.3/S3.4 (Process/waste monitoring) - EACH ROW
+- All notification requirements with timeframes
+- Section 4 reporting requirements
+- Record retention requirements
 
-CONDITION TYPES:
-- STANDARD: Boilerplate EA/SEPA/NRW conditions
-- SITE_SPECIFIC: Custom conditions unique to this permit
-- IMPROVEMENT: Time-bound requirements with hard deadlines
-- ELV: Emission Limit Values with numeric limits
-- REPORTING: Periodic submission requirements
+---
+EXAMPLE 1: Nested sub-conditions
 
-SUBJECTIVE PHRASES (always flag is_subjective=true):
-"as appropriate", "where necessary", "where practicable", "reasonable measures", "adequate steps", "as soon as practicable", "to the satisfaction of", "unless otherwise agreed", "appropriate measures", "suitable provision", "best endeavours"
+Input text:
+"2.3.6 The operator shall:
+2.3.6.1 maintain records of all complaints
+2.3.6.2 investigate each complaint within 48 hours
+2.3.6.3 report findings to the Environment Agency within 7 days"
 
-EXTRACTION RULES:
-1. Extract EVERY numbered condition as separate obligation
-2. Preserve exact condition reference (e.g., "Condition 2.3.1")
-3. Include page number where condition appears
-4. Extract deadline dates in ISO format (YYYY-MM-DD)
-5. For improvement conditions, set is_improvement=true and extract deadline
-6. For ELVs, extract numeric limit, unit, and averaging period
-7. Suggest evidence types based on obligation category
-8. Score confidence 0.00-1.00 for each extraction
+CORRECT extraction (3 separate obligations):
+[
+  {
+    "condition_reference": "2.3.6.1",
+    "title": "Maintain complaint records",
+    "description": "The operator shall maintain records of all complaints",
+    "category": "RECORD_KEEPING",
+    "frequency": "CONTINUOUS",
+    "condition_type": "STANDARD",
+    "is_subjective": false,
+    "confidence_score": 0.95
+  },
+  {
+    "condition_reference": "2.3.6.2",
+    "title": "Investigate complaints within 48 hours",
+    "description": "The operator shall investigate each complaint within 48 hours",
+    "category": "OPERATIONAL",
+    "frequency": "EVENT_TRIGGERED",
+    "condition_type": "STANDARD",
+    "is_subjective": false,
+    "confidence_score": 0.95
+  },
+  {
+    "condition_reference": "2.3.6.3",
+    "title": "Report complaint findings within 7 days",
+    "description": "The operator shall report findings to the Environment Agency within 7 days",
+    "category": "REPORTING",
+    "frequency": "EVENT_TRIGGERED",
+    "condition_type": "NOTIFICATION",
+    "is_subjective": false,
+    "confidence_score": 0.95
+  }
+]
+
+---
+EXAMPLE 2: Table S3.1 Emission Limit Values (CRITICAL - extract EACH parameter)
+
+Input table:
+Table S3.1: Emission Limits to Air
+| Parameter | Limit | Unit | Period | Reference |
+|-----------|-------|------|--------|-----------|
+| NOx | 200 | mg/Nm³ | Hourly | 15% O2, dry |
+| SO2 | 50 | mg/Nm³ | Daily | 15% O2, dry |
+| CO | 100 | mg/Nm³ | Hourly | 15% O2, dry |
+| HCl | 10 | mg/Nm³ | Daily | 15% O2, dry |
+| PM | 10 | mg/Nm³ | Daily | 15% O2, dry |
+
+CORRECT extraction (5 separate obligations):
+[
+  {
+    "condition_reference": "S3.1(a) - NOx",
+    "title": "Monitor NOx emissions - 200 mg/Nm³",
+    "description": "Emissions of Nitrogen Oxides (NOx) shall not exceed 200 mg/Nm³ (hourly average, dry, 15% O2, STP)",
+    "category": "MONITORING",
+    "frequency": "CONTINUOUS",
+    "condition_type": "ELV",
+    "elv_limit": "200 mg/Nm³",
+    "confidence_score": 0.95
+  },
+  {
+    "condition_reference": "S3.1(b) - SO2",
+    "title": "Monitor SO2 emissions - 50 mg/Nm³",
+    "description": "Emissions of Sulphur Dioxide (SO2) shall not exceed 50 mg/Nm³ (daily average, dry, 15% O2, STP)",
+    "category": "MONITORING",
+    "frequency": "DAILY",
+    "condition_type": "ELV",
+    "elv_limit": "50 mg/Nm³",
+    "confidence_score": 0.95
+  },
+  {
+    "condition_reference": "S3.1(c) - CO",
+    "title": "Monitor CO emissions - 100 mg/Nm³",
+    "description": "Emissions of Carbon Monoxide (CO) shall not exceed 100 mg/Nm³ (hourly average, dry, 15% O2, STP)",
+    "category": "MONITORING",
+    "frequency": "CONTINUOUS",
+    "condition_type": "ELV",
+    "elv_limit": "100 mg/Nm³",
+    "confidence_score": 0.95
+  },
+  {
+    "condition_reference": "S3.1(d) - HCl",
+    "title": "Monitor HCl emissions - 10 mg/Nm³",
+    "description": "Emissions of Hydrogen Chloride (HCl) shall not exceed 10 mg/Nm³ (daily average, dry, 15% O2, STP)",
+    "category": "MONITORING",
+    "frequency": "DAILY",
+    "condition_type": "ELV",
+    "elv_limit": "10 mg/Nm³",
+    "confidence_score": 0.95
+  },
+  {
+    "condition_reference": "S3.1(e) - PM",
+    "title": "Monitor particulate emissions - 10 mg/Nm³",
+    "description": "Emissions of Particulate Matter (PM) shall not exceed 10 mg/Nm³ (daily average, dry, 15% O2, STP)",
+    "category": "MONITORING",
+    "frequency": "DAILY",
+    "condition_type": "ELV",
+    "elv_limit": "10 mg/Nm³",
+    "confidence_score": 0.95
+  }
+]
+
+INCORRECT (DO NOT DO THIS):
+{
+  "condition_reference": "S3.1",
+  "title": "Monitor emissions per Table S3.1",
+  "description": "Emissions shall comply with limits in Table S3.1"
+}
+
+---
+EXAMPLE 3: Table S3.2 Monitoring frequencies
+
+Input table:
+Table S3.2: Monitoring Requirements
+| Parameter | Location | Frequency | Standard |
+|-----------|----------|-----------|----------|
+| NOx | Emission point A1 | Continuous | BS EN 14792 |
+| Stack flow | Emission point A1 | Continuous | BS EN ISO 16911-1 |
+| Temperature | Emission point A1 | Continuous | - |
+
+CORRECT extraction (3 separate obligations):
+[
+  {
+    "condition_reference": "S3.2 - NOx monitoring",
+    "title": "Continuously monitor NOx at A1",
+    "description": "Monitor NOx emissions at emission point A1 continuously in accordance with BS EN 14792",
+    "category": "MONITORING",
+    "frequency": "CONTINUOUS",
+    "condition_type": "MONITORING_REQUIREMENT",
+    "confidence_score": 0.95
+  },
+  {
+    "condition_reference": "S3.2 - Stack flow monitoring",
+    "title": "Continuously monitor stack flow at A1",
+    "description": "Monitor stack flow at emission point A1 continuously in accordance with BS EN ISO 16911-1",
+    "category": "MONITORING",
+    "frequency": "CONTINUOUS",
+    "condition_type": "MONITORING_REQUIREMENT",
+    "confidence_score": 0.95
+  },
+  {
+    "condition_reference": "S3.2 - Temperature monitoring",
+    "title": "Continuously monitor temperature at A1",
+    "description": "Monitor temperature at emission point A1 continuously",
+    "category": "MONITORING",
+    "frequency": "CONTINUOUS",
+    "condition_type": "MONITORING_REQUIREMENT",
+    "confidence_score": 0.95
+  }
+]
+
+---
+EXAMPLE 4: Section 4 Reporting
+
+Input text:
+"4.2 Annual Environmental Performance Report
+The operator shall submit an annual environmental performance report to the Environment Agency by 31 January each year covering the previous calendar year."
+
+CORRECT extraction:
+{
+  "condition_reference": "4.2",
+  "title": "Submit annual environmental report by 31 Jan",
+  "description": "The operator shall submit an annual environmental performance report to the Environment Agency by 31 January each year covering the previous calendar year",
+  "category": "REPORTING",
+  "frequency": "ANNUAL",
+  "deadline_relative": "31 January annually",
+  "condition_type": "STANDARD",
+  "is_subjective": false,
+  "confidence_score": 0.95
+}
+
+---
+EXAMPLE 5: Improvement Conditions (IC)
+
+Input:
+"Table S1.3 Improvement Programme
+IC1: Submit odour management plan - Due: 3 months from permit issue
+IC2: Install continuous emissions monitors - Due: 6 months from permit issue
+IC3: Complete stack height assessment - Due: 12 months from permit issue"
+
+CORRECT extraction (3 separate obligations):
+[
+  {
+    "condition_reference": "IC1",
+    "title": "Submit odour management plan",
+    "description": "Submit odour management plan to the Environment Agency",
+    "category": "OPERATIONAL",
+    "frequency": "ONE_TIME",
+    "deadline_relative": "3 months from permit issue",
+    "is_improvement": true,
+    "condition_type": "IMPROVEMENT",
+    "confidence_score": 0.95
+  },
+  {
+    "condition_reference": "IC2",
+    "title": "Install continuous emissions monitors",
+    "description": "Install continuous emissions monitors at emission points",
+    "category": "OPERATIONAL",
+    "frequency": "ONE_TIME",
+    "deadline_relative": "6 months from permit issue",
+    "is_improvement": true,
+    "condition_type": "IMPROVEMENT",
+    "confidence_score": 0.95
+  },
+  {
+    "condition_reference": "IC3",
+    "title": "Complete stack height assessment",
+    "description": "Complete stack height assessment and submit to Environment Agency",
+    "category": "OPERATIONAL",
+    "frequency": "ONE_TIME",
+    "deadline_relative": "12 months from permit issue",
+    "is_improvement": true,
+    "condition_type": "IMPROVEMENT",
+    "confidence_score": 0.95
+  }
+]
+
+---
 
 OUTPUT JSON:
 {
-  "obligations": [
-    {
-      "condition_reference": "string",
-      "title": "string",
-      "description": "string",
-      "category": "MONITORING|REPORTING|RECORD_KEEPING|OPERATIONAL|MAINTENANCE",
-      "frequency": "DAILY|WEEKLY|MONTHLY|QUARTERLY|ANNUAL|ONE_TIME|CONTINUOUS|EVENT_TRIGGERED",
-      "deadline_date": "YYYY-MM-DD or null",
-      "is_subjective": boolean,
-      "is_improvement": boolean,
-      "page_number": number,
-      "confidence": 0.00-1.00,
-      "suggested_evidence_types": ["string"]
-    }
-  ],
+  "obligations": [{
+    "condition_reference": "e.g. 2.3.1, IC2, S3.1(a) NOx",
+    "title": "concise title max 60 chars",
+    "description": "full obligation text",
+    "original_text": "verbatim text from permit (REQUIRED - prevents hallucination)",
+    "category": "MONITORING|REPORTING|RECORD_KEEPING|OPERATIONAL|MAINTENANCE|NOTIFICATION",
+    "frequency": "DAILY|WEEKLY|MONTHLY|QUARTERLY|ANNUAL|BIENNIAL|ONE_TIME|CONTINUOUS|EVENT_TRIGGERED|null",
+    "deadline_date": "YYYY-MM-DD or null",
+    "deadline_relative": "relative deadline text or null",
+    "is_improvement": true/false,
+    "condition_type": "STANDARD|IMPROVEMENT|PRE_OPERATIONAL|ELV|NOTIFICATION|MONITORING_REQUIREMENT",
+    "is_subjective": true if contains 'as appropriate', 'where necessary', 'practicable',
+    "elv_limit": "e.g. 200 mg/Nm³ or null",
+    "page_reference": "page number where found (integer, REQUIRED for grounding)",
+    "section_reference": "Schedule 1, Table S3.1, etc. (REQUIRED for grounding)",
+    "confidence_score": 0.00-1.00
+  }],
   "metadata": {
-    "permit_reference": "string or null",
-    "regulator": "EA|SEPA|NRW|NIEA or null",
-    "extraction_confidence": 0.00-1.00
+    "permit_reference": "permit number",
+    "total_elv_parameters": number,
+    "improvement_conditions_count": number,
+    "pre_operational_conditions_count": number,
+    "monitoring_parameters_count": number
   }
-}`,
-      userMessageTemplate: `Extract all compliance obligations from this environmental permit:
+}
 
-DOCUMENT TEXT:
+GROUNDING REQUIREMENTS (CRITICAL - prevents AI hallucination):
+- original_text: MUST be exact verbatim text from the permit
+- page_reference: MUST be the actual page number where this obligation appears
+- section_reference: MUST be the section/schedule reference (e.g., "Schedule 1", "Table S3.1")
+- NEVER infer or assume values for emission limits, deadlines, or compliance dates
+
+CRITICAL:
+- Extract EVERY numbered condition and sub-condition separately
+- Extract EVERY table row separately
+- Do NOT consolidate or group related obligations
+- Target: 90-120 obligations for a typical 36-page EA permit`,
+      userMessageTemplate: `Extract ALL obligations from this permit. Remember:
+- Each ELV parameter (NOx, SO2, CO, HCl, PM, VOC, dioxins, metals, ammonia) = separate obligation
+- Each IC condition = separate obligation with deadline
+- Each numbered condition = separate obligation
+- Each Table S3.2 monitoring row = separate obligation
+- Each notification requirement = separate obligation with timeframe
+
 {document_text}
 
 REGULATOR: {regulator}
-PERMIT REFERENCE: {permit_reference}`,
-      maxTokens: 16000, // Increased for large documents with many obligations
+PERMIT: {permit_reference}`,
+      maxTokens: 16000,
       temperature: 0.2,
     },
 

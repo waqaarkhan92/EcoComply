@@ -12,7 +12,7 @@ import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ evidenceId: string } }
+  request: NextRequest, props: { params: Promise<{ evidenceId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -22,15 +22,15 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { evidenceId } = params;
-    const { searchParams } = new URL(request.url);
+  const { evidenceId } = params;
+  const { searchParams } = new URL(request.url);
     const format = searchParams.get('format') || 'csv';
 
     // Get evidence - RLS will enforce access control
-    const { data: evidence, error: evidenceError } = await supabaseAdmin
+  const { data: evidence, error: evidenceError } = await supabaseAdmin
       .from('evidence')
       .select('id, file_name, site_id, company_id')
       .eq('id', evidenceId)
@@ -48,7 +48,7 @@ export async function GET(
     }
 
     // Get chain of custody events (reuse logic from chain-of-custody route)
-    const { data: auditLogs } = await supabaseAdmin
+  const { data: auditLogs } = await supabaseAdmin
       .from('audit_logs')
       .select(`
         id,
@@ -71,7 +71,7 @@ export async function GET(
       .order('created_at', { ascending: true });
 
     const userIds = [...new Set(auditLogs?.map(log => log.user_id) || [])];
-    const { data: users } = await supabaseAdmin
+  const { data: users } = await supabaseAdmin
       .from('users')
       .select('id, email, full_name')
       .in('id', userIds);

@@ -11,23 +11,23 @@ import { requireModule } from '@/lib/api/module-check';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function POST(
-  request: NextRequest, props: { params: Promise<{ noteId: string } }
+  request: NextRequest, props: { params: Promise<{ noteId: string }> }
 ) {
   const requestId = getRequestId(request);
 
   try {
     const authResult = await requireRole(request, ['OWNER', 'ADMIN', 'STAFF']);
     if (authResult instanceof NextResponse) return authResult;
-    const { user } = authResult;
+  const { user } = authResult;
 
     const moduleCheck = await requireModule(user.company_id, 'MODULE_4');
     if (moduleCheck) return moduleCheck;
 
     const params = await props.params;
-    const { noteId } = params;
+  const { noteId } = params;
 
     // Get consignment note
-    const { data: consignmentNote, error: fetchError } = await supabaseAdmin
+  const { data: consignmentNote, error: fetchError } = await supabaseAdmin
       .from('consignment_notes')
       .select('*, waste_streams!inner(company_id, site_id)')
       .eq('id', noteId)
@@ -55,7 +55,7 @@ export async function POST(
     }
 
     // Get active validation rules for company and waste stream
-    const { data: validationRules, error: rulesError } = await supabaseAdmin
+  const { data: validationRules, error: rulesError } = await supabaseAdmin
       .from('validation_rules')
       .select('*')
       .eq('company_id', user.company_id)
@@ -157,7 +157,7 @@ export async function POST(
     const preValidationStatus = errors.length > 0 ? 'FAILED' : (warnings.length > 0 ? 'PASSED' : 'PASSED');
     const preValidationErrors = [...errors, ...warnings];
 
-    const { data: updatedNote, error: updateError } = await supabaseAdmin
+  const { data: updatedNote, error: updateError } = await supabaseAdmin
       .from('consignment_notes')
       .update({
         pre_validation_status: preValidationStatus,

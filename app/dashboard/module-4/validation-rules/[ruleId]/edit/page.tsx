@@ -38,7 +38,7 @@ export default function EditValidationRulePage({
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: rule, isLoading } = useQuery<ValidationRule>({
+  const { data: rule, isLoading } = useQuery({
     queryKey: ['validation-rule', ruleId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<ValidationRule>(`/module-4/validation-rules/${ruleId}`);

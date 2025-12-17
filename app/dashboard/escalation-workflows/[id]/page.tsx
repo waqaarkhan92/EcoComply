@@ -23,7 +23,7 @@ export default function EscalationWorkflowDetailPage() {
   const router = useRouter();
   const workflowId = params.id as string;
 
-  const { data: workflow, isLoading, error } = useQuery<EscalationWorkflow>({
+  const { data: workflow, isLoading, error } = useQuery({
     queryKey: ['escalation-workflow', workflowId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<EscalationWorkflow>(`/escalation-workflows/${workflowId}`);

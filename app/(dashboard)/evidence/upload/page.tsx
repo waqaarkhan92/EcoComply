@@ -35,7 +35,7 @@ export default function EvidenceUploadPage() {
     },
   });
 
-  const obligations = obligationsData?.data || [];
+  const obligations: any[] = obligationsData?.data || [];
 
   // Upload mutation
   const uploadMutation = useMutation({

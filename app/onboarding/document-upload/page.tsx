@@ -22,8 +22,8 @@ export default function DocumentUploadPage() {
       formData.append('file', file);
       
       // Get first site for onboarding
-      const sitesResponse = await apiClient.get('/sites');
-      const sites = sitesResponse.data.data || [];
+      const sitesResponse = await apiClient.get('/sites') as { data: { data: Array<{ id: string }> } };
+      const sites = sitesResponse.data?.data || [];
       if (sites.length === 0) {
         throw new Error('No site found. Please create a site first.');
       }
@@ -32,9 +32,9 @@ export default function DocumentUploadPage() {
       formData.append('document_type', 'PERMIT'); // Default for onboarding
       
       const response = await apiClient.upload('/documents', formData);
-      return response.data;
+      return response.data as { id: string };
     },
-    onSuccess: async (data) => {
+    onSuccess: async (data: { id: string }) => {
       setUploaded(true);
       
       // Mark PERMIT_UPLOAD step as complete

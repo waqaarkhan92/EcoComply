@@ -10,7 +10,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ obligationId: string } }
+  request: NextRequest, props: { params: Promise<{ obligationId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,10 +20,10 @@ export async function PUT(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { obligationId } = params;
+  const { obligationId } = params;
 
     // Parse request body
     const body = await request.json();
@@ -50,7 +50,7 @@ export async function PUT(
     }
 
     // Check if obligation exists
-    const { data: obligation, error: checkError } = await supabaseAdmin
+  const { data: obligation, error: checkError } = await supabaseAdmin
       .from('obligations')
       .select('id')
       .eq('id', obligationId)
@@ -79,7 +79,7 @@ export async function PUT(
       updates.review_notes = body.review_notes;
     }
 
-    const { data: updatedObligation, error: updateError } = await supabaseAdmin
+  const { data: updatedObligation, error: updateError } = await supabaseAdmin
       .from('obligations')
       .update(updates)
       .eq('id', obligationId)

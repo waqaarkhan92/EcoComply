@@ -13,22 +13,22 @@ import { requireModule } from '@/lib/api/module-check';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ ruleId: string } }
+  request: NextRequest, props: { params: Promise<{ ruleId: string }> }
 ) {
   const requestId = getRequestId(request);
 
   try {
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) return authResult;
-    const { user } = authResult;
+  const { user } = authResult;
 
     const moduleCheck = await requireModule(user.company_id, 'MODULE_4');
     if (moduleCheck) return moduleCheck;
 
     const params = await props.params;
-    const { ruleId } = params;
+  const { ruleId } = params;
 
-    const { data: rule, error } = await supabaseAdmin
+  const { data: rule, error } = await supabaseAdmin
       .from('validation_rules')
       .select('*')
       .eq('id', ruleId)
@@ -69,24 +69,24 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ ruleId: string } }
+  request: NextRequest, props: { params: Promise<{ ruleId: string }> }
 ) {
   const requestId = getRequestId(request);
 
   try {
     const authResult = await requireRole(request, ['OWNER', 'ADMIN', 'STAFF']);
     if (authResult instanceof NextResponse) return authResult;
-    const { user } = authResult;
+  const { user } = authResult;
 
     const moduleCheck = await requireModule(user.company_id, 'MODULE_4');
     if (moduleCheck) return moduleCheck;
 
     const params = await props.params;
-    const { ruleId } = params;
+  const { ruleId } = params;
     const body = await request.json();
 
     // Get existing rule to verify access
-    const { data: existing, error: fetchError } = await supabaseAdmin
+  const { data: existing, error: fetchError } = await supabaseAdmin
       .from('validation_rules')
       .select('id, company_id')
       .eq('id', ruleId)
@@ -122,7 +122,7 @@ export async function PUT(
     if (body.is_active !== undefined) updateData.is_active = body.is_active;
     if (body.waste_stream_id !== undefined) updateData.waste_stream_id = body.waste_stream_id;
 
-    const { data: rule, error: updateError } = await supabaseAdmin
+  const { data: rule, error: updateError } = await supabaseAdmin
       .from('validation_rules')
       .update(updateData)
       .eq('id', ruleId)
@@ -154,23 +154,23 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest, props: { params: Promise<{ ruleId: string } }
+  request: NextRequest, props: { params: Promise<{ ruleId: string }> }
 ) {
   const requestId = getRequestId(request);
 
   try {
     const authResult = await requireRole(request, ['OWNER', 'ADMIN']);
     if (authResult instanceof NextResponse) return authResult;
-    const { user } = authResult;
+  const { user } = authResult;
 
     const moduleCheck = await requireModule(user.company_id, 'MODULE_4');
     if (moduleCheck) return moduleCheck;
 
     const params = await props.params;
-    const { ruleId } = params;
+  const { ruleId } = params;
 
     // Get existing rule to verify access
-    const { data: existing, error: fetchError } = await supabaseAdmin
+  const { data: existing, error: fetchError } = await supabaseAdmin
       .from('validation_rules')
       .select('id, company_id')
       .eq('id', ruleId)
@@ -197,7 +197,7 @@ export async function DELETE(
     }
 
     // Delete validation rule
-    const { error: deleteError } = await supabaseAdmin
+  const { error: deleteError } = await supabaseAdmin
       .from('validation_rules')
       .delete()
       .eq('id', ruleId);

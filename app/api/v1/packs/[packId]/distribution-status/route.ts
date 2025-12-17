@@ -11,7 +11,7 @@ import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 import { parsePaginationParams, createCursor } from '@/lib/api/pagination';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ packId: string } }
+  request: NextRequest, props: { params: Promise<{ packId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -21,13 +21,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { packId } = params;
+  const { packId } = params;
 
     // Verify pack exists
-    const { data: pack, error: packError } = await supabaseAdmin
+  const { data: pack, error: packError } = await supabaseAdmin
       .from('audit_packs')
       .select('id')
       .eq('id', packId)
@@ -44,7 +44,7 @@ export async function GET(
     }
 
     // Parse pagination params
-    const { limit, cursor } = parsePaginationParams(request);
+  const { limit, cursor } = parsePaginationParams(request);
 
     // Get distribution records
     let query = supabaseAdmin
@@ -59,7 +59,7 @@ export async function GET(
       query = query.lt('created_at', parsedCursor.created_at);
     }
 
-    const { data: distributions, error } = await query;
+  const { data: distributions, error } = await query;
 
     if (error) {
       return errorResponse(

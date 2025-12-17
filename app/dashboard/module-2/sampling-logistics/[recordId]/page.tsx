@@ -51,7 +51,7 @@ export default function SamplingLogisticDetailPage({
   const [certificateDocumentId, setCertificateDocumentId] = useState('');
   const [labResultId, setLabResultId] = useState('');
 
-  const { data: record, isLoading } = useQuery<SamplingLogistic>({
+  const { data: record, isLoading } = useQuery({
     queryKey: ['sampling-logistic', recordId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<SamplingLogistic>(`/module-2/sampling-logistics/${recordId}`);

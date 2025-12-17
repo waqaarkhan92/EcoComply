@@ -117,8 +117,8 @@ async function applyPolicies() {
   console.log('🔐 Applying Reports Storage Policies via PostgreSQL...\n');
 
   const client = new Client({
-    connectionString: databaseUrl,
-    ssl: databaseUrl.includes('supabase') ? { rejectUnauthorized: false } : false,
+    connectionString: databaseUrl!,
+    ssl: databaseUrl!.includes('supabase') ? { rejectUnauthorized: false } : false,
   });
 
   try {

@@ -13,9 +13,10 @@ import { requireModule } from '@/lib/api/module-check';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ recordId: string } }
+  request: NextRequest, props: { params: Promise<{ recordId: string }> }
 ) {
   const requestId = getRequestId(request);
+  const params = await props.params;
   const { recordId } = params;
 
   try {
@@ -106,11 +107,11 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ recordId: string } }
+  request: NextRequest, props: { params: Promise<{ recordId: string }> }
 ) {
   const requestId = getRequestId(request);
   const params = await props.params;
-    const { recordId } = params;
+  const { recordId } = params;
 
   try {
     // Require authentication and appropriate role
@@ -282,11 +283,11 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest, props: { params: Promise<{ recordId: string } }
+  request: NextRequest, props: { params: Promise<{ recordId: string }> }
 ) {
   const requestId = getRequestId(request);
   const params = await props.params;
-    const { recordId } = params;
+  const { recordId } = params;
 
   try {
     // Require authentication and appropriate role

@@ -27,9 +27,10 @@ export async function GET(request: NextRequest) {
     const sort = parseSortParams(request);
 
     // Build query - RLS will automatically filter by user's company/site access
+    // Note: audit_packs table doesn't have a status column - we derive it from storage_path
     let query = supabaseAdmin
       .from('audit_packs')
-      .select('id, company_id, site_id, document_id, pack_type, status, recipient_type, recipient_name, purpose, date_range_start, date_range_end, storage_path, generated_by, created_at, updated_at')
+      .select('id, company_id, site_id, document_id, pack_type, title, recipient_type, recipient_name, purpose, date_range_start, date_range_end, storage_path, file_size_bytes, total_obligations, complete_count, pending_count, overdue_count, evidence_count, generated_by, generation_trigger, created_at')
       .order('created_at', { ascending: false });
 
     // Apply filters
@@ -41,9 +42,6 @@ export async function GET(request: NextRequest) {
     }
     if (filters.pack_type) {
       query = query.eq('pack_type', filters.pack_type);
-    }
-    if (filters.status) {
-      query = query.eq('status', filters.status);
     }
     if (filters['date_range_start[gte]']) {
       query = query.gte('date_range_start', filters['date_range_start[gte]']);
@@ -76,30 +74,35 @@ export async function GET(request: NextRequest) {
     const hasMore = packs && packs.length > limit;
     const results = hasMore ? packs.slice(0, limit) : packs || [];
 
-    // Get file URLs for completed packs
-    const resultsWithUrls = results.map((pack: any) => {
-      if (pack.status === 'COMPLETED' && pack.storage_path) {
+    // Derive status from storage_path and add file URLs for completed packs
+    const resultsWithStatus = results.map((pack: any) => {
+      // Derive status: 'pending' = GENERATING, actual path = COMPLETED
+      const status = pack.storage_path === 'pending' ? 'GENERATING' : 'COMPLETED';
+
+      let fileUrl = '';
+      if (status === 'COMPLETED' && pack.storage_path && pack.storage_path !== 'pending') {
         const { data: urlData } = supabaseAdmin.storage
           .from('audit-packs')
           .getPublicUrl(pack.storage_path);
-        
-        return {
-          ...pack,
-          file_url: urlData?.publicUrl || '',
-        };
+        fileUrl = urlData?.publicUrl || '';
       }
-      return pack;
+
+      return {
+        ...pack,
+        status,
+        file_url: fileUrl,
+      };
     });
 
     // Create cursor for next page (if there are more results)
     let nextCursor: string | undefined;
-    if (hasMore && resultsWithUrls.length > 0) {
-      const lastItem = resultsWithUrls[resultsWithUrls.length - 1];
+    if (hasMore && resultsWithStatus.length > 0) {
+      const lastItem = resultsWithStatus[resultsWithStatus.length - 1];
       nextCursor = createCursor(lastItem.id, lastItem.created_at);
     }
 
     const response = paginatedResponse(
-      resultsWithUrls,
+      resultsWithStatus,
       nextCursor,
       limit,
       hasMore,

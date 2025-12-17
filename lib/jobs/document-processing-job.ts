@@ -12,6 +12,7 @@ import { createClient } from '@supabase/supabase-js';
 import { env } from '@/lib/env';
 import { checkForPatternDiscovery } from '@/lib/ai/pattern-discovery';
 import { calculateCost } from '@/lib/ai/cost-calculator';
+import { updateExtractionProgress, clearExtractionProgress } from '@/lib/services/extraction-progress-service';
 
 export interface DocumentProcessingJobData {
   document_id: string;
@@ -29,7 +30,16 @@ export async function processDocumentJob(job: Job<DocumentProcessingJobData>): P
 
   console.log(`📋 Starting extraction for document ${document_id}`);
   console.log(`📋 Job data:`, JSON.stringify({ document_id, company_id, site_id, module_id, file_path, document_type, regulator, permit_reference }, null, 2));
-  
+
+  // Initialize real-time progress tracking
+  await updateExtractionProgress(document_id, {
+    status: 'queued',
+    progress: 0,
+    obligationsFound: 0,
+    message: 'Document queued for processing...',
+    startedAt: new Date().toISOString(),
+  }).catch(err => console.error('Failed to initialize progress:', err));
+
   try {
     // Update job status in database
     await updateJobStatus(document_id, 'PROCESSING', null);
@@ -51,11 +61,24 @@ export async function processDocumentJob(job: Job<DocumentProcessingJobData>): P
 
     // Step 1: Download file from Supabase Storage
     console.log(`📥 Downloading file: ${file_path}`);
+    await updateExtractionProgress(document_id, {
+      status: 'downloading',
+      progress: 5,
+      obligationsFound: 0,
+      message: 'Downloading document from storage...',
+    }).catch(err => console.error('Failed to update progress:', err));
+
     const fileBuffer = await downloadFile(file_path);
     console.log(`✅ File downloaded: ${fileBuffer.length} bytes`);
 
     // Step 2: Process document (OCR, text extraction)
     console.log(`🔍 Processing document (OCR/text extraction)...`);
+    await updateExtractionProgress(document_id, {
+      status: 'extracting_text',
+      progress: 8,
+      obligationsFound: 0,
+      message: 'Extracting text from document...',
+    }).catch(err => console.error('Failed to update progress:', err));
     const documentProcessor = getDocumentProcessor();
     const processingResult = await documentProcessor.processDocument(
       fileBuffer,
@@ -99,6 +122,7 @@ export async function processDocumentJob(job: Job<DocumentProcessingJobData>): P
       extractionResult = await documentProcessor.extractObligations(
       processingResult.extractedText,
       {
+        documentId: document_id, // Pass documentId for real-time progress tracking
         moduleTypes: [module_id],
         regulator,
         documentType: document_type as any,
@@ -139,15 +163,10 @@ export async function processDocumentJob(job: Job<DocumentProcessingJobData>): P
     } catch (creationError: any) {
       console.error(`❌ Failed to create obligations:`, creationError.message);
       console.error(`❌ Creation error stack:`, creationError.stack);
-      // Set creation result to empty to continue processing
-      creationResult = {
-        obligationsCreated: 0,
-        schedulesCreated: 0,
-        deadlinesCreated: 0,
-        reviewQueueItemsCreated: 0,
-        duplicatesSkipped: 0,
-        errors: [creationError.message],
-      };
+
+      // CRITICAL: Re-throw database errors - don't silently continue with empty result
+      // This ensures the job fails properly and can be retried or investigated
+      throw new Error(`Obligation creation failed: ${creationError.message}`);
     }
 
     // Step 6: Log extraction to extraction_logs
@@ -195,11 +214,26 @@ export async function processDocumentJob(job: Job<DocumentProcessingJobData>): P
       console.warn(`⚠️ No obligations found in database for document ${document_id}`);
     }
     
+    // Prepare update data with token usage if available
+    const updateData: any = {
+      extraction_status: 'COMPLETED',
+    };
+
+    if (extractionResult.tokenUsage) {
+      updateData.extraction_tokens_input = extractionResult.tokenUsage.inputTokens;
+      updateData.extraction_tokens_output = extractionResult.tokenUsage.outputTokens;
+      updateData.extraction_tokens_total = extractionResult.tokenUsage.totalTokens;
+      updateData.extraction_model = extractionResult.tokenUsage.model;
+      updateData.extraction_cost_usd = extractionResult.tokenUsage.estimatedCost;
+    }
+
+    if (extractionResult.complexity) {
+      updateData.extraction_complexity = extractionResult.complexity;
+    }
+
     const { data: updatedDoc, error: updateError } = await supabaseAdmin
       .from('documents')
-      .update({
-        extraction_status: 'COMPLETED',
-      })
+      .update(updateData)
       .eq('id', document_id)
       .select('id, extraction_status')
       .single();
@@ -247,9 +281,27 @@ export async function processDocumentJob(job: Job<DocumentProcessingJobData>): P
       errors: creationResult.errors,
     });
 
+    // Publish completed progress for real-time subscribers
+    await updateExtractionProgress(document_id, {
+      status: 'completed',
+      progress: 100,
+      obligationsFound: creationResult.obligationsCreated,
+      message: `Completed! Extracted ${creationResult.obligationsCreated} obligations`,
+      completedAt: new Date().toISOString(),
+    }).catch(err => console.error('Failed to update progress:', err));
+
     console.log(`Document processing completed: ${document_id} - ${creationResult.obligationsCreated} obligations created`);
   } catch (error: any) {
     console.error(`Document processing failed: ${document_id}`, error);
+
+    // Publish failed progress for real-time subscribers
+    await updateExtractionProgress(document_id, {
+      status: 'failed',
+      progress: 0,
+      obligationsFound: 0,
+      error: error.message,
+      message: `Failed: ${error.message}`,
+    }).catch(err => console.error('Failed to update progress:', err));
 
     // Update document status
     await supabaseAdmin

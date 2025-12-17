@@ -13,9 +13,10 @@ import { requireModule } from '@/lib/api/module-check';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ generatorId: string } }
+  request: NextRequest, props: { params: Promise<{ generatorId: string }> }
 ) {
   const requestId = getRequestId(request);
+  const params = await props.params;
   const { generatorId } = params;
 
   // Validate UUID
@@ -36,7 +37,7 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     // Check Module 3 is activated
     const moduleCheck = await requireModule(user.company_id, 'MODULE_3');
@@ -45,7 +46,7 @@ export async function GET(
     }
 
     // Fetch generator
-    const { data: generator, error } = await supabaseAdmin
+  const { data: generator, error } = await supabaseAdmin
       .from('generators')
       .select(`
         id,
@@ -110,7 +111,7 @@ export async function GET(
       : undefined;
 
     // Get recent run-hour records
-    const { data: recentRecords } = await supabaseAdmin
+  const { data: recentRecords } = await supabaseAdmin
       .from('run_hour_records')
       .select('id, recording_date, hours_recorded, running_total_year, percentage_of_annual_limit')
       .eq('generator_id', generatorId)
@@ -142,11 +143,11 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ generatorId: string } }
+  request: NextRequest, props: { params: Promise<{ generatorId: string }> }
 ) {
   const requestId = getRequestId(request);
   const params = await props.params;
-    const { generatorId } = params;
+  const { generatorId } = params;
 
   try {
     // Require authentication and appropriate role
@@ -154,7 +155,7 @@ export async function PUT(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     // Check Module 3 is activated
     const moduleCheck = await requireModule(user.company_id, 'MODULE_3');
@@ -163,7 +164,7 @@ export async function PUT(
     }
 
     // Verify generator exists and user has access
-    const { data: existingGenerator, error: fetchError } = await supabaseAdmin
+  const { data: existingGenerator, error: fetchError } = await supabaseAdmin
       .from('generators')
       .select('id, company_id')
       .eq('id', generatorId)
@@ -233,7 +234,7 @@ export async function PUT(
     }
 
     // Update generator
-    const { data: updatedGenerator, error: updateError } = await supabaseAdmin
+  const { data: updatedGenerator, error: updateError } = await supabaseAdmin
       .from('generators')
       .update(updateData)
       .eq('id', generatorId)
@@ -269,11 +270,11 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest, props: { params: Promise<{ generatorId: string } }
+  request: NextRequest, props: { params: Promise<{ generatorId: string }> }
 ) {
   const requestId = getRequestId(request);
   const params = await props.params;
-    const { generatorId } = params;
+  const { generatorId } = params;
 
   try {
     // Require authentication and appropriate role
@@ -281,7 +282,7 @@ export async function DELETE(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     // Check Module 3 is activated
     const moduleCheck = await requireModule(user.company_id, 'MODULE_3');
@@ -290,7 +291,7 @@ export async function DELETE(
     }
 
     // Verify generator exists and user has access
-    const { data: existingGenerator, error: fetchError } = await supabaseAdmin
+  const { data: existingGenerator, error: fetchError } = await supabaseAdmin
       .from('generators')
       .select('id, company_id')
       .eq('id', generatorId)
@@ -317,7 +318,7 @@ export async function DELETE(
     }
 
     // Soft delete
-    const { error: deleteError } = await supabaseAdmin
+  const { error: deleteError } = await supabaseAdmin
       .from('generators')
       .update({
         is_active: false,

@@ -15,7 +15,7 @@ const VALID_REPORT_TYPES = ['compliance_summary', 'deadline_report', 'obligation
 const VALID_FORMATS = ['PDF', 'CSV', 'JSON'];
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ reportType: string } }
+  request: NextRequest, props: { params: Promise<{ reportType: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -25,10 +25,10 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { reportType } = params;
+  const { reportType } = params;
     const searchParams = request.nextUrl.searchParams;
     const reportId = searchParams.get('report_id');
 
@@ -97,7 +97,7 @@ export async function GET(
     }
 
     // List recent reports for this report type
-    const { data: reports, error: reportsError } = await supabaseAdmin
+  const { data: reports, error: reportsError } = await supabaseAdmin
       .from('reports')
       .select('id, status, format, generated_at, file_size_bytes')
       .eq('company_id', user.company_id)
@@ -136,7 +136,7 @@ export async function GET(
 }
 
 export async function POST(
-  request: NextRequest, props: { params: Promise<{ reportType: string } }
+  request: NextRequest, props: { params: Promise<{ reportType: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -146,10 +146,10 @@ export async function POST(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { reportType } = params;
+  const { reportType } = params;
 
     if (!VALID_REPORT_TYPES.includes(reportType)) {
       return errorResponse(
@@ -163,7 +163,7 @@ export async function POST(
 
     // Parse request body for filters
     const body = await request.json().catch(() => ({}));
-    const { site_id, date_range_start, date_range_end, status, category, format = 'PDF' } = body;
+  const { site_id, date_range_start, date_range_end, status, category, format = 'PDF' } = body;
 
     // Validate format
     if (!VALID_FORMATS.includes(format)) {
@@ -197,7 +197,7 @@ export async function POST(
     }
 
     // Create report record
-    const { data: report, error: createError } = await supabaseAdmin
+  const { data: report, error: createError } = await supabaseAdmin
       .from('reports')
       .insert({
         company_id: user.company_id,
@@ -227,7 +227,7 @@ export async function POST(
     }
 
     // Create background job record
-    const { data: jobRecord, error: jobError } = await supabaseAdmin
+  const { data: jobRecord, error: jobError } = await supabaseAdmin
       .from('background_jobs')
       .insert({
         job_type: 'REPORT_GENERATION',

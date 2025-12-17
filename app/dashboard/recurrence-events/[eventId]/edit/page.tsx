@@ -37,7 +37,7 @@ export default function EditRecurrenceEventPage({
     is_active: true,
   });
 
-  const { data: event, isLoading } = useQuery<RecurrenceEvent>({
+  const { data: event, isLoading } = useQuery({
     queryKey: ['recurrence-event', eventId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<RecurrenceEvent>(`/recurrence-events/${eventId}`);

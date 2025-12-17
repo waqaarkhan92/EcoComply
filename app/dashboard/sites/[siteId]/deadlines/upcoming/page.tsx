@@ -27,7 +27,7 @@ export default function UpcomingDeadlinesPage() {
   const nextMonth = new Date();
   nextMonth.setDate(today.getDate() + 30);
 
-  const { data: deadlinesData, isLoading } = useQuery<DeadlinesResponse>({
+  const { data: deadlinesData, isLoading } = useQuery({
     queryKey: ['upcoming-deadlines', siteId],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -42,7 +42,7 @@ export default function UpcomingDeadlinesPage() {
     enabled: !!siteId,
   });
 
-  const deadlines = deadlinesData?.data || [];
+  const deadlines: any[] = deadlinesData?.data || [];
 
   // Sort by due date
   deadlines.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());

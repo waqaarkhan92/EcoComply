@@ -65,10 +65,10 @@ async function findRootCause() {
       insertFunctions.rows.forEach((f, i) => {
         console.log(`\n   ${i + 1}. ${f.schema_name}.${f.function_name}`);
         const def = f.definition || '';
-        const lines = def.split('\n').filter(l => 
+        const lines = def.split('\n').filter((l: any) =>
           l.toLowerCase().includes('insert') && l.toLowerCase().includes('users')
         );
-        lines.slice(0, 3).forEach(line => {
+        lines.slice(0, 3).forEach((line: any) => {
           console.log(`      ${line.trim()}`);
         });
       });

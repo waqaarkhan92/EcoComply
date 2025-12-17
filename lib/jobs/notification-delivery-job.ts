@@ -68,8 +68,9 @@ export async function processNotificationDeliveryJob(
           const preferences = await getUserPreferences(notification.user_id, notification.notification_type);
           
           if (preferences.frequency_preference === 'DAILY_DIGEST' || preferences.frequency_preference === 'WEEKLY_DIGEST') {
-            // Queue for digest
-            await queueForDigest(notification.id, notification.user_id, preferences.frequency_preference);
+            // Queue for digest - map DAILY_DIGEST/WEEKLY_DIGEST to DAILY/WEEKLY
+            const digestType: 'DAILY' | 'WEEKLY' = preferences.frequency_preference === 'DAILY_DIGEST' ? 'DAILY' : 'WEEKLY';
+            await queueForDigest(notification.id, notification.user_id, digestType);
           } else {
             // User has disabled this notification type or channel
             await supabaseAdmin

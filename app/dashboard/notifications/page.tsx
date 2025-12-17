@@ -59,7 +59,7 @@ export default function NotificationsPage() {
     },
   });
 
-  const notifications = notificationsData?.data || [];
+  const notifications: any[] = notificationsData?.data || [];
 
   // Mark as read mutation
   const markAsReadMutation = useMutation({

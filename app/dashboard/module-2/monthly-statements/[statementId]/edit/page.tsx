@@ -41,7 +41,7 @@ export default function EditMonthlyStatementPage({
     water_company_name: '',
   });
 
-  const { data: statement, isLoading } = useQuery<MonthlyStatement>({
+  const { data: statement, isLoading } = useQuery({
     queryKey: ['monthly-statement', statementId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<MonthlyStatement>(`/module-2/monthly-statements/${statementId}`);

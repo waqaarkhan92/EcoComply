@@ -11,7 +11,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ userId: string } }
+  request: NextRequest, props: { params: Promise<{ userId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -21,9 +21,10 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user: currentUser } = authResult;
+  const { user: currentUser } = authResult;
 
-    const { userId } = params;
+    const params = await props.params;
+  const { userId } = params;
 
     // Users can view their own roles, or Admins can view any user's roles in their company
     if (userId !== currentUser.id && !currentUser.roles.includes('OWNER') && !currentUser.roles.includes('ADMIN')) {
@@ -37,7 +38,7 @@ export async function GET(
     }
 
     // Check if user exists
-    const { data: user, error: userError } = await supabaseAdmin
+  const { data: user, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, company_id')
       .eq('id', userId)
@@ -66,7 +67,7 @@ export async function GET(
     }
 
     // Get user roles
-    const { data: roles, error: rolesError } = await supabaseAdmin
+  const { data: roles, error: rolesError } = await supabaseAdmin
       .from('user_roles')
       .select('role, assigned_at')
       .eq('user_id', user.id);
@@ -103,7 +104,7 @@ export async function GET(
 }
 
 export async function POST(
-  request: NextRequest, props: { params: Promise<{ userId: string } }
+  request: NextRequest, props: { params: Promise<{ userId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -113,9 +114,10 @@ export async function POST(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user: currentUser } = authResult;
+  const { user: currentUser } = authResult;
 
-    const { userId } = params;
+    const params = await props.params;
+  const { userId } = params;
 
     // Parse request body
     const body = await request.json();
@@ -144,7 +146,7 @@ export async function POST(
     }
 
     // Check if user exists
-    const { data: user, error: userError } = await supabaseAdmin
+  const { data: user, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, company_id')
       .eq('id', userId)
@@ -173,7 +175,7 @@ export async function POST(
     }
 
     // Check if role already assigned
-    const { data: existingRole } = await supabaseAdmin
+  const { data: existingRole } = await supabaseAdmin
       .from('user_roles')
       .select('id')
       .eq('user_id', user.id)
@@ -191,7 +193,7 @@ export async function POST(
     }
 
     // Assign role
-    const { data: roleAssignment, error: roleError } = await supabaseAdmin
+  const { data: roleAssignment, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .insert({
         user_id: userId,

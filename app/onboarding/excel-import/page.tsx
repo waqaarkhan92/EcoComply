@@ -22,8 +22,8 @@ export default function ExcelImportPage() {
       formData.append('file', file);
       
       // Get first site for onboarding
-      const sitesResponse = await apiClient.get('/sites');
-      const sites = sitesResponse.data.data || [];
+      const sitesResponse = await apiClient.get('/sites') as { data: { data: Array<{ id: string }> } };
+      const sites = sitesResponse.data?.data || [];
       if (sites.length === 0) {
         throw new Error('No site found. Please create a site first.');
       }
@@ -31,9 +31,9 @@ export default function ExcelImportPage() {
       formData.append('site_id', sites[0].id);
       
       const response = await apiClient.upload('/excel-imports', formData);
-      return response.data;
+      return response.data as { id: string };
     },
-    onSuccess: async (data) => {
+    onSuccess: async (data: { id: string }) => {
       setUploaded(true);
       
       // Mark EXCEL_IMPORT step as complete

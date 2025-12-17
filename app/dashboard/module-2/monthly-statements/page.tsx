@@ -41,7 +41,7 @@ export default function MonthlyStatementsPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<MonthlyStatementsResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['monthly-statements', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -53,7 +53,7 @@ export default function MonthlyStatementsPage() {
     },
   });
 
-  const statements = data?.data || [];
+  const statements: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

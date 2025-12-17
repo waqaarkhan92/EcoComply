@@ -48,7 +48,7 @@ export default function ExpiringEvidencePage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<ExpiringEvidenceResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['evidence-expiring', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -62,7 +62,7 @@ export default function ExpiringEvidencePage() {
     },
   });
 
-  const expiring = data?.data || [];
+  const expiring: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

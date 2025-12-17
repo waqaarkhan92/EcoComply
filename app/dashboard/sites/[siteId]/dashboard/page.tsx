@@ -17,9 +17,17 @@ import {
   Beaker,
   Zap,
   Trash2,
+  Settings,
+  Calendar,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ComplianceStatusBadge } from '@/components/ui';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
+import { PageHeader } from '@/components/ui/page-header';
+import { TabBar, TabItem } from '@/components/ui/tab-bar';
+import { getComplianceStatus, complianceStatusConfig } from '@/lib/utils/status';
+import { useModuleActivation } from '@/lib/hooks/use-module-activation';
 
 interface SiteDashboardProps {
   params: Promise<{ siteId: string }>;
@@ -62,10 +70,15 @@ export default function SiteDashboardPage({ params }: SiteDashboardProps) {
   const { siteId } = use(params);
   const router = useRouter();
 
+  // Module activation hooks
+  const { data: isModule2Active } = useModuleActivation('MODULE_2');
+  const { data: isModule3Active } = useModuleActivation('MODULE_3');
+  const { data: isModule4Active } = useModuleActivation('MODULE_4');
+
   const { data: siteData, isLoading: isSiteLoading } = useQuery({
     queryKey: ['site', siteId],
     queryFn: async () => {
-      const response = await apiClient.get(\`/sites/\${siteId}\`);
+      const response = await apiClient.get(`/sites/${siteId}`);
       return response.data as Site;
     },
   });
@@ -73,304 +86,385 @@ export default function SiteDashboardPage({ params }: SiteDashboardProps) {
   const { data: statsData, isLoading: isStatsLoading } = useQuery({
     queryKey: ['site-dashboard-stats', siteId],
     queryFn: async () => {
-      const response = await apiClient.get(\`/sites/\${siteId}/dashboard\`);
+      const response = await apiClient.get(`/sites/${siteId}/dashboard`);
       return response.data as DashboardStats;
-    },
-  });
-
-  const { data: modules } = useQuery({
-    queryKey: ['modules'],
-    queryFn: async () => {
-      const [module2, module3, module4] = await Promise.all([
-        apiClient.get('/modules?filter[module_code]=MODULE_2'),
-        apiClient.get('/modules?filter[module_code]=MODULE_3'),
-        apiClient.get('/modules?filter[module_code]=MODULE_4'),
-      ]);
-      return {
-        module2: module2.data?.[0],
-        module3: module3.data?.[0],
-        module4: module4.data?.[0],
-      };
     },
   });
 
   const site = siteData;
   const stats = statsData;
 
-  const getStatusColor = (status: string | undefined, score: number | undefined) => {
-    if (!status && !score) return '#6B7280';
-    if (status === 'COMPLIANT' || (score && score >= 85)) return '#2E7D32';
-    if (status === 'AT_RISK' || (score && score >= 70 && score < 85)) return '#D4A017';
-    return '#C44536';
-  };
+  const score = site?.compliance_score || 0;
+  const status = getComplianceStatus(score);
+  const config = complianceStatusConfig[status];
 
-  const getStatusText = (status: string | undefined, score: number | undefined) => {
-    if (!status && !score) return 'Unknown';
-    if (status === 'COMPLIANT' || (score && score >= 85)) return 'Compliant';
-    if (status === 'AT_RISK' || (score && score >= 70 && score < 85)) return 'At Risk';
-    return 'Non-Compliant';
-  };
+  // Build module tabs based on what's active
+  const moduleTabs: TabItem[] = [
+    {
+      id: 'permits',
+      label: 'Permits',
+      href: `/dashboard/sites/${siteId}/permits/documents`,
+      icon: FileText,
+    },
+  ];
+
+  if (isModule2Active) {
+    moduleTabs.push({
+      id: 'trade-effluent',
+      label: 'Trade Effluent',
+      href: `/dashboard/sites/${siteId}/module-2/parameters`,
+      icon: Beaker,
+    });
+  }
+
+  if (isModule3Active) {
+    moduleTabs.push({
+      id: 'generators',
+      label: 'Generators',
+      href: `/dashboard/sites/${siteId}/module-3/run-hours`,
+      icon: Zap,
+    });
+  }
+
+  if (isModule4Active) {
+    moduleTabs.push({
+      id: 'hazardous-waste',
+      label: 'Hazardous Waste',
+      href: `/dashboard/sites/${siteId}/hazardous-waste/waste-streams`,
+      icon: Trash2,
+    });
+  }
 
   if (isSiteLoading || isStatsLoading) {
     return (
-      <div className="min-h-screen bg-[#F9FAFB] p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="h-12 bg-gray-200 rounded animate-pulse" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-40 bg-white rounded-lg shadow animate-pulse" />
-            ))}
-          </div>
+      <div className="space-y-6">
+        <div className="h-10 bg-gray-200 rounded animate-pulse w-64" />
+        <div className="h-8 bg-gray-200 rounded animate-pulse w-48" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="h-32 bg-gray-200 rounded-lg animate-pulse" />
+          <div className="lg:col-span-2 h-32 bg-gray-200 rounded-lg animate-pulse" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-32 bg-gray-200 rounded-lg animate-pulse" />
+          ))}
         </div>
       </div>
     );
   }
 
-  const statusColor = getStatusColor(site?.compliance_status, site?.compliance_score);
-  const score = site?.compliance_score || 0;
+  const breadcrumbItems = [
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Sites', href: '/dashboard/sites' },
+    { label: site?.name || 'Site' },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="bg-white rounded-lg shadow-lg p-6 border-l-4" style={{ borderLeftColor: statusColor }}>
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <Building2 className="h-8 w-8 text-[#104B3A]" />
-                <h1 className="text-4xl font-bold text-[#101314]">{site?.name}</h1>
-              </div>
-              <p className="text-gray-600">
-                {site?.address_line_1}, {site?.city}, {site?.postcode}
-              </p>
-            </div>
+    <div className="space-y-6">
+      {/* Breadcrumbs */}
+      <Breadcrumbs items={breadcrumbItems} />
 
-            <div className="text-right">
-              <p className="text-sm text-gray-600 mb-2">Compliance Score</p>
-              <div className="flex items-baseline gap-2">
-                <span className="text-6xl font-bold" style={{ color: statusColor }}>
-                  {score}
-                </span>
-                <span className="text-3xl font-medium text-gray-400">%</span>
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: statusColor }} />
-                <span className="text-sm font-medium" style={{ color: statusColor }}>
-                  {getStatusText(site?.compliance_status, score)}
-                </span>
-              </div>
-            </div>
+      {/* Page Header with Site Name */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">{site?.name}</h1>
+          <p className="text-sm text-text-secondary mt-1">
+            {site?.address_line_1}, {site?.city}, {site?.postcode}
+          </p>
+        </div>
+        <Link href={`/dashboard/sites/${siteId}/settings`}>
+          <Button variant="outline" size="sm">
+            <Settings className="h-4 w-4 mr-2" />
+            Site Settings
+          </Button>
+        </Link>
+      </div>
+
+      {/* Module Tabs */}
+      <TabBar tabs={moduleTabs} variant="pills" />
+
+      {/* Summary Row: Compliance Score + Deadline Status */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Compliance Score Card */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <p className="text-sm font-medium text-text-secondary mb-2">Compliance Score</p>
+          <div className="flex items-baseline gap-2 mb-3">
+            <span className={`text-5xl font-bold tracking-tight ${config.textColor}`}>
+              {score}
+            </span>
+            <span className="text-2xl text-text-tertiary">%</span>
           </div>
+          <ComplianceStatusBadge status={status} showIcon size="sm" />
+          <p className="text-xs text-text-tertiary mt-3">
+            Based on {stats?.obligations?.total || 0} obligations
+          </p>
         </div>
 
-        <div className="bg-gradient-to-br from-[#104B3A] to-[#0B372A] rounded-lg shadow-xl p-6 text-white">
-          <div className="flex items-center gap-3 mb-6">
-            <Clock className="h-6 w-6" />
-            <h2 className="text-2xl font-bold">Compliance Clock</h2>
+        {/* Deadline Status */}
+        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-medium text-text-secondary">Deadline Status</p>
+            <Link href={`/dashboard/sites/${siteId}/deadlines`}>
+              <Button variant="ghost" size="sm" className="text-primary">
+                View All <ArrowRight className="ml-1 h-4 w-4" />
+              </Button>
+            </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white/10 backdrop-blur rounded-lg p-4 border-2 border-[#C44536]">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-white/80">Overdue</span>
-                <AlertCircle className="h-5 w-5 text-[#C44536]" />
-              </div>
-              <div className="text-4xl font-bold text-[#C44536]">{stats?.obligations.overdue || 0}</div>
-              <Button
-                className="mt-3 w-full bg-[#C44536] hover:bg-[#A33528] text-white"
-                onClick={() => router.push(\`/dashboard/sites/\${siteId}/obligations?filter=overdue\`)}
-              >
-                View →
-              </Button>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur rounded-lg p-4 border-2 border-[#D4A017]">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-white/80">Due Soon (7 days)</span>
-                <Clock className="h-5 w-5 text-[#D4A017]" />
-              </div>
-              <div className="text-4xl font-bold text-[#D4A017]">{stats?.obligations.due_soon || 0}</div>
-              <Button
-                className="mt-3 w-full bg-[#D4A017] hover:bg-[#B58914] text-white"
-                onClick={() => router.push(\`/dashboard/sites/\${siteId}/obligations?filter=due_soon\`)}
-              >
-                View →
-              </Button>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur rounded-lg p-4 border-2 border-[#2E7D32]">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-white/80">On Track</span>
-                <CheckCircle2 className="h-5 w-5 text-[#2E7D32]" />
-              </div>
-              <div className="text-4xl font-bold text-[#2E7D32]">{stats?.obligations.compliant || 0}</div>
-              <Button
-                className="mt-3 w-full bg-[#2E7D32] hover:bg-[#246627] text-white"
-                onClick={() => router.push(\`/dashboard/sites/\${siteId}/obligations?filter=compliant\`)}
-              >
-                View →
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-[#101314] mb-6">Module Features</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="border-2 border-[#2E7D32] rounded-lg p-5 bg-green-50">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-[#2E7D32] rounded-lg">
-                  <FileText className="h-5 w-5 text-white" />
+          <div className="grid grid-cols-3 gap-4">
+            <Link href={`/dashboard/sites/${siteId}/permits/obligations?status=OVERDUE`} className="group">
+              <div className="p-4 rounded-lg border-2 border-danger/30 bg-danger/5 hover:border-danger transition-colors">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="h-4 w-4 text-danger" />
+                  <span className="text-xs font-semibold text-danger uppercase">Overdue</span>
                 </div>
-                <span className="px-2 py-1 text-xs font-medium bg-[#2E7D32] text-white rounded-full">
-                  ACTIVE
-                </span>
+                <p className="text-3xl font-bold text-danger">{stats?.obligations?.overdue || 0}</p>
               </div>
-              <h3 className="font-bold text-[#101314] mb-2">Environmental Permits</h3>
-              <p className="text-sm text-gray-600 mb-4">Core permit management</p>
-              <Button
-                className="w-full bg-[#2E7D32] hover:bg-[#246627] text-white"
-                onClick={() => router.push(\`/dashboard/sites/\${siteId}/permits/documents\`)}
-              >
-                Manage →
-              </Button>
+            </Link>
+
+            <Link href={`/dashboard/sites/${siteId}/permits/obligations?status=DUE_SOON`} className="group">
+              <div className="p-4 rounded-lg border-2 border-warning/30 bg-warning/5 hover:border-warning transition-colors">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="h-4 w-4 text-warning" />
+                  <span className="text-xs font-semibold text-warning uppercase">Due Soon</span>
+                </div>
+                <p className="text-3xl font-bold text-warning">{stats?.obligations?.due_soon || 0}</p>
+              </div>
+            </Link>
+
+            <div className="p-4 rounded-lg border-2 border-success/30 bg-success/5">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle2 className="h-4 w-4 text-success" />
+                <span className="text-xs font-semibold text-success uppercase">On Track</span>
+              </div>
+              <p className="text-3xl font-bold text-success">{stats?.obligations?.compliant || 0}</p>
             </div>
-
-            <div className={\`border-2 rounded-lg p-5 \${modules?.module2 ? 'border-[#2E7D32] bg-green-50' : 'border-gray-300 bg-gray-50'}\`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className={\`p-2 rounded-lg \${modules?.module2 ? 'bg-[#2E7D32]' : 'bg-gray-400'}\`}>
-                  <Beaker className="h-5 w-5 text-white" />
-                </div>
-                <span className={\`px-2 py-1 text-xs font-medium rounded-full \${
-                  modules?.module2
-                    ? 'bg-[#2E7D32] text-white'
-                    : 'bg-gray-300 text-gray-600'
-                }\`}>
-                  {modules?.module2 ? 'ACTIVE' : 'INACTIVE'}
-                </span>
-              </div>
-              <h3 className="font-bold text-[#101314] mb-2">Trade Effluent</h3>
-              <p className="text-sm text-gray-600 mb-4">Water discharge monitoring</p>
-              {modules?.module2 ? (
-                <Button
-                  className="w-full bg-[#2E7D32] hover:bg-[#246627] text-white"
-                  onClick={() => router.push(\`/dashboard/sites/\${siteId}/trade-effluent/parameters\`)}
-                >
-                  Manage →
-                </Button>
-              ) : (
-                <Button variant="outline" className="w-full" disabled>
-                  Not Purchased
-                </Button>
-              )}
-            </div>
-
-            <div className={\`border-2 rounded-lg p-5 \${modules?.module3 ? 'border-[#2E7D32] bg-green-50' : 'border-gray-300 bg-gray-50'}\`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className={\`p-2 rounded-lg \${modules?.module3 ? 'bg-[#2E7D32]' : 'bg-gray-400'}\`}>
-                  <Zap className="h-5 w-5 text-white" />
-                </div>
-                <span className={\`px-2 py-1 text-xs font-medium rounded-full \${
-                  modules?.module3
-                    ? 'bg-[#2E7D32] text-white'
-                    : 'bg-gray-300 text-gray-600'
-                }\`}>
-                  {modules?.module3 ? 'ACTIVE' : 'INACTIVE'}
-                </span>
-              </div>
-              <h3 className="font-bold text-[#101314] mb-2">MCPD/Generators</h3>
-              <p className="text-sm text-gray-600 mb-4">Generator runtime tracking</p>
-              {modules?.module3 ? (
-                <Button
-                  className="w-full bg-[#2E7D32] hover:bg-[#246627] text-white"
-                  onClick={() => router.push(\`/dashboard/sites/\${siteId}/generators/run-hours\`)}
-                >
-                  Manage →
-                </Button>
-              ) : (
-                <Button variant="outline" className="w-full" disabled>
-                  Not Purchased
-                </Button>
-              )}
-            </div>
-
-            <div className={\`border-2 rounded-lg p-5 \${modules?.module4 ? 'border-[#2E7D32] bg-green-50' : 'border-gray-300 bg-gray-50'}\`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className={\`p-2 rounded-lg \${modules?.module4 ? 'bg-[#2E7D32]' : 'bg-gray-400'}\`}>
-                  <Trash2 className="h-5 w-5 text-white" />
-                </div>
-                <span className={\`px-2 py-1 text-xs font-medium rounded-full \${
-                  modules?.module4
-                    ? 'bg-[#2E7D32] text-white'
-                    : 'bg-gray-300 text-gray-600'
-                }\`}>
-                  {modules?.module4 ? 'ACTIVE' : 'INACTIVE'}
-                </span>
-              </div>
-              <h3 className="font-bold text-[#101314] mb-2">Hazardous Waste</h3>
-              <p className="text-sm text-gray-600 mb-4">Waste stream tracking</p>
-              {modules?.module4 ? (
-                <Button
-                  className="w-full bg-[#2E7D32] hover:bg-[#246627] text-white"
-                  onClick={() => router.push(\`/dashboard/sites/\${siteId}/hazardous-waste/waste-streams\`)}
-                >
-                  Manage →
-                </Button>
-              ) : (
-                <Button variant="outline" className="w-full" disabled>
-                  Not Purchased
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-[#101314] mb-6">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button
-              className="w-full h-auto p-6 bg-[#104B3A] hover:bg-[#0B372A] text-white flex items-center justify-between group"
-              onClick={() => router.push(\`/dashboard/sites/\${siteId}/permits/documents/upload\`)}
-            >
-              <div className="flex items-center gap-3">
-                <Upload className="h-6 w-6" />
-                <div className="text-left">
-                  <p className="font-semibold">Upload Document</p>
-                  <p className="text-sm text-white/80">Add permit or evidence</p>
-                </div>
-              </div>
-              <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
-
-            <Button
-              className="w-full h-auto p-6 bg-[#0056A6] hover:bg-[#004080] text-white flex items-center justify-between group"
-              onClick={() => router.push(\`/dashboard/sites/\${siteId}/audit-packs\`)}
-            >
-              <div className="flex items-center gap-3">
-                <Package className="h-6 w-6" />
-                <div className="text-left">
-                  <p className="font-semibold">Generate Audit Pack</p>
-                  <p className="text-sm text-white/80">Create compliance package</p>
-                </div>
-              </div>
-              <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
-
-            <Button
-              className="w-full h-auto p-6 bg-[#104B3A] hover:bg-[#0B372A] text-white flex items-center justify-between group"
-              onClick={() => router.push(\`/dashboard/sites/\${siteId}/settings\`)}
-            >
-              <div className="flex items-center gap-3">
-                <TrendingUp className="h-6 w-6" />
-                <div className="text-left">
-                  <p className="font-semibold">View Reports</p>
-                  <p className="text-sm text-white/80">Compliance analytics</p>
-                </div>
-              </div>
-              <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
           </div>
         </div>
       </div>
+
+      {/* Quick Actions */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-text-primary mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Link href={`/dashboard/sites/${siteId}/permits/evidence`}>
+            <div className="p-4 rounded-lg border border-gray-200 hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer group">
+              <Upload className="h-5 w-5 text-primary mb-2" />
+              <p className="font-medium text-sm text-text-primary group-hover:text-primary">View Evidence</p>
+              <p className="text-xs text-text-tertiary">Manage evidence</p>
+            </div>
+          </Link>
+
+          <Link href={`/dashboard/sites/${siteId}/packs`}>
+            <div className="p-4 rounded-lg border border-gray-200 hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer group">
+              <Package className="h-5 w-5 text-primary mb-2" />
+              <p className="font-medium text-sm text-text-primary group-hover:text-primary">Generate Pack</p>
+              <p className="text-xs text-text-tertiary">Create audit pack</p>
+            </div>
+          </Link>
+
+          {isModule3Active && (
+            <Link href={`/dashboard/sites/${siteId}/module-3/run-hours/new`}>
+              <div className="p-4 rounded-lg border border-gray-200 hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer group">
+                <Zap className="h-5 w-5 text-primary mb-2" />
+                <p className="font-medium text-sm text-text-primary group-hover:text-primary">Log Run Hours</p>
+                <p className="text-xs text-text-tertiary">Generator runtime</p>
+              </div>
+            </Link>
+          )}
+
+          <Link href={`/dashboard/sites/${siteId}/deadlines`}>
+            <div className="p-4 rounded-lg border border-gray-200 hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer group">
+              <TrendingUp className="h-5 w-5 text-primary mb-2" />
+              <p className="font-medium text-sm text-text-primary group-hover:text-primary">View Deadlines</p>
+              <p className="text-xs text-text-tertiary">Upcoming tasks</p>
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      {/* Module Status Cards - Only Active Modules */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Permits - Always shown */}
+        <div
+          className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 hover:shadow-md transition-shadow cursor-pointer"
+          onClick={() => router.push(`/dashboard/sites/${siteId}/permits/documents`)}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="font-semibold text-text-primary">Environmental Permits</h3>
+            </div>
+            <ArrowRight className="h-5 w-5 text-text-tertiary" />
+          </div>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold text-text-primary">{stats?.obligations?.total || 0}</p>
+              <p className="text-xs text-text-tertiary">Obligations</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-text-primary">{stats?.documents?.total || 0}</p>
+              <p className="text-xs text-text-tertiary">Documents</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-danger">{stats?.obligations?.overdue || 0}</p>
+              <p className="text-xs text-text-tertiary">Overdue</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Trade Effluent - If Active */}
+        {isModule2Active && (
+          <div
+            className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => router.push(`/dashboard/sites/${siteId}/module-2/parameters`)}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Beaker className="h-5 w-5 text-blue-600" />
+                </div>
+                <h3 className="font-semibold text-text-primary">Trade Effluent</h3>
+              </div>
+              <ArrowRight className="h-5 w-5 text-text-tertiary" />
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-bold text-text-primary">-</p>
+                <p className="text-xs text-text-tertiary">Parameters</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-text-primary">-</p>
+                <p className="text-xs text-text-tertiary">Lab Results</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-warning">-</p>
+                <p className="text-xs text-text-tertiary">Exceedances</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Generators - If Active */}
+        {isModule3Active && (
+          <div
+            className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => router.push(`/dashboard/sites/${siteId}/module-3/run-hours`)}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <Zap className="h-5 w-5 text-yellow-600" />
+                </div>
+                <h3 className="font-semibold text-text-primary">Generators</h3>
+              </div>
+              <ArrowRight className="h-5 w-5 text-text-tertiary" />
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-bold text-text-primary">-</p>
+                <p className="text-xs text-text-tertiary">Generators</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-text-primary">-</p>
+                <p className="text-xs text-text-tertiary">Run Hours MTD</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-text-primary">-</p>
+                <p className="text-xs text-text-tertiary">Stack Tests</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Hazardous Waste - If Active */}
+        {isModule4Active && (
+          <div
+            className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => router.push(`/dashboard/sites/${siteId}/hazardous-waste/waste-streams`)}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <Trash2 className="h-5 w-5 text-red-600" />
+                </div>
+                <h3 className="font-semibold text-text-primary">Hazardous Waste</h3>
+              </div>
+              <ArrowRight className="h-5 w-5 text-text-tertiary" />
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-bold text-text-primary">-</p>
+                <p className="text-xs text-text-tertiary">Waste Streams</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-text-primary">-</p>
+                <p className="text-xs text-text-tertiary">Consignments</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-success">-</p>
+                <p className="text-xs text-text-tertiary">Chain Breaks</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Upcoming Deadlines */}
+      {stats?.upcoming_deadlines && stats.upcoming_deadlines.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-text-tertiary" />
+              <h2 className="text-lg font-semibold text-text-primary">Upcoming Deadlines</h2>
+            </div>
+            <Link href={`/dashboard/sites/${siteId}/deadlines`}>
+              <Button variant="ghost" size="sm" className="text-primary">
+                View All
+              </Button>
+            </Link>
+          </div>
+
+          <div className="divide-y divide-gray-100">
+            {stats.upcoming_deadlines.slice(0, 5).map((deadline) => {
+              const daysRemaining = Math.max(0, Math.ceil((new Date(deadline.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+              const isUrgent = daysRemaining <= 1;
+              const isDueSoon = daysRemaining > 1 && daysRemaining <= 7;
+
+              return (
+                <div
+                  key={deadline.id}
+                  className="px-6 py-3 hover:bg-gray-50 cursor-pointer transition-colors flex items-center justify-between"
+                  onClick={() => router.push(`/dashboard/obligations/${deadline.obligation_id}`)}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                      isUrgent ? 'bg-danger' : isDueSoon ? 'bg-warning' : 'bg-success'
+                    }`} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-text-primary truncate">
+                        {deadline.obligation_title || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-4">
+                    <p className={`text-lg font-bold ${
+                      isUrgent ? 'text-danger' : isDueSoon ? 'text-warning' : 'text-success'
+                    }`}>
+                      {daysRemaining}d
+                    </p>
+                    <p className="text-xs text-text-tertiary">
+                      {new Date(deadline.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -45,7 +45,7 @@ export default function LabResultsPage() {
     sample_date_to: '',
   });
 
-  const { data, isLoading, error } = useQuery<LabResultsResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-2-lab-results', siteId, filters, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -63,7 +63,7 @@ export default function LabResultsPage() {
     enabled: !!siteId,
   });
 
-  const labResults = data?.data || [];
+  const labResults: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

@@ -32,10 +32,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseClasses = cn(
-      'inline-flex items-center justify-center rounded-md font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] transform',
+      'inline-flex items-center justify-center rounded-md font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98]',
       'leading-normal relative overflow-hidden',
       {
-        'bg-primary text-white hover:bg-primary-dark hover:shadow-primary-glow hover:scale-[1.02]': variant === 'primary',
+        'bg-primary text-white hover:bg-primary-dark hover:shadow-primary-glow': variant === 'primary',
         'bg-transparent border-2 border-charcoal text-charcoal hover:bg-charcoal hover:text-white':
           variant === 'secondary',
         'border border-primary text-primary hover:bg-primary/10 hover:border-primary-dark':
@@ -44,9 +44,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         'bg-danger text-white hover:bg-red-700 hover:shadow-lg': variant === 'danger',
         'bg-transparent text-primary hover:text-primary-dark underline-offset-4 hover:underline':
           variant === 'link',
-        'h-8 px-4 py-2 text-sm': size === 'sm',
-        'h-10 px-6 py-3 text-base': size === 'md',
-        'h-12 px-8 py-4 text-lg': size === 'lg',
+        'h-9 px-4 py-2 text-sm': size === 'sm',
+        'h-11 px-6 py-2.5 text-base': size === 'md',
+        'h-12 px-8 py-3 text-lg': size === 'lg',
         'w-full': fullWidth,
       },
       className

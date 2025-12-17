@@ -10,7 +10,7 @@ import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ notificationId: string } }
+  request: NextRequest, props: { params: Promise<{ notificationId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,13 +20,13 @@ export async function PUT(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { notificationId } = params;
+  const { notificationId } = params;
 
     // Check if notification exists and belongs to user
-    const { data: notification, error: checkError } = await supabaseAdmin
+  const { data: notification, error: checkError } = await supabaseAdmin
       .from('notifications')
       .select('id, user_id, read_at')
       .eq('id', notificationId)
@@ -44,7 +44,7 @@ export async function PUT(
     }
 
     // Update notification
-    const { data: updatedNotification, error: updateError } = await supabaseAdmin
+  const { data: updatedNotification, error: updateError } = await supabaseAdmin
       .from('notifications')
       .update({
         read_at: new Date().toISOString(),

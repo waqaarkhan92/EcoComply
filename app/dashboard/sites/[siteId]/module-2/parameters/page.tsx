@@ -61,7 +61,7 @@ export default function ParametersPage() {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [exceedanceCursor, setExceedanceCursor] = useState<string | undefined>(undefined);
 
-  const { data: parametersData, isLoading: parametersLoading, error: parametersError } = useQuery<ParametersResponse>({
+  const { data: parametersData, isLoading: parametersLoading, error: parametersError } = useQuery({
     queryKey: ['module-2-parameters', siteId, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -74,7 +74,7 @@ export default function ParametersPage() {
     enabled: !!siteId,
   });
 
-  const { data: exceedancesData, isLoading: exceedancesLoading } = useQuery<ExceedancesResponse>({
+  const { data: exceedancesData, isLoading: exceedancesLoading } = useQuery({
     queryKey: ['module-2-exceedances', siteId, exceedanceCursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -88,8 +88,8 @@ export default function ParametersPage() {
     enabled: !!siteId,
   });
 
-  const parameters = parametersData?.data || [];
-  const exceedances = exceedancesData?.data || [];
+  const parameters: any[] = parametersData?.data || [];
+  const exceedances: any[] = exceedancesData?.data || [];
   const hasMore = parametersData?.pagination?.has_more || false;
   const nextCursor = parametersData?.pagination?.cursor;
 

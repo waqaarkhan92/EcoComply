@@ -43,7 +43,7 @@ export default function NewDischargeVolumePage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Fetch consents for this site
-  const { data: consentsData, isLoading: consentsLoading } = useQuery<ConsentsResponse>({
+  const { data: consentsData, isLoading: consentsLoading } = useQuery({
     queryKey: ['module-2-consents', siteId],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -55,7 +55,7 @@ export default function NewDischargeVolumePage() {
     enabled: !!siteId,
   });
 
-  const consents = consentsData?.data || [];
+  const consents: any[] = consentsData?.data || [];
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {

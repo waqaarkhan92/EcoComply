@@ -43,7 +43,7 @@ export default function EditComplianceDecisionPage({
     is_active: true,
   });
 
-  const { data: decision, isLoading } = useQuery<ComplianceDecision>({
+  const { data: decision, isLoading } = useQuery({
     queryKey: ['compliance-decision', decisionId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<ComplianceDecision>(`/module-1/compliance-decisions/${decisionId}`);

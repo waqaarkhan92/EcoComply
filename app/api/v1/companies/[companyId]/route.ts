@@ -23,13 +23,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { companyId } = params;
+  const { companyId } = params;
 
     // Get company - RLS will enforce access control
-    const { data: company, error } = await supabaseAdmin
+  const { data: company, error } = await supabaseAdmin
       .from('companies')
       .select('id, name, billing_email, billing_address, phone, subscription_tier, is_active, settings, created_at, updated_at')
       .eq('id', companyId)
@@ -82,10 +82,10 @@ export async function PUT(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { companyId } = params;
+  const { companyId } = params;
 
     // Parse request body
     const body = await request.json();
@@ -149,7 +149,7 @@ export async function PUT(
     }
 
     // Check if company exists and user has access (RLS will enforce)
-    const { data: existingCompany, error: checkError } = await supabaseAdmin
+  const { data: existingCompany, error: checkError } = await supabaseAdmin
       .from('companies')
       .select('id')
       .eq('id', companyId)
@@ -169,7 +169,7 @@ export async function PUT(
     // Update company
     updates.updated_at = new Date().toISOString();
 
-    const { data: updatedCompany, error: updateError } = await supabaseAdmin
+  const { data: updatedCompany, error: updateError } = await supabaseAdmin
       .from('companies')
       .update(updates)
       .eq('id', companyId)
@@ -212,13 +212,13 @@ export async function DELETE(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { companyId } = params;
+  const { companyId } = params;
 
     // Check if company exists and user has access (RLS will enforce)
-    const { data: existingCompany, error: checkError } = await supabaseAdmin
+  const { data: existingCompany, error: checkError } = await supabaseAdmin
       .from('companies')
       .select('id')
       .eq('id', companyId)
@@ -236,7 +236,7 @@ export async function DELETE(
     }
 
     // Soft delete company
-    const { error: deleteError } = await supabaseAdmin
+  const { error: deleteError } = await supabaseAdmin
       .from('companies')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', companyId);

@@ -49,7 +49,7 @@ export default function RecurrenceEventsPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<RecurrenceEventsResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['recurrence-events', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -63,7 +63,7 @@ export default function RecurrenceEventsPage() {
     },
   });
 
-  const events = data?.data || [];
+  const events: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

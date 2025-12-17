@@ -25,7 +25,7 @@ export default function VersionImpactPage() {
   const documentId = params.documentId as string;
   const versionId = params.versionId as string;
 
-  const { data: impactData, isLoading, error } = useQuery<{ data: VersionImpact }>({
+  const { data: impactData, isLoading, error } = useQuery({
     queryKey: ['version-impact', versionId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: VersionImpact }>(`/module-1/permit-versions/${versionId}/impact`);

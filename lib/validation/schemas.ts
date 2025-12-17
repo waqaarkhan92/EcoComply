@@ -56,6 +56,53 @@ export const obligationConditionTypeSchema = z.enum([
   'RUN_HOUR_LIMIT',
 ]);
 
+// Extended condition types for ingestion (multi-valued array)
+// Aligned with: docs/09-regulatory/01-methodology-handbook.md Section 6.2 (21-value ENUM)
+// and docs/09-regulatory/prompts/environmental-permits/ea-env-ingest-001_v1.3.md
+export const conditionTypesSchema = z.array(
+  z.enum([
+    // Core condition types (all modules)
+    'STANDARD',
+    'IMPROVEMENT',
+    'PRE_OPERATIONAL',
+    'OPERATIONAL',
+    'NOTIFICATION',
+    'MONITORING',
+    'REPORTING',
+    'RECORD_KEEPING',
+    // Environmental permit types (Module 1)
+    'EMISSION_LIMIT',
+    'BAT_COMPLIANCE',
+    'BAT_REQUIREMENT',
+    'CESSATION',
+    'FINANCIAL_PROVISION',
+    'SITE_PROTECTION',
+    'MANAGEMENT_SYSTEM',
+    'POLLUTION_PREVENTION',
+    'RESOURCE_EFFICIENCY',
+    'ACCIDENT_MANAGEMENT',
+    'NOISE_VIBRATION',
+    'ODOUR',
+    'CLIMATE_ADAPTATION',
+    // Trade effluent types (Module 2)
+    'PARAMETER_LIMIT',
+    'DISCHARGE_LIMIT',
+    'QUARTERLY_RETURN',
+    'ANNUAL_RETURN',
+    // Generator types (Module 3)
+    'RUN_HOUR_LIMIT',
+    'STACK_TEST',
+    'EQUIPMENT_MAINTENANCE',
+    'CALIBRATION',
+    // Waste management types (Module 4)
+    'WASTE_ACCEPTANCE',
+    'WASTE_HANDLING',
+    'STORAGE_LIMIT',
+    'TRANSFER_REQUIREMENT',
+    'INCIDENT_NOTIFICATION',
+  ])
+).default([]);
+
 export const createObligationSchema = z.object({
   document_id: uuidSchema,
   site_id: uuidSchema,
@@ -210,7 +257,7 @@ export const createUserSchema = z.object({
 export const updateUserSchema = z.object({
   full_name: z.string().min(1).max(200).optional(),
   email: emailSchema.optional(),
-  notification_preferences: z.record(z.boolean()).optional(),
+  notification_preferences: z.record(z.string(), z.boolean()).optional(),
 });
 
 // ============================================================================
@@ -288,6 +335,182 @@ export const createConsignmentNoteSchema = z.object({
 // EXPORT ALL SCHEMAS
 // ============================================================================
 
+// ============================================================================
+// INGESTION SCHEMAS
+// ============================================================================
+
+// Grid reference schemas
+export const ukGridReferenceSchema = z.string().regex(
+  /^[A-HJ-Z]{2}\s?\d{4,10}$/i,
+  'Invalid UK OS grid reference format'
+);
+
+export const irishGridReferenceSchema = z.string().regex(
+  /^[A-HJ-Z]\s?\d{4,10}$/i,
+  'Invalid Irish grid reference format'
+);
+
+export const gridReferenceTypeSchema = z.enum(['UK_OS', 'IRISH_GRID', 'WGS84']);
+
+// EWC code schema (Module 4)
+export const ewcCodeSchema = z.string().regex(
+  /^\d{2}\s\d{2}\s\d{2}(\*)?$/,
+  'Invalid EWC code format (expected XX XX XX or XX XX XX*)'
+);
+
+// Permit reference schemas per regulator
+export const permitReferenceSchemas = {
+  EA: z.string().regex(/^EPR\/[A-Z]{2}\d{4}[A-Z]{2}\/[A-Z]\d{3}$/i, 'Invalid EA permit reference'),
+  SEPA: z.string().regex(/^PPC\/[A-Z]\/\d+$/i, 'Invalid SEPA permit reference'),
+  NRW: z.string().regex(/^EPR\/[A-Z]{2}\d{4}[A-Z]{2}\/[A-Z]\d{3}$/i, 'Invalid NRW permit reference'),
+  NIEA: z.string().regex(/^[A-Z]+\/\d+\/\d+$/i, 'Invalid NIEA permit reference'),
+};
+
+// Confidence components schema (for AI extraction)
+export const confidenceComponentsSchema = z.object({
+  textClarity: z.number().min(0).max(1),
+  structureMatch: z.number().min(0).max(1),
+  keywordPresence: z.number().min(0).max(1),
+  contextRelevance: z.number().min(0).max(1),
+});
+
+// Mogden formula schema (for Trade Effluent consents)
+export const mogdenFormulaSchema = z.object({
+  ot: z.number().positive(),
+  os: z.number().positive(),
+  st: z.number().positive(),
+  ss: z.number().positive(),
+  formula_version: z.string().optional(),
+});
+
+// Subjective phrases schema
+export const subjectivePhraseSchema = z.object({
+  phrase: z.string().min(1),
+  context: z.string().optional(),
+  suggested_interpretation: z.string().optional(),
+});
+
+// Bilingual content schema (for Welsh/Irish permits)
+export const bilingualContentSchema = z.object({
+  primary_language: z.enum(['EN', 'CY', 'GA']),
+  primary_text: z.string().min(1),
+  secondary_language: z.enum(['EN', 'CY', 'GA']).optional(),
+  secondary_text: z.string().optional(),
+});
+
+// Ingestion session schema
+export const createIngestionSessionSchema = z.object({
+  document_id: uuidSchema,
+  company_id: uuidSchema,
+  site_id: uuidSchema,
+  prompt_id: z.string().min(1),
+  prompt_version: z.string().min(1),
+  model_identifier: z.string().min(1),
+});
+
+export const updateIngestionSessionSchema = z.object({
+  processing_completed_at: z.string().datetime().optional(),
+  processing_time_ms: z.number().int().positive().optional(),
+  total_obligations_extracted: z.number().int().min(0).optional(),
+  high_confidence_count: z.number().int().min(0).optional(),
+  medium_confidence_count: z.number().int().min(0).optional(),
+  low_confidence_count: z.number().int().min(0).optional(),
+  subjective_count: z.number().int().min(0).optional(),
+  flagged_for_review_count: z.number().int().min(0).optional(),
+  raw_extraction_output: z.record(z.string(), z.unknown()).optional(),
+  errors: z.array(z.object({
+    code: z.string(),
+    message: z.string(),
+    details: z.record(z.string(), z.unknown()).optional(),
+  })).optional(),
+  warnings: z.array(z.object({
+    code: z.string(),
+    message: z.string(),
+    details: z.record(z.string(), z.unknown()).optional(),
+  })).optional(),
+});
+
+// Subjective interpretation schema
+export const createSubjectiveInterpretationSchema = z.object({
+  obligation_id: uuidSchema,
+  company_id: uuidSchema,
+  phrase: z.string().min(1).max(500),
+  interpretation: z.string().min(1),
+  operational_definition: z.string().optional(),
+  checklist_items: z.array(z.string()).default([]),
+});
+
+export const updateSubjectiveInterpretationSchema = z.object({
+  interpretation: z.string().min(1).optional(),
+  operational_definition: z.string().optional(),
+  checklist_items: z.array(z.string()).optional(),
+});
+
+// Review status schema (extended)
+export const reviewStatusSchema = z.enum([
+  'PENDING',
+  'PENDING_INTERPRETATION',
+  'APPROVED',
+  'REJECTED',
+  'NEEDS_CLARIFICATION',
+]);
+
+// Jurisdiction schema
+export const jurisdictionSchema = z.enum([
+  'ENGLAND',
+  'WALES',
+  'SCOTLAND',
+  'NORTHERN_IRELAND',
+  'REPUBLIC_OF_IRELAND',
+]);
+
+// Regulator schema
+export const regulatorSchema = z.enum([
+  'EA',      // Environment Agency (England)
+  'NRW',     // Natural Resources Wales
+  'SEPA',    // Scottish Environment Protection Agency
+  'NIEA',    // Northern Ireland Environment Agency
+  'EPA',     // Environmental Protection Agency (Ireland)
+]);
+
+// Water company schema (for Trade Effluent consents - Module 2)
+// Aligned with: docs/09-regulatory/prompts/README.md (Prompt_Index_v2.0)
+export const waterCompanySchema = z.enum([
+  // England
+  'THAMES_WATER',
+  'SEVERN_TRENT',
+  'UNITED_UTILITIES',
+  'ANGLIAN_WATER',
+  'YORKSHIRE_WATER',
+  'NORTHUMBRIAN_WATER',
+  'SOUTHERN_WATER',
+  'SOUTH_WEST_WATER',
+  'WESSEX_WATER',
+  // Wales
+  'DWR_CYMRU',           // Welsh Water (Dŵr Cymru)
+  // Scotland
+  'SCOTTISH_WATER',
+]);
+
+// Water company metadata for validation and routing
+export const waterCompanyConfig = {
+  THAMES_WATER: { jurisdiction: 'ENGLAND', hasMogdenFormula: true, code: 'TW' },
+  SEVERN_TRENT: { jurisdiction: 'ENGLAND', hasMogdenFormula: false, code: 'ST' },
+  UNITED_UTILITIES: { jurisdiction: 'ENGLAND', hasMogdenFormula: false, code: 'UU' },
+  ANGLIAN_WATER: { jurisdiction: 'ENGLAND', hasMogdenFormula: false, code: 'AW' },
+  YORKSHIRE_WATER: { jurisdiction: 'ENGLAND', hasMogdenFormula: false, code: 'YW' },
+  NORTHUMBRIAN_WATER: { jurisdiction: 'ENGLAND', hasMogdenFormula: false, code: 'NW' },
+  SOUTHERN_WATER: { jurisdiction: 'ENGLAND', hasMogdenFormula: false, code: 'SW' },
+  SOUTH_WEST_WATER: { jurisdiction: 'ENGLAND', hasMogdenFormula: false, code: 'SWW' },
+  WESSEX_WATER: { jurisdiction: 'ENGLAND', hasMogdenFormula: false, code: 'WW' },
+  DWR_CYMRU: { jurisdiction: 'WALES', hasMogdenFormula: false, code: 'DC', requiresWelshLanguage: true },
+  SCOTTISH_WATER: { jurisdiction: 'SCOTLAND', hasMogdenFormula: false, code: 'SCW' },
+} as const;
+
+// ============================================================================
+// EXPORT ALL SCHEMAS
+// ============================================================================
+
 export const schemas = {
   // Common
   uuid: uuidSchema,
@@ -327,4 +550,38 @@ export const schemas = {
   // Module 4
   createWasteStream: createWasteStreamSchema,
   createConsignmentNote: createConsignmentNoteSchema,
+
+  // Ingestion
+  conditionTypes: conditionTypesSchema,
+  ukGridReference: ukGridReferenceSchema,
+  irishGridReference: irishGridReferenceSchema,
+  gridReferenceType: gridReferenceTypeSchema,
+  ewcCode: ewcCodeSchema,
+  confidenceComponents: confidenceComponentsSchema,
+  mogdenFormula: mogdenFormulaSchema,
+  subjectivePhrase: subjectivePhraseSchema,
+  bilingualContent: bilingualContentSchema,
+  createIngestionSession: createIngestionSessionSchema,
+  updateIngestionSession: updateIngestionSessionSchema,
+  createSubjectiveInterpretation: createSubjectiveInterpretationSchema,
+  updateSubjectiveInterpretation: updateSubjectiveInterpretationSchema,
+  reviewStatus: reviewStatusSchema,
+  jurisdiction: jurisdictionSchema,
+  regulator: regulatorSchema,
 };
+
+// ============================================================================
+// AUTH SCHEMAS
+// ============================================================================
+
+export const loginSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1, 'Password is required'),
+});
+
+export const signupSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  full_name: z.string().min(2, 'Full name must be at least 2 characters').max(200),
+  company_name: z.string().min(2, 'Company name must be at least 2 characters').max(200),
+});

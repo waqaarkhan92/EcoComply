@@ -6,6 +6,10 @@
 import OpenAI from 'openai';
 import { getAPIKeyManager } from './api-key-manager';
 import { getPromptTemplate, substitutePromptPlaceholders } from './prompts';
+import { analyzeDocumentComplexity, type AIModel } from './model-router';
+import { selectPromptId, getJurisdictionFromRegulator, getJurisdictionFromWaterCompany } from './prompt-registry';
+import { loadPrompt, toPromptTemplate } from './prompt-loader';
+import { getAIBudgetService, calculateCost, type AIModel as BudgetAIModel } from '@/lib/services/ai-budget-service';
 
 export interface RetryConfig {
   maxRetries: number; // Number of retry attempts AFTER initial attempt
@@ -26,9 +30,9 @@ export const RETRY_CONFIG: RetryConfig = {
 };
 
 export const TIMEOUT_CONFIG: TimeoutConfig = {
-  standard: 180000, // 3 minutes for standard documents (increased from 30s - LLM extraction takes time)
-  medium: 300000, // 5 minutes for medium documents (increased from 2m)
-  large: 600000, // 10 minutes for large documents (increased from 5m)
+  standard: 300000, // 5 minutes for standard documents (comprehensive extraction takes time)
+  medium: 480000, // 8 minutes for medium documents
+  large: 900000, // 15 minutes for large documents
 };
 
 export interface OpenAIRequestConfig {
@@ -52,11 +56,76 @@ export interface OpenAIResponse {
     total_tokens: number;
   };
   finish_reason: string;
+  complexity?: 'simple' | 'medium' | 'complex';
 }
 
 export class OpenAIClient {
   private client: OpenAI | null = null;
   private apiKeyManager = getAPIKeyManager();
+  private budgetService = getAIBudgetService();
+  private currentCompanyId: string | null = null;
+
+  /**
+   * Set the company context for budget tracking
+   */
+  setCompanyContext(companyId: string): void {
+    this.currentCompanyId = companyId;
+  }
+
+  /**
+   * Check if AI operations are blocked due to budget limits
+   */
+  async checkBudgetLimit(companyId?: string): Promise<{ allowed: boolean; reason?: string }> {
+    const targetCompanyId = companyId || this.currentCompanyId;
+    if (!targetCompanyId) {
+      // No company context, allow operation (shouldn't happen in production)
+      return { allowed: true };
+    }
+
+    try {
+      const blockCheck = await this.budgetService.isAIBlocked(targetCompanyId);
+      if (blockCheck.blocked) {
+        console.warn(`🚫 AI operation blocked for company ${targetCompanyId}: ${blockCheck.reason}`);
+        return { allowed: false, reason: blockCheck.reason };
+      }
+      return { allowed: true };
+    } catch (error) {
+      // Don't block operations if budget check fails
+      console.warn('⚠️ Budget check failed, allowing operation:', error);
+      return { allowed: true };
+    }
+  }
+
+  /**
+   * Record AI usage after successful API call
+   */
+  private async recordUsage(
+    model: string,
+    inputTokens: number,
+    outputTokens: number,
+    operationType: 'extraction' | 'title_generation' | 'validation' | 'other',
+    companyId?: string
+  ): Promise<void> {
+    const targetCompanyId = companyId || this.currentCompanyId;
+    if (!targetCompanyId) return;
+
+    try {
+      // Map model name to budget model type
+      const budgetModel: BudgetAIModel = model.includes('gpt-4o-mini') ? 'gpt-4o-mini' :
+                                          model.includes('gpt-4o') ? 'gpt-4o' :
+                                          'gpt-3.5-turbo';
+
+      await this.budgetService.recordUsage(targetCompanyId, {
+        model: budgetModel,
+        inputTokens,
+        outputTokens,
+        operationType,
+      });
+    } catch (error) {
+      // Don't fail the operation if usage recording fails
+      console.warn('⚠️ Failed to record AI usage:', error);
+    }
+  }
 
   /**
    * Initialize OpenAI client with current API key
@@ -100,12 +169,25 @@ export class OpenAIClient {
   }
 
   /**
-   * Make OpenAI API call with retry logic
+   * Make OpenAI API call with retry logic and budget tracking
    */
   async callWithRetry(
     config: OpenAIRequestConfig,
-    retryConfig: RetryConfig = RETRY_CONFIG
+    retryConfig: RetryConfig = RETRY_CONFIG,
+    options?: {
+      companyId?: string;
+      operationType?: 'extraction' | 'title_generation' | 'validation' | 'other';
+      skipBudgetCheck?: boolean;
+    }
   ): Promise<OpenAIResponse> {
+    // Check budget limit before making API call (unless skipped)
+    if (!options?.skipBudgetCheck) {
+      const budgetCheck = await this.checkBudgetLimit(options?.companyId);
+      if (!budgetCheck.allowed) {
+        throw new Error(`AI_BUDGET_EXCEEDED: ${budgetCheck.reason}`);
+      }
+    }
+
     const client = await this.getClient();
     let lastError: Error | null = null;
 
@@ -150,7 +232,7 @@ export class OpenAIClient {
           throw new Error('Empty response from OpenAI');
         }
 
-        return {
+        const result: OpenAIResponse = {
           content: message,
           model: response.model,
           usage: {
@@ -160,6 +242,17 @@ export class OpenAIClient {
           },
           finish_reason: response.choices[0]?.finish_reason || 'stop',
         };
+
+        // Record usage after successful call (async, don't block)
+        this.recordUsage(
+          response.model,
+          result.usage.prompt_tokens,
+          result.usage.completion_tokens,
+          options?.operationType || 'other',
+          options?.companyId
+        ).catch(() => {}); // Silently handle any errors
+
+        return result;
       } catch (error: any) {
         lastError = error;
 
@@ -221,23 +314,60 @@ export class OpenAIClient {
       permitReference?: string;
       waterCompany?: string;
       registrationType?: string;
+      forceModel?: AIModel; // Optional: force specific model (for testing)
     }
   ): Promise<OpenAIResponse> {
-    // Get prompt template based on document type
-    let promptId: string;
-    if (documentType === 'ENVIRONMENTAL_PERMIT') {
-      promptId = 'PROMPT_M1_EXTRACT_001';
-    } else if (documentType === 'TRADE_EFFLUENT_CONSENT') {
-      promptId = 'PROMPT_M2_EXTRACT_001';
-    } else if (documentType === 'MCPD_REGISTRATION') {
-      promptId = 'PROMPT_M3_EXTRACT_001';
-    } else {
-      throw new Error(`Unknown document type: ${documentType}`);
+    // Smart model routing: analyze document complexity
+    const complexityAnalysis = analyzeDocumentComplexity({
+      documentText,
+      documentType,
+      pageCount: options?.pageCount,
+      regulator: options?.regulator,
+      fileSizeBytes: options?.fileSizeBytes,
+    });
+
+    const selectedModel = options?.forceModel || complexityAnalysis.recommendedModel;
+
+    console.log(`🧠 Model routing analysis:`);
+    console.log(`   Complexity: ${complexityAnalysis.complexity}`);
+    console.log(`   Recommended: ${complexityAnalysis.recommendedModel}`);
+    console.log(`   Confidence: ${(complexityAnalysis.confidence * 100).toFixed(0)}%`);
+    console.log(`   Using: ${selectedModel}`);
+    console.log(`   Reasons: ${complexityAnalysis.reasons.join(', ')}`);
+    console.log(`   Metrics:`, complexityAnalysis.metrics);
+
+    // Get prompt using jurisdiction-specific prompt registry
+    const promptSelection = selectPromptId(
+      documentType,
+      options?.regulator,
+      options?.waterCompany
+    );
+
+    console.log(`📝 Prompt selection:`);
+    console.log(`   ID: ${promptSelection.promptId}`);
+    console.log(`   Version: ${promptSelection.version}`);
+    console.log(`   Jurisdiction-specific: ${promptSelection.isJurisdictionSpecific}`);
+    if (promptSelection.fallbackReason) {
+      console.log(`   Fallback reason: ${promptSelection.fallbackReason}`);
     }
 
-    const template = getPromptTemplate(promptId);
+    // Try to load from docs first, then fall back to in-memory
+    let template;
+    const loadedPrompt = await loadPrompt(promptSelection);
+    if (loadedPrompt) {
+      template = toPromptTemplate(loadedPrompt);
+      console.log(`   Loaded from: ${loadedPrompt.loadedFrom}`);
+    } else {
+      // Ultimate fallback to generic prompts
+      const fallbackId = documentType === 'ENVIRONMENTAL_PERMIT' ? 'PROMPT_M1_EXTRACT_001' :
+                         documentType === 'TRADE_EFFLUENT_CONSENT' ? 'PROMPT_M2_EXTRACT_001' :
+                         'PROMPT_M3_EXTRACT_001';
+      template = getPromptTemplate(fallbackId);
+      console.log(`   Loaded from: memory (fallback)`);
+    }
+
     if (!template) {
-      throw new Error(`Prompt template not found: ${promptId}`);
+      throw new Error(`Prompt template not found: ${promptSelection.promptId}`);
     }
 
     // Substitute placeholders in user message
@@ -260,8 +390,8 @@ export class OpenAIClient {
 
     const timeout = this.getDocumentTimeout(options?.pageCount, options?.fileSizeBytes);
 
-    return this.callWithRetry({
-      model: template.model,
+    const response = await this.callWithRetry({
+      model: selectedModel, // Use smart routing instead of template.model
       messages: [
         { role: 'system', content: template.systemMessage },
         { role: 'user', content: userMessage },
@@ -271,6 +401,12 @@ export class OpenAIClient {
       max_tokens: template.maxTokens,
       timeout,
     });
+
+    // Add complexity to response for tracking
+    return {
+      ...response,
+      complexity: complexityAnalysis.complexity,
+    };
   }
 
   /**

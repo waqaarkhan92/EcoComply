@@ -47,11 +47,11 @@ export function CrudDetailPage<T extends { id: string }>({
   const { data, isLoading, error } = useQuery({
     queryKey: [apiEndpoint, itemId],
     queryFn: async () => {
-      return apiClient.get(apiEndpoint + '/' + itemId);
+      return apiClient.get<T>(apiEndpoint + '/' + itemId);
     },
   });
 
-  const item: T | null = data?.data || null;
+  const item: T | null = (data?.data as T) ?? null;
 
   if (isLoading) {
     return (

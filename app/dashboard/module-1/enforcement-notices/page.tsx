@@ -70,7 +70,7 @@ export default function EnforcementNoticesPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<EnforcementNoticesResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-1-enforcement-notices', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -85,7 +85,7 @@ export default function EnforcementNoticesPage() {
     },
   });
 
-  const notices = data?.data || [];
+  const notices: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

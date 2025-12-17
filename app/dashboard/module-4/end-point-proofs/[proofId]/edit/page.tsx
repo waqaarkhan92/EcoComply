@@ -32,7 +32,7 @@ export default function EditEndPointProofPage({
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: proof, isLoading } = useQuery<EndPointProof>({
+  const { data: proof, isLoading } = useQuery({
     queryKey: ['end-point-proof', proofId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<EndPointProof>(`/module-4/end-point-proofs/${proofId}`);

@@ -47,7 +47,7 @@ export default function AERDetailPage() {
   const siteId = params.siteId as string;
   const aerId = params.aerId as string;
 
-  const { data: aerData, isLoading, error } = useQuery<{ data: AERDocument }>({
+  const { data: aerData, isLoading, error } = useQuery({
     queryKey: ['module-3-aer', aerId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: AERDocument }>(`/module-3/aer/${aerId}`);
@@ -196,7 +196,7 @@ export default function AERDetailPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {aer.generator_data.map((gen, index) => (
+                {aer.generator_data.map((gen: { generator_id?: string; generator_identifier: string; generator_type?: string; run_hours?: number }, index: number) => (
                   <tr key={gen.generator_id || index}>
                     <td className="px-4 py-3 text-sm text-text-primary">
                       {gen.generator_identifier}

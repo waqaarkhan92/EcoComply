@@ -11,7 +11,7 @@ import { parsePaginationParams, parseFilterParams, parseSortParams, createCursor
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ obligationId: string } }
+  request: NextRequest, props: { params: Promise<{ obligationId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -21,13 +21,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { obligationId } = params;
+  const { obligationId } = params;
 
     // Verify obligation exists
-    const { data: obligation, error: obligationError } = await supabaseAdmin
+  const { data: obligation, error: obligationError } = await supabaseAdmin
       .from('obligations')
       .select('id')
       .eq('id', obligationId)
@@ -45,7 +45,7 @@ export async function GET(
     }
 
     // Parse pagination and filter params
-    const { limit, cursor } = parsePaginationParams(request);
+  const { limit, cursor } = parsePaginationParams(request);
     const filters = parseFilterParams(request);
     const sort = parseSortParams(request);
 
@@ -79,7 +79,7 @@ export async function GET(
     // Add limit and fetch one extra to check if there are more
     query = query.limit(limit + 1);
 
-    const { data: deadlines, error } = await query;
+  const { data: deadlines, error } = await query;
 
     if (error) {
       return errorResponse(

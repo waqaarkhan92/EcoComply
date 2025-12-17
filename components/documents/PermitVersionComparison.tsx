@@ -25,14 +25,14 @@ interface PermitVersionComparisonProps {
 export function PermitVersionComparison({ documentId }: PermitVersionComparisonProps) {
   const [selectedVersions, setSelectedVersions] = useState<[string | null, string | null]>([null, null]);
 
-  const { data: versionsData, isLoading } = useQuery<{ data: PermitVersion[] }>({
+  const { data: versionsData, isLoading } = useQuery({
     queryKey: ['permit-versions', documentId],
     queryFn: async () => {
-      return apiClient.get('/documents/' + documentId + '/versions');
+      return apiClient.get<PermitVersion[]>('/documents/' + documentId + '/versions');
     },
   });
 
-  const versions = versionsData?.data || [];
+  const versions: PermitVersion[] = versionsData?.data ?? [];
   const [versionA, versionB] = selectedVersions;
 
   if (versions.length >= 2 && !versionA && !versionB) {

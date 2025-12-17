@@ -20,7 +20,7 @@ export default function CompanyDetailPage() {
   const params = useParams();
   const companyId = params.companyId as string;
 
-  const { data: companyData, isLoading } = useQuery<{ data: Company }>({
+  const { data: companyData, isLoading } = useQuery({
     queryKey: ['company', companyId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Company }>(`/companies/${companyId}`);

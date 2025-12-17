@@ -40,7 +40,7 @@ export default function EditRecurrenceTriggerRulePage({
     next_execution_date: '',
   });
 
-  const { data: rule, isLoading } = useQuery<RecurrenceTriggerRule>({
+  const { data: rule, isLoading } = useQuery({
     queryKey: ['recurrence-trigger-rule', ruleId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<RecurrenceTriggerRule>(`/recurrence-trigger-rules/${ruleId}`);

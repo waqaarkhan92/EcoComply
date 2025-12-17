@@ -1,9 +1,163 @@
 'use client';
 
-import { useState, useRef, useEffect, ReactNode } from 'react';
+import * as React from 'react';
+import { useState, useRef, useEffect, ReactNode, createContext, useContext } from 'react';
 import { cn } from '@/lib/utils';
 
-interface TooltipProps {
+// =============================================================================
+// RADIX-STYLE COMPOUND COMPONENT API
+// =============================================================================
+
+interface TooltipContextValue {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  delayDuration: number;
+}
+
+const TooltipContext = createContext<TooltipContextValue | null>(null);
+
+interface TooltipProviderProps {
+  children: ReactNode;
+  delayDuration?: number;
+}
+
+export function TooltipProvider({ children, delayDuration = 300 }: TooltipProviderProps) {
+  return (
+    <TooltipProviderContext.Provider value={{ delayDuration }}>
+      {children}
+    </TooltipProviderContext.Provider>
+  );
+}
+
+const TooltipProviderContext = createContext<{ delayDuration: number }>({ delayDuration: 300 });
+
+interface TooltipRootProps {
+  children: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  delayDuration?: number;
+}
+
+function TooltipRoot({ children, open, onOpenChange, delayDuration }: TooltipRootProps) {
+  const providerContext = useContext(TooltipProviderContext);
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  const isOpen = open !== undefined ? open : internalOpen;
+  const setIsOpen = onOpenChange || setInternalOpen;
+  const delay = delayDuration ?? providerContext.delayDuration;
+
+  return (
+    <TooltipContext.Provider value={{ isOpen, setIsOpen, delayDuration: delay }}>
+      <div className="relative inline-block">
+        {children}
+      </div>
+    </TooltipContext.Provider>
+  );
+}
+
+interface TooltipTriggerProps {
+  children: ReactNode;
+  asChild?: boolean;
+}
+
+export function TooltipTrigger({ children, asChild }: TooltipTriggerProps) {
+  const context = useContext(TooltipContext);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  if (!context) {
+    throw new Error('TooltipTrigger must be used within a Tooltip');
+  }
+
+  const { setIsOpen, delayDuration } = context;
+
+  const handleMouseEnter = () => {
+    timeoutRef.current = setTimeout(() => {
+      setIsOpen(true);
+    }, delayDuration);
+  };
+
+  const handleMouseLeave = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setIsOpen(false);
+  };
+
+  if (asChild && React.isValidElement(children)) {
+    return React.cloneElement(children as React.ReactElement<any>, {
+      onMouseEnter: handleMouseEnter,
+      onMouseLeave: handleMouseLeave,
+      onFocus: () => setIsOpen(true),
+      onBlur: () => setIsOpen(false),
+    });
+  }
+
+  return (
+    <span
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onFocus={() => setIsOpen(true)}
+      onBlur={() => setIsOpen(false)}
+    >
+      {children}
+    </span>
+  );
+}
+
+interface TooltipContentProps {
+  children: ReactNode;
+  side?: 'top' | 'bottom' | 'left' | 'right';
+  sideOffset?: number;
+  className?: string;
+}
+
+export function TooltipContent({
+  children,
+  side = 'top',
+  sideOffset = 4,
+  className
+}: TooltipContentProps) {
+  const context = useContext(TooltipContext);
+
+  if (!context) {
+    throw new Error('TooltipContent must be used within a Tooltip');
+  }
+
+  const { isOpen } = context;
+
+  if (!isOpen) return null;
+
+  const positionClasses = {
+    top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
+    bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
+    left: 'right-full top-1/2 -translate-y-1/2 mr-2',
+    right: 'left-full top-1/2 -translate-y-1/2 ml-2',
+  };
+
+  return (
+    <div
+      className={cn(
+        'absolute z-50 px-3 py-1.5 text-xs text-white bg-charcoal rounded-md shadow-lg whitespace-nowrap pointer-events-none animate-in fade-in-0 zoom-in-95',
+        positionClasses[side],
+        className
+      )}
+      role="tooltip"
+      style={{ marginTop: side === 'bottom' ? sideOffset : undefined, marginBottom: side === 'top' ? sideOffset : undefined }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// Export Tooltip as an alias to TooltipRoot for the compound pattern
+export { TooltipRoot as Tooltip };
+
+// =============================================================================
+// LEGACY SIMPLE API (for backward compatibility)
+// =============================================================================
+
+interface SimpleTooltipProps {
   content: string | ReactNode;
   children: ReactNode;
   position?: 'top' | 'bottom' | 'left' | 'right';
@@ -11,13 +165,13 @@ interface TooltipProps {
   className?: string;
 }
 
-export function Tooltip({
+export function SimpleTooltip({
   content,
   children,
   position = 'top',
   delay = 300,
   className,
-}: TooltipProps) {
+}: SimpleTooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [showTimeout, setShowTimeout] = useState<NodeJS.Timeout | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -113,4 +267,3 @@ export function Tooltip({
     </div>
   );
 }
-

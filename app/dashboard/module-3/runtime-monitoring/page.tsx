@@ -51,7 +51,7 @@ export default function RuntimeMonitoringPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<RuntimeMonitoringResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-3-runtime-monitoring', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -66,7 +66,7 @@ export default function RuntimeMonitoringPage() {
     },
   });
 
-  const records = data?.data || [];
+  const records: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

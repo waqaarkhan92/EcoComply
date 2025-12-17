@@ -17,7 +17,7 @@ export default function ReportDetailPage() {
   const params = useParams();
   const reportType = params.reportType as string;
 
-  const { data: reportData, isLoading } = useQuery<{ data: ReportData }>({
+  const { data: reportData, isLoading } = useQuery({
     queryKey: ['report', reportType],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: ReportData }>(`/reports/${reportType}`);

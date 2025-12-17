@@ -60,7 +60,7 @@ export default function SamplingLogisticsPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<SamplingLogisticsResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-2-sampling-logistics', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -74,7 +74,7 @@ export default function SamplingLogisticsPage() {
     },
   });
 
-  const records = data?.data || [];
+  const records: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

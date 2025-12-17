@@ -22,7 +22,7 @@ export default function ObligationSchedulePage() {
   const siteId = params.siteId as string;
   const obligationId = params.obligationId as string;
 
-  const { data: scheduleData } = useQuery<{ data: Schedule }>({
+  const { data: scheduleData } = useQuery({
     queryKey: ['obligation-schedule', obligationId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Schedule }>(`/obligations/${obligationId}/schedule`);

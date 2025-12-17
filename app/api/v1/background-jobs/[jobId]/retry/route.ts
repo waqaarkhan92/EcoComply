@@ -11,7 +11,7 @@ import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 import { getQueue, QUEUE_NAMES } from '@/lib/queue/queue-manager';
 
 export async function POST(
-  request: NextRequest, props: { params: Promise<{ jobId: string } }
+  request: NextRequest, props: { params: Promise<{ jobId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -22,12 +22,12 @@ export async function POST(
       return authResult;
     }
 
-    const { user } = authResult;
+  const { user } = authResult;
     const params = await props.params;
-    const { jobId } = params;
+  const { jobId } = params;
 
     // Get job
-    const { data: job, error: getError } = await supabaseAdmin
+  const { data: job, error: getError } = await supabaseAdmin
       .from('background_jobs')
       .select('*')
       .eq('id', jobId)

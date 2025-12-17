@@ -82,7 +82,7 @@ export async function processMonitorCorrectiveActionItemsJob(
     // Step 2: Process each item
     for (const item of items) {
       try {
-        const action = (item.corrective_action_items as any) || item.corrective_actions;
+        const action = Array.isArray(item.corrective_actions) ? item.corrective_actions[0] : item.corrective_actions;
         const assignee = item.users as any;
 
         if (!action || !item.due_date) {

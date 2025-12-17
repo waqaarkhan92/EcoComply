@@ -37,7 +37,7 @@ const customJestConfig = {
     '!**/.next/**',
   ],
   transformIgnorePatterns: [
-    'node_modules/(?!(undici)/)',
+    'node_modules/(?!(undici|pdf-parse|pdfjs-dist)/)',
   ],
   // Detect open handles only when debugging (use npm run test:debug)
   // For normal runs, use --forceExit to prevent hanging

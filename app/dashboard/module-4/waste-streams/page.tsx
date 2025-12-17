@@ -44,7 +44,7 @@ export default function WasteStreamsPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<WasteStreamsResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-4-waste-streams', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -58,7 +58,7 @@ export default function WasteStreamsPage() {
     },
   });
 
-  const wasteStreams = data?.data || [];
+  const wasteStreams: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

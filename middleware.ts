@@ -8,10 +8,76 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // CORS headers for API routes
-  if (request.nextUrl.pathname.startsWith('/api/')) {
-    const response = NextResponse.next();
+  const { pathname } = request.nextUrl;
 
+  // ============================================
+  // URL REDIRECTS (Navigation Restructure)
+  // ============================================
+  const redirects: Record<string, string> = {
+    '/dashboard/compliance-clocks': '/dashboard/deadlines',
+    '/dashboard/recurring-tasks': '/dashboard/deadlines',
+    '/dashboard/profile': '/dashboard/settings',
+    '/dashboard/documents': '/dashboard/sites',
+    '/dashboard/obligations': '/dashboard/sites',
+    '/dashboard/evidence': '/dashboard/sites',
+  };
+
+  if (redirects[pathname]) {
+    const url = request.nextUrl.clone();
+    url.pathname = redirects[pathname];
+    return NextResponse.redirect(url, { status: 301 });
+  }
+
+  const response = NextResponse.next();
+
+  // ============================================
+  // SECURITY HEADERS (OWASP Best Practices)
+  // ============================================
+
+  // Prevent clickjacking attacks
+  response.headers.set('X-Frame-Options', 'DENY');
+
+  // Prevent MIME type sniffing
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+
+  // Enable XSS protection (legacy browsers)
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+
+  // Control referrer information
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // Restrict browser features
+  response.headers.set(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), payment=()'
+  );
+
+  // Enforce HTTPS (only in production)
+  if (process.env.NODE_ENV === 'production') {
+    response.headers.set(
+      'Strict-Transport-Security',
+      'max-age=31536000; includeSubDomains; preload'
+    );
+  }
+
+  // Content Security Policy
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // Next.js requires unsafe-eval/inline
+    "style-src 'self' 'unsafe-inline'", // Tailwind requires unsafe-inline
+    "img-src 'self' data: https: blob:",
+    "font-src 'self' data:",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; ');
+  response.headers.set('Content-Security-Policy', csp);
+
+  // ============================================
+  // CORS HEADERS (API routes only)
+  // ============================================
+  if (request.nextUrl.pathname.startsWith('/api/')) {
     // Get origin from request
     const origin = request.headers.get('origin');
 
@@ -41,16 +107,15 @@ export function middleware(request: NextRequest) {
     if (!request.headers.get('x-request-id')) {
       response.headers.set('x-request-id', crypto.randomUUID());
     }
-
-    return response;
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
   matcher: [
-    '/api/:path*',
+    // Apply to all routes except static files
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };
 

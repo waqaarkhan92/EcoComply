@@ -61,8 +61,30 @@ export async function GET(request: NextRequest) {
       storageStatus = 'unhealthy';
     }
 
+    // Check OpenAI API health
+    let openaiStatus: 'healthy' | 'unhealthy' = 'unhealthy';
+    try {
+      const openaiApiKey = process.env.OPENAI_API_KEY;
+      if (openaiApiKey) {
+        // Quick models list check (lightweight API call)
+        const response = await fetch('https://api.openai.com/v1/models', {
+          headers: {
+            'Authorization': `Bearer ${openaiApiKey}`,
+          },
+          signal: AbortSignal.timeout(5000), // 5 second timeout
+        });
+        openaiStatus = response.ok ? 'healthy' : 'unhealthy';
+      }
+    } catch (error) {
+      console.error('OpenAI health check error:', error);
+      openaiStatus = 'unhealthy';
+    }
+
     const overallStatus =
-      databaseStatus === 'healthy' && storageStatus === 'healthy' && redisStatus === 'healthy'
+      databaseStatus === 'healthy' &&
+      storageStatus === 'healthy' &&
+      redisStatus === 'healthy' &&
+      openaiStatus === 'healthy'
         ? 'healthy'
         : 'degraded';
 
@@ -75,6 +97,7 @@ export async function GET(request: NextRequest) {
           database: databaseStatus,
           redis: redisStatus,
           storage: storageStatus,
+          openai: openaiStatus,
         },
       },
       200,
@@ -90,6 +113,7 @@ export async function GET(request: NextRequest) {
           database: 'unhealthy',
           redis: 'unhealthy',
           storage: 'unhealthy',
+          openai: 'unhealthy',
         },
       },
       503

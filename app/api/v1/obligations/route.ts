@@ -40,10 +40,29 @@ export async function GET(request: NextRequest) {
     const filters = parseFilterParams(request);
     const sort = parseSortParams(request);
 
-    // Build query - RLS will automatically filter by user's site access
+    // Build query with evidence count - using left join and count aggregation to avoid N+1
     let query = supabaseAdmin
       .from('obligations')
-      .select('id, document_id, site_id, obligation_title, obligation_description, original_text, category, frequency, deadline_date, status, review_status, is_subjective, confidence_score, condition_reference, page_reference, created_at, updated_at')
+      .select(`
+        id,
+        document_id,
+        site_id,
+        obligation_title,
+        obligation_description,
+        original_text,
+        category,
+        frequency,
+        deadline_date,
+        status,
+        review_status,
+        is_subjective,
+        confidence_score,
+        condition_reference,
+        page_reference,
+        created_at,
+        updated_at,
+        evidence_count:obligation_evidence_links(count)
+      `)
       .is('deleted_at', null); // Only non-deleted obligations
 
     // Apply search query
@@ -103,23 +122,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get evidence counts for each obligation
-    const obligationIds = (obligations || []).map((o: any) => o.id);
-    const { data: evidenceLinks } = await supabaseAdmin
-      .from('obligation_evidence_links')
-      .select('obligation_id')
-      .in('obligation_id', obligationIds);
-
-    // Count evidence per obligation
-    const countsMap: Record<string, number> = {};
-    evidenceLinks?.forEach((link: any) => {
-      countsMap[link.obligation_id] = (countsMap[link.obligation_id] || 0) + 1;
-    });
-
-    // Add evidence_count to each obligation
+    // Transform evidence_count from array to number
     const obligationsWithCounts = (obligations || []).map((obligation: any) => ({
       ...obligation,
-      evidence_count: countsMap[obligation.id] || 0,
+      evidence_count: obligation.evidence_count?.[0]?.count || 0,
     }));
 
     // Check if there are more results

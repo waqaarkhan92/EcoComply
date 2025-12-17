@@ -13,7 +13,7 @@ import { getQueue, QUEUE_NAMES } from '@/lib/queue/queue-manager';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function POST(
-  request: NextRequest, props: { params: Promise<{ clientId: string } }
+  request: NextRequest, props: { params: Promise<{ clientId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -23,13 +23,13 @@ export async function POST(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { clientId } = params;
+  const { clientId } = params;
 
     // Verify consultant has ACTIVE assignment to this client
-    const { data: assignment, error: assignmentError } = await supabaseAdmin
+  const { data: assignment, error: assignmentError } = await supabaseAdmin
       .from('consultant_client_assignments')
       .select('client_company_id, status')
       .eq('consultant_id', user.id)
@@ -106,7 +106,7 @@ export async function POST(
     }
 
     // Verify site belongs to client company
-    const { data: site, error: siteError } = await supabaseAdmin
+  const { data: site, error: siteError } = await supabaseAdmin
       .from('sites')
       .select('id, company_id')
       .eq('id', site_id)
@@ -139,7 +139,7 @@ export async function POST(
       generated_by: user.id,
     };
 
-    const { data: pack, error: packError } = await supabaseAdmin
+  const { data: pack, error: packError } = await supabaseAdmin
       .from('audit_packs')
       .insert(packData)
       .select('id, pack_type, status, created_at')

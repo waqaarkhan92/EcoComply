@@ -40,7 +40,7 @@ export default function RunHoursPage() {
   const siteId = params.siteId as string;
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
-  const { data: runHoursData, isLoading, error } = useQuery<RunHoursResponse>({
+  const { data: runHoursData, isLoading, error } = useQuery({
     queryKey: ['module-3-run-hours', siteId, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -55,7 +55,7 @@ export default function RunHoursPage() {
     enabled: !!siteId,
   });
 
-  const runHours = runHoursData?.data || [];
+  const runHours: any[] = runHoursData?.data || [];
   const hasMore = runHoursData?.pagination?.has_more || false;
   const nextCursor = runHoursData?.pagination?.cursor;
 

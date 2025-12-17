@@ -13,7 +13,7 @@ import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 import { calculateNextDueDate, Frequency } from '@/lib/utils/schedule-calculator';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ scheduleId: string } }
+  request: NextRequest, props: { params: Promise<{ scheduleId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -23,13 +23,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { scheduleId } = params;
+  const { scheduleId } = params;
 
     // Get schedule - RLS will enforce access control
-    const { data: schedule, error } = await supabaseAdmin
+  const { data: schedule, error } = await supabaseAdmin
       .from('schedules')
       .select('*')
       .eq('id', scheduleId)
@@ -69,7 +69,7 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ scheduleId: string } }
+  request: NextRequest, props: { params: Promise<{ scheduleId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -79,13 +79,13 @@ export async function PUT(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { scheduleId } = params;
+  const { scheduleId } = params;
 
     // Get existing schedule
-    const { data: existingSchedule, error: getError } = await supabaseAdmin
+  const { data: existingSchedule, error: getError } = await supabaseAdmin
       .from('schedules')
       .select('*')
       .eq('id', scheduleId)
@@ -169,7 +169,7 @@ export async function PUT(
     updates.updated_at = new Date().toISOString();
 
     // Update schedule
-    const { data: updatedSchedule, error: updateError } = await supabaseAdmin
+  const { data: updatedSchedule, error: updateError } = await supabaseAdmin
       .from('schedules')
       .update(updates)
       .eq('id', scheduleId)
@@ -201,7 +201,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest, props: { params: Promise<{ scheduleId: string } }
+  request: NextRequest, props: { params: Promise<{ scheduleId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -212,12 +212,12 @@ export async function DELETE(
       return authResult;
     }
 
-    const { user } = authResult;
+  const { user } = authResult;
     const params = await props.params;
-    const { scheduleId } = params;
+  const { scheduleId } = params;
 
     // Get schedule
-    const { data: schedule, error: getError } = await supabaseAdmin
+  const { data: schedule, error: getError } = await supabaseAdmin
       .from('schedules')
       .select('id')
       .eq('id', scheduleId)
@@ -234,7 +234,7 @@ export async function DELETE(
     }
 
     // Archive schedule (soft delete by setting status to ARCHIVED)
-    const { error: updateError } = await supabaseAdmin
+  const { error: updateError } = await supabaseAdmin
       .from('schedules')
       .update({
         status: 'ARCHIVED',

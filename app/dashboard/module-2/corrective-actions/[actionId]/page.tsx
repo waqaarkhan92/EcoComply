@@ -54,7 +54,7 @@ export default function CorrectiveActionDetailPage({
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [regulatorJustification, setRegulatorJustification] = useState('');
 
-  const { data: action, isLoading } = useQuery<CorrectiveAction>({
+  const { data: action, isLoading } = useQuery({
     queryKey: ['corrective-action', actionId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<CorrectiveAction>(`/module-2/corrective-actions/${actionId}`);
@@ -405,7 +405,7 @@ export default function CorrectiveActionDetailPage({
             <div className="md:col-span-2">
               <p className="text-sm font-medium text-text-secondary mb-2">Evidence ({action.evidence_ids.length})</p>
               <div className="space-y-1">
-                {action.evidence_ids.map((evidenceId, index) => (
+                {action.evidence_ids.map((evidenceId: string, index: number) => (
                   <div key={index} className="text-sm text-gray-600">{evidenceId}</div>
                 ))}
               </div>

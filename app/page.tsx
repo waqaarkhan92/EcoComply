@@ -1,21 +1,31 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { Navbar } from '@/components/marketing/Navbar';
+import { Hero } from '@/components/marketing/Hero';
+import { ProblemSection } from '@/components/marketing/ProblemSection';
+import { SolutionSection } from '@/components/marketing/SolutionSection';
+import { FeaturesSection } from '@/components/marketing/FeaturesSection';
+import { TestimonialsSection } from '@/components/marketing/TestimonialsSection';
+import { PricingSection } from '@/components/marketing/PricingSection';
+import { FAQSection } from '@/components/marketing/FAQSection';
+import { CTASection } from '@/components/marketing/CTASection';
+import { Footer } from '@/components/marketing/Footer';
 
-export default function Home() {
-  const router = useRouter();
-
-  useEffect(() => {
-    // Redirect to login for now (will be updated with auth check)
-    router.replace('/login');
-  }, [router]);
-
-  // Show loading state while redirecting
+export default function HomePage() {
   return (
-    <div className="min-h-screen bg-background-secondary flex items-center justify-center">
-      <div className="text-text-secondary">Redirecting...</div>
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
+      <main className="flex-grow">
+        <Hero />
+        <ProblemSection />
+        <SolutionSection />
+        <FeaturesSection />
+        <TestimonialsSection />
+        <PricingSection />
+        <FAQSection />
+        <CTASection />
+      </main>
+      <Footer />
     </div>
   );
 }
-

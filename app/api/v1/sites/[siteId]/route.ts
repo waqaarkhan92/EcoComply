@@ -12,7 +12,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ siteId: string } }
+  request: NextRequest, props: { params: Promise<{ siteId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -22,10 +22,10 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { siteId } = params;
+  const { siteId } = params;
 
     // Validate UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -40,7 +40,7 @@ export async function GET(
     }
 
     // Get site - RLS will enforce access control
-    const { data: site, error } = await supabaseAdmin
+  const { data: site, error } = await supabaseAdmin
       .from('sites')
       .select('id, company_id, name, address_line_1, address_line_2, city, postcode, country, regulator, water_company, grace_period_days, is_active, created_at, updated_at')
       .eq('id', siteId)
@@ -82,7 +82,7 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ siteId: string } }
+  request: NextRequest, props: { params: Promise<{ siteId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -93,10 +93,10 @@ export async function PUT(
       // Return auth error (401 or 403) immediately
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { siteId } = params;
+  const { siteId } = params;
 
     // Parse request body - handle potential JSON parsing errors
     let body: any;
@@ -184,7 +184,7 @@ export async function PUT(
     }
 
     // Check if site exists and user has access (RLS will enforce)
-    const { data: existingSite, error: checkError } = await supabaseAdmin
+  const { data: existingSite, error: checkError } = await supabaseAdmin
       .from('sites')
       .select('id')
       .eq('id', siteId)
@@ -204,7 +204,7 @@ export async function PUT(
     // Update site
     updates.updated_at = new Date().toISOString();
 
-    const { data: updatedSite, error: updateError } = await supabaseAdmin
+  const { data: updatedSite, error: updateError } = await supabaseAdmin
       .from('sites')
       .update(updates)
       .eq('id', siteId)
@@ -236,7 +236,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest, props: { params: Promise<{ siteId: string } }
+  request: NextRequest, props: { params: Promise<{ siteId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -247,13 +247,13 @@ export async function DELETE(
       // Return auth error (401 or 403) immediately
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { siteId } = params;
+  const { siteId } = params;
 
     // Check if site exists and user has access (RLS will enforce)
-    const { data: existingSite, error: checkError } = await supabaseAdmin
+  const { data: existingSite, error: checkError } = await supabaseAdmin
       .from('sites')
       .select('id')
       .eq('id', siteId)
@@ -271,7 +271,7 @@ export async function DELETE(
     }
 
     // Soft delete site
-    const { error: deleteError } = await supabaseAdmin
+  const { error: deleteError } = await supabaseAdmin
       .from('sites')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', siteId);

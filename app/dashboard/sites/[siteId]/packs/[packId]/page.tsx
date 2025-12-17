@@ -28,7 +28,7 @@ export default function PackDetailPage() {
   const packId = params.packId as string;
   const [activeTab, setActiveTab] = useState<'preview' | 'contents' | 'access-logs' | 'metadata'>('preview');
 
-  const { data: packData, isLoading } = useQuery<{ data: Pack }>({
+  const { data: packData, isLoading } = useQuery({
     queryKey: ['pack', packId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Pack }>(`/packs/${packId}`);
@@ -439,7 +439,7 @@ function PackAccessLogsTab({ packId }: { packId: string }) {
     );
   }
 
-  const logs = logsData?.data || [];
+  const logs: any[] = logsData?.data || [];
   const summary = logsData?.summary;
 
   return (

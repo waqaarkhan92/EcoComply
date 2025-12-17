@@ -37,7 +37,7 @@ export default function ConsultantPacksPage() {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [statusFilter, setStatusFilter] = useState<string>('');
 
-  const { data: packsData, isLoading, error } = useQuery<ConsultantPacksResponse>({
+  const { data: packsData, isLoading, error } = useQuery({
     queryKey: ['consultant-packs', statusFilter, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -49,7 +49,7 @@ export default function ConsultantPacksPage() {
     },
   });
 
-  const packs = packsData?.data || [];
+  const packs: Pack[] = packsData?.data || [];
   const hasMore = packsData?.pagination?.has_more || false;
   const nextCursor = packsData?.pagination?.cursor;
 

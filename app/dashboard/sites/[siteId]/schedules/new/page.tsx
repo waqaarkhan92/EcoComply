@@ -26,7 +26,7 @@ export default function NewSchedulePage() {
   const [adjustForBusinessDays, setAdjustForBusinessDays] = useState(false);
 
   // Fetch obligations for this site
-  const { data: obligationsData } = useQuery<{ data: Obligation[] }>({
+  const { data: obligationsData } = useQuery({
     queryKey: ['obligations', siteId],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -84,7 +84,7 @@ export default function NewSchedulePage() {
             required
           >
             <option value="">Select an obligation</option>
-            {obligationsData?.data?.map((obligation) => (
+            {obligationsData?.data?.map((obligation: Obligation) => (
               <option key={obligation.id} value={obligation.id}>
                 {obligation.obligation_title}
               </option>

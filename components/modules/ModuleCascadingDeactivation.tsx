@@ -31,17 +31,17 @@ export default function ModuleCascadingDeactivation({
   const queryClient = useQueryClient();
   const [acknowledged, setAcknowledged] = useState(false);
 
-  const { data: modulesData } = useQuery<{ data: Module[] }>({
+  const { data: modulesData } = useQuery({
     queryKey: ['site-modules', siteId],
     queryFn: async () => {
-      return apiClient.get(`/sites/${siteId}/modules`);
+      return apiClient.get<Module[]>(`/sites/${siteId}/modules`);
     },
   });
 
-  const { data: moduleData } = useQuery<{ data: Module }>({
+  const { data: moduleData } = useQuery({
     queryKey: ['module', moduleId],
     queryFn: async () => {
-      return apiClient.get(`/modules/${moduleId}`);
+      return apiClient.get<Module>(`/modules/${moduleId}`);
     },
   });
 
@@ -59,8 +59,8 @@ export default function ModuleCascadingDeactivation({
     },
   });
 
-  const modules = modulesData?.data || [];
-  const module = moduleData?.data;
+  const modules: Module[] = modulesData?.data ?? [];
+  const module: Module | undefined = moduleData?.data;
 
   if (!module) {
     return null;
@@ -201,7 +201,7 @@ export default function ModuleCascadingDeactivation({
             Cancel
           </Button>
           <Button
-            variant="destructive"
+            variant="danger"
             onClick={() => deactivateMutation.mutate()}
             disabled={hasDependents && !acknowledged}
           >

@@ -142,7 +142,6 @@ async function quickTest() {
     await new Promise(resolve => setTimeout(resolve, 2000)); // Check every 2 seconds
 
     const jobState = await job.getState();
-    const jobData = await job.get();
 
     if (jobState === 'completed') {
       console.log('✅ Job completed!\n');
@@ -190,7 +189,7 @@ async function quickTest() {
       console.log('\n✅ Test completed successfully!');
       process.exit(0);
     } else if (jobState === 'failed') {
-      const failedReason = jobData?.failedReason || 'Unknown error';
+      const failedReason = job.failedReason || 'Unknown error';
       console.error(`❌ Job failed: ${failedReason}`);
       await testWorker.close();
       process.exit(1);

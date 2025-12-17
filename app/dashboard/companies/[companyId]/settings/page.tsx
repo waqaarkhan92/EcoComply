@@ -29,7 +29,7 @@ export default function CompanySettingsPage() {
   const [billingAddress, setBillingAddress] = useState('');
   const [phone, setPhone] = useState('');
 
-  const { data: companyData, isLoading } = useQuery<{ data: Company }>({
+  const { data: companyData, isLoading } = useQuery({
     queryKey: ['company', companyId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Company }>(`/companies/${companyId}`);

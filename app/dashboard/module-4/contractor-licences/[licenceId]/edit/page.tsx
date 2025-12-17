@@ -34,7 +34,7 @@ export default function EditContractorLicencePage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [wasteTypeInput, setWasteTypeInput] = useState('');
 
-  const { data: licence, isLoading } = useQuery<ContractorLicence>({
+  const { data: licence, isLoading } = useQuery({
     queryKey: ['contractor-licence', licenceId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<ContractorLicence>(`/module-4/contractor-licences/${licenceId}`);

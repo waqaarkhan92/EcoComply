@@ -25,14 +25,14 @@ interface ModuleActivation {
 export default function ModulesPage() {
   const { user } = useAuthStore();
 
-  const { data: modulesData } = useQuery<{ data: Module[] }>({
+  const { data: modulesData } = useQuery({
     queryKey: ['modules'],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Module[] }>('/modules');
     },
   });
 
-  const { data: activationsData } = useQuery<{ data: ModuleActivation[] }>({
+  const { data: activationsData } = useQuery({
     queryKey: ['module-activations', user?.company_id],
     queryFn: async (): Promise<any> => {
       if (!user?.company_id) return { data: [] };
@@ -50,8 +50,8 @@ export default function ModulesPage() {
     },
   });
 
-  const modules = modulesData?.data || [];
-  const activations = activationsData?.data || [];
+  const modules: any[] = modulesData?.data || [];
+  const activations: any[] = activationsData?.data || [];
   const activatedModuleIds = new Set(activations.map(a => a.module_id));
 
   return (

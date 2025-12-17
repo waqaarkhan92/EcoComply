@@ -40,7 +40,7 @@ export default function PermitSurrenderPage({
   });
   const [isCreating, setIsCreating] = useState(false);
 
-  const { data: surrender, isLoading, isError } = useQuery<PermitSurrender>({
+  const { data: surrender, isLoading, isError } = useQuery({
     queryKey: ['permit-surrender', workflowId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<PermitSurrender>(`/module-1/permit-workflows/${workflowId}/surrender`);

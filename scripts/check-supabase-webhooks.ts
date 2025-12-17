@@ -20,7 +20,7 @@ async function checkWebhooks() {
   const { data: functions, error: funcError } = await supabaseAdmin
     .from('pg_proc')
     .select('proname')
-    .eq('pronamespace', 'public'::regnamespace);
+    .ilike('proname', '%user%');
 
   if (funcError) {
     console.log('⚠️  Could not check functions (this is normal)');

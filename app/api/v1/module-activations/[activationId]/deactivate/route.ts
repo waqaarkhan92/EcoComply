@@ -10,7 +10,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ activationId: string } }
+  request: NextRequest, props: { params: Promise<{ activationId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,10 +20,10 @@ export async function PUT(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { activationId } = params;
+  const { activationId } = params;
 
     // Parse request body (optional)
     let deactivationReason: string | undefined;
@@ -35,7 +35,7 @@ export async function PUT(
     }
 
     // Get activation with module info - RLS will enforce access control
-    const { data: activation, error: getError } = await supabaseAdmin
+  const { data: activation, error: getError } = await supabaseAdmin
       .from('module_activations')
       .select('id, company_id, site_id, status, module_id, modules!inner(id, module_code, module_name)')
       .eq('id', activationId)
@@ -86,7 +86,7 @@ export async function PUT(
     const module = activation.modules as any;
 
     // Check if this module has dependent modules (cascading deactivation)
-    const { data: dependentModules, error: dependentError } = await supabaseAdmin
+  const { data: dependentModules, error: dependentError } = await supabaseAdmin
       .from('modules')
       .select('id, module_code, module_name')
       .eq('requires_module_id', moduleId)
@@ -100,7 +100,7 @@ export async function PUT(
     const dependentModuleNames = (dependentModules || []).map((m) => m.module_name).join(', ');
 
     // Update activation status
-    const { data: updatedActivation, error: updateError } = await supabaseAdmin
+  const { data: updatedActivation, error: updateError } = await supabaseAdmin
       .from('module_activations')
       .update({
         status: 'INACTIVE',

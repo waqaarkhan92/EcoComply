@@ -23,7 +23,7 @@ export default function ClientDetailPage() {
   const params = useParams();
   const clientId = params.clientId as string;
 
-  const { data: clientData, isLoading } = useQuery<{ data: ClientDetail }>({
+  const { data: clientData, isLoading } = useQuery({
     queryKey: ['consultant-client', clientId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: ClientDetail }>(`/consultant/clients/${clientId}`);

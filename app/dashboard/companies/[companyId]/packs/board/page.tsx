@@ -32,7 +32,7 @@ export default function BoardPackGenerationPage() {
   const isAuthorized = roles?.includes('OWNER') || roles?.includes('ADMIN');
   const hasPlanAccess = true; // TODO: Check Growth Plan or Consultant Edition
 
-  const { data: companyData, isLoading } = useQuery<{ data: Company }>({
+  const { data: companyData, isLoading } = useQuery({
     queryKey: ['company', companyId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Company }>(`/companies/${companyId}`);

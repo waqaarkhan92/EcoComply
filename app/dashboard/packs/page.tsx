@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { useAuthStore } from '@/lib/store/auth-store';
+import { useToast } from '@/lib/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NoPacksState } from '@/components/ui/empty-state';
 import { Package, Download, Share2, FileText, Calendar, Filter, X, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
@@ -52,6 +54,7 @@ const PACK_TYPES = [
 export default function PacksPage() {
   const { company, user, roles } = useAuthStore();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [selectedPackType, setSelectedPackType] = useState<string | null>(null);
   const [selectedSite, setSelectedSite] = useState<string>('');
@@ -94,7 +97,7 @@ export default function PacksPage() {
     },
   });
 
-  const sites = sitesData?.data || [];
+  const sites: any[] = sitesData?.data || [];
 
   // Fetch documents for selected site
   const { data: documentsData } = useQuery<{
@@ -109,7 +112,7 @@ export default function PacksPage() {
     enabled: !!selectedSite && selectedPackType !== 'BOARD_MULTI_SITE_RISK',
   });
 
-  const documents = documentsData?.data || [];
+  const documents: any[] = documentsData?.data || [];
 
   // Pack generation mutation
   const generateMutation = useMutation({
@@ -128,10 +131,23 @@ export default function PacksPage() {
       setDateRangeEnd('');
       setRecipientName('');
       setPurpose('');
+      // Show success toast
+      toast({
+        title: 'Pack Generation Started',
+        description: 'Your pack is being generated. It will appear in the list shortly.',
+        variant: 'default',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Pack Generation Failed',
+        description: error?.message || 'An error occurred while generating the pack.',
+        variant: 'destructive',
+      });
     },
   });
 
-  const packs = packsData?.data || [];
+  const packs: any[] = packsData?.data || [];
 
   // Filter pack types based on subscription tier
   const availablePackTypes = PACK_TYPES.filter(pt => {
@@ -238,12 +254,8 @@ export default function PacksPage() {
       {packsLoading ? (
         <div className="text-center py-12 text-text-secondary">Loading packs...</div>
       ) : packs.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-base p-12 text-center">
-          <Package className="h-16 w-16 mx-auto text-text-tertiary mb-4" />
-          <p className="text-text-secondary mb-4">No packs generated yet</p>
-          <Button variant="primary" size="md" onClick={() => setShowGenerateModal(true)}>
-            Generate Your First Pack
-          </Button>
+        <div className="bg-white rounded-lg shadow-base overflow-hidden">
+          <NoPacksState onCreate={() => setShowGenerateModal(true)} />
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-base overflow-hidden">

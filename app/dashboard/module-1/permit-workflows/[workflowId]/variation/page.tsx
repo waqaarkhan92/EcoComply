@@ -38,7 +38,7 @@ export default function PermitVariationPage({
   });
   const [isCreating, setIsCreating] = useState(false);
 
-  const { data: variation, isLoading, isError } = useQuery<PermitVariation>({
+  const { data: variation, isLoading, isError } = useQuery({
     queryKey: ['permit-variation', workflowId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<PermitVariation>(`/module-1/permit-workflows/${workflowId}/variation`);

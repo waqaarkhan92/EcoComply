@@ -2,9 +2,14 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
+import { PageHeader } from '@/components/ui/page-header';
+import { NoEvidenceState } from '@/components/ui/empty-state';
 import { Search, Download, Link as LinkIcon, Unlink, Eye, Upload } from 'lucide-react';
 import Link from 'next/link';
 
@@ -14,8 +19,8 @@ interface EvidenceItem {
   company_id: string;
   file_name: string;
   file_type: string;
-  evidence_type?: string;
   description?: string;
+  compliance_period?: string;
   file_size_bytes: number;
   mime_type: string;
   file_url?: string;
@@ -25,6 +30,7 @@ interface EvidenceItem {
 }
 
 export default function EvidencePage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSite, setSelectedSite] = useState<string>('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -46,7 +52,7 @@ export default function EvidencePage() {
     },
   });
 
-  const evidenceItems = evidenceData?.data || [];
+  const evidenceItems: any[] = evidenceData?.data || [];
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
@@ -58,25 +64,32 @@ export default function EvidencePage() {
     return mimeType.startsWith('image/');
   };
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Evidence' },
+  ];
+
   return (
     <div className="space-y-6">
+      {/* Breadcrumbs */}
+      <Breadcrumbs items={breadcrumbItems} />
+
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-text-primary">Evidence</h1>
-          <p className="text-text-secondary mt-2">
-            Manage and link evidence to obligations
-          </p>
-        </div>
-        <Link href="/dashboard/evidence/upload">
-          <Button variant="primary" size="md" icon={<Upload className="h-4 w-4" />} iconPosition="left">
-            Upload Evidence
-          </Button>
-        </Link>
-      </div>
+      <PageHeader
+        title="Evidence"
+        description="Manage and link evidence to obligations"
+        actions={
+          <Link href="/dashboard/evidence/upload">
+            <Button variant="primary" size="sm">
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Evidence
+            </Button>
+          </Link>
+        }
+      />
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-base p-6">
+      <div className="bg-card rounded-lg shadow-base p-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <Input
@@ -108,15 +121,24 @@ export default function EvidencePage() {
 
       {/* Evidence Items */}
       {isLoading ? (
-        <div className="text-center py-12 text-text-secondary">Loading evidence...</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="bg-card rounded-lg shadow-base overflow-hidden">
+              <Skeleton className="aspect-video w-full" />
+              <div className="p-4">
+                <Skeleton className="h-5 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : evidenceItems.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-base p-12 text-center">
-          <p className="text-text-secondary mb-4">No evidence items found</p>
-          <Link href="/dashboard/evidence/upload">
-            <Button variant="primary" size="md">
-              Upload Your First Evidence
-            </Button>
-          </Link>
+        <div className="bg-card rounded-lg shadow-base overflow-hidden">
+          <NoEvidenceState onUpload={() => router.push('/dashboard/evidence/upload')} />
         </div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -130,10 +152,10 @@ export default function EvidencePage() {
       ))}
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-base overflow-hidden">
+        <div className="bg-card rounded-lg shadow-base overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-input-border bg-background-tertiary">
+              <tr className="border-b border-border bg-muted">
                 <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Preview</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Title</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Type</th>
@@ -173,7 +195,7 @@ function EvidenceCard({
   const downloadUrl = `/api/v1/evidence/${item.id}/download`;
 
   return (
-    <div className="bg-white rounded-lg shadow-base overflow-hidden hover:shadow-md transition-shadow">
+    <div className="bg-card rounded-lg shadow-base overflow-hidden hover:shadow-md transition-shadow">
       {/* Preview */}
       <div className="aspect-video bg-background-secondary flex items-center justify-center relative group">
         {isImage(item.mime_type) && item.file_url ? (
@@ -238,7 +260,7 @@ function EvidenceRow({
   const downloadUrl = `/api/v1/evidence/${item.id}/download`;
 
   return (
-    <tr className="border-b border-input-border/50 hover:bg-background-tertiary transition-colors">
+    <tr className="border-b border-border/50 hover:bg-muted/50 transition-colors">
       <td className="py-3 px-4">
         <div className="w-16 h-16 bg-background-secondary rounded flex items-center justify-center">
           {isImage(item.mime_type) && item.file_url ? (
@@ -265,7 +287,7 @@ function EvidenceRow({
       </td>
       <td className="py-3 px-4">
         <span className="text-sm text-text-secondary capitalize">
-          {item.evidence_type ? item.evidence_type.toLowerCase().replace('_', ' ') : item.file_type.toLowerCase()}
+          {item.file_type.toLowerCase()}
         </span>
       </td>
       <td className="py-3 px-4 text-sm text-text-secondary">

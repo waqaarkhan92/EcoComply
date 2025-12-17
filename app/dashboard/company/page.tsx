@@ -55,7 +55,7 @@ export default function CompanyPage() {
 
   const companyId = company?.id;
 
-  const { data: companyData, isLoading: companyLoading } = useQuery<{ data: Company }>({
+  const { data: companyData, isLoading: companyLoading } = useQuery({
     queryKey: ['company'],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Company }>(`/companies/${companyId}`);
@@ -63,7 +63,7 @@ export default function CompanyPage() {
     enabled: !!companyId && (roles?.includes('OWNER') || roles?.includes('ADMIN')),
   });
 
-  const { data: sitesData } = useQuery<{ data: Site[] }>({
+  const { data: sitesData } = useQuery({
     queryKey: ['company-sites', companyId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Site[] }>(`/companies/${companyId}/sites`);
@@ -71,7 +71,7 @@ export default function CompanyPage() {
     enabled: !!companyId && activeTab === 'sites',
   });
 
-  const { data: usersData } = useQuery<{ data: User[] }>({
+  const { data: usersData } = useQuery({
     queryKey: ['company-users', companyId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: User[] }>(`/companies/${companyId}/users`);
@@ -158,7 +158,7 @@ export default function CompanyPage() {
           <h2 className="text-xl font-semibold mb-4">Sites</h2>
           {sitesData?.data && sitesData.data.length > 0 ? (
             <div className="space-y-3">
-              {sitesData.data.map((site) => (
+              {sitesData.data.map((site: Site) => (
                 <Link
                   key={site.id}
                   href={`/dashboard/sites/${site.id}`}
@@ -182,7 +182,7 @@ export default function CompanyPage() {
           <h2 className="text-xl font-semibold mb-4">Users</h2>
           {usersData?.data && usersData.data.length > 0 ? (
             <div className="space-y-3">
-              {usersData.data.map((userItem) => (
+              {usersData.data.map((userItem: User) => (
                 <div key={userItem.id} className="p-4 border rounded-lg">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">

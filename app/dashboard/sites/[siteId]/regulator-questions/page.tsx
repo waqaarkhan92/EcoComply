@@ -31,7 +31,7 @@ export default function RegulatorQuestionsPage() {
   const siteId = params.siteId as string;
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
-  const { data: questionsData, isLoading } = useQuery<QuestionsResponse>({
+  const { data: questionsData, isLoading } = useQuery({
     queryKey: ['regulator-questions', siteId, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -44,7 +44,7 @@ export default function RegulatorQuestionsPage() {
     enabled: !!siteId,
   });
 
-  const questions = questionsData?.data || [];
+  const questions: any[] = questionsData?.data || [];
   const hasMore = questionsData?.pagination?.has_more || false;
   const nextCursor = questionsData?.pagination?.cursor;
 

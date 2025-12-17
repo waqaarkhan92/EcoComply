@@ -12,7 +12,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function POST(
-  request: NextRequest, props: { params: Promise<{ siteId: string; moduleId: string } }
+  request: NextRequest, props: { params: Promise<{ siteId: string; moduleId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -22,15 +22,15 @@ export async function POST(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { siteId, moduleId } = params;
+  const { siteId, moduleId } = params;
     const body = await request.json();
-    const { cascade, acknowledge_dependencies } = body;
+  const { cascade, acknowledge_dependencies } = body;
 
     // Get module
-    const { data: module, error: moduleError } = await supabaseAdmin
+  const { data: module, error: moduleError } = await supabaseAdmin
       .from('site_modules')
       .select('id, site_id, module_type, is_active, dependencies')
       .eq('id', moduleId)
@@ -48,7 +48,7 @@ export async function POST(
     }
 
     // Check for dependent modules
-    const { data: dependentModules } = await supabaseAdmin
+  const { data: dependentModules } = await supabaseAdmin
       .from('site_modules')
       .select('id, module_type, module_name')
       .eq('site_id', siteId)
@@ -71,7 +71,7 @@ export async function POST(
     }
 
     // Deactivate module
-    const { error: updateError } = await supabaseAdmin
+  const { error: updateError } = await supabaseAdmin
       .from('site_modules')
       .update({
         is_active: false,

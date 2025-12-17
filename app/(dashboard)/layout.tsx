@@ -9,6 +9,10 @@ import { Sidebar } from '@/components/dashboard/sidebar';
 import { Header } from '@/components/dashboard/header';
 import { MobileSidebar } from '@/components/dashboard/mobile-sidebar';
 import { MobileBottomNav } from '@/components/dashboard/mobile-bottom-nav';
+import { ErrorBoundary } from '@/components/error-boundary';
+import { CommandPalette } from '@/components/ui/enhanced/command-palette';
+import { QuickActionsFAB } from '@/components/ui/quick-actions-fab';
+import { useKeyboardShortcuts, commonShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 
 export default function DashboardLayout({
   children,
@@ -20,6 +24,19 @@ export default function DashboardLayout({
   const { isAuthenticated, user } = useAuthStore();
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Global keyboard shortcuts
+  useKeyboardShortcuts([
+    commonShortcuts.goToDashboard(() => router.push('/dashboard')),
+    commonShortcuts.goToSites(() => router.push('/dashboard/sites')),
+    commonShortcuts.goToDeadlines(() => router.push('/dashboard/deadlines')),
+    commonShortcuts.goToEvidence(() => router.push('/dashboard/evidence')),
+    commonShortcuts.goToPacks(() => router.push('/dashboard/packs/regulatory')),
+    commonShortcuts.help(() => {
+      // Could open a help modal or shortcuts guide
+      console.log('Help shortcuts: g d = Dashboard, g s = Sites, g l = Deadlines, g e = Evidence, g p = Packs, ctrl+k = Search');
+    }),
+  ]);
 
   // Check onboarding progress
   const { data: onboardingData } = useQuery({
@@ -84,26 +101,46 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-background-secondary overflow-hidden">
-      {/* Desktop Sidebar */}
-      <Sidebar />
-      
-      {/* Mobile Sidebar Drawer */}
-      <MobileSidebar
-        isOpen={mobileSidebarOpen}
-        onClose={() => setMobileSidebarOpen(false)}
-      />
+    <ErrorBoundary>
+      {/* Skip to main content link for keyboard users */}
+      <a href="#main-content" className="skip-to-main">
+        Skip to main content
+      </a>
 
-      <div className="flex-1 flex flex-col overflow-hidden md:ml-0">
-        <Header onMenuClick={() => setMobileSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto bg-background-secondary p-4 md:p-6 pb-20 md:pb-6">
-          {children}
-        </main>
+      {/* Command Palette (Cmd+K / Ctrl+K) */}
+      <CommandPalette />
+
+      <div className="flex h-screen bg-background-secondary overflow-hidden">
+        {/* Desktop Sidebar */}
+        <Sidebar />
+
+        {/* Mobile Sidebar Drawer */}
+        <MobileSidebar
+          isOpen={mobileSidebarOpen}
+          onClose={() => setMobileSidebarOpen(false)}
+        />
+
+        <div className="flex-1 flex flex-col overflow-hidden md:ml-0">
+          <Header onMenuClick={() => setMobileSidebarOpen(true)} />
+          <main
+            id="main-content"
+            className="flex-1 overflow-y-auto bg-background-secondary p-4 md:p-8 pb-20 md:pb-8"
+            role="main"
+            aria-label="Main content"
+          >
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
+          </main>
+        </div>
+
+        {/* Mobile Bottom Navigation */}
+        <MobileBottomNav />
+
+        {/* Mobile Quick Actions FAB */}
+        <QuickActionsFAB />
       </div>
-
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav />
-    </div>
+    </ErrorBoundary>
   );
 }
 

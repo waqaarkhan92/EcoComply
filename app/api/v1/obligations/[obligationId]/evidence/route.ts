@@ -13,7 +13,7 @@ import { parsePaginationParams, createCursor } from '@/lib/api/pagination';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ obligationId: string } }
+  request: NextRequest, props: { params: Promise<{ obligationId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -23,16 +23,16 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { obligationId } = params;
+  const { obligationId } = params;
 
     // Parse pagination params
-    const { limit, cursor } = parsePaginationParams(request);
+  const { limit, cursor } = parsePaginationParams(request);
 
     // Check if obligation exists and user has access (RLS will enforce)
-    const { data: obligation, error: obligationError } = await supabaseAdmin
+  const { data: obligation, error: obligationError } = await supabaseAdmin
       .from('obligations')
       .select('id')
       .eq('id', obligationId)
@@ -58,7 +58,7 @@ export async function GET(
       .order('linked_at', { ascending: false })
       .limit(limit + 1);
 
-    const { data: links, error: linksError } = await linksQuery;
+  const { data: links, error: linksError } = await linksQuery;
 
     if (linksError) {
       return errorResponse(
@@ -79,7 +79,7 @@ export async function GET(
     const evidenceIds = links.map((link: any) => link.evidence_id);
 
     // Get evidence items
-    const { data: evidenceItems, error: evidenceError } = await supabaseAdmin
+  const { data: evidenceItems, error: evidenceError } = await supabaseAdmin
       .from('evidence_items')
       .select('id, file_name, file_type, evidence_type, file_size_bytes, storage_path, created_at')
       .in('id', evidenceIds)

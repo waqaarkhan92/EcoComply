@@ -14,15 +14,15 @@ const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
       <span
         ref={ref}
         className={cn(
-          'inline-flex items-center rounded-full font-medium',
+          'inline-flex items-center rounded-full font-semibold uppercase tracking-wide',
           {
             'bg-background-tertiary text-text-primary': variant === 'default',
             'bg-success/10 text-success': variant === 'success',
             'bg-warning/10 text-warning': variant === 'warning',
             'bg-danger/10 text-danger': variant === 'danger',
             'bg-primary/10 text-primary': variant === 'info',
-            'px-2 py-0.5 text-xs': size === 'sm',
-            'px-2.5 py-1 text-sm': size === 'md',
+            'px-2.5 py-1 text-[11px]': size === 'sm',
+            'px-3 py-1.5 text-xs': size === 'md',
           },
           className
         )}

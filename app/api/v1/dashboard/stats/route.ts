@@ -37,6 +37,16 @@ export async function GET(request: NextRequest) {
 
     const siteIds = userSites?.map(us => us.site_id) || [];
 
+    // Get all sites for the company as fallback
+    const { data: companySites } = await supabaseAdmin
+      .from('sites')
+      .select('id')
+      .eq('company_id', companyId)
+      .is('deleted_at', null);
+
+    // If user has no site assignments, use all company sites
+    const finalSiteIds = siteIds.length > 0 ? siteIds : (companySites?.map(s => s.id) || []);
+
     // Parallel queries for better performance
     const [
       obligationsResult,
@@ -51,14 +61,14 @@ export async function GET(request: NextRequest) {
       supabaseAdmin
         .from('obligations')
         .select('id', { count: 'exact', head: true })
-        .in('site_id', siteIds)
+        .in('site_id', finalSiteIds)
         .is('deleted_at', null),
 
       // Overdue obligations
       supabaseAdmin
         .from('obligations')
         .select('id', { count: 'exact', head: true })
-        .in('site_id', siteIds)
+        .in('site_id', finalSiteIds)
         .eq('status', 'OVERDUE')
         .is('deleted_at', null),
 
@@ -66,7 +76,7 @@ export async function GET(request: NextRequest) {
       supabaseAdmin
         .from('deadlines')
         .select('id', { count: 'exact', head: true })
-        .in('site_id', siteIds)
+        .in('site_id', finalSiteIds)
         .gte('due_date', new Date().toISOString().split('T')[0])
         .lte('due_date', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
         .is('deleted_at', null),
@@ -75,7 +85,7 @@ export async function GET(request: NextRequest) {
       supabaseAdmin
         .from('deadlines')
         .select('id', { count: 'exact', head: true })
-        .in('site_id', siteIds)
+        .in('site_id', finalSiteIds)
         .eq('status', 'COMPLETED')
         .gte('completed_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
         .is('deleted_at', null),
@@ -84,29 +94,29 @@ export async function GET(request: NextRequest) {
       supabaseAdmin
         .from('documents')
         .select('id', { count: 'exact', head: true })
-        .in('site_id', siteIds)
+        .in('site_id', finalSiteIds)
         .is('deleted_at', null),
 
       // Total evidence
       supabaseAdmin
-        .from('evidence_items')
+        .from('evidence')
         .select('id', { count: 'exact', head: true })
-        .in('site_id', siteIds)
+        .eq('company_id', companyId)
         .is('deleted_at', null),
 
       // Total packs
       supabaseAdmin
-        .from('audit_packs')
+        .from('packs')
         .select('id', { count: 'exact', head: true })
-        .in('site_id', siteIds)
+        .eq('company_id', companyId)
         .is('deleted_at', null),
     ]);
 
     // Get recent activity (last 5 obligations)
     const { data: recentObligations } = await supabaseAdmin
       .from('obligations')
-      .select('id, title, category, created_at, site_id, sites(site_name)')
-      .in('site_id', siteIds)
+      .select('id, obligation_title, status, created_at, site_id, sites!inner(name)')
+      .in('site_id', finalSiteIds)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(5);
@@ -114,8 +124,8 @@ export async function GET(request: NextRequest) {
     // Get upcoming deadlines (next 10)
     const { data: upcomingDeadlines } = await supabaseAdmin
       .from('deadlines')
-      .select('id, due_date, obligation_id, obligations(title, category), site_id, sites(site_name)')
-      .in('site_id', siteIds)
+      .select('id, due_date, obligation_id, site_id, obligations!inner(id, obligation_title), sites!inner(id, name)')
+      .in('site_id', finalSiteIds)
       .gte('due_date', new Date().toISOString().split('T')[0])
       .is('deleted_at', null)
       .order('due_date', { ascending: true })
@@ -123,6 +133,7 @@ export async function GET(request: NextRequest) {
 
     const stats = {
       totals: {
+        sites: finalSiteIds.length,
         obligations: obligationsResult.count || 0,
         overdue: overdueResult.count || 0,
         due_soon: dueSoonResult.count || 0,
@@ -135,7 +146,7 @@ export async function GET(request: NextRequest) {
       upcoming_deadlines: upcomingDeadlines || [],
     };
 
-    return successResponse(stats);
+    return successResponse(stats, 200);
   } catch (error: any) {
     console.error('Dashboard stats error:', error);
     return errorResponse(

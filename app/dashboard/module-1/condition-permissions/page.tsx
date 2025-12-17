@@ -51,7 +51,7 @@ export default function ConditionPermissionsPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<ConditionPermissionsResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['condition-permissions', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -65,7 +65,7 @@ export default function ConditionPermissionsPage() {
     },
   });
 
-  const permissions = data?.data || [];
+  const permissions: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
   const queryClient = useQueryClient();

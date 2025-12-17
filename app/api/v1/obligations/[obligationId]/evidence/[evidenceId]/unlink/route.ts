@@ -10,7 +10,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function DELETE(
-  request: NextRequest, props: { params: Promise<{ obligationId: string; evidenceId: string } }
+  request: NextRequest, props: { params: Promise<{ obligationId: string; evidenceId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -22,10 +22,10 @@ export async function DELETE(
     }
 
     const params = await props.params;
-    const { obligationId, evidenceId } = params;
+  const { obligationId, evidenceId } = params;
 
     // Verify obligation exists
-    const { data: obligation, error: obligationError } = await supabaseAdmin
+  const { data: obligation, error: obligationError } = await supabaseAdmin
       .from('obligations')
       .select('id')
       .eq('id', obligationId)
@@ -43,7 +43,7 @@ export async function DELETE(
     }
 
     // Verify evidence link exists
-    const { data: link, error: linkError } = await supabaseAdmin
+  const { data: link, error: linkError } = await supabaseAdmin
       .from('obligation_evidence_links')
       .select('id')
       .eq('obligation_id', obligationId)
@@ -62,7 +62,7 @@ export async function DELETE(
     }
 
     // Soft unlink by setting unlinked_at
-    const { error: updateError } = await supabaseAdmin
+  const { error: updateError } = await supabaseAdmin
       .from('obligation_evidence_links')
       .update({
         unlinked_at: new Date().toISOString(),
@@ -80,7 +80,7 @@ export async function DELETE(
     }
 
     // Get site_id for compliance score update
-    const { data: obligationWithSite } = await supabaseAdmin
+  const { data: obligationWithSite } = await supabaseAdmin
       .from('obligations')
       .select('site_id')
       .eq('id', obligationId)
@@ -97,7 +97,7 @@ export async function DELETE(
       }
     }
 
-    const { user } = authResult;
+  const { user } = authResult;
     const response = successResponse(
       { message: 'Evidence unlinked successfully' },
       200,

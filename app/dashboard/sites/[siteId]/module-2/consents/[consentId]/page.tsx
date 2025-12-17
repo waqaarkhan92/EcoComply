@@ -41,7 +41,7 @@ export default function ConsentDetailPage() {
   const siteId = params.siteId as string;
   const consentId = params.consentId as string;
 
-  const { data, isLoading, error } = useQuery<ConsentResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-2-consent', consentId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<ConsentResponse>(`/module-2/consents/${consentId}`);
@@ -181,7 +181,7 @@ export default function ConsentDetailPage() {
           </div>
 
           <div className="space-y-4">
-            {consent.parameters.map((param, index) => (
+            {consent.parameters.map((param: Parameter, index: number) => (
               <div key={index} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-lg font-semibold text-text-primary">{param.parameter_name}</h3>

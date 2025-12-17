@@ -9,7 +9,7 @@ import * as React from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'onChange'> {
   checked?: boolean;
   onChange?: (checked: boolean) => void;
   label?: string;

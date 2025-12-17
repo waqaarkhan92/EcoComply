@@ -6,6 +6,7 @@
 import FormData from 'form-data';
 import fs from 'fs';
 import path from 'path';
+// @ts-ignore
 import fetch from 'node-fetch';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
@@ -31,7 +32,7 @@ async function testE2E() {
   const uploadResponse = await fetch(`${BASE_URL}/api/v1/documents`, {
     method: 'POST',
     headers: {
-      ...(AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` : {}),
+      ...(AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : {}),
       ...formData.getHeaders(),
     },
     body: formData,

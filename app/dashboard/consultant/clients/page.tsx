@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { Building2 } from 'lucide-react';
 import Link from 'next/link';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Client {
   client_company_id: string;
@@ -23,19 +24,42 @@ interface ClientsResponse {
 }
 
 export default function ConsultantClientsPage() {
-  const { data: clientsData, isLoading } = useQuery<ClientsResponse>({
+  const { data: clientsData, isLoading } = useQuery({
     queryKey: ['consultant-clients'],
     queryFn: async (): Promise<any> => {
       return apiClient.get<ClientsResponse>('/consultant/clients');
     },
   });
 
-  const clients = clientsData?.data || [];
+  const clients: Client[] = clientsData?.data || [];
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading clients...</div>
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-8 w-32 mb-2" />
+          <Skeleton className="h-5 w-56" />
+        </div>
+        <div className="grid gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-4">
+                  <Skeleton className="h-6 w-6 rounded" />
+                  <div>
+                    <Skeleton className="h-6 w-48 mb-3" />
+                    <div className="grid grid-cols-3 gap-4">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  </div>
+                </div>
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

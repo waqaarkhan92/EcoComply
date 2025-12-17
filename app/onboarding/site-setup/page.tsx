@@ -23,9 +23,9 @@ export default function SiteSetupPage() {
   const createSiteMutation = useMutation({
     mutationFn: async (siteData: any) => {
       const response = await apiClient.post('/sites', siteData);
-      return response.data;
+      return response.data as { id: string };
     },
-    onSuccess: async (data) => {
+    onSuccess: async (data: { id: string }) => {
       // Mark SITE_CREATION step as complete
       try {
         await apiClient.put('/users/me/onboarding-progress', {

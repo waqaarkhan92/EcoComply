@@ -38,7 +38,7 @@ export default function MCPDRegistrationsPage() {
   const siteId = params.siteId as string;
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
-  const { data: registrationsData, isLoading, error } = useQuery<RegistrationsResponse>({
+  const { data: registrationsData, isLoading, error } = useQuery({
     queryKey: ['module-3-registrations', siteId, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -51,7 +51,7 @@ export default function MCPDRegistrationsPage() {
     enabled: !!siteId,
   });
 
-  const registrations = registrationsData?.data || [];
+  const registrations: any[] = registrationsData?.data || [];
   const hasMore = registrationsData?.pagination?.has_more || false;
   const nextCursor = registrationsData?.pagination?.cursor;
 
@@ -149,7 +149,7 @@ export default function MCPDRegistrationsPage() {
                     <div className="mt-4">
                       <p className="text-sm text-text-tertiary mb-2">Generators:</p>
                       <div className="flex flex-wrap gap-2">
-                        {registration.generators.map((gen) => (
+                        {registration.generators.map((gen: { id: string; generator_identifier: string; generator_type: string }) => (
                           <span
                             key={gen.id}
                             className="px-2 py-1 bg-gray-100 rounded text-xs text-text-secondary"

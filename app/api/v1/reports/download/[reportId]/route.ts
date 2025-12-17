@@ -11,7 +11,7 @@ import { errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, getRequestId } from '@/lib/api/middleware';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ reportId: string } }
+  request: NextRequest, props: { params: Promise<{ reportId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -21,13 +21,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { reportId } = params;
+  const { reportId } = params;
 
     // Get report - RLS will enforce access control
-    const { data: report, error } = await supabaseAdmin
+  const { data: report, error } = await supabaseAdmin
       .from('reports')
       .select('id, report_type, status, file_path, format, company_id')
       .eq('id', reportId)
@@ -85,7 +85,7 @@ export async function GET(
     }
 
     // Download file from Supabase Storage
-    const { data: fileData, error: downloadError } = await supabaseAdmin.storage
+  const { data: fileData, error: downloadError } = await supabaseAdmin.storage
       .from('reports')
       .download(report.file_path);
 

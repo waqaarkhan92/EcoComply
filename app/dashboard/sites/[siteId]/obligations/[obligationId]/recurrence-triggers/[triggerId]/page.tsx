@@ -41,7 +41,7 @@ export default function RecurrenceTriggerDetailPage() {
   const triggerId = params.triggerId as string;
   const [activeTab, setActiveTab] = useState<'details' | 'execution-history' | 'schedule-preview'>('details');
 
-  const { data: trigger, isLoading } = useQuery<RecurrenceTrigger>({
+  const { data: trigger, isLoading } = useQuery({
     queryKey: ['recurrence-trigger', triggerId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<RecurrenceTrigger>(`/recurrence-trigger-rules/${triggerId}`);
@@ -50,7 +50,7 @@ export default function RecurrenceTriggerDetailPage() {
     enabled: !!triggerId,
   });
 
-  const { data: executionsData } = useQuery<TriggerExecutionsResponse>({
+  const { data: executionsData } = useQuery({
     queryKey: ['recurrence-trigger-executions', triggerId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<TriggerExecutionsResponse>(`/recurrence-trigger-rules/${triggerId}/executions`);
@@ -79,7 +79,7 @@ export default function RecurrenceTriggerDetailPage() {
     );
   }
 
-  const executions = executionsData?.data || [];
+  const executions: any[] = executionsData?.data || [];
 
   return (
     <div className="space-y-6">

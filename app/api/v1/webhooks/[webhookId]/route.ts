@@ -12,7 +12,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ webhookId: string } }
+  request: NextRequest, props: { params: Promise<{ webhookId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -22,13 +22,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { webhookId } = params;
+  const { webhookId } = params;
 
     // Get webhook - RLS will filter by company
-    const { data: webhook, error } = await supabaseAdmin
+  const { data: webhook, error } = await supabaseAdmin
       .from('webhooks')
       .select('id, url, events, is_active, last_delivery_at, last_delivery_status, created_at, updated_at')
       .eq('id', webhookId)
@@ -69,7 +69,7 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ webhookId: string } }
+  request: NextRequest, props: { params: Promise<{ webhookId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -79,16 +79,16 @@ export async function PUT(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { webhookId } = params;
+  const { webhookId } = params;
 
     // Parse request body
     const body = await request.json();
 
     // Check if webhook exists and user has access
-    const { data: existingWebhook, error: checkError } = await supabaseAdmin
+  const { data: existingWebhook, error: checkError } = await supabaseAdmin
       .from('webhooks')
       .select('id, company_id')
       .eq('id', webhookId)
@@ -173,7 +173,7 @@ export async function PUT(
     // Update webhook
     updates.updated_at = new Date().toISOString();
 
-    const { data: updatedWebhook, error: updateError } = await supabaseAdmin
+  const { data: updatedWebhook, error: updateError } = await supabaseAdmin
       .from('webhooks')
       .update(updates)
       .eq('id', webhookId)
@@ -205,7 +205,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest, props: { params: Promise<{ webhookId: string } }
+  request: NextRequest, props: { params: Promise<{ webhookId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -215,13 +215,13 @@ export async function DELETE(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { webhookId } = params;
+  const { webhookId } = params;
 
     // Check if webhook exists and user has access
-    const { data: existingWebhook, error: checkError } = await supabaseAdmin
+  const { data: existingWebhook, error: checkError } = await supabaseAdmin
       .from('webhooks')
       .select('id, company_id')
       .eq('id', webhookId)
@@ -239,7 +239,7 @@ export async function DELETE(
     }
 
     // Delete webhook
-    const { error: deleteError } = await supabaseAdmin
+  const { error: deleteError } = await supabaseAdmin
       .from('webhooks')
       .delete()
       .eq('id', webhookId);

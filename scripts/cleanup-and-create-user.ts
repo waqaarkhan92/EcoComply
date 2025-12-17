@@ -24,7 +24,7 @@ async function main() {
   console.log('1. Checking database...');
   const { data: dbUser } = await supabaseAdmin
     .from('users')
-    .select('id, email')
+    .select('id, email, company_id')
     .eq('email', TEST_EMAIL)
     .maybeSingle();
 

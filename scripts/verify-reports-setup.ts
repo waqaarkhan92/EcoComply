@@ -6,11 +6,10 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { env } from '../lib/env';
 
 const supabase = createClient(
-  env.NEXT_PUBLIC_SUPABASE_URL!,
-  env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 async function verifyReportsSetup() {
@@ -64,8 +63,8 @@ async function verifyReportsSetup() {
   // 3. Check RLS policies on reports table
   console.log('\n3. Checking RLS policies...');
   try {
-    const { data, error } = await supabase
-      .rpc('check_rls_enabled', { table_name: 'reports' })
+    const { data, error } = await Promise.resolve(supabase
+      .rpc('check_rls_enabled', { table_name: 'reports' }))
       .catch(() => ({ data: null, error: null }));
 
     // Simple check: try to query with service role (should work)

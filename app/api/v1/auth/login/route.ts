@@ -9,60 +9,21 @@ import { NextRequest } from 'next/server';
 import { supabaseAdmin, supabase } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { getRequestId } from '@/lib/api/middleware';
-
-interface LoginRequest {
-  email: string;
-  password: string;
-}
+import { validateRequestBody } from '@/lib/validation/middleware';
+import { loginSchema } from '@/lib/validation/schemas';
 
 export async function POST(request: NextRequest) {
   const requestId = getRequestId(request);
 
   try {
-    // Parse request body - handle potential JSON parsing errors
-    let body: LoginRequest;
-    try {
-      body = await request.json();
-    } catch (jsonError: any) {
-      return errorResponse(
-        ErrorCodes.VALIDATION_ERROR,
-        'Invalid JSON in request body',
-        422,
-        { error: jsonError.message || 'Request body must be valid JSON' },
-        { request_id: requestId }
-      );
+    // Validate request body with Zod
+    const validation = await validateRequestBody(request, loginSchema);
+    if ('error' in validation) {
+      return validation.error;
     }
-
-    // Validate required fields
-    if (!body.email || !body.password) {
-      return errorResponse(
-        ErrorCodes.VALIDATION_ERROR,
-        'Missing required fields: email, password',
-        422,
-        {
-          missing_fields: [
-            !body.email && 'email',
-            !body.password && 'password',
-          ].filter(Boolean),
-        },
-        { request_id: requestId }
-      );
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(body.email)) {
-      return errorResponse(
-        ErrorCodes.VALIDATION_ERROR,
-        'Invalid email format',
-        422,
-        { email: 'Must be a valid email address' },
-        { request_id: requestId }
-      );
-    }
+    const body = validation.data;
 
     // Authenticate with Supabase Auth - use regular client (not service role)
-    // Service role bypasses normal auth flows and can cause errors
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: body.email.toLowerCase(),
       password: body.password,
@@ -70,7 +31,6 @@ export async function POST(request: NextRequest) {
 
     if (authError || !authData.session || !authData.user) {
       // Check if error is due to unverified email
-      // Skip email verification check in test/development environment
       const isTestEnv = process.env.NODE_ENV === 'test' || 
                         process.env.NODE_ENV === 'development' || 
                         process.env.DISABLE_EMAIL_VERIFICATION === 'true';
@@ -128,7 +88,7 @@ export async function POST(request: NextRequest) {
       .select('role')
       .eq('user_id', user.id);
 
-    // Update last_login_at (trigger will handle this, but we can also update directly)
+    // Update last_login_at
     await supabaseAdmin
       .from('users')
       .update({ last_login_at: new Date().toISOString() })
@@ -139,7 +99,7 @@ export async function POST(request: NextRequest) {
       {
         access_token: authData.session.access_token,
         refresh_token: authData.session.refresh_token,
-        expires_in: authData.session.expires_in || 86400, // 24 hours in seconds
+        expires_in: authData.session.expires_in || 86400,
         user: {
           id: user.id,
           email: user.email,
@@ -163,4 +123,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

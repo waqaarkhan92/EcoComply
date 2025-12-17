@@ -10,7 +10,7 @@ import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ evidenceId: string } }
+  request: NextRequest, props: { params: Promise<{ evidenceId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,13 +20,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { evidenceId } = params;
+  const { evidenceId } = params;
 
     // Get evidence - RLS will enforce access control
-    const { data: evidence, error } = await supabaseAdmin
+  const { data: evidence, error } = await supabaseAdmin
       .from('evidence_items')
       .select('*')
       .eq('id', evidenceId)
@@ -54,14 +54,14 @@ export async function GET(
     }
 
     // Get linked obligations
-    const { data: links } = await supabaseAdmin
+  const { data: links } = await supabaseAdmin
       .from('obligation_evidence_links')
       .select('obligation_id, linked_at, compliance_period, notes')
       .eq('evidence_id', evidenceId)
       .is('unlinked_at', null);
 
     // Get file URL
-    const { data: urlData } = supabaseAdmin.storage
+  const { data: urlData } = supabaseAdmin.storage
       .from('evidence')
       .getPublicUrl(evidence.storage_path);
 

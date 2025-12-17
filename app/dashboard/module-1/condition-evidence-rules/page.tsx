@@ -43,7 +43,7 @@ export default function ConditionEvidenceRulesPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<ConditionEvidenceRulesResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['condition-evidence-rules', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -57,7 +57,7 @@ export default function ConditionEvidenceRulesPage() {
     },
   });
 
-  const rules = data?.data || [];
+  const rules: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 
@@ -67,7 +67,7 @@ export default function ConditionEvidenceRulesPage() {
     return (
       rule.documents.document_name.toLowerCase().includes(query) ||
       rule.condition_reference.toLowerCase().includes(query) ||
-      rule.allowed_evidence_types.some(type => type.toLowerCase().includes(query))
+      rule.allowed_evidence_types.some((type: string) => type.toLowerCase().includes(query))
     );
   });
 
@@ -197,7 +197,7 @@ export default function ConditionEvidenceRulesPage() {
                       <td className="py-4 px-6">
                         <div className="flex flex-wrap gap-1">
                           {rule.allowed_evidence_types.length > 0 ? (
-                            rule.allowed_evidence_types.map((type, i) => (
+                            rule.allowed_evidence_types.map((type: string, i: number) => (
                               <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700">
                                 {type}
                               </span>
@@ -210,7 +210,7 @@ export default function ConditionEvidenceRulesPage() {
                       <td className="py-4 px-6">
                         <div className="flex flex-wrap gap-1">
                           {rule.required_evidence_types.length > 0 ? (
-                            rule.required_evidence_types.map((type, i) => (
+                            rule.required_evidence_types.map((type: string, i: number) => (
                               <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-orange-50 text-orange-700">
                                 {type}
                               </span>

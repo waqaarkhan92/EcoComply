@@ -44,7 +44,7 @@ export default function EditEnforcementNoticePage({
     deadline_date: '',
   });
 
-  const { data: notice, isLoading } = useQuery<EnforcementNotice>({
+  const { data: notice, isLoading } = useQuery({
     queryKey: ['enforcement-notice', noticeId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<EnforcementNotice>(`/module-1/enforcement-notices/${noticeId}`);

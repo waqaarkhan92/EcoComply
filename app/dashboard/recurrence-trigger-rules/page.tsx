@@ -42,7 +42,7 @@ export default function RecurrenceTriggerRulesPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<RecurrenceTriggerRulesResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['recurrence-trigger-rules', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -56,7 +56,7 @@ export default function RecurrenceTriggerRulesPage() {
     },
   });
 
-  const rules = data?.data || [];
+  const rules: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

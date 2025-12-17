@@ -10,7 +10,7 @@ import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ userId: string } }
+  request: NextRequest, props: { params: Promise<{ userId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,9 +20,10 @@ export async function PUT(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user: currentUser } = authResult;
+  const { user: currentUser } = authResult;
 
-    const { userId } = params;
+    const params = await props.params;
+  const { userId } = params;
 
     // Users can change their own password, or Admins can change any user's password in their company
     if (userId !== currentUser.id && !currentUser.roles.includes('OWNER') && !currentUser.roles.includes('ADMIN')) {
@@ -64,7 +65,7 @@ export async function PUT(
     }
 
     // Check if user exists
-    const { data: user, error: userError } = await supabaseAdmin
+  const { data: user, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, email, company_id')
       .eq('id', userId)
@@ -112,7 +113,7 @@ export async function PUT(
     }
 
     // Update password using Supabase Admin API
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+  const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       userId,
       { password: body.new_password }
     );

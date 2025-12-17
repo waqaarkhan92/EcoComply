@@ -1,5 +1,25 @@
 @import "tailwindcss";
 
+/* Smooth scrolling for the entire page */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @theme {
   /* Primary Brand + Authority - EcoComply Deep Forest Green */
   --color-primary: #104B3A;
@@ -163,5 +183,81 @@ h6 {
 
 .animate-slide-in-right {
   animation: slide-in-right 0.3s ease-out;
+}
+
+/* ============================================ */
+/* Global Focus Indicators (Accessibility)      */
+/* ============================================ */
+
+/* Enhanced focus ring for all interactive elements */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(16, 75, 58, 0.4), 0 0 0 1px var(--color-primary);
+  border-radius: 0.375rem;
+}
+
+/* Focus indicator for buttons and links */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(16, 75, 58, 0.4), 0 0 0 1px var(--color-primary);
+}
+
+/* Focus indicator for inputs and selects */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(16, 75, 58, 0.2);
+}
+
+/* Focus indicator on dark backgrounds */
+.bg-charcoal :focus-visible,
+.bg-charcoal:focus-visible {
+  box-shadow: 0 0 0 3px rgba(148, 180, 159, 0.5), 0 0 0 1px var(--color-primary-light);
+}
+
+/* Skip to main content link for keyboard users */
+.skip-to-main {
+  position: absolute;
+  top: -9999px;
+  left: 0;
+  z-index: 9999;
+  padding: 1rem;
+  background: var(--color-primary);
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.skip-to-main:focus {
+  top: 0;
+}
+
+/* Screen reader only text */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 

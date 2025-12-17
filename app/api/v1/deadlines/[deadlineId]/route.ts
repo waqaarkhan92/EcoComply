@@ -10,7 +10,7 @@ import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ deadlineId: string } }
+  request: NextRequest, props: { params: Promise<{ deadlineId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,13 +20,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { deadlineId } = params;
+  const { deadlineId } = params;
 
     // Get deadline - RLS will enforce access control
-    const { data: deadline, error } = await supabaseAdmin
+  const { data: deadline, error } = await supabaseAdmin
       .from('deadlines')
       .select('*')
       .eq('id', deadlineId)

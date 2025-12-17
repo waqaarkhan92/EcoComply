@@ -126,7 +126,6 @@ async function testExtraction() {
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     const jobState = await job.getState();
-    const jobData = await job.get();
 
     if (jobState === 'completed') {
       console.log('✅ Job completed!\n');
@@ -174,7 +173,7 @@ async function testExtraction() {
       console.log('\n✅ TEST PASSED');
       process.exit(0);
     } else if (jobState === 'failed') {
-      const failedReason = jobData?.failedReason || 'Unknown error';
+      const failedReason = job.failedReason || 'Unknown error';
       console.error(`❌ Job failed: ${failedReason}`);
       await worker.close();
       process.exit(1);

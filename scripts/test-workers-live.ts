@@ -20,6 +20,7 @@ async function testWorkersLive() {
 
   try {
     // Import modules after dotenv loads
+    // @ts-ignore - test-data module may not exist
     const { createTestData } = await import('../tests/helpers/test-data');
     const { startAllWorkers, stopAllWorkers } = await import('../lib/workers/worker-manager');
     const { getQueue, QUEUE_NAMES } = await import('../lib/queue/queue-manager');

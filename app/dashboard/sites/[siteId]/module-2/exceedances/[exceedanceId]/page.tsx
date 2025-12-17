@@ -45,14 +45,14 @@ export default function ExceedanceDetailPage() {
   const [correctiveAction, setCorrectiveAction] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
-  const { data, isLoading, error } = useQuery<ExceedanceResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-2-exceedance', exceedanceId],
-    queryFn: async (): Promise<any> => {
+    queryFn: async () => {
       // Note: We'll need to fetch from the list endpoint and filter, or create a detail endpoint
       // For now, we'll use the list endpoint with a filter
-      const response = await apiClient.get<{ data: Exceedance[] }>(`/module-2/exceedances?filter[id]=${exceedanceId}`);
+      const response = await apiClient.get(`/module-2/exceedances?filter[id]=${exceedanceId}`) as { data: Exceedance[] };
       if (response.data && response.data.length > 0) {
-        return { data: response.data[0] };
+        return { data: response.data[0] } as ExceedanceResponse;
       }
       throw new Error('Exceedance not found');
     },

@@ -39,19 +39,19 @@ export function ConsentStateMachine({ consentId, siteId }: ConsentStateMachinePr
   const [transitionNotes, setTransitionNotes] = useState('');
 
   // Fetch current state
-  const { data: stateData, isLoading } = useQuery<{ data: ConsentState }>({
+  const { data: stateData, isLoading } = useQuery({
     queryKey: ['consent-state', consentId],
     queryFn: async () => {
-      return apiClient.get('/module-2/consent-states/' + consentId);
+      return apiClient.get<ConsentState>('/module-2/consent-states/' + consentId);
     },
   });
 
   // Fetch available transitions
-  const { data: transitionsData } = useQuery<{ data: StateTransition[] }>({
+  const { data: transitionsData } = useQuery({
     queryKey: ['consent-transitions', stateData?.data?.current_state],
     queryFn: async () => {
-      if (!stateData?.data?.current_state) return { data: [] };
-      return apiClient.get('/module-2/consent-states/transitions?from_state=' + stateData.data.current_state);
+      if (!stateData?.data?.current_state) return { data: [] as StateTransition[] };
+      return apiClient.get<StateTransition[]>('/module-2/consent-states/transitions?from_state=' + stateData.data.current_state);
     },
     enabled: !!stateData?.data?.current_state,
   });
@@ -71,8 +71,8 @@ export function ConsentStateMachine({ consentId, siteId }: ConsentStateMachinePr
     },
   });
 
-  const state = stateData?.data;
-  const transitions = transitionsData?.data || [];
+  const state: ConsentState | undefined = stateData?.data;
+  const transitions: StateTransition[] = transitionsData?.data ?? [];
 
   if (isLoading) {
     return (

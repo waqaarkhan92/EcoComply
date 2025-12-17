@@ -35,7 +35,7 @@ export default function GenerateAERPage() {
   });
 
   // Fetch MCPD registrations for this site
-  const { data: registrationsData } = useQuery<RegistrationsResponse>({
+  const { data: registrationsData } = useQuery({
     queryKey: ['module-3-registrations', siteId],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -47,7 +47,7 @@ export default function GenerateAERPage() {
     enabled: !!siteId,
   });
 
-  const registrations = registrationsData?.data || [];
+  const registrations: any[] = registrationsData?.data || [];
   const selectedRegistration = registrations.find((r) => r.id === formData.document_id);
   const availableGenerators = selectedRegistration?.generators || [];
 
@@ -89,7 +89,7 @@ export default function GenerateAERPage() {
     } else {
       setFormData((prev) => ({
         ...prev,
-        generator_ids: availableGenerators.map((g) => g.id),
+        generator_ids: availableGenerators.map((g: { id: string; generator_identifier: string }) => g.id),
       }));
     }
   };
@@ -173,7 +173,7 @@ export default function GenerateAERPage() {
               Select which generators to include in the AER. If none selected, all generators will be included.
             </p>
             <div className="border border-border rounded-md p-4 space-y-2 max-h-64 overflow-y-auto">
-              {availableGenerators.map((generator) => (
+              {availableGenerators.map((generator: { id: string; generator_identifier: string }) => (
                 <label
                   key={generator.id}
                   className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"

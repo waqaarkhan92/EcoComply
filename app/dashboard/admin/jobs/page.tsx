@@ -39,7 +39,7 @@ export default function BackgroundJobsAdminPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [jobTypeFilter, setJobTypeFilter] = useState<string>('all');
 
-  const { data: metricsData } = useQuery<{ data: JobMetrics }>({
+  const { data: metricsData } = useQuery({
     queryKey: ['jobs-metrics'],
     queryFn: async (): Promise<any> => {
       try {
@@ -83,7 +83,7 @@ export default function BackgroundJobsAdminPage() {
   }
 
   const metrics = metricsData?.data;
-  const jobs = jobsData?.data || [];
+  const jobs: any[] = jobsData?.data || [];
 
   return (
     <div className="space-y-6">

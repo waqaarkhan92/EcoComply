@@ -31,7 +31,7 @@ export default function EscalationWorkflowsPage() {
   const router = useRouter();
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
-  const { data: workflowsData, isLoading, error } = useQuery<EscalationWorkflowsResponse>({
+  const { data: workflowsData, isLoading, error } = useQuery({
     queryKey: ['escalation-workflows', cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -42,7 +42,7 @@ export default function EscalationWorkflowsPage() {
     },
   });
 
-  const workflows = workflowsData?.data || [];
+  const workflows: any[] = workflowsData?.data || [];
   const hasMore = workflowsData?.pagination?.has_more || false;
   const nextCursor = workflowsData?.pagination?.cursor;
 

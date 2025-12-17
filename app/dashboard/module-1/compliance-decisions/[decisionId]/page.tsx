@@ -44,7 +44,7 @@ export default function ComplianceDecisionDetailPage({
 }) {
   const { decisionId } = use(params);
 
-  const { data: decision, isLoading } = useQuery<ComplianceDecision>({
+  const { data: decision, isLoading } = useQuery({
     queryKey: ['compliance-decision', decisionId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<ComplianceDecision>(`/module-1/compliance-decisions/${decisionId}`);
@@ -177,7 +177,7 @@ export default function ComplianceDecisionDetailPage({
             <div className="md:col-span-2">
               <p className="text-sm font-medium text-text-secondary mb-2">Evidence References</p>
               <div className="space-y-2">
-                {decision.evidence_references.map((ref, index) => (
+                {decision.evidence_references.map((ref: string, index: number) => (
                   <div key={index} className="flex items-center gap-2 text-sm">
                     <FileText className="w-4 h-4 text-gray-400" />
                     <span className="text-text-primary">{ref}</span>

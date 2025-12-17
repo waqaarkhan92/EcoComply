@@ -67,7 +67,7 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ streamId: string } }
+  request: NextRequest, props: { params: Promise<{ streamId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -85,7 +85,7 @@ export async function PUT(
       return moduleCheck;
     }
 
-    const { streamId } = await params;
+    const { streamId } = await props.params;
 
     // Parse request body
     const body = await request.json();
@@ -165,7 +165,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest, props: { params: Promise<{ streamId: string } }
+  request: NextRequest, props: { params: Promise<{ streamId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -183,7 +183,7 @@ export async function DELETE(
       return moduleCheck;
     }
 
-    const { streamId } = await params;
+    const { streamId } = await props.params;
 
     // Get existing waste stream to verify access
     const { data: existing, error: fetchError } = await supabaseAdmin

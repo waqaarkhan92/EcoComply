@@ -11,20 +11,20 @@ import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ clockId: string } }
+  request: NextRequest, props: { params: Promise<{ clockId: string }> }
 ) {
   const requestId = getRequestId(request);
 
   try {
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) return authResult;
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { clockId } = params;
+  const { clockId } = params;
 
     // Get compliance clock - RLS will enforce access control
-    const { data: clock, error } = await supabaseAdmin
+  const { data: clock, error } = await supabaseAdmin
       .from('compliance_clocks_universal')
       .select('*')
       .eq('id', clockId)
@@ -55,7 +55,7 @@ export async function GET(
 }
 
 export async function PATCH(
-  request: NextRequest, props: { params: Promise<{ clockId: string } }
+  request: NextRequest, props: { params: Promise<{ clockId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -73,7 +73,8 @@ export async function PATCH(
       );
     }
 
-    const { clockId } = params;
+    const params = await props.params;
+  const { clockId } = params;
     const body = await request.json();
 
     // Update compliance clock (system updates only)
@@ -83,7 +84,7 @@ export async function PATCH(
     if (body.status !== undefined) updateData.status = body.status;
     if (body.criticality !== undefined) updateData.criticality = body.criticality;
 
-    const { data: clock, error: updateError } = await supabaseAdmin
+  const { data: clock, error: updateError } = await supabaseAdmin
       .from('compliance_clocks_universal')
       .update(updateData)
       .eq('id', clockId)

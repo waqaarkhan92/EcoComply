@@ -41,7 +41,7 @@ export default function DischargeVolumesPage() {
     date_to: '',
   });
 
-  const { data, isLoading, error } = useQuery<DischargeVolumesResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-2-discharge-volumes', siteId, filters, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -58,7 +58,7 @@ export default function DischargeVolumesPage() {
     enabled: !!siteId,
   });
 
-  const volumes = data?.data || [];
+  const volumes: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

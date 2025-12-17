@@ -45,7 +45,7 @@ export default function ConsignmentNotesPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<ConsignmentNotesResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-4-consignment-notes', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -59,7 +59,7 @@ export default function ConsignmentNotesPage() {
     },
   });
 
-  const consignmentNotes = data?.data || [];
+  const consignmentNotes: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

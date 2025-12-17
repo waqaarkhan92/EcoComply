@@ -10,7 +10,7 @@ import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ packId: string } }
+  request: NextRequest, props: { params: Promise<{ packId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,13 +20,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { packId } = params;
+  const { packId } = params;
 
     // Verify pack exists
-    const { data: pack, error: packError } = await supabaseAdmin
+  const { data: pack, error: packError } = await supabaseAdmin
       .from('audit_packs')
       .select('id, storage_path, status')
       .eq('id', packId)
@@ -53,7 +53,7 @@ export async function GET(
     }
 
     // Get active shared link distribution
-    const { data: distribution, error: distError } = await supabaseAdmin
+  const { data: distribution, error: distError } = await supabaseAdmin
       .from('pack_distributions')
       .select('id, shared_link_token, distributed_at, expires_at, view_count')
       .eq('pack_id', packId)

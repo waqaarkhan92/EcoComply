@@ -12,7 +12,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function POST(
-  request: NextRequest, props: { params: Promise<{ evidenceId: string } }
+  request: NextRequest, props: { params: Promise<{ evidenceId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -22,12 +22,12 @@ export async function POST(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { evidenceId } = params;
+  const { evidenceId } = params;
     const body = await request.json();
-    const { obligation_id } = body;
+  const { obligation_id } = body;
 
     if (!obligation_id) {
       return errorResponse(
@@ -40,7 +40,7 @@ export async function POST(
     }
 
     // Verify evidence exists and user has access
-    const { data: evidence, error: evidenceError } = await supabaseAdmin
+  const { data: evidence, error: evidenceError } = await supabaseAdmin
       .from('evidence_items')
       .select('id, site_id, company_id, enforcement_status')
       .eq('id', evidenceId)
@@ -58,7 +58,7 @@ export async function POST(
     }
 
     // Verify obligation exists and user has access
-    const { data: obligation, error: obligationError } = await supabaseAdmin
+  const { data: obligation, error: obligationError } = await supabaseAdmin
       .from('obligations')
       .select('id, site_id, company_id, document_id')
       .eq('id', obligation_id)
@@ -77,7 +77,7 @@ export async function POST(
 
     // Validate site matching based on obligations_shared setting
     // Check if the obligation's document has multi-site assignments
-    const { data: documentAssignments, error: assignmentsError } = await supabaseAdmin
+  const { data: documentAssignments, error: assignmentsError } = await supabaseAdmin
       .from('document_site_assignments')
       .select('site_id, obligations_shared, is_primary')
       .eq('document_id', obligation.document_id)
@@ -175,8 +175,8 @@ export async function POST(
     }
 
     // Check if link already exists
-    const { data: existingLink } = await supabaseAdmin
-      .from('evidence_obligation_links')
+  const { data: existingLink } = await supabaseAdmin
+      .from('obligation_evidence_links')
       .select('id')
       .eq('evidence_id', evidenceId)
       .eq('obligation_id', obligation_id)
@@ -193,8 +193,8 @@ export async function POST(
     }
 
     // Create link
-    const { data: link, error: linkError } = await supabaseAdmin
-      .from('evidence_obligation_links')
+  const { data: link, error: linkError } = await supabaseAdmin
+      .from('obligation_evidence_links')
       .insert({
         evidence_id: evidenceId,
         obligation_id: obligation_id,
@@ -215,7 +215,7 @@ export async function POST(
     }
 
     // Update evidence enforcement status to LINKED
-    const { error: updateError } = await supabaseAdmin
+  const { error: updateError } = await supabaseAdmin
       .from('evidence_items')
       .update({
         enforcement_status: 'LINKED',

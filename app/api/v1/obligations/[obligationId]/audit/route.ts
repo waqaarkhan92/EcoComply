@@ -10,7 +10,7 @@ import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ obligationId: string } }
+  request: NextRequest, props: { params: Promise<{ obligationId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,10 +20,10 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { obligationId } = params;
+  const { obligationId } = params;
 
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -38,7 +38,7 @@ export async function GET(
     }
 
     // Verify obligation exists and user has access (RLS will enforce)
-    const { data: obligation, error: obligationError } = await supabaseAdmin
+  const { data: obligation, error: obligationError } = await supabaseAdmin
       .from('obligations')
       .select('id, company_id, created_at, updated_at')
       .eq('id', obligationId)
@@ -56,7 +56,7 @@ export async function GET(
     }
 
     // Get all audit logs related to this obligation
-    const { data: auditLogs, error: logsError } = await supabaseAdmin
+  const { data: auditLogs, error: logsError } = await supabaseAdmin
       .from('audit_logs')
       .select(`
         id,
@@ -88,7 +88,7 @@ export async function GET(
     }
 
     // Also check for related entity audit logs (deadlines, evidence links, etc.)
-    const { data: relatedLogs, error: relatedError } = await supabaseAdmin
+  const { data: relatedLogs, error: relatedError } = await supabaseAdmin
       .from('audit_logs')
       .select('*')
       .eq('company_id', obligation.company_id)
@@ -102,7 +102,7 @@ export async function GET(
     // Get user details
     const allLogs = [...(auditLogs || []), ...(relatedLogs || [])];
     const userIds = [...new Set(allLogs.map((log: any) => log.user_id).filter(Boolean))];
-    const { data: users } = userIds.length > 0
+  const { data: users } = userIds.length > 0
       ? await supabaseAdmin
           .from('users')
           .select('id, email, full_name')

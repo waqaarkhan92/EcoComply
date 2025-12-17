@@ -11,7 +11,7 @@ import { parseFilterParams, parseSortParams } from '@/lib/api/pagination';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ companyId: string } }
+  request: NextRequest, props: { params: Promise<{ companyId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -21,10 +21,10 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { companyId } = params;
+  const { companyId } = params;
 
     // Verify user has access to this company (RLS will enforce, but we check explicitly too)
     if (user.company_id !== companyId) {
@@ -100,7 +100,7 @@ export async function GET(
       query = query.order('activated_at', { ascending: false });
     }
 
-    const { data: activations, error } = await query;
+  const { data: activations, error } = await query;
 
     if (error) {
       return errorResponse(

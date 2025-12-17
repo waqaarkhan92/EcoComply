@@ -38,14 +38,14 @@ export default function JobDetailPage({
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'details' | 'logs' | 'timeline' | 'retry-history'>('details');
 
-  const { data: jobData, isLoading } = useQuery<{ data: Job }>({
+  const { data: jobData, isLoading } = useQuery({
     queryKey: ['background-job', jobId],
     queryFn: async (): Promise<any> => {
       return apiClient.get(`/admin/background-jobs/${jobId}`);
     },
   });
 
-  const { data: timelineData } = useQuery<{ data: JobTimelineEvent[] }>({
+  const { data: timelineData } = useQuery({
     queryKey: ['background-job-timeline', jobId],
     queryFn: async (): Promise<any> => {
       try {
@@ -74,7 +74,7 @@ export default function JobDetailPage({
   }
 
   const job = jobData.data;
-  const timeline = timelineData?.data || [];
+  const timeline: Array<{ event: string; timestamp: string; details?: string }> = timelineData?.data || [];
 
   return (
     <div className="space-y-6">

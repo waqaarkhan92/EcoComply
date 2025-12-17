@@ -42,10 +42,22 @@ export async function GET(request: NextRequest) {
     const filters = parseFilterParams(request);
     const sort = parseSortParams(request);
 
-    // Build query - RLS will automatically filter by user's site access
+    // Build query with obligation count - using left join and count aggregation to avoid N+1
     let query = supabaseAdmin
       .from('documents')
-      .select('id, site_id, document_type, title, reference_number, status, extraction_status, file_size_bytes, created_at, updated_at')
+      .select(`
+        id,
+        site_id,
+        document_type,
+        title,
+        reference_number,
+        status,
+        extraction_status,
+        file_size_bytes,
+        created_at,
+        updated_at,
+        obligation_count:obligations(count)
+      `)
       .is('deleted_at', null); // Only non-deleted documents
 
     // Apply filters
@@ -89,23 +101,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get obligation counts for each document
-    const documentIds = (documents || []).map((d: any) => d.id);
-    const { data: obligationCounts } = await supabaseAdmin
-      .from('obligations')
-      .select('document_id')
-      .in('document_id', documentIds);
-
-    // Count obligations per document
-    const countsMap: Record<string, number> = {};
-    obligationCounts?.forEach((o: any) => {
-      countsMap[o.document_id] = (countsMap[o.document_id] || 0) + 1;
-    });
-
-    // Add obligation_count to each document
+    // Transform obligation_count from array to number
     const documentsWithCounts = (documents || []).map((doc: any) => ({
       ...doc,
-      obligation_count: countsMap[doc.id] || 0,
+      obligation_count: doc.obligation_count?.[0]?.count || 0,
     }));
 
     // Check if there are more results

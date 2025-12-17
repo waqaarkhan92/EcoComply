@@ -43,7 +43,7 @@ export default function AERPage() {
   const siteId = params.siteId as string;
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
-  const { data: aerData, isLoading, error } = useQuery<AERResponse>({
+  const { data: aerData, isLoading, error } = useQuery({
     queryKey: ['module-3-aer', siteId, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -56,7 +56,7 @@ export default function AERPage() {
     enabled: !!siteId,
   });
 
-  const aerDocuments = aerData?.data || [];
+  const aerDocuments: any[] = aerData?.data || [];
   const hasMore = aerData?.pagination?.has_more || false;
   const nextCursor = aerData?.pagination?.cursor;
 

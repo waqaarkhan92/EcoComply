@@ -34,7 +34,7 @@ export default function PermitWorkflowsPage() {
   const documentId = params.documentId as string;
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
-  const { data: workflowsData, isLoading, error } = useQuery<PermitWorkflowsResponse>({
+  const { data: workflowsData, isLoading, error } = useQuery({
     queryKey: ['permit-workflows', documentId, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -47,7 +47,7 @@ export default function PermitWorkflowsPage() {
     enabled: !!documentId,
   });
 
-  const workflows = workflowsData?.data || [];
+  const workflows: any[] = workflowsData?.data || [];
   const hasMore = workflowsData?.pagination?.has_more || false;
   const nextCursor = workflowsData?.pagination?.cursor;
 

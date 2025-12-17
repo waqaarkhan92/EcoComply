@@ -29,7 +29,7 @@ export default function ConditionEvidenceRuleDetailPage({
 }) {
   const { ruleId } = use(params);
 
-  const { data: rule, isLoading } = useQuery<ConditionEvidenceRule>({
+  const { data: rule, isLoading } = useQuery({
     queryKey: ['condition-evidence-rule', ruleId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<ConditionEvidenceRule>(`/module-1/condition-evidence-rules/${ruleId}`);
@@ -120,7 +120,7 @@ export default function ConditionEvidenceRuleDetailPage({
             <p className="text-sm font-medium text-text-secondary mb-2">Allowed Evidence Types</p>
             <div className="flex flex-wrap gap-2">
               {rule.allowed_evidence_types.length > 0 ? (
-                rule.allowed_evidence_types.map((type, i) => (
+                rule.allowed_evidence_types.map((type: string, i: number) => (
                   <span key={i} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700">
                     {type}
                   </span>
@@ -135,7 +135,7 @@ export default function ConditionEvidenceRuleDetailPage({
             <p className="text-sm font-medium text-text-secondary mb-2">Required Evidence Types</p>
             <div className="flex flex-wrap gap-2">
               {rule.required_evidence_types.length > 0 ? (
-                rule.required_evidence_types.map((type, i) => (
+                rule.required_evidence_types.map((type: string, i: number) => (
                   <span key={i} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-orange-50 text-orange-700">
                     {type}
                   </span>

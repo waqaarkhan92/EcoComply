@@ -42,7 +42,7 @@ export default function ContractorLicencesPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<ContractorLicencesResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-4-contractor-licences', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -63,7 +63,7 @@ export default function ContractorLicencesPage() {
     },
   });
 
-  const licences = data?.data || [];
+  const licences: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
   const expiringLicences = expiringData?.licences || [];

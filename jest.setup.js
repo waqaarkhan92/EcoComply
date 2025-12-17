@@ -1,10 +1,25 @@
-// Polyfill fetch for Node.js test environment
-if (typeof globalThis.fetch === 'undefined') {
-  const { fetch, Request, Response, Headers } = require('undici');
-  globalThis.fetch = fetch;
-  globalThis.Request = Request;
-  globalThis.Response = Response;
-  globalThis.Headers = Headers;
+// Polyfill TextEncoder/TextDecoder for Node.js test environment
+const { TextEncoder, TextDecoder } = require('util');
+if (typeof globalThis.TextEncoder === 'undefined') {
+  globalThis.TextEncoder = TextEncoder;
+}
+if (typeof globalThis.TextDecoder === 'undefined') {
+  globalThis.TextDecoder = TextDecoder;
+}
+
+// Polyfill fetch for Node.js test environment (only when not in jsdom)
+// jsdom provides its own fetch implementation
+if (typeof globalThis.fetch === 'undefined' && typeof window === 'undefined') {
+  try {
+    const { fetch, Request, Response, Headers } = require('undici');
+    globalThis.fetch = fetch;
+    globalThis.Request = Request;
+    globalThis.Response = Response;
+    globalThis.Headers = Headers;
+  } catch (e) {
+    // undici may fail in certain environments, which is fine if fetch is already available
+    console.warn('Could not load undici for fetch polyfill:', e.message);
+  }
 }
 
 // Mock Next.js router (only for frontend tests)

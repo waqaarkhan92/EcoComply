@@ -24,14 +24,14 @@ interface UsersResponse {
 }
 
 export default function UsersPage() {
-  const { data: usersData, isLoading } = useQuery<UsersResponse>({
+  const { data: usersData, isLoading } = useQuery({
     queryKey: ['users'],
     queryFn: async (): Promise<any> => {
       return apiClient.get<UsersResponse>('/users');
     },
   });
 
-  const users = usersData?.data || [];
+  const users: any[] = usersData?.data || [];
 
   if (isLoading) {
     return (

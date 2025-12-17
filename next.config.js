@@ -1,18 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable instrumentation hook for worker auto-start
-  instrumentationHook: true,
-  
-  // Enable experimental features if needed
-  experimental: {
-    // Add any experimental features here
-  },
-  
-  // API configuration
-  api: {
-    bodyParser: {
-      sizeLimit: '50mb', // For document uploads
-    },
+  // Response compression configuration
+  // Next.js automatically compresses responses in production with gzip/brotli
+  compress: true, // Enable compression (default in production)
+
+  // Performance optimizations
+  poweredByHeader: false, // Remove X-Powered-By header for security
+
+  // Optimize images
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60,
   },
 
   // Environment variables that should be available on the client

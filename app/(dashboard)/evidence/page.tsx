@@ -45,7 +45,7 @@ export default function EvidencePage() {
     },
   });
 
-  const evidenceItems = evidenceData?.data || [];
+  const evidenceItems: any[] = evidenceData?.data || [];
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;

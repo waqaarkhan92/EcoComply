@@ -12,9 +12,10 @@ export const dynamic = 'force-dynamic';
  * Get a single fuel usage log entry
  */
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ logId: string } }
+  request: NextRequest, props: { params: Promise<{ logId: string }> }
 ) {
   const requestId = getRequestId(request);
+  const params = await props.params;
 
   try {
     // Require authentication
@@ -64,9 +65,10 @@ export async function GET(
  * Update a fuel usage log entry
  */
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ logId: string } }
+  request: NextRequest, props: { params: Promise<{ logId: string }> }
 ) {
   const requestId = getRequestId(request);
+  const params = await props.params;
 
   try {
     // Require authentication
@@ -150,9 +152,10 @@ export async function PUT(
  * Delete a fuel usage log entry
  */
 export async function DELETE(
-  request: NextRequest, props: { params: Promise<{ logId: string } }
+  request: NextRequest, props: { params: Promise<{ logId: string }> }
 ) {
   const requestId = getRequestId(request);
+  const params = await props.params;
 
   try {
     // Require authentication

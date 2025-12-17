@@ -47,7 +47,7 @@ export default function PackSharingPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<PackSharingResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['pack-sharing', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -61,7 +61,7 @@ export default function PackSharingPage() {
     },
   });
 
-  const sharing = data?.data || [];
+  const sharing: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

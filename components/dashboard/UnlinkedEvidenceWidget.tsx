@@ -4,27 +4,33 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { AlertCircle, Link as LinkIcon, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
-import ConfidenceScoreBadge from '@/components/confidence/ConfidenceScoreBadge';
+
+interface UnlinkedEvidenceItem {
+  id: string;
+  file_name: string;
+  days_since_upload: number;
+  enforcement_status: string;
+}
 
 interface UnlinkedEvidenceWidgetProps {
   siteId: string;
 }
 
 export default function UnlinkedEvidenceWidget({ siteId }: UnlinkedEvidenceWidgetProps) {
-  const { data: evidenceData } = useQuery<{ data: any[] }>({
+  const { data: evidenceData } = useQuery({
     queryKey: ['unlinked-evidence-widget', siteId],
     queryFn: async () => {
       try {
-        return apiClient.get(`/evidence/unlinked?site_id=${siteId}&limit=5`);
+        return apiClient.get<UnlinkedEvidenceItem[]>(`/evidence/unlinked?site_id=${siteId}&limit=5`);
       } catch (error) {
-        return { data: [] };
+        return { data: [] as UnlinkedEvidenceItem[] };
       }
     },
   });
 
-  const evidenceItems = evidenceData?.data || [];
-  const criticalCount = evidenceItems.filter((item: any) => 
-    item.enforcement_status === 'UNLINKED_CRITICAL' || 
+  const evidenceItems: UnlinkedEvidenceItem[] = evidenceData?.data ?? [];
+  const criticalCount = evidenceItems.filter((item: UnlinkedEvidenceItem) =>
+    item.enforcement_status === 'UNLINKED_CRITICAL' ||
     item.days_since_upload >= 14
   ).length;
 
@@ -57,7 +63,7 @@ export default function UnlinkedEvidenceWidget({ siteId }: UnlinkedEvidenceWidge
       )}
 
       <div className="space-y-3">
-        {evidenceItems.slice(0, 5).map((item: any) => {
+        {evidenceItems.slice(0, 5).map((item: UnlinkedEvidenceItem) => {
           const isCritical = item.enforcement_status === 'UNLINKED_CRITICAL' || item.days_since_upload >= 14;
           const daysRemaining = Math.max(0, 7 - item.days_since_upload);
 

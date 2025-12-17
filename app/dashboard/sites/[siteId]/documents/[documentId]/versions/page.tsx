@@ -33,7 +33,7 @@ export default function PermitVersionsPage() {
   const documentId = params.documentId as string;
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
-  const { data: versionsData, isLoading, error } = useQuery<PermitVersionsResponse>({
+  const { data: versionsData, isLoading, error } = useQuery({
     queryKey: ['permit-versions', documentId, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -46,7 +46,7 @@ export default function PermitVersionsPage() {
     enabled: !!documentId,
   });
 
-  const versions = versionsData?.data || [];
+  const versions: any[] = versionsData?.data || [];
   const hasMore = versionsData?.pagination?.has_more || false;
   const nextCursor = versionsData?.pagination?.cursor;
 

@@ -32,7 +32,7 @@ export default function SchedulesPage() {
   const siteId = params.siteId as string;
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
-  const { data: schedulesData, isLoading, error } = useQuery<SchedulesResponse>({
+  const { data: schedulesData, isLoading, error } = useQuery({
     queryKey: ['schedules', siteId, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -45,7 +45,7 @@ export default function SchedulesPage() {
     enabled: !!siteId,
   });
 
-  const schedules = schedulesData?.data || [];
+  const schedules: any[] = schedulesData?.data || [];
   const hasMore = schedulesData?.pagination?.has_more || false;
   const nextCursor = schedulesData?.pagination?.cursor;
 

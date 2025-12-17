@@ -10,7 +10,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function POST(
-  request: NextRequest, props: { params: Promise<{ moduleId: string } }
+  request: NextRequest, props: { params: Promise<{ moduleId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,10 +20,10 @@ export async function POST(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { moduleId } = params;
+  const { moduleId } = params;
 
     // Parse request body (optional)
     let siteIds: string[] | undefined;
@@ -35,7 +35,7 @@ export async function POST(
     }
 
     // Get module details
-    const { data: module, error: moduleError } = await supabaseAdmin
+  const { data: module, error: moduleError } = await supabaseAdmin
       .from('modules')
       .select('id, module_code, module_name, requires_module_id, is_active')
       .eq('id', moduleId)
@@ -96,7 +96,7 @@ export async function POST(
       .eq('module_id', moduleId)
       .eq('status', 'ACTIVE');
 
-    const { data: existingActivations } = await existingActivationQuery;
+  const { data: existingActivations } = await existingActivationQuery;
 
     // Handle Module 3 (company-level activation, site_id must be null)
     if (module.module_code === 'MODULE_3') {

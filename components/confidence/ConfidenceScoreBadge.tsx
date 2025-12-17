@@ -1,5 +1,22 @@
 'use client';
 
+import { CONFIDENCE_THRESHOLDS, getConfidenceLevel } from '@/lib/utils/status';
+
+/**
+ * @deprecated Use `ConfidenceBadge` from `@/components/ui/status-badge` instead.
+ * This component is kept for backwards compatibility.
+ *
+ * Example migration:
+ * ```tsx
+ * // Before:
+ * import ConfidenceScoreBadge from '@/components/confidence/ConfidenceScoreBadge';
+ * <ConfidenceScoreBadge score={0.85} />
+ *
+ * // After:
+ * import { ConfidenceBadge } from '@/components/ui/status-badge';
+ * <ConfidenceBadge score={0.85} />
+ * ```
+ */
 interface ConfidenceScoreBadgeProps {
   score: number; // 0-1 or 0-100
   showPercentage?: boolean;
@@ -13,18 +30,41 @@ export default function ConfidenceScoreBadge({
   size = 'md',
   variant = 'badge',
 }: ConfidenceScoreBadgeProps) {
-  // Normalize score to 0-100 if it's 0-1
-  const normalizedScore = score > 1 ? score : score * 100;
-  const percentage = Math.round(normalizedScore);
+  // Normalize score to 0-1 if it's 0-100
+  const normalizedScore = score > 1 ? score / 100 : score;
+  const percentage = Math.round(normalizedScore * 100);
 
-  // Determine color based on confidence level
+  // Use centralized confidence level calculation
+  const level = getConfidenceLevel(normalizedScore);
+
+  // Determine color based on confidence level using centralized thresholds
   const getColorClasses = () => {
-    if (percentage >= 85) {
-      return 'bg-green-100 text-green-800 border-green-200';
-    } else if (percentage >= 70) {
-      return 'bg-amber-100 text-amber-800 border-amber-200';
-    } else {
-      return 'bg-red-100 text-red-800 border-red-200';
+    switch (level) {
+      case 'HIGH':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'MEDIUM':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'LOW':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'VERY_LOW':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getLevelLabel = () => {
+    switch (level) {
+      case 'HIGH':
+        return 'High';
+      case 'MEDIUM':
+        return 'Medium';
+      case 'LOW':
+        return 'Low';
+      case 'VERY_LOW':
+        return 'Very Low';
+      default:
+        return 'Unknown';
     }
   };
 
@@ -53,7 +93,7 @@ export default function ConfidenceScoreBadge({
       className={`inline-flex items-center gap-1.5 rounded-md border font-medium ${getColorClasses()} ${getSizeClasses()}`}
     >
       <span className="font-semibold">{percentage}%</span>
-      {percentage >= 85 ? 'High' : percentage >= 70 ? 'Medium' : 'Low'}
+      {getLevelLabel()}
     </span>
   );
 }

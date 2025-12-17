@@ -10,7 +10,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ escalationId: string } }
+  request: NextRequest, props: { params: Promise<{ escalationId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,16 +20,16 @@ export async function PUT(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { escalationId } = params;
+  const { escalationId } = params;
 
     // Parse request body
     const body = await request.json();
 
     // Check if escalation exists and user has access
-    const { data: existingEscalation, error: checkError } = await supabaseAdmin
+  const { data: existingEscalation, error: checkError } = await supabaseAdmin
       .from('escalations')
       .select('id, company_id, resolved_at')
       .eq('id', escalationId)
@@ -68,7 +68,7 @@ export async function PUT(
       updates.resolution_notes = body.resolution_notes;
     }
 
-    const { data: updatedEscalation, error: updateError } = await supabaseAdmin
+  const { data: updatedEscalation, error: updateError } = await supabaseAdmin
       .from('escalations')
       .update(updates)
       .eq('id', escalationId)

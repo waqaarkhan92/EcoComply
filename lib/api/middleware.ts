@@ -36,10 +36,11 @@ export function extractToken(request: NextRequest): string | null {
 
 /**
  * Verify JWT token and get user info
+ * Optimized to reduce database queries by fetching user data with roles in a single query
  */
 export async function verifyToken(token: string): Promise<AuthenticatedUser | null> {
   try {
-    // Verify token with Supabase
+    // Verify token with Supabase Auth (required, cannot be optimized away)
     const {
       data: { user },
       error,
@@ -49,10 +50,15 @@ export async function verifyToken(token: string): Promise<AuthenticatedUser | nu
       return null;
     }
 
-    // Get user details from database
+    // Fetch user details with roles in a single query using joins
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
-      .select('id, email, company_id')
+      .select(`
+        id,
+        email,
+        company_id,
+        user_roles (role)
+      `)
       .eq('id', user.id)
       .single();
 
@@ -60,22 +66,17 @@ export async function verifyToken(token: string): Promise<AuthenticatedUser | nu
       return null;
     }
 
-    // Get user roles
-    const { data: roles } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id);
+    // Extract roles from the joined data
+    const roleNames = (userData.user_roles as { role: string }[] | null)?.map((r) => r.role) || [];
 
-    const roleNames = roles?.map((r: { role: string }) => r.role) || [];
-
-    // Check if user is a consultant
+    // Check consultant status - use maybeSingle to avoid error if no record
     const { data: consultantAssignment } = await supabaseAdmin
       .from('consultant_client_assignments')
       .select('consultant_id')
       .eq('consultant_id', user.id)
       .eq('status', 'ACTIVE')
       .limit(1)
-      .single();
+      .maybeSingle();
 
     return {
       id: userData.id,
@@ -125,8 +126,14 @@ export async function requireAuth(
     return rateLimitResult;
       }
     } catch (rateLimitError) {
-      // If rate limiting fails, log but continue (don't block the request)
-      console.warn('Rate limit check failed:', rateLimitError);
+      // SECURITY: If rate limiting fails (e.g., Redis is down), return 503 to prevent DDoS
+      console.error('Rate limit check failed - service may be degraded:', rateLimitError);
+      return errorResponse(
+        ErrorCodes.SERVICE_UNAVAILABLE,
+        'Rate limiting service unavailable',
+        503,
+        { error: 'Unable to verify rate limits. Please try again in a moment.' }
+      );
   }
 
   return { user };

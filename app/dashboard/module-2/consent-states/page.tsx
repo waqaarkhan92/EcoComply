@@ -51,7 +51,7 @@ export default function ConsentStatesPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<ConsentStatesResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['consent-states', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -65,7 +65,7 @@ export default function ConsentStatesPage() {
     },
   });
 
-  const states = data?.data || [];
+  const states: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

@@ -44,7 +44,7 @@ export default function RuntimeMonitoringDetailPage({
 }) {
   const { recordId } = use(params);
 
-  const { data: record, isLoading } = useQuery<RuntimeMonitoring>({
+  const { data: record, isLoading } = useQuery({
     queryKey: ['runtime-monitoring', recordId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<RuntimeMonitoring>(`/module-3/runtime-monitoring/${recordId}`);

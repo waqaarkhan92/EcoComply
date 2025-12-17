@@ -11,7 +11,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ importId: string } }
+  request: NextRequest, props: { params: Promise<{ importId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -21,13 +21,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { importId } = params;
+  const { importId } = params;
 
     // Get import - RLS will enforce access control
-    const { data: excelImport, error } = await supabaseAdmin
+  const { data: excelImport, error } = await supabaseAdmin
       .from('excel_imports')
       .select('*')
       .eq('id', importId)
@@ -82,7 +82,7 @@ export async function GET(
 }
 
 export async function DELETE(
-  request: NextRequest, props: { params: Promise<{ importId: string } }
+  request: NextRequest, props: { params: Promise<{ importId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -92,13 +92,13 @@ export async function DELETE(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { importId } = params;
+  const { importId } = params;
 
     // Get import - RLS will enforce access control
-    const { data: excelImport, error } = await supabaseAdmin
+  const { data: excelImport, error } = await supabaseAdmin
       .from('excel_imports')
       .select('*')
       .eq('id', importId)
@@ -135,7 +135,7 @@ export async function DELETE(
     }
 
     // Update import status to CANCELLED
-    const { error: updateError } = await supabaseAdmin
+  const { error: updateError } = await supabaseAdmin
       .from('excel_imports')
       .update({
         status: 'CANCELLED',
@@ -154,7 +154,7 @@ export async function DELETE(
     }
 
     // Cancel any pending background jobs
-    const { data: jobs } = await supabaseAdmin
+  const { data: jobs } = await supabaseAdmin
       .from('background_jobs')
       .select('id, job_id')
       .eq('entity_type', 'excel_imports')

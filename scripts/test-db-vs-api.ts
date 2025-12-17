@@ -115,7 +115,7 @@ async function testDBvsAPI() {
     .from('obligations')
     .select('id, document_id, deleted_at')
     .eq('document_id', documentId);
-  const filtered2 = test2?.filter(o => !o.deleted_at) || [];
+  const filtered2 = test2?.filter((o: any) => !o.deleted_at) || [];
   console.log(`  2. Select all then filter: ${filtered2.length} obligations, error: ${err2 ? err2.message : 'none'}`);
 
   // Approach 3: Count query
@@ -131,7 +131,7 @@ async function testDBvsAPI() {
     .from('obligations')
     .select('id, document_id')
     .limit(100);
-  const matching4 = test4?.filter(o => o.document_id === documentId && !test4.find(x => x.id === o.id && x.deleted_at)) || [];
+  const matching4 = test4?.filter((o: any) => o.document_id === documentId && !test4.find((x: any) => x.id === o.id && x.deleted_at)) || [];
   console.log(`  4. Check all obligations: Found ${matching4.length} matching, total in table: ${test4?.length || 0}`);
 
   // ===== TEST 4: Check document_id values =====

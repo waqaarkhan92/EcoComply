@@ -43,9 +43,10 @@ export async function GET(request: NextRequest) {
     const sort = parseSortParams(request);
 
     // Build query - RLS will automatically filter by user's site access
+    // Note: evidence_type column doesn't exist in the schema, file_type is used instead
     let query = supabaseAdmin
       .from('evidence_items')
-      .select('id, site_id, company_id, file_name, file_type, evidence_type, file_size_bytes, mime_type, storage_path, description, created_at, updated_at')
+      .select('id, site_id, company_id, file_name, file_type, file_size_bytes, mime_type, storage_path, description, compliance_period, created_at, updated_at')
       .eq('is_archived', false); // Only non-archived evidence
 
     // Apply filters
@@ -338,6 +339,7 @@ export async function POST(request: NextRequest) {
       .getPublicUrl(storagePath);
 
     // Create evidence record
+    // Note: evidence_type doesn't exist in the schema, using file_type instead
     const evidenceData: any = {
       company_id: companyId,
       site_id: siteId,
@@ -348,7 +350,6 @@ export async function POST(request: NextRequest) {
       storage_path: storagePath,
       file_hash: fileHash,
       description: metadata.description || null,
-      evidence_type: metadata.evidence_type || null,
       compliance_period: metadata.compliance_period || null,
       gps_latitude: metadata.gps_latitude || null,
       gps_longitude: metadata.gps_longitude || null,

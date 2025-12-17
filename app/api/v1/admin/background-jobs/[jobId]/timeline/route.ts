@@ -12,7 +12,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ jobId: string } }
+  request: NextRequest, props: { params: Promise<{ jobId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -22,13 +22,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { jobId } = params;
+  const { jobId } = params;
 
     // Get job
-    const { data: job, error: jobError } = await supabaseAdmin
+  const { data: job, error: jobError } = await supabaseAdmin
       .from('background_jobs')
       .select('id, created_at, started_at, completed_at, failed_at')
       .eq('id', jobId)

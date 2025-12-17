@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Upload, Search, FileText, Filter } from 'lucide-react';
 import Link from 'next/link';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 
 interface PermitDocument {
   id: string;
@@ -37,7 +38,7 @@ export default function PermitDocumentsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
-  const { data: documentsData, isLoading, error } = useQuery<PermitDocumentsResponse>({
+  const { data: documentsData, isLoading, error } = useQuery({
     queryKey: ['permit-documents', siteId, cursor, documentTypeFilter, statusFilter, searchQuery],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -60,7 +61,7 @@ export default function PermitDocumentsPage() {
     enabled: !!siteId,
   });
 
-  const documents = documentsData?.data || [];
+  const documents: any[] = documentsData?.data || [];
   const hasMore = documentsData?.pagination?.has_more || false;
   const nextCursor = documentsData?.pagination?.cursor;
 
@@ -96,15 +97,25 @@ export default function PermitDocumentsPage() {
     );
   }
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Sites', href: '/dashboard/sites' },
+    { label: 'Site', href: `/dashboard/sites/${siteId}/dashboard` },
+    { label: 'Permits', href: `/dashboard/sites/${siteId}/permits/documents` },
+    { label: 'Documents' },
+  ];
+
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={breadcrumbItems} />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Permit Documents</h1>
           <p className="text-gray-600 mt-1">Manage environmental permit documents for this site</p>
         </div>
-        <Link href={`/dashboard/sites/${siteId}/documents/upload`}>
+        <Link href={`/dashboard/documents/upload?siteId=${siteId}`}>
           <Button style={{ backgroundColor: '#026A67' }}>
             <Upload className="h-4 w-4 mr-2" />
             Upload Document
@@ -179,7 +190,7 @@ export default function PermitDocumentsPage() {
                   <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                     <FileText className="h-12 w-12 mx-auto mb-2 text-gray-400" />
                     <p>No permit documents found.</p>
-                    <Link href={`/dashboard/sites/${siteId}/documents/upload`}>
+                    <Link href={`/dashboard/documents/upload?siteId=${siteId}`}>
                       <Button variant="outline" className="mt-4">
                         Upload Your First Document
                       </Button>

@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, ReactNode } from 'react';
 import { X } from 'lucide-react';
-import { Button } from './button';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ModalProps {
   isOpen: boolean;
@@ -89,63 +89,76 @@ export function Modal({
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 transition-opacity" aria-hidden="true" />
+    <AnimatePresence>
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              onClose();
+            }
+          }}
+        >
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/50"
+            aria-hidden="true"
+          />
 
-      {/* Modal */}
-      <div
-        ref={modalRef}
-        className={cn(
-          'relative bg-white rounded-lg shadow-xl z-50 w-full flex flex-col max-h-[90vh]',
-          sizeClasses[size],
-          className
-        )}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={title ? 'modal-title' : undefined}
-      >
-        {/* Header */}
-        {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-input-border">
-            {title && (
-              <h2 id="modal-title" className="text-xl font-semibold text-text-primary">
-                {title}
-              </h2>
+          {/* Modal */}
+          <motion.div
+            ref={modalRef}
+            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className={cn(
+              'relative bg-white rounded-lg shadow-xl z-50 w-full flex flex-col max-h-[90vh]',
+              sizeClasses[size],
+              className
             )}
-            {showCloseButton && (
-              <button
-                onClick={onClose}
-                className="p-2 text-text-tertiary hover:text-text-primary transition-colors"
-                aria-label="Close modal"
-              >
-                <X className="h-5 w-5" />
-              </button>
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? 'modal-title' : undefined}
+          >
+            {/* Header */}
+            {(title || showCloseButton) && (
+              <div className="flex items-center justify-between px-6 py-4 border-b border-input-border">
+                {title && (
+                  <h2 id="modal-title" className="text-xl font-semibold text-text-primary">
+                    {title}
+                  </h2>
+                )}
+                {showCloseButton && (
+                  <button
+                    onClick={onClose}
+                    className="p-2 text-text-tertiary hover:text-text-primary transition-colors rounded-md hover:bg-gray-100"
+                    aria-label="Close modal"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
             )}
-          </div>
-        )}
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
 
-        {/* Footer */}
-        {footer && (
-          <div className="px-6 py-4 border-t border-input-border flex items-center justify-end gap-3">
-            {footer}
-          </div>
-        )}
-      </div>
-    </div>
+            {/* Footer */}
+            {footer && (
+              <div className="px-6 py-4 border-t border-input-border flex items-center justify-end gap-3">
+                {footer}
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }
 

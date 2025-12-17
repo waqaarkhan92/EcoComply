@@ -9,18 +9,18 @@ import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth } from '@/lib/api/middleware';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ packId: string } }
+  request: NextRequest, props: { params: Promise<{ packId: string }> }
 ) {
   try {
     const authResult = await requireAuth(request);
     if (authResult instanceof Response) return authResult;
 
-    const { user } = authResult;
+  const { user } = authResult;
     const params = await props.params;
-    const { packId } = params;
+  const { packId } = params;
 
     // Verify pack exists and user has access
-    const { data: pack, error: packError } = await supabaseAdmin
+  const { data: pack, error: packError } = await supabaseAdmin
       .from('audit_packs')
       .select('id, site_id, sites(site_name)')
       .eq('id', packId)
@@ -31,7 +31,7 @@ export async function GET(
     }
 
     // Check user has access to this site
-    const { data: userSite } = await supabaseAdmin
+  const { data: userSite } = await supabaseAdmin
       .from('user_site_assignments')
       .select('id')
       .eq('user_id', user.id)
@@ -43,7 +43,7 @@ export async function GET(
     }
 
     // Get pack obligations
-    const { data: packObligations, error: obligationsError } = await supabaseAdmin
+  const { data: packObligations, error: obligationsError } = await supabaseAdmin
       .from('pack_obligations')
       .select(`
         id,
@@ -55,7 +55,7 @@ export async function GET(
       .is('deleted_at', null);
 
     // Get pack evidence
-    const { data: packEvidence, error: evidenceError } = await supabaseAdmin
+  const { data: packEvidence, error: evidenceError } = await supabaseAdmin
       .from('pack_evidence')
       .select(`
         id,

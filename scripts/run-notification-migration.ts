@@ -52,7 +52,7 @@ async function runMigration() {
         console.log(`   [${i + 1}/${statements.length}] Executing statement...`);
         
         // Use RPC to execute raw SQL (if available) or use direct query
-        const { error } = await supabase.rpc('exec_sql', { sql: statement }).catch(async () => {
+        const { error } = await Promise.resolve(supabase.rpc('exec_sql', { sql: statement })).catch(async () => {
           // Fallback: Try direct query via REST API
           // Note: Supabase JS client doesn't support raw SQL directly
           // We'll need to use the REST API or pg client

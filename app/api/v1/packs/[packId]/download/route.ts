@@ -11,7 +11,7 @@ import { errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, getRequestId } from '@/lib/api/middleware';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ packId: string } }
+  request: NextRequest, props: { params: Promise<{ packId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -21,13 +21,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { packId } = params;
+  const { packId } = params;
 
     // Get pack - RLS will enforce access control
-    const { data: pack, error } = await supabaseAdmin
+  const { data: pack, error } = await supabaseAdmin
       .from('audit_packs')
       .select('id, pack_type, status, storage_path, file_name')
       .eq('id', packId)
@@ -75,7 +75,7 @@ export async function GET(
     }
 
     // Download file from Supabase Storage
-    const { data: fileData, error: downloadError } = await supabaseAdmin.storage
+  const { data: fileData, error: downloadError } = await supabaseAdmin.storage
       .from('audit-packs')
       .download(pack.storage_path);
 

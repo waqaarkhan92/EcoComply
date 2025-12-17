@@ -62,7 +62,7 @@ async function sendEmailViaResend(options: EmailOptions, apiKey: string): Promis
       subject: options.subject,
       html: options.html,
       text: options.text || stripHtml(options.html),
-      reply_to: options.replyTo,
+      replyTo: options.replyTo,
     });
     
     if (result.error) {

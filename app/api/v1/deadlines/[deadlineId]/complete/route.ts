@@ -10,7 +10,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ deadlineId: string } }
+  request: NextRequest, props: { params: Promise<{ deadlineId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,10 +20,10 @@ export async function PUT(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { deadlineId } = params;
+  const { deadlineId } = params;
 
     // Parse request body
     let completionNotes: string | undefined;
@@ -35,7 +35,7 @@ export async function PUT(
     }
 
     // Get deadline
-    const { data: deadline, error: getError } = await supabaseAdmin
+  const { data: deadline, error: getError } = await supabaseAdmin
       .from('deadlines')
       .select('*')
       .eq('id', deadlineId)
@@ -79,7 +79,7 @@ export async function PUT(
       updates.completion_notes = completionNotes;
     }
 
-    const { data: updatedDeadline, error: updateError } = await supabaseAdmin
+  const { data: updatedDeadline, error: updateError } = await supabaseAdmin
       .from('deadlines')
       .update(updates)
       .eq('id', deadlineId)
@@ -97,7 +97,7 @@ export async function PUT(
     }
 
     // Update schedule's last_completed_date if this is the most recent completion
-    const { data: schedule } = await supabaseAdmin
+  const { data: schedule } = await supabaseAdmin
       .from('schedules')
       .select('id, last_completed_date')
       .eq('id', deadline.schedule_id)

@@ -58,7 +58,7 @@ export default function PermitWorkflowsPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<PermitWorkflowsResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['permit-workflows', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -72,7 +72,7 @@ export default function PermitWorkflowsPage() {
     },
   });
 
-  const workflows = data?.data || [];
+  const workflows: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

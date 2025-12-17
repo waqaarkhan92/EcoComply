@@ -69,7 +69,7 @@ async function main() {
     const exists = existingAssignments?.some(a => a.user_id === user.user_id);
 
     if (exists) {
-      console.log(`  ⏭️  Skipped ${user.profiles?.email} (already assigned)`);
+      console.log(`  ⏭️  Skipped ${(user.profiles as any)?.[0]?.email} (already assigned)`);
       skipped++;
       continue;
     }
@@ -83,9 +83,9 @@ async function main() {
       });
 
     if (error) {
-      console.error(`  ❌ Failed for ${user.profiles?.email}:`, error.message);
+      console.error(`  ❌ Failed for ${(user.profiles as any)?.[0]?.email}:`, error.message);
     } else {
-      console.log(`  ✅ Created for ${user.profiles?.email}`);
+      console.log(`  ✅ Created for ${(user.profiles as any)?.[0]?.email}`);
       created++;
     }
   }

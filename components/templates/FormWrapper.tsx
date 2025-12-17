@@ -14,8 +14,9 @@ import { FormField } from '@/components/forms/FormField';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { z } from 'zod';
+import type { FieldValues } from 'react-hook-form';
 
-interface FormWrapperProps<T extends z.ZodType> {
+interface FormWrapperProps<T extends z.ZodType<FieldValues>> {
   title: string;
   description?: string;
   schema: T;
@@ -36,7 +37,7 @@ interface FormWrapperProps<T extends z.ZodType> {
   submitLabel?: string;
 }
 
-export function FormWrapper<T extends z.ZodType>({
+export function FormWrapper<T extends z.ZodType<FieldValues>>({
   title,
   description,
   schema,
@@ -56,7 +57,7 @@ export function FormWrapper<T extends z.ZodType>({
     formState: { errors },
     reset,
   } = useForm<z.infer<T>>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema as any) as any,
     defaultValues: defaultValues as any,
   });
 

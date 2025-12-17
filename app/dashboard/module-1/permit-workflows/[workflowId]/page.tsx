@@ -33,7 +33,7 @@ export default function PermitWorkflowDetailPage({
 }) {
   const { workflowId } = use(params);
 
-  const { data: workflow, isLoading } = useQuery<PermitWorkflow>({
+  const { data: workflow, isLoading } = useQuery({
     queryKey: ['permit-workflow', workflowId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<PermitWorkflow>(`/module-1/permit-workflows/${workflowId}`);

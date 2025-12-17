@@ -1,93 +1,108 @@
-#!/usr/bin/env tsx
+/**
+ * Fix Next.js 16 API route params pattern
+ *
+ * This script finds all API route files that use the pattern:
+ *   const { someId } = params;
+ *
+ * And inserts the required await:
+ *   const params = await props.params;
+ *   const { someId } = params;
+ */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { glob } from 'glob';
 
-/**
- * Fix Next.js 16 params async breaking change
- * Converts all API routes from synchronous params to async params
- */
+const API_DIR = path.join(process.cwd(), 'app/api');
 
-async function fixParamsInFile(filePath: string): Promise<boolean> {
-  const content = fs.readFileSync(filePath, 'utf-8');
-  let modified = false;
-  let newContent = content;
+function getAllTsFiles(dir: string): string[] {
+  const files: string[] = [];
 
-  // Pattern 1: Fix function signature with single param
-  // From: { params }: { params: { paramName: string } }
-  // To: props: { params: Promise<{ paramName: string }> }
-  const singleParamPattern = /(\s+)(request: NextRequest,)\s*\{ params \}(\s*:\s*\{ params: \{[^}]+\} \})/g;
-  if (singleParamPattern.test(content)) {
-    newContent = newContent.replace(
-      singleParamPattern,
-      '$1$2 props$3'
-    );
-    // Replace params: { with params: Promise<{
-    newContent = newContent.replace(
-      /props\s*:\s*\{ params: \{/g,
-      'props: { params: Promise<{'
-    );
-    modified = true;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...getAllTsFiles(fullPath));
+    } else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.bak')) {
+      files.push(fullPath);
+    }
   }
 
-  // Pattern 2: Add await for params after auth check
-  // Look for patterns like: const { paramName } = params;
-  // And add: const params = await props.params; before it
-  const paramUsagePattern = /(\n\s+const \{ user \} = authResult;[\s\S]*?\n\s+)(const \{ [^}]+ \} = params;)/g;
+  return files;
+}
 
-  if (paramUsagePattern.test(newContent)) {
-    newContent = newContent.replace(
-      paramUsagePattern,
-      (match, prefix, paramLine) => {
-        // Check if we already added the await line
-        if (prefix.includes('const params = await props.params;')) {
-          return match;
-        }
-        return prefix + 'const params = await props.params;\n    ' + paramLine;
+function fixFile(filePath: string): boolean {
+  let content = fs.readFileSync(filePath, 'utf-8');
+  const originalContent = content;
+
+  // Skip if no Promise params pattern
+  if (!content.includes('props: { params: Promise<')) {
+    return false;
+  }
+
+  // Pattern: Find functions with Promise params that use params directly
+  // We need to add "const params = await props.params;" before the first use of params
+
+  const lines = content.split('\n');
+  const result: string[] = [];
+
+  let inFunction = false;
+  let functionHasPromiseParams = false;
+  let awaitAdded = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Detect function with Promise params
+    if (line.includes('export async function') && line.includes('props:')) {
+      inFunction = true;
+      functionHasPromiseParams = line.includes('Promise<');
+      awaitAdded = false;
+      result.push(line);
+      continue;
+    }
+
+    // Check if next line continues the function signature
+    if (inFunction && line.includes('Promise<')) {
+      functionHasPromiseParams = true;
+    }
+
+    // Inside function body
+    if (inFunction && functionHasPromiseParams && !awaitAdded) {
+      // Check if this line already has "await props.params"
+      if (line.includes('await props.params')) {
+        awaitAdded = true;
+        result.push(line);
+        continue;
       }
-    );
-    modified = true;
-  }
 
-  // Pattern 3: Handle cases where params is used directly (not destructured immediately)
-  // Look for: const variableName = params.paramName;
-  const directParamsPattern = /(\n\s+const \{ user \} = authResult;[\s\S]*?\n\s+)(const [a-zA-Z0-9_]+ = params\.[a-zA-Z0-9_]+;)/g;
-
-  if (directParamsPattern.test(newContent)) {
-    newContent = newContent.replace(
-      directParamsPattern,
-      (match, prefix, paramLine) => {
-        if (prefix.includes('const params = await props.params;')) {
-          return match;
-        }
-        return prefix + 'const params = await props.params;\n    ' + paramLine;
+      // Check if this line uses params directly (the problematic pattern)
+      const paramsMatch = line.match(/const \{ (\w+(?:, \w+)*) \} = params;/);
+      if (paramsMatch) {
+        // Insert await before this line
+        const indent = line.match(/^(\s*)/)?.[1] || '    ';
+        result.push(indent + 'const params = await props.params;');
+        awaitAdded = true;
       }
-    );
-    modified = true;
-  }
+    }
 
-  // Pattern 4: Handle GET/POST/PUT/DELETE/PATCH methods
-  // Some routes might not have auth checks, so add await right after requestId
-  const noAuthPattern = /(\n\s+const requestId = getRequestId\(request\);[\s]*\n[\s]*\n\s+try \{[\s]*\n\s+)(const \{ [^}]+ \} = params;)/g;
-
-  if (noAuthPattern.test(newContent)) {
-    newContent = newContent.replace(
-      noAuthPattern,
-      (match, prefix, paramLine) => {
-        if (prefix.includes('const params = await props.params;')) {
-          return match;
-        }
-        return prefix + 'const params = await props.params;\n    ' + paramLine;
+    // Reset on new function (but not the first line of a new function)
+    if (i > 0 && line.includes('export async function')) {
+      if (line.includes('props:')) {
+        inFunction = true;
+        functionHasPromiseParams = line.includes('Promise<');
+        awaitAdded = false;
+      } else {
+        inFunction = false;
+        functionHasPromiseParams = false;
+        awaitAdded = false;
       }
-    );
-    modified = true;
+    }
+
+    result.push(line);
   }
 
-  if (modified) {
-    // Create backup
-    fs.writeFileSync(filePath + '.bak', content);
-    // Write fixed content
+  const newContent = result.join('\n');
+
+  if (newContent !== originalContent) {
     fs.writeFileSync(filePath, newContent);
     return true;
   }
@@ -96,40 +111,21 @@ async function fixParamsInFile(filePath: string): Promise<boolean> {
 }
 
 async function main() {
-  console.log('🔧 Fixing Next.js 16 params async issue in all API routes...\n');
-
-  // Find all route.ts files in app/api directories with dynamic params
-  const routeFiles = await glob('app/api/**/\\[*\\]/**/route.ts', {
-    cwd: process.cwd(),
-    absolute: true
-  });
-
-  console.log(`Found ${routeFiles.length} route files with dynamic params\n`);
-
+  const files = getAllTsFiles(API_DIR);
   let fixedCount = 0;
-  let skippedCount = 0;
 
-  for (const file of routeFiles) {
-    const relativePath = path.relative(process.cwd(), file);
+  for (const file of files) {
     try {
-      const wasFixed = await fixParamsInFile(file);
-      if (wasFixed) {
-        console.log(`✅ Fixed: ${relativePath}`);
+      if (fixFile(file)) {
+        console.log('Fixed: ' + path.relative(process.cwd(), file));
         fixedCount++;
-      } else {
-        console.log(`⏭️  Skipped: ${relativePath} (already fixed or no params usage)`);
-        skippedCount++;
       }
-    } catch (error) {
-      console.error(`❌ Error fixing ${relativePath}:`, error);
+    } catch (err) {
+      console.error('Error processing ' + file + ':', err);
     }
   }
 
-  console.log(`\n✨ Done!`);
-  console.log(`   Fixed: ${fixedCount} files`);
-  console.log(`   Skipped: ${skippedCount} files`);
-  console.log(`   Total: ${routeFiles.length} files`);
-  console.log(`\n💾 Backup files created with .bak extension`);
+  console.log('\nTotal files fixed: ' + fixedCount);
 }
 
-main().catch(console.error);
+main();

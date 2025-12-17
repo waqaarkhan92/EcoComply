@@ -27,14 +27,14 @@ export default function DocumentReviewPage() {
   const siteId = params.siteId as string;
   const documentId = params.documentId as string;
 
-  const { data: documentData } = useQuery<{ data: Document }>({
+  const { data: documentData } = useQuery({
     queryKey: ['document', documentId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Document }>(`/documents/${documentId}`);
     },
   });
 
-  const { data: obligationsData } = useQuery<{ data: Obligation[] }>({
+  const { data: obligationsData } = useQuery({
     queryKey: ['document-obligations', documentId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Obligation[] }>(`/documents/${documentId}/obligations`);
@@ -63,7 +63,7 @@ export default function DocumentReviewPage() {
     },
   });
 
-  const obligations = obligationsData?.data || [];
+  const obligations: any[] = obligationsData?.data || [];
 
   return (
     <div className="space-y-6">

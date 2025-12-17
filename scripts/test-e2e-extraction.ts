@@ -251,11 +251,10 @@ async function testE2E() {
       console.log('='.repeat(60));
       process.exit(0);
     } else if (jobState === 'failed') {
-      const jobData = await job.get();
-      const failedReason = jobData?.failedReason || 'Unknown error';
+      const failedReason = job.failedReason || 'Unknown error';
       console.error(`\n❌ Job failed after ${elapsed}s: ${failedReason}`);
-      if (jobData?.stacktrace) {
-        console.error('Stack:', jobData.stacktrace.split('\n').slice(0, 10).join('\n'));
+      if (job.stacktrace) {
+        console.error('Stack:', job.stacktrace.join('\n').slice(0, 10));
       }
       
       // Check if any obligations were created despite failure

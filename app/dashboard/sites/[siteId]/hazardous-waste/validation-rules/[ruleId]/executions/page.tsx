@@ -61,7 +61,7 @@ export default function ValidationExecutionHistoryPage({
     },
   });
 
-  const executions = executionsData?.data || [];
+  const executions: any[] = executionsData?.data || [];
   const stats = executionsData?.stats;
 
   return (

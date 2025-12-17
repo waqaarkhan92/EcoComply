@@ -253,11 +253,10 @@ async function testUIEndpoints() {
       await supabase.from('documents').delete().eq('id', document.id);
       await supabase.storage.from('documents').remove([storagePath]);
       await worker.close();
-      
+
       process.exit(finalObligations && finalObligations.length > 0 ? 0 : 1);
     } else if (jobState === 'failed') {
-      const jobData = await job.get();
-      console.error(`\n❌ Job failed after ${elapsed}s: ${jobData?.failedReason || 'Unknown error'}`);
+      console.error(`\n❌ Job failed after ${elapsed}s: ${job.failedReason || 'Unknown error'}`);
       await worker.close();
       process.exit(1);
     }

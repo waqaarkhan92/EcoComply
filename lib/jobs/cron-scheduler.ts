@@ -99,6 +99,17 @@ export async function scheduleRecurringJobs(): Promise<void> {
   // Detect Breaches and Trigger Alerts Job (every 15 minutes) - HIGH PRIORITY
   await scheduleJob('DETECT_BREACHES_AND_ALERTS', QUEUE_NAMES.SLA_BREACH_ALERTS, '*/15 * * * *', {});
 
+  // Enhanced Features V2 Jobs
+
+  // Evidence Gap Detection Job (every 6 hours)
+  await scheduleJob('EVIDENCE_GAP_DETECTION', QUEUE_NAMES.EVIDENCE_GAP_DETECTION, '0 */6 * * *', {});
+
+  // Risk Score Calculation Job (daily at 4 AM)
+  await scheduleJob('RISK_SCORE_CALCULATION', QUEUE_NAMES.RISK_SCORE_CALCULATION, '0 4 * * *', {});
+
+  // Review Queue Escalation Job (every 4 hours per Implementation Blueprint Section 7.5)
+  await scheduleJob('REVIEW_QUEUE_ESCALATION', QUEUE_NAMES.REVIEW_QUEUE_ESCALATION, '0 */4 * * *', {});
+
   console.log('All recurring jobs scheduled');
 }
 

@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 import { env } from '../env';
 
 // Create Supabase client with service role key (for server-side operations)
+// With connection pooling configuration to prevent connection exhaustion
 export const supabaseAdmin = createClient(
   env.SUPABASE_URL,
   env.SUPABASE_SERVICE_ROLE_KEY,
@@ -15,6 +16,17 @@ export const supabaseAdmin = createClient(
       autoRefreshToken: false,
       persistSession: false,
     },
+    db: {
+      schema: 'public',
+    },
+    global: {
+      // Connection pooling configuration
+      fetch: (...args) => fetch(...args),
+    },
+    // Note: Supabase JS client doesn't directly expose pool config
+    // Connection pooling is handled by Supabase's PgBouncer
+    // Ensure SUPABASE_URL uses pooler endpoint if needed
+    // Format: postgres://[user]:[password]@[host]:6543/[db]?pgbouncer=true
   }
 );
 

@@ -12,7 +12,8 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ userId: string } }
+  request: NextRequest,
+  props: { params: Promise<{ userId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -22,9 +23,10 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user: currentUser } = authResult;
+  const { user: currentUser } = authResult;
 
-    const { userId } = params;
+    const params = await props.params;
+  const { userId } = params;
 
     // Users can view their own profile, or Admins can view any user in their company
     if (userId !== currentUser.id && !currentUser.roles.includes('OWNER') && !currentUser.roles.includes('ADMIN')) {
@@ -38,7 +40,7 @@ export async function GET(
     }
 
     // Get user - RLS will enforce access control
-    const { data: user, error } = await supabaseAdmin
+  const { data: user, error } = await supabaseAdmin
       .from('users')
       .select('id, email, full_name, company_id, phone, email_verified, is_active, created_at, updated_at')
       .eq('id', userId)
@@ -66,13 +68,13 @@ export async function GET(
     }
 
     // Get user roles
-    const { data: roles } = await supabaseAdmin
+  const { data: roles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id);
 
     // Get user's assigned sites
-    const { data: siteAssignments } = await supabaseAdmin
+  const { data: siteAssignments } = await supabaseAdmin
       .from('user_site_assignments')
       .select('site_id')
       .eq('user_id', user.id);
@@ -100,19 +102,21 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ userId: string } }
+  request: NextRequest,
+  props: { params: Promise<{ userId: string }> }
 ) {
   const requestId = getRequestId(request);
 
   try {
+    const params = await props.params;
     // Require authentication
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user: currentUser } = authResult;
+  const { user: currentUser } = authResult;
 
-    const { userId } = params;
+  const { userId } = params;
 
     // Users can update their own profile, or Admins can update any user in their company
     if (userId !== currentUser.id && !currentUser.roles.includes('OWNER') && !currentUser.roles.includes('ADMIN')) {
@@ -149,7 +153,7 @@ export async function PUT(
     }
 
     // Check if user exists and user has access (RLS will enforce)
-    const { data: existingUser, error: checkError } = await supabaseAdmin
+  const { data: existingUser, error: checkError } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('id', userId)
@@ -169,7 +173,7 @@ export async function PUT(
     // Update user
     updates.updated_at = new Date().toISOString();
 
-    const { data: updatedUser, error: updateError } = await supabaseAdmin
+  const { data: updatedUser, error: updateError } = await supabaseAdmin
       .from('users')
       .update(updates)
       .eq('id', userId)
@@ -201,19 +205,21 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest, props: { params: Promise<{ userId: string } }
+  request: NextRequest,
+  props: { params: Promise<{ userId: string }> }
 ) {
   const requestId = getRequestId(request);
 
   try {
+    const params = await props.params;
     // Require Owner or Admin role
     const authResult = await requireRole(request, ['OWNER', 'ADMIN']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user: currentUser } = authResult;
+  const { user: currentUser } = authResult;
 
-    const { userId } = params;
+  const { userId } = params;
 
     // Cannot delete own account
     if (userId === currentUser.id) {
@@ -227,7 +233,7 @@ export async function DELETE(
     }
 
     // Check if user exists and user has access (RLS will enforce)
-    const { data: existingUser, error: checkError } = await supabaseAdmin
+  const { data: existingUser, error: checkError } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('id', userId)
@@ -245,7 +251,7 @@ export async function DELETE(
     }
 
     // Soft delete user
-    const { error: deleteError } = await supabaseAdmin
+  const { error: deleteError } = await supabaseAdmin
       .from('users')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', userId);

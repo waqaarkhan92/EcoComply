@@ -35,6 +35,11 @@ export const QUEUE_NAMES = {
   RUNTIME_MONITORING: 'runtime-monitoring',
   TRIGGER_EXECUTION: 'trigger-execution',
   DASHBOARD_REFRESH: 'dashboard-refresh',
+  // Enhanced Features V2
+  EVIDENCE_GAP_DETECTION: 'evidence-gap-detection',
+  RISK_SCORE_CALCULATION: 'risk-score-calculation',
+  // Review Queue Escalation
+  REVIEW_QUEUE_ESCALATION: 'review-queue-escalation',
 } as const;
 
 // Redis connection
@@ -91,7 +96,11 @@ export function createQueue<T = any>(
         count: 1000, // Keep last 1000 completed jobs
       },
       removeOnFail: {
-        age: 7 * 24 * 3600, // Keep failed jobs for 7 days
+        // CRITICAL: Extended retention for compliance auditing
+        // Failed jobs should be kept longer to allow investigation
+        // and to ensure no data loss goes unnoticed
+        age: 30 * 24 * 3600, // Keep failed jobs for 30 days (was 7)
+        count: 10000, // Keep up to 10k failed jobs
       },
     },
     ...options,

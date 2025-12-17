@@ -12,7 +12,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ workflowId: string } }
+  request: NextRequest, props: { params: Promise<{ workflowId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -21,12 +21,12 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { workflowId } = params;
+  const { workflowId } = params;
 
-    const { data: workflow, error } = await supabaseAdmin
+  const { data: workflow, error } = await supabaseAdmin
       .from('escalation_workflows')
       .select('*')
       .eq('id', workflowId)
@@ -67,7 +67,7 @@ export async function GET(
 }
 
 export async function PATCH(
-  request: NextRequest, props: { params: Promise<{ workflowId: string } }
+  request: NextRequest, props: { params: Promise<{ workflowId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -77,14 +77,14 @@ export async function PATCH(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { workflowId } = params;
+  const { workflowId } = params;
     const body = await request.json();
 
     // Verify workflow exists and belongs to company
-    const { data: existingWorkflow, error: getError } = await supabaseAdmin
+  const { data: existingWorkflow, error: getError } = await supabaseAdmin
       .from('escalation_workflows')
       .select('id, company_id')
       .eq('id', workflowId)
@@ -167,7 +167,7 @@ export async function PATCH(
     if (body.is_active !== undefined) updateData.is_active = body.is_active;
 
     // Update workflow
-    const { data: updatedWorkflow, error: updateError } = await supabaseAdmin
+  const { data: updatedWorkflow, error: updateError } = await supabaseAdmin
       .from('escalation_workflows')
       .update(updateData)
       .eq('id', workflowId)
@@ -199,7 +199,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: NextRequest, props: { params: Promise<{ workflowId: string } }
+  request: NextRequest, props: { params: Promise<{ workflowId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -209,13 +209,13 @@ export async function DELETE(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { workflowId } = params;
+  const { workflowId } = params;
 
     // Verify workflow exists and belongs to company
-    const { data: existingWorkflow, error: getError } = await supabaseAdmin
+  const { data: existingWorkflow, error: getError } = await supabaseAdmin
       .from('escalation_workflows')
       .select('id, company_id')
       .eq('id', workflowId)
@@ -242,7 +242,7 @@ export async function DELETE(
     }
 
     // Delete workflow
-    const { error: deleteError } = await supabaseAdmin
+  const { error: deleteError } = await supabaseAdmin
       .from('escalation_workflows')
       .delete()
       .eq('id', workflowId);

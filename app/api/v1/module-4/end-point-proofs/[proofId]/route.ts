@@ -12,22 +12,22 @@ import { requireModule } from '@/lib/api/module-check';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ proofId: string } }
+  request: NextRequest, props: { params: Promise<{ proofId: string }> }
 ) {
   const requestId = getRequestId(request);
 
   try {
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) return authResult;
-    const { user } = authResult;
+  const { user } = authResult;
 
     const moduleCheck = await requireModule(user.company_id, 'MODULE_4');
     if (moduleCheck) return moduleCheck;
 
     const params = await props.params;
-    const { proofId } = params;
+  const { proofId } = params;
 
-    const { data: proof, error } = await supabaseAdmin
+  const { data: proof, error } = await supabaseAdmin
       .from('end_point_proofs')
       .select('*')
       .eq('id', proofId)
@@ -68,24 +68,24 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ proofId: string } }
+  request: NextRequest, props: { params: Promise<{ proofId: string }> }
 ) {
   const requestId = getRequestId(request);
 
   try {
     const authResult = await requireRole(request, ['OWNER', 'ADMIN', 'STAFF']);
     if (authResult instanceof NextResponse) return authResult;
-    const { user } = authResult;
+  const { user } = authResult;
 
     const moduleCheck = await requireModule(user.company_id, 'MODULE_4');
     if (moduleCheck) return moduleCheck;
 
     const params = await props.params;
-    const { proofId } = params;
+  const { proofId } = params;
     const body = await request.json();
 
     // Get existing proof to verify access
-    const { data: existing, error: fetchError } = await supabaseAdmin
+  const { data: existing, error: fetchError } = await supabaseAdmin
       .from('end_point_proofs')
       .select('id, company_id')
       .eq('id', proofId)
@@ -129,7 +129,7 @@ export async function PUT(
     }
     if (body.verification_notes !== undefined) updateData.verification_notes = body.verification_notes;
 
-    const { data: proof, error: updateError } = await supabaseAdmin
+  const { data: proof, error: updateError } = await supabaseAdmin
       .from('end_point_proofs')
       .update(updateData)
       .eq('id', proofId)

@@ -38,14 +38,14 @@ export default function EvidenceDetailPage() {
   const evidenceId = params.evidenceId as string;
   const [activeTab, setActiveTab] = useState<'details' | 'linked-obligations' | 'chain-of-custody' | 'approval-history'>('details');
 
-  const { data: evidenceData, isLoading } = useQuery<{ data: Evidence }>({
+  const { data: evidenceData, isLoading } = useQuery({
     queryKey: ['evidence', evidenceId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Evidence }>(`/evidence/${evidenceId}`);
     },
   });
 
-  const { data: chainOfCustodyData } = useQuery<{ data: ChainOfCustodyEvent[] }>({
+  const { data: chainOfCustodyData } = useQuery({
     queryKey: ['evidence-chain-of-custody', evidenceId],
     queryFn: async (): Promise<any> => {
       try {
@@ -74,7 +74,7 @@ export default function EvidenceDetailPage() {
   }
 
   const evidence = evidenceData.data;
-  const chainOfCustody = chainOfCustodyData?.data || [];
+  const chainOfCustody: any[] = chainOfCustodyData?.data || [];
 
   return (
     <div className="space-y-6">
@@ -189,7 +189,7 @@ export default function EvidenceDetailPage() {
 
 // Linked Obligations Tab Component
 function LinkedObligationsTab({ evidenceId }: { evidenceId: string }) {
-  const { data: linksData, isLoading } = useQuery<{ data: any[] }>({
+  const { data: linksData, isLoading } = useQuery({
     queryKey: ['evidence-obligation-links', evidenceId],
     queryFn: async (): Promise<any> => {
       return apiClient.get(`/evidence/${evidenceId}/obligations`);
@@ -204,7 +204,7 @@ function LinkedObligationsTab({ evidenceId }: { evidenceId: string }) {
     );
   }
 
-  const links = linksData?.data || [];
+  const links: any[] = linksData?.data || [];
 
   return (
     <div className="bg-white rounded-lg shadow p-6">

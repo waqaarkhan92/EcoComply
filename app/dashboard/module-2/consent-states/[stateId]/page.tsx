@@ -38,7 +38,7 @@ export default function ConsentStateDetailPage({
 }) {
   const { stateId } = use(params);
 
-  const { data: state, isLoading } = useQuery<ConsentState>({
+  const { data: state, isLoading } = useQuery({
     queryKey: ['consent-state', stateId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<ConsentState>(`/module-2/consent-states/${stateId}`);

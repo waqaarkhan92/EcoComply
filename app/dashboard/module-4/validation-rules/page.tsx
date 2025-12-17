@@ -45,7 +45,7 @@ export default function ValidationRulesPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<ValidationRulesResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-4-validation-rules', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -68,7 +68,7 @@ export default function ValidationRulesPage() {
     },
   });
 
-  const rules = data?.data || [];
+  const rules: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

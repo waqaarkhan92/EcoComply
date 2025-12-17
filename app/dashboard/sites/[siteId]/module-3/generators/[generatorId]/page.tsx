@@ -39,7 +39,7 @@ export default function GeneratorDetailPage() {
   const siteId = params.siteId as string;
   const generatorId = params.generatorId as string;
 
-  const { data: generatorData, isLoading, error } = useQuery<{ data: Generator }>({
+  const { data: generatorData, isLoading, error } = useQuery({
     queryKey: ['module-3-generator', generatorId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Generator }>(`/module-3/generators/${generatorId}`);
@@ -243,7 +243,7 @@ export default function GeneratorDetailPage() {
           <h2 className="text-lg font-semibold text-text-primary mb-4">Recent Run Hours</h2>
           {generator.recent_run_hour_records && generator.recent_run_hour_records.length > 0 ? (
             <div className="space-y-3">
-              {generator.recent_run_hour_records.map((record) => (
+              {generator.recent_run_hour_records.map((record: { id: string; recording_date: string; hours_recorded: number; running_total_year: number; percentage_of_annual_limit: number }) => (
                 <div key={record.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                   <div>
                     <p className="text-sm font-medium text-text-primary">

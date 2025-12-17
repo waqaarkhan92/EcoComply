@@ -43,7 +43,7 @@ export default function PermitVersionDetailPage({
 }) {
   const { versionId } = use(params);
 
-  const { data: version, isLoading } = useQuery<PermitVersion>({
+  const { data: version, isLoading } = useQuery({
     queryKey: ['permit-version', versionId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<PermitVersion>(`/module-1/permit-versions/${versionId}`);

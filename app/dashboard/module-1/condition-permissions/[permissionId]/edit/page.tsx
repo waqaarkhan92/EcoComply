@@ -30,7 +30,7 @@ export default function EditConditionPermissionPage({
     permission_type: 'VIEW' as 'VIEW' | 'EDIT' | 'MANAGE' | 'FULL',
   });
 
-  const { data: permission, isLoading } = useQuery<ConditionPermission>({
+  const { data: permission, isLoading } = useQuery({
     queryKey: ['condition-permission', permissionId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<ConditionPermission>(`/module-1/condition-permissions/${permissionId}`);

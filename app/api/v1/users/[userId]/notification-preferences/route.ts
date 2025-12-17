@@ -11,7 +11,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ userId: string } }
+  request: NextRequest, props: { params: Promise<{ userId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -21,10 +21,10 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { userId } = params;
+  const { userId } = params;
 
     // Check permissions: user can only view their own preferences, or Admin can view any
     if (user.id !== userId) {
@@ -43,7 +43,7 @@ export async function GET(
     // Get user notification preferences from settings
     // Note: This assumes preferences are stored in user settings JSONB field
     // If a separate table exists, query that instead
-    const { data: userData, error } = await supabaseAdmin
+  const { data: userData, error } = await supabaseAdmin
       .from('users')
       .select('id, settings')
       .eq('id', userId)
@@ -84,7 +84,7 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ userId: string } }
+  request: NextRequest, props: { params: Promise<{ userId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -94,10 +94,10 @@ export async function PUT(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { userId } = params;
+  const { userId } = params;
 
     // Check permissions
     if (user.id !== userId) {
@@ -152,7 +152,7 @@ export async function PUT(
     }
 
     // Get current user settings
-    const { data: userData, error: getUserError } = await supabaseAdmin
+  const { data: userData, error: getUserError } = await supabaseAdmin
       .from('users')
       .select('settings')
       .eq('id', userId)
@@ -192,7 +192,7 @@ export async function PUT(
     }
 
     // Update user settings
-    const { data: updatedUser, error: updateError } = await supabaseAdmin
+  const { data: updatedUser, error: updateError } = await supabaseAdmin
       .from('users')
       .update({
         settings: {

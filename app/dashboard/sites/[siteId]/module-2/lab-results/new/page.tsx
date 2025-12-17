@@ -53,7 +53,7 @@ export default function NewLabResultPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Fetch parameters for this site
-  const { data: parametersData, isLoading: parametersLoading } = useQuery<ParametersResponse>({
+  const { data: parametersData, isLoading: parametersLoading } = useQuery({
     queryKey: ['module-2-parameters', siteId],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -65,7 +65,7 @@ export default function NewLabResultPage() {
     enabled: !!siteId,
   });
 
-  const parameters = parametersData?.data || [];
+  const parameters: any[] = parametersData?.data || [];
   const selectedParameter = parameters.find(p => p.id === formData.parameter_id);
 
   const createMutation = useMutation({

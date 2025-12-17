@@ -49,7 +49,7 @@ export default function MonthlyStatementDetailPage({
     reconciliation_notes: '',
   });
 
-  const { data: statement, isLoading } = useQuery<MonthlyStatement>({
+  const { data: statement, isLoading } = useQuery({
     queryKey: ['monthly-statement', statementId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<MonthlyStatement>(`/module-2/monthly-statements/${statementId}`);
@@ -57,7 +57,7 @@ export default function MonthlyStatementDetailPage({
     },
   });
 
-  const { data: reconciliations } = useQuery<{ data: StatementReconciliation[] }>({
+  const { data: reconciliations } = useQuery({
     queryKey: ['statement-reconciliations', statementId],
     queryFn: async (): Promise<any> => {
       return apiClient.get(`/module-2/monthly-statements/${statementId}/reconciliations`);
@@ -242,7 +242,7 @@ export default function MonthlyStatementDetailPage({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {reconciliations.data.map((recon) => {
+                {reconciliations.data.map((recon: StatementReconciliation) => {
                   const isPositive = recon.variance_m3 >= 0;
                   return (
                     <tr key={recon.id} className="hover:bg-gray-50">

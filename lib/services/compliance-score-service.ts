@@ -129,7 +129,7 @@ export async function calculateModuleComplianceScore(
       completed_and_evidenced_obligations: completedCount,
       overdue_obligations: overdueCount,
       completion_rate: totalDue > 0 ? (completedCount / totalDue) * 100 : 100,
-      overdue_penalty,
+      overdue_penalty: overduePenalty,
       compliance_clock_penalty: complianceClockPenalty,
     },
     calculated_at: new Date().toISOString(),

@@ -28,7 +28,7 @@ async function testWorkerConnection() {
   try {
     // Test Redis connection
     console.log('1. Testing Redis connection...');
-    redis = new Redis(redisUrl, {
+    redis = new Redis(redisUrl!, {
       maxRetriesPerRequest: null, // Required by BullMQ
       retryStrategy: () => null,
     });

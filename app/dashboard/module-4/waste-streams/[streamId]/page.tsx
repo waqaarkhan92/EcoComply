@@ -35,7 +35,7 @@ export default function WasteStreamDetailPage({
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
 
-  const { data: wasteStream, isLoading } = useQuery<WasteStream>({
+  const { data: wasteStream, isLoading } = useQuery({
     queryKey: ['waste-stream', streamId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<WasteStream>(`/module-4/waste-streams/${streamId}`);

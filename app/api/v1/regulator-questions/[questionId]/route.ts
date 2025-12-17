@@ -11,7 +11,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ questionId: string } }
+  request: NextRequest, props: { params: Promise<{ questionId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -21,13 +21,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { questionId } = params;
+  const { questionId } = params;
 
     // Get question - RLS will enforce access control
-    const { data: question, error } = await supabaseAdmin
+  const { data: question, error } = await supabaseAdmin
       .from('regulator_questions')
       .select('*')
       .eq('id', questionId)
@@ -67,7 +67,7 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ questionId: string } }
+  request: NextRequest, props: { params: Promise<{ questionId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -77,16 +77,16 @@ export async function PUT(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { questionId } = params;
+  const { questionId } = params;
 
     // Parse request body
     const body = await request.json();
 
     // Get existing question
-    const { data: existingQuestion, error: getError } = await supabaseAdmin
+  const { data: existingQuestion, error: getError } = await supabaseAdmin
       .from('regulator_questions')
       .select('*')
       .eq('id', questionId)
@@ -138,7 +138,7 @@ export async function PUT(
     updates.updated_at = new Date().toISOString();
 
     // Update question
-    const { data: updatedQuestion, error: updateError } = await supabaseAdmin
+  const { data: updatedQuestion, error: updateError } = await supabaseAdmin
       .from('regulator_questions')
       .update(updates)
       .eq('id', questionId)

@@ -10,7 +10,7 @@ import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ siteId: string } }
+  request: NextRequest, props: { params: Promise<{ siteId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,16 +20,16 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { siteId } = params;
+  const { siteId } = params;
     const searchParams = request.nextUrl.searchParams;
     const includeSitesParam = searchParams.get('include_sites');
     const includeSites = includeSitesParam ? includeSitesParam.split(',') : [];
 
     // Verify primary site exists and user has access
-    const { data: primarySite, error: siteError } = await supabaseAdmin
+  const { data: primarySite, error: siteError } = await supabaseAdmin
       .from('sites')
       .select('id, name, company_id')
       .eq('id', siteId)
@@ -72,7 +72,7 @@ export async function GET(
     const allSiteIds = [siteId, ...includeSites].filter((id, index, self) => self.indexOf(id) === index);
 
     // Verify all sites belong to same company
-    const { data: sites, error: sitesError } = await supabaseAdmin
+  const { data: sites, error: sitesError } = await supabaseAdmin
       .from('sites')
       .select('id, name, company_id')
       .in('id', allSiteIds)
@@ -90,13 +90,13 @@ export async function GET(
     }
 
     // Aggregate data across all sites
-    const { count: totalObligations } = await supabaseAdmin
+  const { count: totalObligations } = await supabaseAdmin
       .from('obligations')
       .select('id', { count: 'exact', head: true })
       .in('site_id', allSiteIds)
       .is('deleted_at', null);
 
-    const { count: overdueObligations } = await supabaseAdmin
+  const { count: overdueObligations } = await supabaseAdmin
       .from('obligations')
       .select('id', { count: 'exact', head: true })
       .in('site_id', allSiteIds)
@@ -106,7 +106,7 @@ export async function GET(
     const now = new Date();
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    const { count: dueSoonObligations } = await supabaseAdmin
+  const { count: dueSoonObligations } = await supabaseAdmin
       .from('deadlines')
       .select('id', { count: 'exact', head: true })
       .in('site_id', allSiteIds)
@@ -114,7 +114,7 @@ export async function GET(
       .gte('due_date', now.toISOString().split('T')[0])
       .lte('due_date', sevenDaysFromNow.toISOString().split('T')[0]);
 
-    const { count: completedObligations } = await supabaseAdmin
+  const { count: completedObligations } = await supabaseAdmin
       .from('obligations')
       .select('id', { count: 'exact', head: true })
       .in('site_id', allSiteIds)
@@ -122,7 +122,7 @@ export async function GET(
       .is('deleted_at', null);
 
     // Get upcoming deadlines across all sites
-    const { data: deadlines } = await supabaseAdmin
+  const { data: deadlines } = await supabaseAdmin
       .from('deadlines')
       .select('id, obligation_id, site_id, due_date, status')
       .in('site_id', allSiteIds)

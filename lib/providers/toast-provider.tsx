@@ -5,10 +5,10 @@ import { useToast } from '@/lib/hooks/use-toast';
 import { ToastContainer } from '@/components/ui/toast';
 
 interface ToastContextType {
-  success: (message: string, duration?: number, action?: { label: string; onClick: () => void }) => string;
-  error: (message: string, duration?: number, action?: { label: string; onClick: () => void }) => string;
-  warning: (message: string, duration?: number, action?: { label: string; onClick: () => void }) => string;
-  info: (message: string, duration?: number, action?: { label: string; onClick: () => void }) => string;
+  success: (message: string, duration?: number, action?: ReactNode) => string;
+  error: (message: string, duration?: number, action?: ReactNode) => string;
+  warning: (message: string, duration?: number, action?: ReactNode) => string;
+  info: (message: string, duration?: number, action?: ReactNode) => string;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);

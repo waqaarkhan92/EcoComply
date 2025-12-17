@@ -12,9 +12,10 @@ import { requireModule } from '@/lib/api/module-check';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ recordId: string } }
+  request: NextRequest, props: { params: Promise<{ recordId: string }> }
 ) {
   const requestId = getRequestId(request);
+  const params = await props.params;
   const { recordId } = params;
 
   try {
@@ -23,7 +24,7 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     // Check Module 3 is activated
     const moduleCheck = await requireModule(user.company_id, 'MODULE_3');
@@ -32,7 +33,7 @@ export async function GET(
     }
 
     // Fetch maintenance record
-    const { data: record, error } = await supabaseAdmin
+  const { data: record, error } = await supabaseAdmin
       .from('maintenance_records')
       .select(`
         id,
@@ -99,11 +100,11 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ recordId: string } }
+  request: NextRequest, props: { params: Promise<{ recordId: string }> }
 ) {
   const requestId = getRequestId(request);
   const params = await props.params;
-    const { recordId } = params;
+  const { recordId } = params;
 
   try {
     // Require authentication and appropriate role
@@ -111,7 +112,7 @@ export async function PUT(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     // Check Module 3 is activated
     const moduleCheck = await requireModule(user.company_id, 'MODULE_3');
@@ -120,7 +121,7 @@ export async function PUT(
     }
 
     // Verify record exists and user has access
-    const { data: existingRecord, error: fetchError } = await supabaseAdmin
+  const { data: existingRecord, error: fetchError } = await supabaseAdmin
       .from('maintenance_records')
       .select('id, company_id, generator_id')
       .eq('id', recordId)
@@ -172,7 +173,7 @@ export async function PUT(
     }
 
     // Update maintenance record
-    const { data: updatedRecord, error: updateError } = await supabaseAdmin
+  const { data: updatedRecord, error: updateError } = await supabaseAdmin
       .from('maintenance_records')
       .update(updateData)
       .eq('id', recordId)

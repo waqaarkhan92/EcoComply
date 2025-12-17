@@ -18,14 +18,14 @@ interface Company {
 export default function CompaniesPage() {
   const { user } = useAuthStore();
 
-  const { data: companiesData, isLoading } = useQuery<{ data: Company[] }>({
+  const { data: companiesData, isLoading } = useQuery({
     queryKey: ['companies'],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Company[] }>('/companies');
     },
   });
 
-  const companies = companiesData?.data || [];
+  const companies: Company[] = companiesData?.data || [];
 
   if (isLoading) {
     return (

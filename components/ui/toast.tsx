@@ -12,10 +12,7 @@ interface ToastProps {
   type?: ToastType;
   duration?: number;
   onClose: (id: string) => void;
-  action?: {
-    label: string;
-    onClick: () => void;
-  };
+  action?: ReactNode;
 }
 
 const typeConfig = {
@@ -70,14 +67,7 @@ export function Toast({ id, message, type = 'info', duration = 5000, onClose, ac
     >
       <Icon className={cn('h-5 w-5 flex-shrink-0', config.iconColor)} />
       <p className="flex-1 text-sm font-medium">{message}</p>
-      {action && (
-        <button
-          onClick={action.onClick}
-          className="text-sm font-semibold underline hover:no-underline"
-        >
-          {action.label}
-        </button>
-      )}
+      {action && <div className="flex-shrink-0">{action}</div>}
       <button
         onClick={() => onClose(id)}
         className="p-1 hover:opacity-70 transition-opacity"
@@ -95,10 +85,7 @@ interface ToastContainerProps {
     message: string;
     type?: ToastType;
     duration?: number;
-    action?: {
-      label: string;
-      onClick: () => void;
-    };
+    action?: ReactNode;
   }>;
   onClose: (id: string) => void;
 }

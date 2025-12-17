@@ -41,7 +41,7 @@ export default function EditPermitWorkflowPage({
     workflow_notes: '',
   });
 
-  const { data: workflow, isLoading } = useQuery<PermitWorkflow>({
+  const { data: workflow, isLoading } = useQuery({
     queryKey: ['permit-workflow', workflowId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<PermitWorkflow>(`/module-1/permit-workflows/${workflowId}`);

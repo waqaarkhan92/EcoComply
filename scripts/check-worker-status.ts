@@ -26,7 +26,7 @@ async function checkWorkerStatus() {
 
   try {
     // Connect to Redis
-    redis = new Redis(redisUrl, {
+    redis = new Redis(redisUrl!, {
       maxRetriesPerRequest: null,
       retryStrategy: () => null,
     });

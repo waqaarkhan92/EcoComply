@@ -195,11 +195,10 @@ async function testExtraction() {
       console.log('\n✅ TEST PASSED');
       process.exit(0);
     } else if (jobState === 'failed') {
-      const jobData = await job.get();
-      const failedReason = jobData?.failedReason || 'Unknown error';
+      const failedReason = job.failedReason || 'Unknown error';
       console.error(`\n❌ Job failed after ${elapsed}s: ${failedReason}`);
-      if (jobData?.stacktrace) {
-        console.error('Stack:', jobData.stacktrace.split('\n').slice(0, 10).join('\n'));
+      if (job.stacktrace) {
+        console.error('Stack:', job.stacktrace.join('\n').slice(0, 10));
       }
       await worker.close();
       process.exit(1);
@@ -217,11 +216,11 @@ async function testExtraction() {
     .single();
   console.error(`Document status: ${finalDoc?.extraction_status || 'UNKNOWN'}`);
   console.error(`Text length: ${finalDoc?.extracted_text?.length || 0}`);
-  
+
   // Get job details
-  const jobData = await job.get();
-  console.error(`Job data:`, JSON.stringify(jobData, null, 2));
-  
+  console.error(`Job failed reason:`, job.failedReason || 'Not failed');
+  console.error(`Job data:`, JSON.stringify(job.data, null, 2));
+
   await worker.close();
   process.exit(1);
 }

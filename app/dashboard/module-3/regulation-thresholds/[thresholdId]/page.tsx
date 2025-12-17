@@ -47,7 +47,7 @@ export default function RegulationThresholdDetailPage({
   const { thresholdId } = use(params);
   const queryClient = useQueryClient();
 
-  const { data: threshold, isLoading } = useQuery<RegulationThreshold>({
+  const { data: threshold, isLoading } = useQuery({
     queryKey: ['regulation-threshold', thresholdId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<RegulationThreshold>(`/module-3/regulation-thresholds/${thresholdId}`);

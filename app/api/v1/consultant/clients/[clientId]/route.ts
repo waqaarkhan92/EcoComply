@@ -12,7 +12,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ clientId: string } }
+  request: NextRequest, props: { params: Promise<{ clientId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -22,13 +22,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { clientId } = params;
+  const { clientId } = params;
 
     // Verify consultant has access to this client
-    const { data: assignment, error: assignmentError } = await supabaseAdmin
+  const { data: assignment, error: assignmentError } = await supabaseAdmin
       .from('consultant_client_assignments')
       .select('client_company_id, status')
       .eq('consultant_id', user.id)
@@ -47,7 +47,7 @@ export async function GET(
     }
 
     // Get client company
-    const { data: company, error: companyError } = await supabaseAdmin
+  const { data: company, error: companyError } = await supabaseAdmin
       .from('companies')
       .select('id, name, subscription_tier')
       .eq('id', clientId)
@@ -64,7 +64,7 @@ export async function GET(
     }
 
     // Get sites
-    const { data: sites, error: sitesError } = await supabaseAdmin
+  const { data: sites, error: sitesError } = await supabaseAdmin
       .from('sites')
       .select('id, name, company_id')
       .eq('company_id', clientId);
@@ -114,7 +114,7 @@ export async function GET(
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
     
-    const { data: upcomingDeadlines, error: deadlinesError } = await supabaseAdmin
+  const { data: upcomingDeadlines, error: deadlinesError } = await supabaseAdmin
       .from('obligations')
       .select('id, obligation_title, deadline_date, site_id')
       .in('site_id', siteIds)

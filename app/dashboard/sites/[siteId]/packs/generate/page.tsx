@@ -22,30 +22,52 @@ export default function GeneratePackPage() {
   const [recipientName, setRecipientName] = useState('');
   const [purpose, setPurpose] = useState('');
 
+  // Fetch site to get company_id
+  const { data: siteData } = useQuery({
+    queryKey: ['site', siteId],
+    queryFn: async () => {
+      const response = await apiClient.get(`/sites/${siteId}`);
+      return response.data as { company_id: string; name: string; [key: string]: unknown };
+    },
+    enabled: !!siteId,
+  });
+
   const generatePack = useMutation({
     mutationFn: async (data: any) => {
       return apiClient.post('/packs/generate', data);
     },
     onSuccess: (response: any) => {
-      const packId = response.data?.id;
+      const packId = response.data?.pack_id || response.data?.id;
       if (packId) {
         router.push(`/dashboard/sites/${siteId}/packs/${packId}`);
+      } else {
+        // If no pack_id, navigate back to packs list
+        router.push(`/dashboard/sites/${siteId}/packs`);
       }
+    },
+    onError: (error: any) => {
+      console.error('Pack generation failed:', error);
+      alert(error.message || 'Failed to generate pack. Please try again.');
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!siteData?.company_id) {
+      alert('Unable to determine company. Please try again.');
+      return;
+    }
+
     generatePack.mutate({
       site_id: siteId,
+      company_id: siteData.company_id,
       pack_type: packType,
-      date_range: {
-        start: dateRangeStart,
-        end: dateRangeEnd,
-      },
+      date_range_start: dateRangeStart,
+      date_range_end: dateRangeEnd,
       recipient_type: recipientType,
-      recipient_name: recipientName,
-      purpose: purpose,
+      recipient_name: recipientName || undefined,
+      purpose: purpose || undefined,
     });
   };
 

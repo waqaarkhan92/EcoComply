@@ -43,7 +43,7 @@ export default function EndPointProofsPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<EndPointProofsResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-4-end-point-proofs', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -58,7 +58,7 @@ export default function EndPointProofsPage() {
     },
   });
 
-  const proofs = data?.data || [];
+  const proofs: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

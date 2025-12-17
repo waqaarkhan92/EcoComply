@@ -22,7 +22,7 @@ export default function ConsultantClientsPage() {
     );
   }
 
-  const clients = clientsData?.data || [];
+  const clients: any[] = clientsData?.data || [];
 
   return (
     <div className="space-y-6">

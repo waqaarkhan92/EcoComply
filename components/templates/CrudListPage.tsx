@@ -63,11 +63,11 @@ export function CrudListPage<T extends { id: string }>({
       
       const queryString = params.toString();
       const url = apiEndpoint + (queryString ? '?' + queryString : '');
-      return apiClient.get(url);
+      return apiClient.get<T[]>(url);
     },
   });
 
-  const items: T[] = data?.data || [];
+  const items: T[] = (data?.data as T[]) ?? [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

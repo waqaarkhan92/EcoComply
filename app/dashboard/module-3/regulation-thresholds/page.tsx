@@ -48,7 +48,7 @@ export default function RegulationThresholdsPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<RegulationThresholdsResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['regulation-thresholds', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -61,7 +61,7 @@ export default function RegulationThresholdsPage() {
     },
   });
 
-  const thresholds = data?.data || [];
+  const thresholds: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

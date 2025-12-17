@@ -7,6 +7,8 @@ import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Calendar, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import Link from 'next/link';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
+import { Skeleton, SkeletonTable } from '@/components/ui/skeleton';
 
 interface Deadline {
   id: string;
@@ -33,7 +35,7 @@ export default function DeadlinesPage() {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [filter, setFilter] = useState<string>('all');
 
-  const { data: deadlinesData, isLoading, error } = useQuery<DeadlinesResponse>({
+  const { data: deadlinesData, isLoading, error } = useQuery({
     queryKey: ['deadlines', siteId, cursor, filter],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -49,7 +51,7 @@ export default function DeadlinesPage() {
     enabled: !!siteId,
   });
 
-  const deadlines = deadlinesData?.data || [];
+  const deadlines: any[] = deadlinesData?.data || [];
   const hasMore = deadlinesData?.pagination?.has_more || false;
   const nextCursor = deadlinesData?.pagination?.cursor;
 
@@ -68,8 +70,25 @@ export default function DeadlinesPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading deadlines...</div>
+      <div className="space-y-6">
+        <div className="flex gap-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <Skeleton className="h-8 w-32 mb-2" />
+            <Skeleton className="h-5 w-64" />
+          </div>
+          <div className="flex space-x-2">
+            <Skeleton className="h-9 w-16" />
+            <Skeleton className="h-9 w-20" />
+            <Skeleton className="h-9 w-20" />
+          </div>
+        </div>
+        <SkeletonTable rows={6} />
       </div>
     );
   }
@@ -82,8 +101,17 @@ export default function DeadlinesPage() {
     );
   }
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Sites', href: '/dashboard/sites' },
+    { label: 'Site', href: `/dashboard/sites/${siteId}/dashboard` },
+    { label: 'Deadlines' },
+  ];
+
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={breadcrumbItems} />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Deadlines</h1>
@@ -91,19 +119,19 @@ export default function DeadlinesPage() {
         </div>
         <div className="flex space-x-2">
           <Button
-            variant={filter === 'all' ? 'default' : 'outline'}
+            variant={filter === 'all' ? 'primary' : 'outline'}
             onClick={() => setFilter('all')}
           >
             All
           </Button>
           <Button
-            variant={filter === 'PENDING' ? 'default' : 'outline'}
+            variant={filter === 'PENDING' ? 'primary' : 'outline'}
             onClick={() => setFilter('PENDING')}
           >
             Pending
           </Button>
           <Button
-            variant={filter === 'OVERDUE' ? 'default' : 'outline'}
+            variant={filter === 'OVERDUE' ? 'primary' : 'outline'}
             onClick={() => setFilter('OVERDUE')}
           >
             Overdue

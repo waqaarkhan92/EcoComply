@@ -45,7 +45,7 @@ export default function StackTestsPage() {
   const siteId = params.siteId as string;
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
-  const { data: stackTestsData, isLoading, error } = useQuery<StackTestsResponse>({
+  const { data: stackTestsData, isLoading, error } = useQuery({
     queryKey: ['module-3-stack-tests', siteId, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -58,7 +58,7 @@ export default function StackTestsPage() {
     enabled: !!siteId,
   });
 
-  const stackTests = stackTestsData?.data || [];
+  const stackTests: any[] = stackTestsData?.data || [];
   const hasMore = stackTestsData?.pagination?.has_more || false;
   const nextCursor = stackTestsData?.pagination?.cursor;
 

@@ -21,7 +21,7 @@ const validTransitions: Record<string, string[]> = {
 };
 
 export async function POST(
-  request: NextRequest, props: { params: Promise<{ questionId: string } }
+  request: NextRequest, props: { params: Promise<{ questionId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -31,12 +31,12 @@ export async function POST(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { questionId } = params;
+  const { questionId } = params;
     const body = await request.json();
-    const { new_state, reason } = body;
+  const { new_state, reason } = body;
 
     if (!new_state) {
       return errorResponse(
@@ -49,7 +49,7 @@ export async function POST(
     }
 
     // Get current question
-    const { data: question, error: questionError } = await supabaseAdmin
+  const { data: question, error: questionError } = await supabaseAdmin
       .from('regulator_questions')
       .select('id, status, site_id, company_id')
       .eq('id', questionId)
@@ -101,7 +101,7 @@ export async function POST(
     }
 
     // Update question status
-    const { data: updatedQuestion, error: updateError } = await supabaseAdmin
+  const { data: updatedQuestion, error: updateError } = await supabaseAdmin
       .from('regulator_questions')
       .update({
         status: new_state,

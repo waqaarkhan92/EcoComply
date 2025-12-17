@@ -24,7 +24,7 @@ export default function NotificationDetailPage() {
   const router = useRouter();
   const notificationId = params.notificationId as string;
 
-  const { data: notificationData, isLoading } = useQuery<{ data: Notification }>({
+  const { data: notificationData, isLoading } = useQuery({
     queryKey: ['notification', notificationId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Notification }>(`/notifications/${notificationId}`);

@@ -10,7 +10,7 @@ import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ activationId: string } }
+  request: NextRequest, props: { params: Promise<{ activationId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,13 +20,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { activationId } = params;
+  const { activationId } = params;
 
     // Get activation - RLS will enforce access control
-    const { data: activation, error } = await supabaseAdmin
+  const { data: activation, error } = await supabaseAdmin
       .from('module_activations')
       .select(`
         id,

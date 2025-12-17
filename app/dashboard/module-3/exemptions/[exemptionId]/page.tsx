@@ -39,7 +39,7 @@ export default function ExemptionDetailPage({
 }) {
   const { exemptionId } = use(params);
 
-  const { data: exemption, isLoading } = useQuery<Exemption>({
+  const { data: exemption, isLoading } = useQuery({
     queryKey: ['exemption', exemptionId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<Exemption>(`/module-3/exemptions/${exemptionId}`);
@@ -192,7 +192,7 @@ export default function ExemptionDetailPage({
             <div className="md:col-span-2">
               <p className="text-sm font-medium text-text-secondary mb-2">Evidence ({exemption.evidence_ids.length})</p>
               <div className="space-y-1">
-                {exemption.evidence_ids.map((evidenceId, index) => (
+                {exemption.evidence_ids.map((evidenceId: string, index: number) => (
                   <div key={index} className="flex items-center gap-2 text-sm">
                     <FileText className="w-4 h-4 text-gray-400" />
                     <Link href={`/dashboard/evidence/${evidenceId}`} className="text-primary hover:underline">

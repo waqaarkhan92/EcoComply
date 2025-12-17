@@ -69,8 +69,8 @@ async function runMigrations() {
   console.log('='.repeat(60) + '\n');
 
   const client = new Client({
-    connectionString: databaseUrl,
-    ssl: databaseUrl.includes('supabase') ? { rejectUnauthorized: false } : false,
+    connectionString: databaseUrl!,
+    ssl: databaseUrl!.includes('supabase') ? { rejectUnauthorized: false } : false,
   });
 
   try {

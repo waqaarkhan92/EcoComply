@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { Building2, AlertCircle, CheckCircle, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ConsultantDashboard {
   total_clients: number;
@@ -18,7 +19,7 @@ interface ConsultantDashboard {
 }
 
 export default function ConsultantDashboardPage() {
-  const { data: dashboardData, isLoading } = useQuery<{ data: ConsultantDashboard }>({
+  const { data: dashboardData, isLoading } = useQuery({
     queryKey: ['consultant-dashboard'],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: ConsultantDashboard }>('/consultant/dashboard');
@@ -27,8 +28,37 @@ export default function ConsultantDashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading dashboard...</div>
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-8 w-64 mb-2" />
+          <Skeleton className="h-5 w-48" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Skeleton className="h-4 w-24 mb-2" />
+                  <Skeleton className="h-8 w-16" />
+                </div>
+                <Skeleton className="h-8 w-8 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <Skeleton className="h-6 w-48 mb-4" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i}>
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-6 w-16" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

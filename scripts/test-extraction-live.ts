@@ -135,7 +135,6 @@ async function testExtraction() {
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     const jobState = await job.getState();
-    const jobData = await job.get();
 
     console.log(`⏳ Job state: ${jobState} (${Math.floor((Date.now() - startTime) / 1000)}s elapsed)`);
 
@@ -185,10 +184,10 @@ async function testExtraction() {
       console.log('\n✅ TEST PASSED');
       process.exit(0);
     } else if (jobState === 'failed') {
-      const failedReason = jobData?.failedReason || 'Unknown error';
+      const failedReason = job.failedReason || 'Unknown error';
       console.error(`\n❌ Job failed: ${failedReason}`);
-      if (jobData?.stacktrace) {
-        console.error('Stack trace:', jobData.stacktrace);
+      if (job.stacktrace) {
+        console.error('Stack trace:', job.stacktrace.join('\n'));
       }
       await worker.close();
       process.exit(1);

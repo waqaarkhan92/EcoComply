@@ -11,24 +11,24 @@ import { requireModule } from '@/lib/api/module-check';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function POST(
-  request: NextRequest, props: { params: Promise<{ alertId: string } }
+  request: NextRequest, props: { params: Promise<{ alertId: string }> }
 ) {
   const requestId = getRequestId(request);
 
   try {
     const authResult = await requireRole(request, ['OWNER', 'ADMIN', 'STAFF']);
     if (authResult instanceof NextResponse) return authResult;
-    const { user } = authResult;
+  const { user } = authResult;
 
     const moduleCheck = await requireModule(user.company_id, 'MODULE_4');
     if (moduleCheck) return moduleCheck;
 
     const params = await props.params;
-    const { alertId } = params;
+  const { alertId } = params;
     const body = await request.json();
 
     // Get existing alert to verify access
-    const { data: existing, error: fetchError } = await supabaseAdmin
+  const { data: existing, error: fetchError } = await supabaseAdmin
       .from('chain_break_alerts')
       .select('id, company_id, is_resolved')
       .eq('id', alertId)
@@ -65,7 +65,7 @@ export async function POST(
     }
 
     // Resolve alert
-    const { data: alert, error: updateError } = await supabaseAdmin
+  const { data: alert, error: updateError } = await supabaseAdmin
       .from('chain_break_alerts')
       .update({
         is_resolved: true,

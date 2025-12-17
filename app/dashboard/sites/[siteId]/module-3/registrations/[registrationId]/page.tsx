@@ -43,7 +43,7 @@ export default function MCPDRegistrationDetailPage() {
   const siteId = params.siteId as string;
   const registrationId = params.registrationId as string;
 
-  const { data: registrationData, isLoading, error } = useQuery<{ data: MCPDRegistration }>({
+  const { data: registrationData, isLoading, error } = useQuery({
     queryKey: ['module-3-registration', registrationId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: MCPDRegistration }>(`/module-3/mcpd-registrations/${registrationId}`);
@@ -145,7 +145,7 @@ export default function MCPDRegistrationDetailPage() {
               <div>
                 <p className="text-sm text-text-tertiary">Active Generators</p>
                 <p className="text-lg font-medium text-text-primary">
-                  {registration.generators.filter((g) => g.percentage_of_annual_limit < 100).length} / {registration.generators.length}
+                  {registration.generators.filter((g: Generator) => g.percentage_of_annual_limit < 100).length} / {registration.generators.length}
                 </p>
               </div>
             )}
@@ -158,7 +158,7 @@ export default function MCPDRegistrationDetailPage() {
         <div className="bg-white rounded-lg border border-border p-6">
           <h2 className="text-lg font-semibold text-text-primary mb-4">Generator Details</h2>
           <div className="space-y-4">
-            {registration.generators.map((generator) => (
+            {registration.generators.map((generator: Generator) => (
               <Link
                 key={generator.id}
                 href={`/dashboard/sites/${siteId}/module-3/generators/${generator.id}`}
@@ -234,12 +234,12 @@ export default function MCPDRegistrationDetailPage() {
                           fill="none"
                           strokeDasharray={`${2 * Math.PI * 32}`}
                           strokeDashoffset={`${2 * Math.PI * 32 * (1 - generator.percentage_of_annual_limit / 100)}`}
-                          className={getStatusColor(generator)}
+                          className={getStatusColor(generator.percentage_of_annual_limit)}
                           strokeLinecap="round"
                         />
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className={`text-sm font-bold ${getStatusColor(generator)}`}>
+                        <span className={`text-sm font-bold ${getStatusColor(generator.percentage_of_annual_limit)}`}>
                           {generator.percentage_of_annual_limit.toFixed(0)}%
                         </span>
                       </div>

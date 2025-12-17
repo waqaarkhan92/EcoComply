@@ -26,7 +26,7 @@ export default function DeadlineDetailPage() {
   const siteId = params.siteId as string;
   const deadlineId = params.deadlineId as string;
 
-  const { data: deadlineData, isLoading, error } = useQuery<{ data: Deadline }>({
+  const { data: deadlineData, isLoading, error } = useQuery({
     queryKey: ['deadline', deadlineId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Deadline }>(`/deadlines/${deadlineId}`);
@@ -79,7 +79,7 @@ export default function DeadlineDetailPage() {
         </div>
         {!isCompleted && (
           <Button
-            onClick={() => completeDeadline.mutate()}
+            onClick={() => completeDeadline.mutate(undefined)}
             disabled={completeDeadline.isPending}
           >
             <CheckCircle className="mr-2 h-4 w-4" />

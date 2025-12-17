@@ -29,7 +29,7 @@ export default function RecurrenceTriggersPage() {
   const siteId = params.siteId as string;
   const obligationId = params.obligationId as string;
 
-  const { data: triggersData, isLoading, error } = useQuery<RecurrenceTriggersResponse>({
+  const { data: triggersData, isLoading, error } = useQuery({
     queryKey: ['recurrence-triggers', obligationId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<RecurrenceTriggersResponse>(`/obligations/${obligationId}/recurrence-triggers`);
@@ -37,7 +37,7 @@ export default function RecurrenceTriggersPage() {
     enabled: !!obligationId,
   });
 
-  const triggers = triggersData?.data || [];
+  const triggers: any[] = triggersData?.data || [];
 
   const getTriggerTypeColor = (type: string) => {
     switch (type) {

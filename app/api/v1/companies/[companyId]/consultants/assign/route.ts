@@ -15,7 +15,7 @@ import { env } from '@/lib/env';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function POST(
-  request: NextRequest, props: { params: Promise<{ companyId: string } }
+  request: NextRequest, props: { params: Promise<{ companyId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -25,13 +25,13 @@ export async function POST(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { companyId } = params;
+  const { companyId } = params;
 
     // Get company details for email
-    const { data: clientCompany, error: companyError } = await supabaseAdmin
+  const { data: clientCompany, error: companyError } = await supabaseAdmin
       .from('companies')
       .select('id, name')
       .eq('id', companyId)
@@ -97,7 +97,7 @@ export async function POST(
 
     // Parse request body
     const body = await request.json();
-    const { consultant_id, consultant_email } = body;
+  const { consultant_id, consultant_email } = body;
 
     if (!consultant_id && !consultant_email) {
       return errorResponse(
@@ -163,7 +163,7 @@ export async function POST(
       );
     }
 
-    const { data: consultantRole, error: roleError } = await supabaseAdmin
+  const { data: consultantRole, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', consultantUserId)
@@ -181,7 +181,7 @@ export async function POST(
     }
 
     // Check if assignment already exists
-    const { data: existingAssignment, error: existingError } = await supabaseAdmin
+  const { data: existingAssignment, error: existingError } = await supabaseAdmin
       .from('consultant_client_assignments')
       .select('id, status')
       .eq('consultant_id', consultantUserId)
@@ -242,7 +242,7 @@ export async function POST(
     }
 
     // Create new assignment
-    const { data: assignment, error: assignmentError } = await supabaseAdmin
+  const { data: assignment, error: assignmentError } = await supabaseAdmin
       .from('consultant_client_assignments')
       .insert({
         consultant_id: consultantUserId,

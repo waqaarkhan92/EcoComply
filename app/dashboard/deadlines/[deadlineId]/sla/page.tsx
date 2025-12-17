@@ -38,7 +38,7 @@ export default function SLATrackingPage() {
   const router = useRouter();
   const deadlineId = params.deadlineId as string;
 
-  const { data: slaData, isLoading, error, refetch } = useQuery<{ data: SLAData }>({
+  const { data: slaData, isLoading, error, refetch } = useQuery({
     queryKey: ['deadline-sla', deadlineId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: SLAData }>(`/deadlines/${deadlineId}/sla`);
@@ -67,7 +67,7 @@ export default function SLATrackingPage() {
     );
   }
 
-  const { deadline, sla, history } = slaData.data;
+  const { deadline, sla, history } = slaData.data as SLAData;
   const isBreached = sla.sla_status === 'BREACHED';
 
   return (

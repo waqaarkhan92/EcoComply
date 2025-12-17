@@ -12,7 +12,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function DELETE(
-  request: NextRequest, props: { params: Promise<{ obligationId: string; evidenceId: string } }
+  request: NextRequest, props: { params: Promise<{ obligationId: string; evidenceId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -22,13 +22,13 @@ export async function DELETE(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { obligationId, evidenceId } = params;
+  const { obligationId, evidenceId } = params;
 
     // Check if link exists
-    const { data: link, error: linkError } = await supabaseAdmin
+  const { data: link, error: linkError } = await supabaseAdmin
       .from('obligation_evidence_links')
       .select('id')
       .eq('obligation_id', obligationId)
@@ -47,7 +47,7 @@ export async function DELETE(
     }
 
     // Soft delete link (set unlinked_at)
-    const { error: unlinkError } = await supabaseAdmin
+  const { error: unlinkError } = await supabaseAdmin
       .from('obligation_evidence_links')
       .update({
         unlinked_at: new Date().toISOString(),

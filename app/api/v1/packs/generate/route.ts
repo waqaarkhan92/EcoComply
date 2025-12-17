@@ -116,26 +116,49 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Calculate default date range if not provided (last 12 months)
+    const now = new Date();
+    const defaultEndDate = now.toISOString().split('T')[0];
+    const defaultStartDate = new Date(now.setFullYear(now.getFullYear() - 1)).toISOString().split('T')[0];
+
+    // Generate a title based on pack type and date
+    const packTypeLabels: Record<string, string> = {
+      'AUDIT_PACK': 'Audit Pack',
+      'REGULATOR_INSPECTION': 'Regulator Inspection Pack',
+      'TENDER_CLIENT_ASSURANCE': 'Tender/Client Assurance Pack',
+      'BOARD_MULTI_SITE_RISK': 'Board Multi-Site Risk Pack',
+      'INSURER_BROKER': 'Insurer/Broker Pack',
+    };
+    const title = `${packTypeLabels[pack_type] || pack_type} - ${new Date().toLocaleDateString('en-GB')}`;
+
     // Create audit_packs record
     const packData = {
       company_id: company_id,
       site_id: site_id || null,
       document_id: document_id || null,
       pack_type: pack_type,
+      title: title,
       recipient_type: recipient_type || 'INTERNAL',
       recipient_name: recipient_name || null,
       purpose: purpose || null,
-      date_range_start: date_range_start || null,
-      date_range_end: date_range_end || null,
-      filters: filters || {},
-      status: 'PENDING',
+      date_range_start: date_range_start || defaultStartDate,
+      date_range_end: date_range_end || defaultEndDate,
+      filters_applied: filters || {},
+      storage_path: 'pending', // Will be updated when pack is generated
+      file_size_bytes: 0, // Will be updated when pack is generated
+      total_obligations: 0, // Will be updated when pack is generated
+      complete_count: 0,
+      pending_count: 0,
+      overdue_count: 0,
+      evidence_count: 0,
       generated_by: user.id,
+      generation_trigger: 'MANUAL',
     };
 
     const { data: pack, error: packError } = await supabaseAdmin
       .from('audit_packs')
       .insert(packData)
-      .select('id, pack_type, status, created_at')
+      .select('id, pack_type, created_at')
       .single();
 
     if (packError || !pack) {
@@ -207,7 +230,7 @@ export async function POST(request: NextRequest) {
       {
         pack_id: pack.id,
         pack_type: pack.pack_type,
-        status: pack.status,
+        status: 'GENERATING',
         message: 'Pack generation started. You will be notified when ready.',
       },
       202,

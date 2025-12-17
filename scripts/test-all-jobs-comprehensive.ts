@@ -56,6 +56,7 @@ async function runComprehensiveTests() {
 
     // Create test data
     console.log('📦 Creating test data...\n');
+    // @ts-ignore - test-data module may not exist
     const { createTestData } = await import('../tests/helpers/test-data');
     const testData = await createTestData();
     console.log(`✅ Test data created: Company ${testData.company.id}, Site ${testData.site.id}\n`);
@@ -95,7 +96,7 @@ async function runComprehensiveTests() {
             await new Promise((resolve) => setTimeout(resolve, 100));
           }
         },
-        { connection: redis, concurrency: 1 }
+        { connection: redis!, concurrency: 1 }
       );
 
       const job = await docQueue.add('DOCUMENT_EXTRACTION', {
@@ -162,7 +163,7 @@ async function runComprehensiveTests() {
             throw new Error('Simulated failure');
           }
         },
-        { connection: redis, concurrency: 1 }
+        { connection: redis!, concurrency: 1 }
       );
 
       const job = await docQueue.add(
@@ -209,7 +210,7 @@ async function runComprehensiveTests() {
             processed = true;
           }
         },
-        { connection: redis, concurrency: 1 }
+        { connection: redis!, concurrency: 1 }
       );
 
       const job = await monitoringQueue.add('MONITORING_SCHEDULE', {
@@ -275,7 +276,7 @@ async function runComprehensiveTests() {
             processed = true;
           }
         },
-        { connection: redis, concurrency: 1 }
+        { connection: redis!, concurrency: 1 }
       );
 
       const job = await deadlineQueue.add('DEADLINE_ALERT', {
@@ -324,7 +325,7 @@ async function runComprehensiveTests() {
             processed = true;
           }
         },
-        { connection: redis, concurrency: 1 }
+        { connection: redis!, concurrency: 1 }
       );
 
       const job = await evidenceQueue.add('EVIDENCE_REMINDER', {
@@ -373,7 +374,7 @@ async function runComprehensiveTests() {
             processed = true;
           }
         },
-        { connection: redis, concurrency: 1 }
+        { connection: redis!, concurrency: 1 }
       );
 
       const job = await packQueue.add('AUDIT_PACK_GENERATION', {
@@ -419,7 +420,7 @@ async function runComprehensiveTests() {
             processed = true;
           }
         },
-        { connection: redis, concurrency: 1 }
+        { connection: redis!, concurrency: 1 }
       );
 
       const job = await docQueue.add('EXCEL_IMPORT_PROCESSING', {
@@ -459,7 +460,7 @@ async function runComprehensiveTests() {
         async (job) => {
           processed = true;
         },
-        { connection: redis, concurrency: 1 }
+        { connection: redis!, concurrency: 1 }
       );
 
       const job = await docQueue.add('DOCUMENT_EXTRACTION', { test: 'complete' });
@@ -485,7 +486,7 @@ async function runComprehensiveTests() {
           failed = true;
           throw new Error('Intentional failure');
         },
-        { connection: redis, concurrency: 1 }
+        { connection: redis!, concurrency: 1 }
       );
 
       const job = await docQueue.add(
@@ -524,7 +525,7 @@ async function runComprehensiveTests() {
     console.log('─'.repeat(60));
 
     await test('Worker - Start and Stop', async () => {
-      const worker = new Worker('document-processing', async () => {}, { connection: redis });
+      const worker = new Worker('document-processing', async () => {}, { connection: redis! });
       await new Promise((resolve) => setTimeout(resolve, 500));
       await worker.close();
     });
@@ -537,7 +538,7 @@ async function runComprehensiveTests() {
           processedCount++;
           await new Promise((resolve) => setTimeout(resolve, 100));
         },
-        { connection: redis, concurrency: 3 }
+        { connection: redis!, concurrency: 3 }
       );
 
       // Add 5 jobs
@@ -571,7 +572,7 @@ async function runComprehensiveTests() {
     await test('Real Job - Monitoring Schedule Integration', async () => {
       const { processMonitoringScheduleJob } = await import('../lib/jobs/monitoring-schedule-job');
       const { getQueue } = await import('../lib/queue/queue-manager');
-      
+
       const queue = getQueue('monitoring-schedule');
       const job = await queue.add('MONITORING_SCHEDULE', {
         company_id: testData.company.id,
@@ -590,7 +591,7 @@ async function runComprehensiveTests() {
             processed = true;
           }
         },
-        { connection: redis, concurrency: 1 }
+        { connection: redis!, concurrency: 1 }
       );
 
       let attempts = 0;

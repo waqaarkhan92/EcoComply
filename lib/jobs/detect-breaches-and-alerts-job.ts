@@ -122,7 +122,7 @@ export async function processDetectBreachesAndAlertsJob(
             company_id: obligation.company_id,
             site_id: obligation.site_id,
             recipient_email: recipient.email,
-            notification_type,
+            notification_type: notificationType,
             channel: severity === 'CRITICAL' ? 'EMAIL, SMS, IN_APP' : 'EMAIL, IN_APP',
             priority: 'CRITICAL',
             severity: 'CRITICAL',

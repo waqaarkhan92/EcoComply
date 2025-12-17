@@ -85,7 +85,7 @@ export async function processExecutePendingRecurrenceTriggersJob(
               .lte('occurred_at', now.toISOString())
               .limit(1);
 
-            shouldFire = events && events.length > 0;
+            shouldFire = !!(events && events.length > 0);
             break;
 
           case TriggerType.CONDITIONAL:

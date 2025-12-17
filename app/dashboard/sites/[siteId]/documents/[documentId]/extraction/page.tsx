@@ -26,21 +26,21 @@ export default function DocumentExtractionPage() {
   const siteId = params.siteId as string;
   const documentId = params.documentId as string;
 
-  const { data: documentData } = useQuery<{ data: Document }>({
+  const { data: documentData } = useQuery({
     queryKey: ['document', documentId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Document }>(`/documents/${documentId}`);
     },
   });
 
-  const { data: extractionData, refetch } = useQuery<{ data: ExtractionResults }>({
+  const { data: extractionData, refetch } = useQuery({
     queryKey: ['extraction-results', documentId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: ExtractionResults }>(`/documents/${documentId}/extraction-results`);
     },
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Poll if extraction is in progress
-      return data?.data?.extraction_status === 'IN_PROGRESS' ? 5000 : false;
+      return query.state.data?.data?.extraction_status === 'IN_PROGRESS' ? 5000 : false;
     },
   });
 

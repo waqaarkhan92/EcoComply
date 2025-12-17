@@ -52,14 +52,14 @@ export default function RegulatorQuestionDetailPage() {
   const [responseText, setResponseText] = useState('');
   const [activeTab, setActiveTab] = useState<'details' | 'state-machine' | 'history'>('details');
 
-  const { data: questionData, isLoading } = useQuery<{ data: RegulatorQuestion }>({
+  const { data: questionData, isLoading } = useQuery({
     queryKey: ['regulator-question', questionId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: RegulatorQuestion }>(`/regulator-questions/${questionId}`);
     },
   });
 
-  const { data: stateHistoryData } = useQuery<{ data: StateTransition[] }>({
+  const { data: stateHistoryData } = useQuery({
     queryKey: ['regulator-question-state-history', questionId],
     queryFn: async (): Promise<any> => {
       try {
@@ -131,7 +131,7 @@ export default function RegulatorQuestionDetailPage() {
   };
 
   const availableTransitions = getAvailableTransitions();
-  const stateHistory = stateHistoryData?.data || [];
+  const stateHistory: any[] = stateHistoryData?.data || [];
 
   return (
     <div className="space-y-6">

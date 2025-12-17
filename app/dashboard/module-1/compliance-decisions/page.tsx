@@ -57,7 +57,7 @@ export default function ComplianceDecisionsPage() {
     setCursor(undefined);
   }, [searchQuery, filters]);
 
-  const { data, isLoading, error } = useQuery<ComplianceDecisionsResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-1-compliance-decisions', filters, searchQuery, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -72,7 +72,7 @@ export default function ComplianceDecisionsPage() {
     },
   });
 
-  const decisions = data?.data || [];
+  const decisions: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 

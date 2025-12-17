@@ -84,7 +84,7 @@ async function createReportsBucket() {
         }
       } else {
         console.log('   ✅ Reports bucket created successfully');
-        console.log(`      - ID: ${newBucket?.id || 'N/A'}`);
+        console.log(`      - Name: ${newBucket?.name || 'N/A'}`);
       }
     }
 

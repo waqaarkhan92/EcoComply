@@ -12,7 +12,7 @@ import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ packId: string } }
+  request: NextRequest, props: { params: Promise<{ packId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -22,13 +22,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { packId } = params;
+  const { packId } = params;
 
     // Get pack - RLS will enforce access control
-    const { data: pack, error } = await supabaseAdmin
+  const { data: pack, error } = await supabaseAdmin
       .from('audit_packs')
       .select(`
         id,
@@ -83,13 +83,13 @@ export async function GET(
     }
 
     // Get counts from pack_contents
-    const { count: evidenceCount } = await supabaseAdmin
+  const { count: evidenceCount } = await supabaseAdmin
       .from('pack_contents')
       .select('id', { count: 'exact', head: true })
       .eq('pack_id', packId)
       .eq('content_type', 'EVIDENCE');
 
-    const { count: obligationCount } = await supabaseAdmin
+  const { count: obligationCount } = await supabaseAdmin
       .from('pack_contents')
       .select('id', { count: 'exact', head: true })
       .eq('pack_id', packId)

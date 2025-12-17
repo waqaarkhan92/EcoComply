@@ -11,7 +11,7 @@ import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 import { getQueue, QUEUE_NAMES } from '@/lib/queue/queue-manager';
 
 export async function POST(
-  request: NextRequest, props: { params: Promise<{ packId: string } }
+  request: NextRequest, props: { params: Promise<{ packId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -21,10 +21,10 @@ export async function POST(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { packId } = params;
+  const { packId } = params;
 
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -39,7 +39,7 @@ export async function POST(
     }
 
     // Get existing pack - RLS will enforce access control
-    const { data: existingPack, error: packError } = await supabaseAdmin
+  const { data: existingPack, error: packError } = await supabaseAdmin
       .from('audit_packs')
       .select(`
         id,
@@ -90,7 +90,7 @@ export async function POST(
     };
 
     // Create a new pack record (regeneration creates new pack, doesn't update existing)
-    const { data: newPack, error: createError } = await supabaseAdmin
+  const { data: newPack, error: createError } = await supabaseAdmin
       .from('audit_packs')
       .insert({
         company_id: packParams.company_id,

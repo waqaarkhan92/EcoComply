@@ -28,7 +28,7 @@ export default function ScheduleDetailPage() {
   const siteId = params.siteId as string;
   const scheduleId = params.scheduleId as string;
 
-  const { data: schedule, isLoading, error } = useQuery<{ data: Schedule }>({
+  const { data: schedule, isLoading, error } = useQuery({
     queryKey: ['schedule', scheduleId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Schedule }>(`/schedules/${scheduleId}`);

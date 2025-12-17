@@ -10,17 +10,21 @@ import {
   AlertCircle,
   CheckCircle2,
   TrendingUp,
-  FileText,
-  Package,
-  Upload,
   ArrowRight,
   Calendar,
-  Zap,
-  Target,
-  Activity
+  Plus,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { PageHeader } from '@/components/ui/page-header';
+import { ComplianceStatusBadge } from '@/components/ui';
+import { getComplianceStatus, complianceStatusConfig } from '@/lib/utils/status';
+import { SitesRequiringAttention } from '@/components/dashboard/sites-requiring-attention';
+import { ActionableOverdueItems } from '@/components/dashboard/actionable-overdue-items';
+import { QuickUploadZone } from '@/components/dashboard/quick-upload-zone';
+import { ActivityFeed } from '@/components/enhanced-features';
+import { SiteHealthOverview, ComplianceSummaryCard, type SiteHealthData } from '@/components/ingestion';
 
 interface DashboardStats {
   totals: {
@@ -51,298 +55,390 @@ export default function DashboardPage() {
   const router = useRouter();
 
   // Fetch dashboard stats
-  const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
+  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
     queryKey: ['dashboard-stats'],
-    queryFn: async (): Promise<any> => {
-      try {
-        const response = await fetch('/api/v1/dashboard/stats');
-        if (!response.ok) throw new Error('Failed to fetch stats');
-        const result = await response.json();
-        return result.data;
-      } catch (error) {
-        return {
-          totals: {
-            sites: 0,
-            obligations: 0,
-            overdue: 0,
-            due_soon: 0,
-            completed_this_month: 0,
-            documents: 0,
-            evidence: 0,
-            packs: 0,
-          },
-          recent_activity: [],
-          upcoming_deadlines: [],
-        };
-      }
+    queryFn: async (): Promise<DashboardStats> => {
+      const response = await apiClient.get<DashboardStats>('/dashboard/stats');
+      return response.data;
     },
   });
 
   // Fetch sites
-  const { data: sitesData } = useQuery<{ data: Site[] }>({
+  const { data: sitesData } = useQuery({
     queryKey: ['sites'],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: Site[] }>('/sites');
     },
   });
 
-  const sites = sitesData?.data || [];
-  const totals = stats?.totals || {};
-
-  const getStatusColor = (status?: string, score?: number) => {
-    if (!status && !score) return '#6B7280';
-    if (status === 'COMPLIANT' || (score && score >= 85)) return '#2E7D32';
-    if (status === 'AT_RISK' || (score && score >= 70 && score < 85)) return '#D4A017';
-    return '#C44536';
-  };
-
-  const getStatusText = (status?: string, score?: number) => {
-    if (!status && !score) return 'Unknown';
-    if (status === 'COMPLIANT' || (score && score >= 85)) return 'Compliant';
-    if (status === 'AT_RISK' || (score && score >= 70 && score < 85)) return 'At Risk';
-    return 'Non-Compliant';
+  const sites: any[] = sitesData?.data || [];
+  const totals = stats?.totals || {
+    sites: 0,
+    obligations: 0,
+    overdue: 0,
+    due_soon: 0,
+    completed_this_month: 0,
+    documents: 0,
+    evidence: 0,
+    packs: 0,
   };
 
   const overallCompliance = sites.length > 0
     ? Math.round(sites.reduce((acc, site) => acc + (site.compliance_score || 0), 0) / sites.length)
     : 0;
 
-  const complianceStatus = overallCompliance >= 85 ? 'COMPLIANT' : overallCompliance >= 70 ? 'AT_RISK' : 'NON_COMPLIANT';
+  const complianceStatus = getComplianceStatus(overallCompliance);
+  const statusConfig = complianceStatusConfig[complianceStatus];
 
-  return (
-    <div className="min-h-screen bg-[#F9FAFB] space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-lg shadow-lg p-6 border-l-4" style={{ borderLeftColor: getStatusColor(complianceStatus, overallCompliance) }}>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-[#101314] mb-2">
-              Welcome back, {company?.name || 'User'}
-            </h1>
-            <p className="text-gray-600 text-lg">
-              Here's your compliance overview at a glance
-            </p>
+  // Show error state
+  if (statsError) {
+    return (
+      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md text-center">
+          <AlertCircle className="h-16 w-16 text-danger mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-text-primary mb-2">Failed to Load Dashboard</h2>
+          <p className="text-text-secondary mb-6">
+            We couldn't load your dashboard data. Please try refreshing the page.
+          </p>
+          <Button onClick={() => window.location.reload()} variant="primary">
+            Refresh Page
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading skeleton
+  if (statsLoading) {
+    return (
+      <div className="min-h-screen bg-background space-y-6">
+        {/* Header Skeleton */}
+        <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-gray-300">
+          <div className="flex items-center justify-between">
+            <div>
+              <Skeleton className="h-10 w-[300px] mb-2" />
+              <Skeleton className="h-6 w-[250px]" />
+            </div>
+            <div className="text-right">
+              <Skeleton className="h-6 w-[100px] mb-2 ml-auto" />
+              <Skeleton className="h-16 w-[100px] mb-2 ml-auto" />
+              <Skeleton className="h-4 w-[120px] ml-auto" />
+            </div>
           </div>
-          <div className="text-right">
-            <div className="flex items-center gap-2 mb-2 justify-end">
-              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: getStatusColor(complianceStatus, overallCompliance) }} />
-              <span className="text-sm font-medium text-gray-600">{getStatusText(complianceStatus, overallCompliance)}</span>
+        </div>
+
+        {/* Compliance Clock Skeleton */}
+        <div className="bg-gradient-to-br from-primary to-primary-700 rounded-lg shadow-xl p-8">
+          <Skeleton className="h-10 w-[250px] mb-6 bg-white/20" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-white/10 backdrop-blur rounded-lg p-6">
+                <Skeleton className="h-6 w-[100px] mb-4 bg-white/30" />
+                <Skeleton className="h-10 w-[80px] mb-2 bg-white/30" />
+                <Skeleton className="h-4 w-[150px] bg-white/30" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Summary Row Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <Skeleton className="h-4 w-[100px] mb-3" />
+            <Skeleton className="h-14 w-[120px] mb-3" />
+            <Skeleton className="h-6 w-[80px]" />
+          </div>
+          <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="flex justify-between mb-4">
+              <Skeleton className="h-4 w-[120px]" />
+              <Skeleton className="h-8 w-[80px]" />
             </div>
-            <div className="text-5xl font-bold" style={{ color: getStatusColor(complianceStatus, overallCompliance) }}>
-              {overallCompliance}%
+            <div className="grid grid-cols-3 gap-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="p-4 rounded-lg border-2 border-gray-200">
+                  <Skeleton className="h-4 w-[60px] mb-2" />
+                  <Skeleton className="h-8 w-[40px]" />
+                </div>
+              ))}
             </div>
-            <p className="text-sm text-gray-500 mt-1">Overall Compliance</p>
+          </div>
+        </div>
+
+        {/* Sites Overview Skeleton */}
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <Skeleton className="h-8 w-[200px] mb-6" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="border-2 rounded-lg p-5">
+                <Skeleton className="h-6 w-[150px] mb-3" />
+                <Skeleton className="h-12 w-[80px] mb-3" />
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-10 w-[60px]" />
+                  <Skeleton className="h-10 w-[60px]" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Two Column Layout Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <Skeleton className="h-8 w-[200px] mb-4" />
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="p-4 rounded-lg bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <Skeleton className="h-5 w-[200px] mb-2" />
+                      <Skeleton className="h-4 w-[150px]" />
+                    </div>
+                    <Skeleton className="h-10 w-[60px]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <Skeleton className="h-8 w-[150px] mb-4" />
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
+            </div>
           </div>
         </div>
       </div>
+    );
+  }
 
-      {/* COMPLIANCE CLOCK - The Killer Feature! */}
-      <div className="bg-gradient-to-br from-[#104B3A] to-[#0B372A] rounded-lg shadow-xl p-8 text-white">
-        <div className="flex items-center gap-3 mb-6">
-          <Clock className="h-8 w-8" />
-          <h2 className="text-3xl font-bold">Compliance Clock</h2>
+  return (
+    <div className="space-y-6">
+      {/* Page Header */}
+      <PageHeader
+        title="Portfolio Overview"
+        description={`${sites.length} sites · Last updated: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+        actions={
+          <Link href="/dashboard/sites/new">
+            <Button variant="primary" size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Site
+            </Button>
+          </Link>
+        }
+      />
+
+      {/* Summary Row: Compliance Score + Deadline Status */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Compliance Score Card - 1/3 */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <p className="text-sm font-medium text-text-secondary mb-2">Compliance Score</p>
+          <div className="flex items-baseline gap-2 mb-3">
+            <span className={`text-5xl font-bold tracking-tight ${statusConfig.textColor}`}>
+              {overallCompliance}
+            </span>
+            <span className="text-2xl text-text-tertiary">%</span>
+          </div>
+          <ComplianceStatusBadge status={complianceStatus} showIcon size="sm" />
+          <p className="text-xs text-text-tertiary mt-3">
+            Across {sites.length} {sites.length === 1 ? 'site' : 'sites'}
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white/10 backdrop-blur rounded-lg p-6 border-2 border-[#C44536]">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-6 w-6 text-[#C44536]" />
-                <h3 className="text-lg font-semibold text-[#C44536]">URGENT</h3>
-              </div>
-              <div className="text-4xl font-bold text-[#C44536]">{totals.overdue || 0}</div>
-            </div>
-            <p className="text-sm text-white/80">Overdue or due within 24 hours</p>
-            <Link href="/dashboard/compliance-clocks?filter=urgent">
-              <Button className="mt-4 w-full bg-[#C44536] hover:bg-[#A03A2E]">
-                View Urgent Items →
+        {/* Deadline Status - 2/3 */}
+        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-medium text-text-secondary">Deadline Status</p>
+            <Link href="/dashboard/deadlines">
+              <Button variant="ghost" size="sm" className="text-primary">
+                View All <ArrowRight className="ml-1 h-4 w-4" />
               </Button>
             </Link>
           </div>
 
-          <div className="bg-white/10 backdrop-blur rounded-lg p-6 border-2 border-[#D4A017]">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-6 w-6 text-[#D4A017]" />
-                <h3 className="text-lg font-semibold text-[#D4A017]">DUE SOON</h3>
+          <div className="grid grid-cols-3 gap-4">
+            <Link href="/dashboard/deadlines?filter=overdue" className="group">
+              <div className="p-4 rounded-lg border-2 border-danger/30 bg-danger/5 hover:border-danger transition-colors">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="h-4 w-4 text-danger" />
+                  <span className="text-xs font-semibold text-danger uppercase">Overdue</span>
+                </div>
+                <p className="text-3xl font-bold text-danger">{totals.overdue || 0}</p>
               </div>
-              <div className="text-4xl font-bold text-[#D4A017]">{totals.due_soon || 0}</div>
-            </div>
-            <p className="text-sm text-white/80">Due within 7 days</p>
-            <Link href="/dashboard/compliance-clocks?filter=due_soon">
-              <Button className="mt-4 w-full bg-[#D4A017] hover:bg-[#B88B14]">
-                View Due Soon →
-              </Button>
             </Link>
-          </div>
 
-          <div className="bg-white/10 backdrop-blur rounded-lg p-6 border-2 border-[#2E7D32]">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-6 w-6 text-[#2E7D32]" />
-                <h3 className="text-lg font-semibold text-[#2E7D32]">ON TRACK</h3>
+            <Link href="/dashboard/deadlines?filter=this-week" className="group">
+              <div className="p-4 rounded-lg border-2 border-warning/30 bg-warning/5 hover:border-warning transition-colors">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="h-4 w-4 text-warning" />
+                  <span className="text-xs font-semibold text-warning uppercase">Due Soon</span>
+                </div>
+                <p className="text-3xl font-bold text-warning">{totals.due_soon || 0}</p>
               </div>
-              <div className="text-4xl font-bold text-[#2E7D32]">
+            </Link>
+
+            <div className="p-4 rounded-lg border-2 border-success/30 bg-success/5">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle2 className="h-4 w-4 text-success" />
+                <span className="text-xs font-semibold text-success uppercase">On Track</span>
+              </div>
+              <p className="text-3xl font-bold text-success">
                 {(totals.obligations || 0) - (totals.overdue || 0) - (totals.due_soon || 0)}
-              </div>
+              </p>
             </div>
-            <p className="text-sm text-white/80">More than 7 days out</p>
-            <Link href="/dashboard/compliance-clocks">
-              <Button className="mt-4 w-full bg-[#2E7D32] hover:bg-[#1B5E20]">
-                View All Items →
-              </Button>
-            </Link>
           </div>
-        </div>
 
-        {stats?.upcoming_deadlines && stats.upcoming_deadlines.length > 0 && (
-          <div className="bg-white/20 backdrop-blur rounded-lg p-6">
-            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Next Critical Deadline
-            </h3>
-            <div className="flex items-center justify-between">
+          {/* Next Critical Deadline */}
+          {stats?.upcoming_deadlines && stats.upcoming_deadlines.length > 0 && (
+            <div className="mt-4 p-3 rounded-lg bg-gray-50 flex items-center justify-between">
               <div>
-                <p className="text-xl font-bold mb-1">
+                <p className="text-xs text-text-tertiary">Next Critical</p>
+                <p className="text-sm font-medium text-text-primary truncate max-w-[300px]">
                   {stats.upcoming_deadlines[0].obligations?.title || 'N/A'}
                 </p>
-                <p className="text-sm text-white/80">
+                <p className="text-xs text-text-secondary">
                   {stats.upcoming_deadlines[0].sites?.name || 'N/A'}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-3xl font-bold">
-                  {Math.max(0, Math.ceil((new Date(stats.upcoming_deadlines[0].due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} days
+                <p className="text-2xl font-bold text-text-primary">
+                  {Math.max(0, Math.ceil((new Date(stats.upcoming_deadlines[0].due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))}
                 </p>
-                <p className="text-sm text-white/80">
-                  {new Date(stats.upcoming_deadlines[0].due_date).toLocaleDateString()}
-                </p>
+                <p className="text-xs text-text-tertiary">days</p>
               </div>
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* Actionable Overdue Items - Only show if there are overdue items */}
+      {(totals.overdue || 0) > 0 && (
+        <ActionableOverdueItems limit={5} showHeader={true} />
+      )}
+
+      {/* Sites Requiring Attention */}
+      <SitesRequiringAttention sites={sites} threshold={85} limit={3} />
+
+      {/* Site Health Overview - Enhanced with traffic light indicators */}
+      {sites.length > 0 && (
+        <SiteHealthOverview
+          sites={sites.map((site): SiteHealthData => ({
+            siteId: site.id,
+            siteName: site.name,
+            compliancePercentage: site.compliance_score || 0,
+            overdueCount: site.overdue_count || 0,
+            dueSoonCount: site.upcoming_count || 0,
+            pendingReviewCount: 0,
+            totalObligations: (site.overdue_count || 0) + (site.upcoming_count || 0) + 10, // Estimated
+          }))}
+          onSiteClick={(siteId) => router.push(`/dashboard/sites/${siteId}/dashboard`)}
+        />
+      )}
+
+      {/* All Sites Grid */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-text-primary">All Sites</h2>
+            <p className="text-sm text-text-secondary">{sites.length} {sites.length === 1 ? 'location' : 'locations'}</p>
           </div>
-        )}
-      </div>
-
-      {/* Quick Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <StatCard
-          icon={<Building2 className="h-8 w-8" />}
-          title="Sites"
-          value={sites.length}
-          color="#104B3A"
-          link="/dashboard/sites"
-          loading={statsLoading}
-        />
-        <StatCard
-          icon={<FileText className="h-8 w-8" />}
-          title="Documents"
-          value={totals.documents || 0}
-          color="#0056A6"
-          link="/dashboard/evidence"
-          loading={statsLoading}
-        />
-        <StatCard
-          icon={<Package className="h-8 w-8" />}
-          title="Audit Packs"
-          value={totals.packs || 0}
-          color="#104B3A"
-          link="/dashboard/packs"
-          loading={statsLoading}
-        />
-        <StatCard
-          icon={<Activity className="h-8 w-8" />}
-          title="Evidence Items"
-          value={totals.evidence || 0}
-          color="#0056A6"
-          link="/dashboard/evidence"
-          loading={statsLoading}
-        />
-      </div>
-
-      {/* Sites Overview */}
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-[#101314] flex items-center gap-2">
-            <Building2 className="h-6 w-6" />
-            Your Sites
-          </h2>
-          <Link href="/dashboard/sites">
-            <Button style={{ backgroundColor: '#104B3A' }}>
-              View All Sites <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard/sites">
+              <Button variant="outline" size="sm">
+                View All <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {sites.length === 0 ? (
-          <div className="text-center py-12">
-            <Building2 className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No sites yet</h3>
-            <p className="text-gray-600 mb-6">Get started by adding your first site</p>
+          <div className="text-center py-12 px-6">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+              <Building2 className="h-7 w-7 text-gray-400" />
+            </div>
+            <h3 className="text-base font-semibold text-text-primary mb-2">No sites configured</h3>
+            <p className="text-sm text-text-secondary mb-4">Add your first site to begin compliance tracking</p>
             <Link href="/dashboard/sites/new">
-              <Button style={{ backgroundColor: '#104B3A' }}>
-                Add Your First Site
-              </Button>
+              <Button variant="primary" size="sm">Add Site</Button>
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sites.slice(0, 6).map((site) => {
-              const statusColor = getStatusColor(site.compliance_status, site.compliance_score);
-              return (
-                <div
-                  key={site.id}
-                  className="border-2 rounded-lg p-5 hover:shadow-lg transition-all cursor-pointer"
-                  style={{ borderColor: statusColor }}
-                  onClick={() => router.push(`/dashboard/sites/${site.id}/dashboard`)}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="font-bold text-lg text-[#101314] flex-1">{site.name}</h3>
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: statusColor }} />
-                  </div>
-                  <div className="flex items-baseline gap-2 mb-3">
-                    <span className="text-4xl font-bold" style={{ color: statusColor }}>
-                      {site.compliance_score || 0}
-                    </span>
-                    <span className="text-lg text-gray-500">%</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <div>
-                      <p className="text-gray-500">Overdue</p>
-                      <p className="font-bold text-[#C44536]">{site.overdue_count || 0}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Upcoming</p>
-                      <p className="font-bold text-[#D4A017]">{site.upcoming_count || 0}</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sites.slice(0, 6).map((site) => {
+                const siteStatus = getComplianceStatus(site.compliance_score || 0);
+                const siteConfig = complianceStatusConfig[siteStatus];
 
-        {sites.length > 6 && (
-          <div className="text-center mt-6">
-            <Link href="/dashboard/sites">
-              <Button variant="outline">
-                View All {sites.length} Sites
-              </Button>
-            </Link>
+                return (
+                  <div
+                    key={site.id}
+                    className="group relative bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-gray-300 transition-all cursor-pointer"
+                    onClick={() => router.push(`/dashboard/sites/${site.id}/dashboard`)}
+                  >
+                    <div className={`absolute top-3 right-3 w-2.5 h-2.5 rounded-full ${siteConfig.dotColor}`} />
+
+                    <h3 className="font-medium text-sm text-text-primary mb-2 pr-6 truncate group-hover:text-primary transition-colors">
+                      {site.name}
+                    </h3>
+
+                    <div className="flex items-baseline gap-1 mb-3">
+                      <span className={`text-3xl font-bold tracking-tight ${siteConfig.textColor}`}>
+                        {site.compliance_score || 0}
+                      </span>
+                      <span className="text-sm text-text-tertiary">%</span>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-xs text-text-secondary">
+                      {(site.overdue_count || 0) > 0 && (
+                        <span className="text-danger">{site.overdue_count} overdue</span>
+                      )}
+                      {(site.upcoming_count || 0) > 0 && (
+                        <span className="text-warning">{site.upcoming_count} due soon</span>
+                      )}
+                      {(site.overdue_count || 0) === 0 && (site.upcoming_count || 0) === 0 && (
+                        <span className="text-success">All on track</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {sites.length > 6 && (
+              <div className="mt-4 text-center">
+                <Link href="/dashboard/sites">
+                  <Button variant="ghost" size="sm" className="text-primary">
+                    View All {sites.length} Sites
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Two Column Layout */}
+      {/* Quick Upload Zone - Drag & Drop */}
+      <QuickUploadZone compact />
+
+      {/* Two Column Layout: Deadlines + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Upcoming Deadlines */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-[#101314] mb-4 flex items-center gap-2">
-            <Calendar className="h-6 w-6" />
-            Upcoming Deadlines
-          </h2>
-          {statsLoading ? (
-            <div className="text-center py-8 text-gray-500">Loading...</div>
-          ) : stats?.upcoming_deadlines && stats.upcoming_deadlines.length > 0 ? (
-            <div className="space-y-3">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-text-tertiary" />
+              <h2 className="text-lg font-semibold text-text-primary">Upcoming Deadlines</h2>
+            </div>
+            <Link href="/dashboard/deadlines">
+              <Button variant="ghost" size="sm" className="text-primary">
+                View All
+              </Button>
+            </Link>
+          </div>
+
+          {stats?.upcoming_deadlines && stats.upcoming_deadlines.length > 0 ? (
+            <div className="divide-y divide-gray-100">
               {stats.upcoming_deadlines.slice(0, 5).map((deadline: any) => {
                 const daysRemaining = Math.max(0, Math.ceil((new Date(deadline.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
                 const isUrgent = daysRemaining <= 1;
@@ -351,162 +447,44 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={deadline.id}
-                    className={`p-4 rounded-lg border-l-4 hover:shadow-md transition-all cursor-pointer ${
-                      isUrgent ? 'bg-red-50 border-[#C44536]' :
-                      isDueSoon ? 'bg-yellow-50 border-[#D4A017]' :
-                      'bg-green-50 border-[#2E7D32]'
-                    }`}
-                    onClick={() => router.push(`/dashboard/sites/${deadline.site_id}/obligations/${deadline.obligation_id}`)}
+                    className="px-6 py-3 hover:bg-gray-50 cursor-pointer transition-colors flex items-center justify-between"
+                    onClick={() => router.push(`/dashboard/sites/${deadline.site_id}/permits/obligations/${deadline.obligation_id}`)}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="font-semibold text-[#101314]">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                        isUrgent ? 'bg-danger' : isDueSoon ? 'bg-warning' : 'bg-success'
+                      }`} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-text-primary truncate">
                           {deadline.obligations?.title || 'N/A'}
                         </p>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-xs text-text-tertiary truncate">
                           {deadline.sites?.name || 'N/A'}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className={`text-2xl font-bold ${
-                          isUrgent ? 'text-[#C44536]' :
-                          isDueSoon ? 'text-[#D4A017]' :
-                          'text-[#2E7D32]'
-                        }`}>
-                          {daysRemaining}d
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(deadline.due_date).toLocaleDateString()}
-                        </p>
-                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-4">
+                      <p className={`text-lg font-bold ${
+                        isUrgent ? 'text-danger' : isDueSoon ? 'text-warning' : 'text-success'
+                      }`}>
+                        {daysRemaining}d
+                      </p>
                     </div>
                   </div>
                 );
               })}
-              <Link href="/dashboard/compliance-clocks">
-                <Button variant="outline" className="w-full mt-4">
-                  View All Deadlines
-                </Button>
-              </Link>
             </div>
           ) : (
             <div className="text-center py-8">
-              <CheckCircle2 className="h-12 w-12 mx-auto text-green-500 mb-2" />
-              <p className="text-gray-500">No upcoming deadlines</p>
+              <CheckCircle2 className="h-10 w-10 mx-auto text-success mb-2" />
+              <p className="text-sm text-text-secondary">No upcoming deadlines</p>
             </div>
           )}
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-[#101314] mb-4 flex items-center gap-2">
-            <Zap className="h-6 w-6" />
-            Quick Actions
-          </h2>
-          <div className="space-y-3">
-            <Link href="/dashboard/evidence/upload">
-              <button className="w-full p-4 rounded-lg bg-[#104B3A] text-white hover:bg-[#0B372A] transition-all flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <Upload className="h-5 w-5" />
-                  <div className="text-left">
-                    <p className="font-semibold">Upload Evidence</p>
-                    <p className="text-sm text-white/80">Add compliance documentation</p>
-                  </div>
-                </div>
-                <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </Link>
-
-            <Link href="/dashboard/packs">
-              <button className="w-full p-4 rounded-lg bg-[#0056A6] text-white hover:bg-[#004D95] transition-all flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <Package className="h-5 w-5" />
-                  <div className="text-left">
-                    <p className="font-semibold">Generate Audit Pack</p>
-                    <p className="text-sm text-white/80">Create regulator-ready packs</p>
-                  </div>
-                </div>
-                <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </Link>
-
-            <Link href="/dashboard/sites">
-              <button className="w-full p-4 rounded-lg border-2 border-gray-200 hover:border-[#104B3A] hover:bg-gray-50 transition-all flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <Building2 className="h-5 w-5 text-[#104B3A]" />
-                  <div className="text-left">
-                    <p className="font-semibold text-[#101314]">Manage Sites</p>
-                    <p className="text-sm text-gray-600">View and edit your sites</p>
-                  </div>
-                </div>
-                <ArrowRight className="h-5 w-5 text-[#104B3A] group-hover:translate-x-1 transition-transform" />
-              </button>
-            </Link>
-
-            <Link href="/dashboard/recurring-tasks">
-              <button className="w-full p-4 rounded-lg border-2 border-gray-200 hover:border-[#104B3A] hover:bg-gray-50 transition-all flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-[#104B3A]" />
-                  <div className="text-left">
-                    <p className="font-semibold text-[#101314]">Tasks & Actions</p>
-                    <p className="text-sm text-gray-600">View all compliance tasks</p>
-                  </div>
-                </div>
-                <ArrowRight className="h-5 w-5 text-[#104B3A] group-hover:translate-x-1 transition-transform" />
-              </button>
-            </Link>
-          </div>
-
-          {/* Performance Indicator */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-gray-600">This Month's Performance</p>
-              <TrendingUp className="h-5 w-5 text-green-600" />
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-[#2E7D32]">
-                {totals.completed_this_month || 0}
-              </span>
-              <span className="text-sm text-gray-600">obligations completed</span>
-            </div>
-          </div>
-        </div>
+        {/* Recent Activity */}
+        <ActivityFeed limit={5} />
       </div>
-    </div>
-  );
-}
-
-function StatCard({
-  icon,
-  title,
-  value,
-  color,
-  link,
-  loading,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  value: number;
-  color: string;
-  link: string;
-  loading: boolean;
-}) {
-  const router = useRouter();
-
-  return (
-    <div
-      className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-all cursor-pointer"
-      onClick={() => router.push(link)}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <div style={{ color }}>{icon}</div>
-      </div>
-      {loading ? (
-        <div className="h-8 w-16 bg-gray-200 rounded animate-pulse" />
-      ) : (
-        <p className="text-4xl font-bold text-[#101314] mb-2">{value.toLocaleString()}</p>
-      )}
-      <p className="text-sm font-medium text-gray-600">{title}</p>
     </div>
   );
 }

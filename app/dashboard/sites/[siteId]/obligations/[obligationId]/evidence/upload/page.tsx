@@ -21,14 +21,10 @@ export default function UploadEvidencePage() {
 
   const uploadEvidence = useMutation({
     mutationFn: async (formData: FormData) => {
-      return apiClient.post('/evidence', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      return apiClient.upload('/evidence', formData);
     },
     onSuccess: async (response) => {
-      const evidenceId = response.data?.id;
+      const evidenceId = (response.data as { id?: string })?.id;
       if (evidenceId && obligationId) {
         // Link evidence to obligation
         await apiClient.post(`/obligations/${obligationId}/evidence/${evidenceId}/link`, {

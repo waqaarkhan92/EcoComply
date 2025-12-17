@@ -9,6 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AlertCircle, CheckCircle, Edit, X, FileText, Clock, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
+import {
+  EscalationBadge,
+  EscalationIndicator,
+  ConfidenceBadgeInline,
+  getEscalationLevel,
+  type EscalationLevel,
+} from '@/components/ingestion';
 
 interface ReviewQueueItem {
   id: string;
@@ -27,6 +34,10 @@ interface ReviewQueueItem {
   edited_data: any;
   created_at: string;
   updated_at: string;
+  // Escalation fields
+  escalation_level: number;
+  escalated_at: string | null;
+  last_escalation_notification_at: string | null;
   documents?: {
     id: string;
     file_name: string;
@@ -76,7 +87,7 @@ export default function ReviewQueuePage() {
     },
   });
 
-  const items = queueData?.data || [];
+  const items: any[] = queueData?.data || [];
 
   // Confirm mutation
   const confirmMutation = useMutation({
@@ -140,6 +151,8 @@ export default function ReviewQueuePage() {
 
   const pendingItems = items.filter(item => item.review_status === 'PENDING');
   const blockingItems = pendingItems.filter(item => item.is_blocking);
+  const escalatedItems = pendingItems.filter(item => (item.escalation_level || 0) > 0);
+  const criticalItems = pendingItems.filter(item => (item.escalation_level || 0) >= 3);
 
   return (
     <div className="space-y-6">
@@ -152,6 +165,26 @@ export default function ReviewQueuePage() {
           </p>
         </div>
         <div className="flex items-center gap-4">
+          {criticalItems.length > 0 && (
+            <div className="px-4 py-2 bg-danger/10 border border-danger rounded-lg animate-pulse">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-danger" />
+                <span className="text-sm font-medium text-danger">
+                  {criticalItems.length} critical (7+ days)
+                </span>
+              </div>
+            </div>
+          )}
+          {escalatedItems.length > 0 && escalatedItems.length !== criticalItems.length && (
+            <div className="px-4 py-2 bg-warning/10 border border-warning rounded-lg">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-warning" />
+                <span className="text-sm font-medium text-warning">
+                  {escalatedItems.length} escalated
+                </span>
+              </div>
+            </div>
+          )}
           {blockingItems.length > 0 && (
             <div className="px-4 py-2 bg-danger/10 border border-danger rounded-lg">
               <div className="flex items-center gap-2">
@@ -242,6 +275,7 @@ export default function ReviewQueuePage() {
                 <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Obligation</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Review Type</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Confidence</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Escalation</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Status</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Actions</th>
               </tr>
@@ -290,9 +324,13 @@ export default function ReviewQueuePage() {
                     </div>
                   </td>
                   <td className="py-3 px-4">
-                    <span className={`text-sm font-medium ${getConfidenceColor(item.obligations?.confidence_score)}`}>
-                      {getConfidenceLabel(item.obligations?.confidence_score)}
-                    </span>
+                    <ConfidenceBadgeInline score={item.obligations?.confidence_score || 0} />
+                  </td>
+                  <td className="py-3 px-4">
+                    <EscalationIndicator
+                      level={(item.escalation_level || 0) as EscalationLevel}
+                      hoursPending={Math.floor((Date.now() - new Date(item.created_at).getTime()) / (1000 * 60 * 60))}
+                    />
                   </td>
                   <td className="py-3 px-4">
                     <span className="px-2 py-1 text-xs font-medium rounded bg-background-tertiary text-text-secondary">

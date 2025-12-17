@@ -10,7 +10,7 @@ import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ itemId: string } }
+  request: NextRequest, props: { params: Promise<{ itemId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,13 +20,13 @@ export async function PUT(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { itemId } = params;
+  const { itemId } = params;
 
     // Get review queue item
-    const { data: item, error: itemError } = await supabaseAdmin
+  const { data: item, error: itemError } = await supabaseAdmin
       .from('review_queue_items')
       .select('id, obligation_id, review_status, document_id')
       .eq('id', itemId)
@@ -53,7 +53,7 @@ export async function PUT(
     }
 
     // Update review queue item
-    const { data: updatedItem, error: updateError } = await supabaseAdmin
+  const { data: updatedItem, error: updateError } = await supabaseAdmin
       .from('review_queue_items')
       .update({
         review_status: 'CONFIRMED',

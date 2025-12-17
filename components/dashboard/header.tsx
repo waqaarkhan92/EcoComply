@@ -1,11 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/lib/store/auth-store';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
-import { Search, Bell, User, ChevronDown, LogOut, Settings, HelpCircle, Menu } from 'lucide-react';
+import { Search, User, ChevronDown, LogOut, Settings, HelpCircle, Menu } from 'lucide-react';
 import Link from 'next/link';
 import { NotificationDropdown } from './notification-dropdown';
 import { SiteSwitcher } from './site-switcher';
@@ -17,20 +15,47 @@ interface HeaderProps {
 export function Header({ onMenuClick }: HeaderProps) {
   const { user, company, logout } = useAuthStore();
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
+  const [isMac, setIsMac] = useState(true);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const userMenuButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Detect platform for keyboard shortcut display
+  useEffect(() => {
+    setIsMac(navigator.platform.toUpperCase().indexOf('MAC') >= 0);
+  }, []);
+
+  // Close menu on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showUserMenu) {
+        setShowUserMenu(false);
+        userMenuButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showUserMenu]);
 
   const handleLogout = () => {
     logout();
     router.push('/login');
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setShowSearch(false);
+  // Open command palette using the global event
+  const openCommandPalette = useCallback(() => {
+    // Dispatch a custom event that the CommandPalette component listens for
+    window.dispatchEvent(new CustomEvent('open-command-palette'));
+  }, []);
+
+  // Handle keyboard navigation for user menu button
+  const handleUserMenuKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setShowUserMenu(!showUserMenu);
+    } else if (e.key === 'ArrowDown' && !showUserMenu) {
+      e.preventDefault();
+      setShowUserMenu(true);
     }
   };
 
@@ -64,27 +89,44 @@ export function Header({ onMenuClick }: HeaderProps) {
           </h2>
         </div>
 
-        {/* Center: Search Bar */}
+        {/* Center: Command Palette Trigger */}
         <div className="flex-1 max-w-md mx-8 hidden md:block">
-          <form onSubmit={handleSearch} className="relative">
-            <Input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              leftIcon={<Search className="h-4 w-4" />}
-              className="bg-white border-input-border"
-            />
-          </form>
+          <button
+            onClick={openCommandPalette}
+            className="
+              w-full flex items-center gap-3 px-4 py-2
+              bg-[#1a1f20] hover:bg-[#242a2b]
+              border border-[#2d3436] rounded-lg
+              transition-all duration-200
+              group
+            "
+            aria-label="Open command palette"
+          >
+            <Search className="h-4 w-4 text-text-tertiary" />
+            <span className="flex-1 text-left text-sm text-text-tertiary">
+              Search anything...
+            </span>
+            <kbd className="
+              hidden lg:inline-flex items-center gap-1
+              px-2 py-1 text-xs font-medium
+              bg-[#2d3436] text-text-tertiary
+              rounded border border-[#3d4446]
+              group-hover:bg-[#3d4446] group-hover:text-white
+              transition-colors
+            ">
+              {isMac ? '⌘' : 'Ctrl'}
+              <span>K</span>
+            </kbd>
+          </button>
         </div>
 
         {/* Right: Notifications & User Menu */}
         <div className="flex items-center gap-3">
-          {/* Search Icon (Mobile) */}
+          {/* Search Icon (Mobile) - Opens Command Palette */}
           <button
-            onClick={() => setShowSearch(!showSearch)}
+            onClick={openCommandPalette}
             className="md:hidden p-2 text-white hover:text-primary transition-colors"
-            aria-label="Search"
+            aria-label="Open search"
           >
             <Search className="h-5 w-5" />
           </button>
@@ -93,13 +135,15 @@ export function Header({ onMenuClick }: HeaderProps) {
           <NotificationDropdown />
 
           {/* User Menu */}
-          <div className="relative">
+          <div className="relative" ref={userMenuRef}>
             <button
-              onClick={() => {
-                setShowUserMenu(!showUserMenu);
-              }}
+              ref={userMenuButtonRef}
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              onKeyDown={handleUserMenuKeyDown}
               className="flex items-center gap-2 p-1 rounded-md hover:bg-border-gray transition-colors"
               aria-label="User menu"
+              aria-expanded={showUserMenu}
+              aria-haspopup="menu"
             >
               <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-medium">
                 {userInitials}
@@ -107,7 +151,11 @@ export function Header({ onMenuClick }: HeaderProps) {
               <ChevronDown className="h-4 w-4 text-white hidden md:block" />
             </button>
             {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+              <div
+                role="menu"
+                aria-orientation="vertical"
+                className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
+              >
                 <div className="px-4 py-3 border-b border-gray-200">
                   <p className="text-sm font-medium text-text-primary">
                     {user?.full_name || 'User'}
@@ -116,9 +164,10 @@ export function Header({ onMenuClick }: HeaderProps) {
                     {user?.email}
                   </p>
                 </div>
-                <div className="py-1">
+                <div className="py-1" role="none">
                   <Link
                     href="/profile"
+                    role="menuitem"
                     className="flex items-center gap-3 px-4 py-2 text-sm text-text-primary hover:bg-background-tertiary transition-colors"
                     onClick={() => setShowUserMenu(false)}
                   >
@@ -127,6 +176,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                   </Link>
                   <Link
                     href="/settings"
+                    role="menuitem"
                     className="flex items-center gap-3 px-4 py-2 text-sm text-text-primary hover:bg-background-tertiary transition-colors"
                     onClick={() => setShowUserMenu(false)}
                   >
@@ -135,6 +185,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                   </Link>
                   <Link
                     href="/help"
+                    role="menuitem"
                     className="flex items-center gap-3 px-4 py-2 text-sm text-text-primary hover:bg-background-tertiary transition-colors"
                     onClick={() => setShowUserMenu(false)}
                   >
@@ -142,8 +193,9 @@ export function Header({ onMenuClick }: HeaderProps) {
                     Help
                   </Link>
                 </div>
-                <div className="border-t border-gray-200 pt-1">
+                <div className="border-t border-gray-200 pt-1" role="none">
                   <button
+                    role="menuitem"
                     onClick={() => {
                       setShowUserMenu(false);
                       handleLogout();
@@ -160,22 +212,6 @@ export function Header({ onMenuClick }: HeaderProps) {
         </div>
       </div>
 
-      {/* Mobile Search Overlay */}
-      {showSearch && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-white border-b border-gray-200 p-4 z-50">
-          <form onSubmit={handleSearch} className="relative">
-            <Input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              leftIcon={<Search className="h-4 w-4" />}
-              className="bg-white"
-              autoFocus
-            />
-          </form>
-        </div>
-      )}
 
       {/* Click outside to close menus */}
       {showUserMenu && (

@@ -23,14 +23,14 @@ export default function ClientPacksPage() {
   const params = useParams();
   const clientId = params.clientId as string;
 
-  const { data: packsData, isLoading } = useQuery<PacksResponse>({
+  const { data: packsData, isLoading } = useQuery({
     queryKey: ['consultant-client-packs', clientId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<PacksResponse>(`/consultant/clients/${clientId}/packs`);
     },
   });
 
-  const packs = packsData?.data || [];
+  const packs: Pack[] = packsData?.data || [];
 
   if (isLoading) {
     return (

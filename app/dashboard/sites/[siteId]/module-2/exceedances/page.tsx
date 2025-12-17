@@ -49,7 +49,7 @@ export default function ExceedancesPage() {
     date_to: '',
   });
 
-  const { data, isLoading, error } = useQuery<ExceedancesResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-2-exceedances', siteId, filters, cursor],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -68,7 +68,7 @@ export default function ExceedancesPage() {
     enabled: !!siteId,
   });
 
-  const exceedances = data?.data || [];
+  const exceedances: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
 
@@ -197,7 +197,7 @@ export default function ExceedancesPage() {
       <div className="bg-white rounded-lg shadow-md">
         <div className="p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-text-primary">
-            {exceedances.length} Exceedance{alterances.length !== 1 ? 's' : ''}
+            {exceedances.length} Exceedance{exceedances.length !== 1 ? 's' : ''}
           </h2>
         </div>
 

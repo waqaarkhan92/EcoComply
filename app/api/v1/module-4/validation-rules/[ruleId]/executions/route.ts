@@ -13,7 +13,7 @@ import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 import { parsePaginationParams, parseFilterParams, createCursor } from '@/lib/api/pagination';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ ruleId: string } }
+  request: NextRequest, props: { params: Promise<{ ruleId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -23,13 +23,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { ruleId } = params;
+  const { ruleId } = params;
 
     // Get validation rule - RLS will enforce access control
-    const { data: rule, error: ruleError } = await supabaseAdmin
+  const { data: rule, error: ruleError } = await supabaseAdmin
       .from('validation_rules')
       .select('id, waste_stream_id, site_id')
       .eq('id', ruleId)
@@ -55,7 +55,7 @@ export async function GET(
     }
 
     // Parse pagination and filter params
-    const { limit, cursor } = parsePaginationParams(request);
+  const { limit, cursor } = parsePaginationParams(request);
     const filters = parseFilterParams(request);
 
     // Get execution history from validation_executions table
@@ -79,7 +79,7 @@ export async function GET(
     // Add limit and fetch one extra to check if there are more
     query = query.limit(limit + 1);
 
-    const { data: executions, error: executionsError } = await query;
+  const { data: executions, error: executionsError } = await query;
 
     if (executionsError) {
       return errorResponse(
@@ -96,7 +96,7 @@ export async function GET(
     const results = hasMore ? executions.slice(0, limit) : executions || [];
 
     // Get summary statistics
-    const { data: allExecutions } = await supabaseAdmin
+  const { data: allExecutions } = await supabaseAdmin
       .from('validation_executions')
       .select('execution_status, duration_ms')
       .eq('validation_rule_id', ruleId);

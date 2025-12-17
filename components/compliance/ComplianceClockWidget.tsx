@@ -38,16 +38,7 @@ export function ComplianceClockWidget({
   limit = 5,
   showAll = false
 }: ComplianceClockWidgetProps) {
-  const { data, isLoading } = useQuery<{
-    data: ComplianceClock[];
-    summary: {
-      total: number;
-      overdue: number;
-      critical: number;
-      warning: number;
-      completed: number;
-    };
-  }>({
+  const { data, isLoading } = useQuery({
     queryKey: ['compliance-clocks', siteId, moduleId, limit],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -55,12 +46,22 @@ export function ComplianceClockWidget({
       if (moduleId) params.append('module_id', moduleId);
       params.append('limit', limit.toString());
       const queryString = params.toString();
-      return apiClient.get('/compliance-clocks?' + queryString);
+      const response = await apiClient.get('/compliance-clocks?' + queryString);
+      return response as {
+        data: ComplianceClock[];
+        summary: {
+          total: number;
+          overdue: number;
+          critical: number;
+          warning: number;
+          completed: number;
+        };
+      };
     },
     refetchInterval: 60000,
   });
 
-  const clocks = data?.data || [];
+  const clocks: any[] = data?.data || [];
   const summary = data?.summary;
 
   if (isLoading) {

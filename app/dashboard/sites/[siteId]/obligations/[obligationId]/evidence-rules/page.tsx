@@ -27,7 +27,7 @@ export default function EvidenceRulesPage() {
   const obligationId = params.obligationId as string;
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const { data: rulesData, isLoading, error } = useQuery<EvidenceRulesResponse>({
+  const { data: rulesData, isLoading, error } = useQuery({
     queryKey: ['evidence-rules', obligationId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<EvidenceRulesResponse>(`/obligations/${obligationId}/evidence-rules`);
@@ -35,7 +35,7 @@ export default function EvidenceRulesPage() {
     enabled: !!obligationId,
   });
 
-  const rules = rulesData?.data || [];
+  const rules: any[] = rulesData?.data || [];
 
   if (isLoading) {
     return (

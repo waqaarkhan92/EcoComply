@@ -41,7 +41,7 @@ export default function NewStackTestPage() {
   });
 
   // Fetch generators for this site
-  const { data: generatorsData } = useQuery<GeneratorsResponse>({
+  const { data: generatorsData } = useQuery({
     queryKey: ['module-3-generators', siteId],
     queryFn: async (): Promise<any> => {
       const params = new URLSearchParams();
@@ -53,7 +53,7 @@ export default function NewStackTestPage() {
     enabled: !!siteId,
   });
 
-  const generators = generatorsData?.data || [];
+  const generators: any[] = generatorsData?.data || [];
 
   const mutation = useMutation({
     mutationFn: async (data: typeof formData) => {

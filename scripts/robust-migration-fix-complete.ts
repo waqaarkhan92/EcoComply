@@ -53,10 +53,10 @@ async function main() {
     console.log('📋 Step 1: Checking table existence...\n');
     
     const dependencyTables: TableStatus[] = [
-      { name: 'exceedances', createdByMigration: '20250128000006_create_phase6_module2_tables.sql' },
-      { name: 'parameters', createdByMigration: '20250128000006_create_phase6_module2_tables.sql' },
-      { name: 'generators', createdByMigration: '20250128000007_create_phase7_module3_tables.sql' },
-      { name: 'chain_break_alerts', createdByMigration: '20250131000001_create_module4_tables.sql' },
+      { name: 'exceedances', exists: false, createdByMigration: '20250128000006_create_phase6_module2_tables.sql' },
+      { name: 'parameters', exists: false, createdByMigration: '20250128000006_create_phase6_module2_tables.sql' },
+      { name: 'generators', exists: false, createdByMigration: '20250128000007_create_phase7_module3_tables.sql' },
+      { name: 'chain_break_alerts', exists: false, createdByMigration: '20250131000001_create_module4_tables.sql' },
     ];
 
     for (const table of dependencyTables) {

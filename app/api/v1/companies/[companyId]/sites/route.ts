@@ -11,7 +11,7 @@ import { parsePaginationParams, parseFilterParams, parseSortParams, createCursor
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ companyId: string } }
+  request: NextRequest, props: { params: Promise<{ companyId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -21,13 +21,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { companyId } = params;
+  const { companyId } = params;
 
     // Verify company exists and user has access
-    const { data: company, error: companyError } = await supabaseAdmin
+  const { data: company, error: companyError } = await supabaseAdmin
       .from('companies')
       .select('id')
       .eq('id', companyId)
@@ -66,7 +66,7 @@ export async function GET(
     }
 
     // Parse pagination and filter params
-    const { limit, cursor } = parsePaginationParams(request);
+  const { limit, cursor } = parsePaginationParams(request);
     const filters = parseFilterParams(request);
     const sort = parseSortParams(request);
 
@@ -95,7 +95,7 @@ export async function GET(
     // Add limit and fetch one extra to check if there are more
     query = query.limit(limit + 1);
 
-    const { data: sites, error } = await query;
+  const { data: sites, error } = await query;
 
     if (error) {
       return errorResponse(

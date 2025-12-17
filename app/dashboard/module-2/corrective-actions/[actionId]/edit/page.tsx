@@ -47,7 +47,7 @@ export default function EditCorrectiveActionPage({
     regulator_justification: '',
   });
 
-  const { data: action, isLoading } = useQuery<CorrectiveAction>({
+  const { data: action, isLoading } = useQuery({
     queryKey: ['corrective-action', actionId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<CorrectiveAction>(`/module-2/corrective-actions/${actionId}`);

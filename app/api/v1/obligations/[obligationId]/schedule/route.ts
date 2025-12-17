@@ -10,7 +10,7 @@ import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ obligationId: string } }
+  request: NextRequest, props: { params: Promise<{ obligationId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,13 +20,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { obligationId } = params;
+  const { obligationId } = params;
 
     // Verify obligation exists and user has access
-    const { data: obligation, error: obligationError } = await supabaseAdmin
+  const { data: obligation, error: obligationError } = await supabaseAdmin
       .from('obligations')
       .select('id, company_id')
       .eq('id', obligationId)
@@ -66,7 +66,7 @@ export async function GET(
     }
 
     // Get schedule for obligation
-    const { data: schedule, error } = await supabaseAdmin
+  const { data: schedule, error } = await supabaseAdmin
       .from('schedules')
       .select('id, obligation_id, frequency, next_due_date, status')
       .eq('obligation_id', obligationId)

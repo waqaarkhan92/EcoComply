@@ -35,9 +35,10 @@ const HELP_ARTICLES: Record<string, { id: string; title: string; content: string
 };
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ articleId: string } }
+  request: NextRequest, props: { params: Promise<{ articleId: string }> }
 ) {
   try {
+    const params = await props.params;
     const articleId = params.articleId;
 
     const article = HELP_ARTICLES[articleId];

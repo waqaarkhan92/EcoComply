@@ -38,63 +38,34 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const { accessToken } = useAuthStore.getState();
-    
-    console.log(`🌐 API Request: ${endpoint}`);
-    console.log(`🔑 Has token:`, !!accessToken);
-    console.log(`🔑 Token preview:`, accessToken ? `${accessToken.substring(0, 20)}...` : 'none');
-    
-    const headers: HeadersInit = {
+
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...(options.headers as Record<string, string>),
     };
 
     if (accessToken) {
       headers['Authorization'] = `Bearer ${accessToken}`;
-      console.log(`✅ Authorization header set`);
-    } else {
-      console.warn(`⚠️ No access token available!`);
     }
-
-    console.log(`📤 Request headers:`, Object.keys(headers));
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
     });
 
-    console.log(`📥 Response status:`, response.status);
-    console.log(`📥 Response ok:`, response.ok);
-    console.log(`📥 Response headers:`, Object.fromEntries(response.headers.entries()));
-
-    // Get response text first to see what we're dealing with
     const responseText = await response.text();
-    console.log(`📥 Response text length:`, responseText.length);
-    console.log(`📥 Response text preview:`, responseText.substring(0, 500));
 
     let data: any;
     try {
       data = JSON.parse(responseText);
-      console.log(`📦 Parsed JSON successfully`);
-      console.log(`📦 Response data keys:`, Object.keys(data));
-      console.log(`📦 Response data type:`, typeof data.data);
-      console.log(`📦 Response data is array:`, Array.isArray(data.data));
     } catch (parseError) {
-      console.error(`❌ Failed to parse JSON:`, parseError);
-      console.error(`❌ Response text:`, responseText);
-      // Create error with raw response text
-      const error: any = new Error(`Invalid JSON response: ${responseText.substring(0, 200)}`);
+      const error: any = new Error(`Invalid JSON response from ${endpoint}`);
       error.response = { data: responseText, status: response.status };
       error.status = response.status;
       throw error;
     }
 
     if (!response.ok) {
-      // Only log errors that aren't 404 (to reduce noise for missing resources)
-      if (response.status !== 404) {
-        console.error(`❌ API Error Status:`, response.status);
-        console.error(`❌ API Error:`, data?.error?.message || data?.message || 'Unknown error');
-      }
-      // Create an error object that includes the full response
       const errorMessage = data?.error?.message || data?.message || `API request failed with status ${response.status}`;
       const error: any = new Error(errorMessage);
       error.response = { data, status: response.status };
@@ -102,11 +73,6 @@ class ApiClient {
       error.code = data?.error?.code;
       throw error;
     }
-
-    console.log(`✅ API Success:`, {
-      dataCount: Array.isArray(data.data) ? data.data.length : 'not array',
-      pagination: data.pagination,
-    });
 
     return data;
   }
@@ -125,6 +91,13 @@ class ApiClient {
   async put<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'PUT',
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  }
+
+  async patch<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
       body: body ? JSON.stringify(body) : undefined,
     });
   }
@@ -158,4 +131,13 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient();
+
+/**
+ * Helper function for React Query that returns data in the expected format
+ * This handles the type coercion between ApiResponse and React Query expectations
+ */
+export async function fetchApi<T>(endpoint: string): Promise<T> {
+  const response = await apiClient.get(endpoint);
+  return response as unknown as T;
+}
 

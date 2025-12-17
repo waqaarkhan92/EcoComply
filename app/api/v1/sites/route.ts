@@ -1,6 +1,6 @@
 /**
  * Sites Endpoints
- * GET /api/v1/sites - List sites (RLS filtered)
+ * GET /api/v1/sites - List sites with compliance stats
  * POST /api/v1/sites - Create site
  */
 
@@ -50,6 +50,9 @@ export async function GET(request: NextRequest) {
     // Apply filters
     if (filters.company_id) {
       query = query.eq('company_id', filters.company_id);
+    } else {
+      // Default to user's company
+      query = query.eq('company_id', user.company_id);
     }
     if (filters.regulator) {
       query = query.eq('regulator', filters.regulator);
@@ -80,17 +83,68 @@ export async function GET(request: NextRequest) {
 
     // Check if there are more results
     const hasMore = sites && sites.length > limit;
-    const results = hasMore ? sites.slice(0, limit) : sites || [];
+    const baseSites = hasMore ? sites.slice(0, limit) : sites || [];
+
+    // Now enrich each site with compliance stats
+    const enrichedSites = await Promise.all(
+      baseSites.map(async (site) => {
+        // Get obligation stats for this site
+        const { data: obligations } = await supabaseAdmin
+          .from('obligations')
+          .select('id, status')
+          .eq('site_id', site.id)
+          .is('deleted_at', null);
+
+        const oblStats = obligations || [];
+        const total = oblStats.length;
+        const completed = oblStats.filter(o => o.status === 'COMPLETED').length;
+        const overdue = oblStats.filter(o => o.status === 'OVERDUE').length;
+        const dueSoon = oblStats.filter(o => o.status === 'DUE_SOON').length;
+        const pending = oblStats.filter(o => o.status === 'PENDING').length;
+
+        // Calculate compliance score (completed / total * 100)
+        const compliance_score = total > 0 ? Math.round((completed / total) * 100) : 100;
+
+        // Get upcoming deadlines count (next 7 days)
+        const nextWeek = new Date();
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        const { count: upcomingCount } = await supabaseAdmin
+          .from('deadlines')
+          .select('id', { count: 'exact', head: true })
+          .eq('site_id', site.id)
+          .in('status', ['PENDING', 'DUE_SOON'])
+          .lte('due_date', nextWeek.toISOString().split('T')[0]);
+
+        // Get active modules for this site
+        const { data: moduleActivations } = await supabaseAdmin
+          .from('module_activations')
+          .select('modules:module_id(module_code)')
+          .eq('site_id', site.id)
+          .eq('status', 'ACTIVE');
+
+        const active_modules = moduleActivations
+          ?.map((ma: any) => ma.modules?.module_code)
+          .filter(Boolean) || [];
+
+        return {
+          ...site,
+          compliance_score,
+          overdue_count: overdue,
+          upcoming_count: upcomingCount || dueSoon,
+          active_modules,
+        };
+      })
+    );
 
     // Create cursor for next page (if there are more results)
     let nextCursor: string | undefined;
-    if (hasMore && results.length > 0) {
-      const lastItem = results[results.length - 1];
+    if (hasMore && enrichedSites.length > 0) {
+      const lastItem = enrichedSites[enrichedSites.length - 1];
       nextCursor = createCursor(lastItem.id, lastItem.created_at);
     }
 
     const response = paginatedResponse(
-      results,
+      enrichedSites,
       nextCursor,
       limit,
       hasMore,

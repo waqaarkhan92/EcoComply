@@ -43,7 +43,7 @@ export default function EditExemptionPage({
     verification_notes: '',
   });
 
-  const { data: exemption, isLoading } = useQuery<Exemption>({
+  const { data: exemption, isLoading } = useQuery({
     queryKey: ['exemption', exemptionId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<Exemption>(`/module-3/exemptions/${exemptionId}`);

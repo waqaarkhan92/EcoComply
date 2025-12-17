@@ -34,7 +34,7 @@ export default function RecurrenceTriggerRuleDetailPage({
   const { ruleId } = use(params);
   const [activeTab, setActiveTab] = useState<'details' | 'execution-history'>('details');
 
-  const { data: rule, isLoading } = useQuery<RecurrenceTriggerRule>({
+  const { data: rule, isLoading } = useQuery({
     queryKey: ['recurrence-trigger-rule', ruleId],
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<RecurrenceTriggerRule>(`/recurrence-trigger-rules/${ruleId}`);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
@@ -40,17 +40,19 @@ export default function NotificationSettingsPage() {
     },
   });
 
-  const { data: existingSettings, isLoading } = useQuery<{ data: NotificationSettings }>({
+  const { data: existingSettings, isLoading } = useQuery({
     queryKey: ['notification-settings'],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: NotificationSettings }>('/settings/notifications');
     },
-    onSuccess: (data) => {
-      if (data?.data) {
-        setSettings(data.data);
-      }
-    },
   });
+
+  // Update settings when data is fetched
+  useEffect(() => {
+    if (existingSettings?.data) {
+      setSettings(existingSettings.data);
+    }
+  }, [existingSettings]);
 
   const updateSettings = useMutation({
     mutationFn: async (data: NotificationSettings) => {

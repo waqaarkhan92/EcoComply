@@ -27,7 +27,7 @@ export default function EditUserPage() {
   const [role, setRole] = useState('STAFF');
   const [isActive, setIsActive] = useState(true);
 
-  const { data: userData, isLoading } = useQuery<{ data: User }>({
+  const { data: userData, isLoading } = useQuery({
     queryKey: ['user', userId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: User }>(`/users/${userId}`);

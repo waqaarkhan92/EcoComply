@@ -8,6 +8,14 @@ const config: Config = {
     './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
+    screens: {
+      'xs': '475px',
+      'sm': '640px',
+      'md': '768px',
+      'lg': '1024px',
+      'xl': '1280px',
+      '2xl': '1536px',
+    },
     extend: {
       colors: {
         // Primary Brand + Authority - EcoComply Deep Forest Green
@@ -135,10 +143,10 @@ const config: Config = {
         '24': '96px',
       },
       borderRadius: {
-        sm: '2px',
-        base: '4px',
-        md: '6px',
-        lg: '8px',
+        sm: '4px',
+        base: '6px',
+        md: '8px',
+        lg: '10px',
         xl: '12px',
         '2xl': '16px',
         full: '9999px',
@@ -151,12 +159,12 @@ const config: Config = {
         lg: '0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05)',
         xl: '0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04)',
 
-        // World-class elevation system
-        'card': '0px 1px 3px rgba(0, 0, 0, 0.05), 0px 1px 2px rgba(0, 0, 0, 0.04)',
-        'card-hover': '0px 4px 8px rgba(0, 0, 0, 0.08), 0px 2px 4px rgba(0, 0, 0, 0.06)',
-        'float': '0px 12px 24px rgba(0, 0, 0, 0.12), 0px 4px 8px rgba(0, 0, 0, 0.08)',
-        'modal': '0px 24px 48px rgba(0, 0, 0, 0.16), 0px 8px 16px rgba(0, 0, 0, 0.10)',
-        'primary-glow': '0px 4px 16px rgba(16, 75, 58, 0.24)',
+        // Enterprise elevation system - lighter, more refined
+        'card': '0px 1px 2px rgba(0, 0, 0, 0.04), 0px 1px 3px rgba(0, 0, 0, 0.02)',
+        'card-hover': '0px 4px 12px rgba(0, 0, 0, 0.08), 0px 2px 4px rgba(0, 0, 0, 0.04)',
+        'float': '0px 8px 16px rgba(0, 0, 0, 0.08), 0px 4px 8px rgba(0, 0, 0, 0.04)',
+        'modal': '0px 20px 40px rgba(0, 0, 0, 0.12), 0px 8px 16px rgba(0, 0, 0, 0.08)',
+        'primary-glow': '0px 4px 12px rgba(16, 75, 58, 0.20)',
       },
       animation: {
         'slide-in-right': 'slide-in-right 0.3s ease-out',
@@ -176,6 +184,27 @@ const config: Config = {
           from: { transform: 'scale(0.95)', opacity: '0' },
           to: { transform: 'scale(1)', opacity: '1' },
         },
+        'slide-up': {
+          from: { transform: 'translateY(8px)', opacity: '0' },
+          to: { transform: 'translateY(0)', opacity: '1' },
+        },
+        'shimmer': {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+      },
+      // Safe area insets for mobile devices
+      padding: {
+        'safe-top': 'env(safe-area-inset-top)',
+        'safe-bottom': 'env(safe-area-inset-bottom)',
+        'safe-left': 'env(safe-area-inset-left)',
+        'safe-right': 'env(safe-area-inset-right)',
+      },
+      margin: {
+        'safe-top': 'env(safe-area-inset-top)',
+        'safe-bottom': 'env(safe-area-inset-bottom)',
+        'safe-left': 'env(safe-area-inset-left)',
+        'safe-right': 'env(safe-area-inset-right)',
       },
     },
   },

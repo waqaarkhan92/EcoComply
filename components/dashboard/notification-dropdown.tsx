@@ -45,7 +45,7 @@ export function NotificationDropdown() {
     queryKey: ['notifications-unread-count'],
     queryFn: async () => {
       const response = await apiClient.get('/notifications/unread-count');
-      return response.data;
+      return response.data as { unread_count: number };
     },
     refetchInterval: 30000, // Poll every 30 seconds
   });
@@ -57,13 +57,13 @@ export function NotificationDropdown() {
     queryKey: ['notifications-recent'],
     queryFn: async () => {
       const response = await apiClient.get('/notifications?limit=10&filter[read_at]=null');
-      return response.data;
+      return response as { data: Notification[] };
     },
     enabled: isOpen,
     refetchInterval: isOpen ? 10000 : false, // Poll every 10 seconds when open
   });
 
-  const notifications = notificationsData?.data || [];
+  const notifications: any[] = notificationsData?.data || [];
 
   // Mark as read mutation
   const markAsReadMutation = useMutation({

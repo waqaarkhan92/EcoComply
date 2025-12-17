@@ -10,7 +10,7 @@ import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function GET(
-  request: NextRequest, props: { params: Promise<{ escalationId: string } }
+  request: NextRequest, props: { params: Promise<{ escalationId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,13 +20,13 @@ export async function GET(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { escalationId } = params;
+  const { escalationId } = params;
 
     // Get escalation - RLS will filter by company
-    const { data: escalation, error } = await supabaseAdmin
+  const { data: escalation, error } = await supabaseAdmin
       .from('escalations')
       .select('id, obligation_id, company_id, site_id, current_level, escalation_reason, escalated_to, escalated_at, resolved_at, resolved_by, resolution_notes')
       .eq('id', escalationId)

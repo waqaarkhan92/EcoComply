@@ -11,7 +11,7 @@ import { getQueue, QUEUE_NAMES } from '@/lib/queue/queue-manager';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function POST(
-  request: NextRequest, props: { params: Promise<{ importId: string } }
+  request: NextRequest, props: { params: Promise<{ importId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -21,10 +21,10 @@ export async function POST(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { importId } = params;
+  const { importId } = params;
 
     // Parse request body
     let confirmOptions: any = {
@@ -41,7 +41,7 @@ export async function POST(
     }
 
     // Get import - RLS will enforce access control
-    const { data: excelImport, error } = await supabaseAdmin
+  const { data: excelImport, error } = await supabaseAdmin
       .from('excel_imports')
       .select('*')
       .eq('id', importId)
@@ -84,7 +84,7 @@ export async function POST(
     };
 
     // Update import status to PROCESSING
-    const { error: updateError } = await supabaseAdmin
+  const { error: updateError } = await supabaseAdmin
       .from('excel_imports')
       .update({
         status: 'PROCESSING',

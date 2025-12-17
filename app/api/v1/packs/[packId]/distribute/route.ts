@@ -18,7 +18,7 @@ import crypto from 'crypto';
 const MAX_RECIPIENTS = 50;
 
 export async function POST(
-  request: NextRequest, props: { params: Promise<{ packId: string } }
+  request: NextRequest, props: { params: Promise<{ packId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -28,10 +28,10 @@ export async function POST(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { packId } = params;
+  const { packId } = params;
 
     // Parse request body
     const body = await request.json();
@@ -141,7 +141,7 @@ export async function POST(
     }
 
     // Get pack with title and company info - RLS will enforce access control
-    const { data: pack, error: packError } = await supabaseAdmin
+  const { data: pack, error: packError } = await supabaseAdmin
       .from('audit_packs')
       .select('id, company_id, site_id, pack_type, status, storage_path, title')
       .eq('id', packId)
@@ -169,7 +169,7 @@ export async function POST(
     }
 
     // Get company subscription tier for validation
-    const { data: company, error: companyError } = await supabaseAdmin
+  const { data: company, error: companyError } = await supabaseAdmin
       .from('companies')
       .select('id, name, subscription_tier')
       .eq('id', pack.company_id)

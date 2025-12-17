@@ -24,7 +24,7 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const { data: profileData } = useQuery<{ data: UserProfile }>({
+  const { data: profileData } = useQuery({
     queryKey: ['user-profile', user?.id],
     queryFn: async (): Promise<any> => {
       return apiClient.get<{ data: UserProfile }>(`/users/${user?.id}`);

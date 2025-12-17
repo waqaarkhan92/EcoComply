@@ -6,6 +6,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Upload, X, FileText, Check } from 'lucide-react';
+import {
+  RegulatorFormFields,
+  RegulatorSelector,
+  WaterCompanyFormFields,
+  WaterCompanySelector,
+  type Regulator,
+  type RegulatorFormData,
+  type WaterCompany,
+  type WaterCompanyFormData,
+} from '@/components/ingestion';
 
 interface Site {
   id: string;
@@ -25,13 +35,19 @@ export default function DocumentUploadPage() {
   });
   const [dragActive, setDragActive] = useState(false);
 
+  // Jurisdiction-specific state
+  const [selectedRegulator, setSelectedRegulator] = useState<Regulator | null>(null);
+  const [regulatorData, setRegulatorData] = useState<Partial<RegulatorFormData>>({});
+  const [selectedWaterCompany, setSelectedWaterCompany] = useState<WaterCompany | null>(null);
+  const [waterCompanyData, setWaterCompanyData] = useState<Partial<WaterCompanyFormData>>({});
+
   // Fetch sites
-  const { data: sitesData } = useQuery<{ data: Site[] }>({
+  const { data: sitesData } = useQuery({
     queryKey: ['sites'],
     queryFn: async () => apiClient.get<Site[]>('/sites'),
   });
 
-  const sites = sitesData?.data || [];
+  const sites: any[] = sitesData?.data || [];
 
   // Upload mutation
   const uploadMutation = useMutation({
@@ -140,6 +156,21 @@ export default function DocumentUploadPage() {
     uploadFormData.append('file', selectedFile);
     uploadFormData.append('site_id', formData.primary_site_id);
     uploadFormData.append('document_type', formData.document_type);
+
+    // Add jurisdiction metadata for AI extraction
+    if (formData.document_type === 'PERMIT' && selectedRegulator) {
+      uploadFormData.append('regulator', selectedRegulator);
+      if (regulatorData) {
+        uploadFormData.append('regulator_metadata', JSON.stringify(regulatorData));
+      }
+    }
+
+    if (formData.document_type === 'CONSENT' && selectedWaterCompany) {
+      uploadFormData.append('water_company', selectedWaterCompany);
+      if (waterCompanyData) {
+        uploadFormData.append('water_company_metadata', JSON.stringify(waterCompanyData));
+      }
+    }
 
     uploadMutation.mutate(uploadFormData);
   };
@@ -335,7 +366,14 @@ export default function DocumentUploadPage() {
           </label>
           <select
             value={formData.document_type}
-            onChange={(e) => setFormData({ ...formData, document_type: e.target.value })}
+            onChange={(e) => {
+              setFormData({ ...formData, document_type: e.target.value });
+              // Reset jurisdiction selections when document type changes
+              setSelectedRegulator(null);
+              setRegulatorData({});
+              setSelectedWaterCompany(null);
+              setWaterCompanyData({});
+            }}
             required
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
           >
@@ -344,6 +382,55 @@ export default function DocumentUploadPage() {
             <option value="MCPD_REGISTRATION">MCPD Registration</option>
           </select>
         </div>
+
+        {/* Jurisdiction-Specific Fields */}
+        {(formData.document_type === 'PERMIT' || formData.document_type === 'MCPD_REGISTRATION') && (
+          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-4">
+            <h3 className="text-sm font-medium text-text-primary">
+              Regulator Information
+            </h3>
+            <p className="text-xs text-text-secondary">
+              Select the regulator to enable jurisdiction-specific extraction
+            </p>
+
+            <RegulatorSelector
+              value={selectedRegulator}
+              onChange={(value) => setSelectedRegulator(value as Regulator | null)}
+            />
+
+            {selectedRegulator && (
+              <RegulatorFormFields
+                regulator={selectedRegulator as Regulator}
+                values={regulatorData}
+                onChange={(newValues) => setRegulatorData(newValues)}
+              />
+            )}
+          </div>
+        )}
+
+        {formData.document_type === 'CONSENT' && (
+          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-4">
+            <h3 className="text-sm font-medium text-text-primary">
+              Water Company Information
+            </h3>
+            <p className="text-xs text-text-secondary">
+              Select the water company to enable jurisdiction-specific extraction (including Mogden formula for Thames Water)
+            </p>
+
+            <WaterCompanySelector
+              value={selectedWaterCompany}
+              onChange={(value) => setSelectedWaterCompany(value as WaterCompany | null)}
+            />
+
+            {selectedWaterCompany && (
+              <WaterCompanyFormFields
+                waterCompany={selectedWaterCompany as WaterCompany}
+                values={waterCompanyData}
+                onChange={(newValues) => setWaterCompanyData(newValues)}
+              />
+            )}
+          </div>
+        )}
 
         {/* Submit Button */}
         <div className="flex gap-4">

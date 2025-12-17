@@ -100,7 +100,7 @@ export async function processPermitRenewalReminderJob(job: Job<PermitRenewalRemi
         const { data: existingNotification } = await supabaseAdmin
           .from('notifications')
           .select('id')
-          .eq('company_id', document.sites.company_id)
+          .eq('company_id', document.sites[0]?.company_id)
           .eq('site_id', document.site_id)
           .eq('notification_type', 'PERMIT_RENEWAL_REMINDER')
           .eq('entity_type', 'DOCUMENT')
@@ -141,7 +141,7 @@ export async function processPermitRenewalReminderJob(job: Job<PermitRenewalRemi
             company_id,
             user_roles!inner(role)
           `)
-          .eq('company_id', document.sites.company_id)
+          .eq('company_id', document.sites[0]?.company_id)
           .in('user_roles.role', rolesToNotify)
           .eq('is_active', true)
           .is('deleted_at', null);
@@ -150,7 +150,7 @@ export async function processPermitRenewalReminderJob(job: Job<PermitRenewalRemi
         if (users && users.length > 0) {
           const notifications = users.map((user: any) => ({
             user_id: user.id,
-            company_id: document.sites.company_id,
+            company_id: document.sites[0]?.company_id,
             site_id: document.site_id,
             recipient_email: user.email,
             notification_type: 'PERMIT_RENEWAL_REMINDER',

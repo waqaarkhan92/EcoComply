@@ -28,7 +28,7 @@ export default function LabResultDetailPage() {
   const siteId = params.siteId as string;
   const resultId = params.resultId as string;
 
-  const { data, isLoading, error } = useQuery<LabResultResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-2-lab-result', resultId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<LabResultResponse>(`/module-2/lab-results/${resultId}`);
@@ -115,7 +115,7 @@ export default function LabResultDetailPage() {
           <div className="mt-6 pt-6 border-t border-gray-200">
             <h3 className="text-lg font-semibold text-text-primary mb-4">Parameters</h3>
             <div className="space-y-4">
-              {labResult.parameters.map((param, index) => {
+              {labResult.parameters.map((param: { parameter_name: string; value: number; limit: number }, index: number) => {
                 const exceeded = param.value > param.limit;
                 const percentage = (param.value / param.limit) * 100;
                 return (

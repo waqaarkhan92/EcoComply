@@ -36,7 +36,7 @@ export default function ParameterDetailPage() {
   const siteId = params.siteId as string;
   const parameterId = params.parameterId as string;
 
-  const { data, isLoading, error } = useQuery<ParameterResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['module-2-parameter', parameterId],
     queryFn: async (): Promise<any> => {
       return apiClient.get<ParameterResponse>(`/module-2/parameters/${parameterId}`);

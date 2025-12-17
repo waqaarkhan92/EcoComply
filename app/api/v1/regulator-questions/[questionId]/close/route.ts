@@ -10,7 +10,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 
 export async function PUT(
-  request: NextRequest, props: { params: Promise<{ questionId: string } }
+  request: NextRequest, props: { params: Promise<{ questionId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,13 +20,13 @@ export async function PUT(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+  const { user } = authResult;
 
     const params = await props.params;
-    const { questionId } = params;
+  const { questionId } = params;
 
     // Get existing question
-    const { data: existingQuestion, error: getError } = await supabaseAdmin
+  const { data: existingQuestion, error: getError } = await supabaseAdmin
       .from('regulator_questions')
       .select('id, status')
       .eq('id', questionId)
@@ -43,7 +43,7 @@ export async function PUT(
     }
 
     // Update question status to CLOSED
-    const { data: updatedQuestion, error: updateError } = await supabaseAdmin
+  const { data: updatedQuestion, error: updateError } = await supabaseAdmin
       .from('regulator_questions')
       .update({
         status: 'CLOSED',
