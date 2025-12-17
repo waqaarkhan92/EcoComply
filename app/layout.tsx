@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { QueryProvider } from '@/lib/providers/query-provider';
@@ -6,6 +7,7 @@ import { PWAProvider } from '@/lib/providers/pwa-provider';
 import { KeyboardShortcutsProvider } from '@/lib/providers/keyboard-shortcuts-provider';
 import { ContextualHelpProvider } from '@/lib/providers/contextual-help-provider';
 import { I18nProvider } from '@/lib/providers/i18n-provider';
+import { PostHogProvider } from '@/lib/providers/posthog-provider';
 import { HelpModal } from '@/components/help/HelpModal';
 import { KeyboardShortcutsHandler } from '@/components/keyboard-shortcuts/KeyboardShortcutsHandler';
 import { WorkerInitializer } from '@/components/system/WorkerInitializer';
@@ -48,20 +50,24 @@ export default function RootLayout({
       <body className={`${inter.className} bg-slate text-charcoal`}>
         <ErrorBoundary>
           <WorkerInitializer />
-          <QueryProvider>
-            <I18nProvider>
-              <PWAProvider>
-                <KeyboardShortcutsProvider>
-                  <ContextualHelpProvider>
-                    {children}
-                    <HelpModal />
-                    <KeyboardShortcutsHandler />
-                    <Toaster position="top-right" richColors expand={true} />
-                  </ContextualHelpProvider>
-                </KeyboardShortcutsProvider>
-              </PWAProvider>
-            </I18nProvider>
-          </QueryProvider>
+          <Suspense fallback={null}>
+            <PostHogProvider>
+              <QueryProvider>
+                <I18nProvider>
+                  <PWAProvider>
+                    <KeyboardShortcutsProvider>
+                      <ContextualHelpProvider>
+                        {children}
+                        <HelpModal />
+                        <KeyboardShortcutsHandler />
+                        <Toaster position="top-right" richColors expand={true} />
+                      </ContextualHelpProvider>
+                    </KeyboardShortcutsProvider>
+                  </PWAProvider>
+                </I18nProvider>
+              </QueryProvider>
+            </PostHogProvider>
+          </Suspense>
         </ErrorBoundary>
       </body>
     </html>

@@ -52,5 +52,16 @@ temp/
 .cache/
 
 # Environment variables
+.env
 .env.local
 .env*.local
+.env.production
+.env.staging
+
+# Sentry
+.sentryclirc
+
+# Test outputs
+playwright-report/
+test-results/
+extraction-output.json
