@@ -63,11 +63,11 @@ export function middleware(request: NextRequest) {
   // Content Security Policy
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // Next.js requires unsafe-eval/inline
+    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.posthog.com", // Next.js requires unsafe-eval/inline
     "style-src 'self' 'unsafe-inline'", // Tailwind requires unsafe-inline
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://*.posthog.com https://*.sentry.io https://*.ingest.sentry.io",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
