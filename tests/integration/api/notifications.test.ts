@@ -4,29 +4,44 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Lazy initialization to ensure env vars are loaded
+let supabaseAdmin: SupabaseClient;
 
-// Create admin client for setup/cleanup
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
+function getSupabaseAdmin(): SupabaseClient {
+  if (!supabaseAdmin) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-describe('Notifications API Integration Tests', () => {
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Supabase URL and Service Key must be set for integration tests');
+    }
+
+    supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+  }
+  return supabaseAdmin;
+}
+
+// Skip by default - run with RUN_INTEGRATION_TESTS=true
+const describeIntegration = process.env.RUN_INTEGRATION_TESTS === 'true' ? describe : describe.skip;
+
+describeIntegration('Notifications API Integration Tests', () => {
   let testUser: any;
   let testCompany: any;
   let authToken: string;
   let testNotifications: string[] = [];
 
   beforeAll(async () => {
+    const supabase = getSupabaseAdmin();
+
     // Create test company
-    const { data: company, error: companyError } = await supabaseAdmin
+    const { data: company, error: companyError } = await supabase
       .from('companies')
       .insert({
         name: 'Test Notifications Company',
@@ -40,7 +55,7 @@ describe('Notifications API Integration Tests', () => {
     testCompany = company;
 
     // Create test user in auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: 'notifications-test@example.com',
       password: 'TestPassword123!',
       email_confirm: true,
@@ -49,7 +64,7 @@ describe('Notifications API Integration Tests', () => {
     if (authError) throw authError;
 
     // Create user in users table
-    const { data: user, error: userError } = await supabaseAdmin
+    const { data: user, error: userError } = await supabase
       .from('users')
       .insert({
         id: authData.user.id,
@@ -66,6 +81,8 @@ describe('Notifications API Integration Tests', () => {
     testUser = user;
 
     // Sign in to get auth token
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     const client = createClient(supabaseUrl, supabaseAnonKey);
     const { data: signInData, error: signInError } = await client.auth.signInWithPassword({
       email: 'notifications-test@example.com',
@@ -77,20 +94,22 @@ describe('Notifications API Integration Tests', () => {
   });
 
   afterAll(async () => {
+    const supabase = getSupabaseAdmin();
+
     // Clean up notifications
     if (testNotifications.length > 0) {
-      await supabaseAdmin.from('notifications').delete().in('id', testNotifications);
+      await supabase.from('notifications').delete().in('id', testNotifications);
     }
 
     // Clean up user
     if (testUser) {
-      await supabaseAdmin.from('users').delete().eq('id', testUser.id);
-      await supabaseAdmin.auth.admin.deleteUser(testUser.id);
+      await supabase.from('users').delete().eq('id', testUser.id);
+      await supabase.auth.admin.deleteUser(testUser.id);
     }
 
     // Clean up company
     if (testCompany) {
-      await supabaseAdmin.from('companies').delete().eq('id', testCompany.id);
+      await supabase.from('companies').delete().eq('id', testCompany.id);
     }
   });
 
@@ -100,8 +119,10 @@ describe('Notifications API Integration Tests', () => {
 
   describe('GET /api/v1/notifications', () => {
     it('should retrieve notifications for authenticated user', async () => {
+      const supabase = getSupabaseAdmin();
+
       // Create test notifications
-      const { data: notification1 } = await supabaseAdmin
+      const { data: notification1 } = await supabase
         .from('notifications')
         .insert({
           user_id: testUser.id,
@@ -119,7 +140,7 @@ describe('Notifications API Integration Tests', () => {
         .select()
         .single();
 
-      const { data: notification2 } = await supabaseAdmin
+      const { data: notification2 } = await supabase
         .from('notifications')
         .insert({
           user_id: testUser.id,
@@ -156,8 +177,10 @@ describe('Notifications API Integration Tests', () => {
     });
 
     it('should filter unread notifications only', async () => {
+      const supabase = getSupabaseAdmin();
+
       // Create one read and one unread notification
-      const { data: readNotif } = await supabaseAdmin
+      const { data: readNotif } = await supabase
         .from('notifications')
         .insert({
           user_id: testUser.id,
@@ -176,7 +199,7 @@ describe('Notifications API Integration Tests', () => {
         .select()
         .single();
 
-      const { data: unreadNotif } = await supabaseAdmin
+      const { data: unreadNotif } = await supabase
         .from('notifications')
         .insert({
           user_id: testUser.id,
@@ -218,9 +241,11 @@ describe('Notifications API Integration Tests', () => {
     });
 
     it('should support pagination with limit parameter', async () => {
+      const supabase = getSupabaseAdmin();
+
       // Create multiple notifications
       for (let i = 0; i < 5; i++) {
-        const { data } = await supabaseAdmin
+        const { data } = await supabase
           .from('notifications')
           .insert({
             user_id: testUser.id,
@@ -316,8 +341,10 @@ describe('Notifications API Integration Tests', () => {
 
   describe('POST /api/v1/notifications/[notificationId]/read', () => {
     it('should mark notification as read', async () => {
+      const supabase = getSupabaseAdmin();
+
       // Create unread notification
-      const { data: notification } = await supabaseAdmin
+      const { data: notification } = await supabase
         .from('notifications')
         .insert({
           user_id: testUser.id,
@@ -353,7 +380,7 @@ describe('Notifications API Integration Tests', () => {
       expect(data.success).toBe(true);
 
       // Verify notification is marked as read
-      const { data: updatedNotif } = await supabaseAdmin
+      const { data: updatedNotif } = await supabase
         .from('notifications')
         .select('read_at')
         .eq('id', notification!.id)
@@ -393,15 +420,17 @@ describe('Notifications API Integration Tests', () => {
 
   describe('GET /api/v1/notifications/unread-count', () => {
     it('should return unread notification count', async () => {
+      const supabase = getSupabaseAdmin();
+
       // Clean up existing notifications
-      await supabaseAdmin
+      await supabase
         .from('notifications')
         .delete()
         .eq('user_id', testUser.id);
 
       // Create 3 unread notifications
       for (let i = 0; i < 3; i++) {
-        const { data } = await supabaseAdmin
+        const { data } = await supabase
           .from('notifications')
           .insert({
             user_id: testUser.id,
@@ -423,7 +452,7 @@ describe('Notifications API Integration Tests', () => {
       }
 
       // Create 1 read notification
-      const { data: readNotif } = await supabaseAdmin
+      const { data: readNotif } = await supabase
         .from('notifications')
         .insert({
           user_id: testUser.id,
@@ -480,8 +509,10 @@ describe('Notifications API Integration Tests', () => {
 
   describe('Entity Linking', () => {
     it('should retrieve notifications with entity information', async () => {
+      const supabase = getSupabaseAdmin();
+
       // Create notification with entity link
-      const { data: notification } = await supabaseAdmin
+      const { data: notification } = await supabase
         .from('notifications')
         .insert({
           user_id: testUser.id,

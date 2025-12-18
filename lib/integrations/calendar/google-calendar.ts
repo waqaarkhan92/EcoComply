@@ -38,15 +38,28 @@ export interface GoogleCalendar {
 }
 
 export class GoogleCalendarClient {
-  private oauth2Client: OAuth2Client;
+  private oauth2Client: OAuth2Client | null = null;
+  private initialized = false;
 
-  constructor() {
+  /**
+   * Check if Google Calendar integration is configured
+   */
+  isConfigured(): boolean {
+    return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+  }
+
+  /**
+   * Initialize the OAuth2 client (lazy initialization)
+   */
+  private ensureInitialized(): void {
+    if (this.initialized) return;
+
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${process.env.BASE_URL}/api/v1/integrations/calendar/callback`;
 
     if (!clientId || !clientSecret) {
-      throw new Error('Google Calendar credentials not configured');
+      throw new Error('Google Calendar credentials not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.');
     }
 
     this.oauth2Client = new google.auth.OAuth2(
@@ -54,6 +67,15 @@ export class GoogleCalendarClient {
       clientSecret,
       redirectUri
     );
+    this.initialized = true;
+  }
+
+  /**
+   * Get the OAuth2 client (ensures initialization)
+   */
+  private getClient(): OAuth2Client {
+    this.ensureInitialized();
+    return this.oauth2Client!;
   }
 
   /**
@@ -70,7 +92,7 @@ export class GoogleCalendarClient {
       params.state = state;
     }
 
-    return this.oauth2Client.generateAuthUrl(params);
+    return this.getClient().generateAuthUrl(params);
   }
 
   /**
@@ -82,7 +104,7 @@ export class GoogleCalendarClient {
     expiry_date?: number;
   }> {
     try {
-      const { tokens } = await this.oauth2Client.getToken(code);
+      const { tokens } = await this.getClient().getToken(code);
 
       return {
         access_token: tokens.access_token!,
@@ -102,11 +124,12 @@ export class GoogleCalendarClient {
     expiry_date?: number;
   }> {
     try {
-      this.oauth2Client.setCredentials({
+      const client = this.getClient();
+      client.setCredentials({
         refresh_token: refreshToken,
       });
 
-      const { credentials } = await this.oauth2Client.refreshAccessToken();
+      const { credentials } = await client.refreshAccessToken();
 
       return {
         access_token: credentials.access_token!,
@@ -121,7 +144,7 @@ export class GoogleCalendarClient {
    * Set access token for authenticated requests
    */
   private setAccessToken(accessToken: string, refreshToken?: string) {
-    this.oauth2Client.setCredentials({
+    this.getClient().setCredentials({
       access_token: accessToken,
       refresh_token: refreshToken,
     });
@@ -134,7 +157,7 @@ export class GoogleCalendarClient {
     try {
       this.setAccessToken(accessToken, refreshToken);
 
-      const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
+      const calendar = google.calendar({ version: 'v3', auth: this.getClient() });
       const response = await calendar.calendarList.list();
 
       return (response.data.items || []).map(item => ({
@@ -160,7 +183,7 @@ export class GoogleCalendarClient {
     try {
       this.setAccessToken(accessToken, refreshToken);
 
-      const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
+      const calendar = google.calendar({ version: 'v3', auth: this.getClient() });
       const response = await calendar.events.insert({
         calendarId,
         requestBody: event,
@@ -185,7 +208,7 @@ export class GoogleCalendarClient {
     try {
       this.setAccessToken(accessToken, refreshToken);
 
-      const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
+      const calendar = google.calendar({ version: 'v3', auth: this.getClient() });
       await calendar.events.update({
         calendarId,
         eventId,
@@ -208,7 +231,7 @@ export class GoogleCalendarClient {
     try {
       this.setAccessToken(accessToken, refreshToken);
 
-      const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
+      const calendar = google.calendar({ version: 'v3', auth: this.getClient() });
       await calendar.events.delete({
         calendarId,
         eventId,

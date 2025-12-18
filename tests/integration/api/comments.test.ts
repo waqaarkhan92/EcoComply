@@ -4,21 +4,34 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Lazy initialization to ensure env vars are loaded
+let supabaseAdmin: SupabaseClient;
 
-// Create admin client for setup/cleanup
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
+function getSupabaseAdmin(): SupabaseClient {
+  if (!supabaseAdmin) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-describe('Comments API Integration Tests', () => {
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Supabase URL and Service Key must be set for integration tests');
+    }
+
+    supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+  }
+  return supabaseAdmin;
+}
+
+// Skip by default - run with RUN_INTEGRATION_TESTS=true
+const describeIntegration = process.env.RUN_INTEGRATION_TESTS === 'true' ? describe : describe.skip;
+
+describeIntegration('Comments API Integration Tests', () => {
   let testUser: any;
   let testCompany: any;
   let authToken: string;
@@ -26,8 +39,10 @@ describe('Comments API Integration Tests', () => {
   let testEntityId: string;
 
   beforeAll(async () => {
+    const supabase = getSupabaseAdmin();
+
     // Create test company
-    const { data: company, error: companyError } = await supabaseAdmin
+    const { data: company, error: companyError } = await supabase
       .from('companies')
       .insert({
         name: 'Test Comments Company',
@@ -41,7 +56,7 @@ describe('Comments API Integration Tests', () => {
     testCompany = company;
 
     // Create test user in auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: 'comments-test@example.com',
       password: 'TestPassword123!',
       email_confirm: true,
@@ -50,7 +65,7 @@ describe('Comments API Integration Tests', () => {
     if (authError) throw authError;
 
     // Create user in users table
-    const { data: user, error: userError } = await supabaseAdmin
+    const { data: user, error: userError } = await supabase
       .from('users')
       .insert({
         id: authData.user.id,
@@ -68,6 +83,8 @@ describe('Comments API Integration Tests', () => {
     testUser = user;
 
     // Sign in to get auth token
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     const client = createClient(supabaseUrl, supabaseAnonKey);
     const { data: signInData, error: signInError } = await client.auth.signInWithPassword({
       email: 'comments-test@example.com',
@@ -82,20 +99,22 @@ describe('Comments API Integration Tests', () => {
   });
 
   afterAll(async () => {
+    const supabase = getSupabaseAdmin();
+
     // Clean up comments
     if (testComments.length > 0) {
-      await supabaseAdmin.from('comments').delete().in('id', testComments);
+      await supabase.from('comments').delete().in('id', testComments);
     }
 
     // Clean up user
     if (testUser) {
-      await supabaseAdmin.from('users').delete().eq('id', testUser.id);
-      await supabaseAdmin.auth.admin.deleteUser(testUser.id);
+      await supabase.from('users').delete().eq('id', testUser.id);
+      await supabase.auth.admin.deleteUser(testUser.id);
     }
 
     // Clean up company
     if (testCompany) {
-      await supabaseAdmin.from('companies').delete().eq('id', testCompany.id);
+      await supabase.from('companies').delete().eq('id', testCompany.id);
     }
   });
 
@@ -597,7 +616,7 @@ describe('Comments API Integration Tests', () => {
       expect(deleteData.success).toBe(true);
 
       // Verify comment is deleted
-      const { data: deletedComment } = await supabaseAdmin
+      const { data: deletedComment } = await getSupabaseAdmin()
         .from('comments')
         .select('id')
         .eq('id', commentId)

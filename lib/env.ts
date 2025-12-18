@@ -45,6 +45,28 @@ function validateEnv(): EnvConfig {
   const missing: string[] = [];
   const errors: string[] = [];
   const isDevelopment = process.env.NODE_ENV === 'development';
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // SECURITY: Check for insecure development flags in production
+  if (process.env.DISABLE_EMAIL_VERIFICATION === 'true') {
+    if (isProduction) {
+      throw new Error(
+        'SECURITY ERROR: DISABLE_EMAIL_VERIFICATION cannot be enabled in production. ' +
+        'This flag is a security risk and should only be used during local development.'
+      );
+    }
+
+    // Warn in development
+    console.warn('');
+    console.warn('⚠️  ═══════════════════════════════════════════════════════════════');
+    console.warn('⚠️  SECURITY WARNING: Email verification is DISABLED');
+    console.warn('⚠️  ═══════════════════════════════════════════════════════════════');
+    console.warn('⚠️  DISABLE_EMAIL_VERIFICATION=true is set');
+    console.warn('⚠️  This is a security risk and should ONLY be used for local development');
+    console.warn('⚠️  NEVER enable this flag in production environments');
+    console.warn('⚠️  ═══════════════════════════════════════════════════════════════');
+    console.warn('');
+  }
 
   // Required variables (Phase 2 - Auth endpoints don't need all services yet)
   const required = [

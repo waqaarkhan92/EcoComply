@@ -3,20 +3,29 @@
  * Tests for audit logging functionality
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { AuditService } from '@/lib/services/audit-service';
-import { supabaseAdmin } from '@/lib/supabase/server';
+// Mock Supabase - must be before imports
+const mockFrom = jest.fn(() => ({
+  insert: jest.fn(() => ({ select: jest.fn(() => Promise.resolve({ data: null, error: null })) })),
+  select: jest.fn(() => ({
+    eq: jest.fn(() => ({
+      eq: jest.fn(() => ({
+        order: jest.fn(() => ({
+          limit: jest.fn(() => Promise.resolve({ data: [], error: null })),
+        })),
+      })),
+    })),
+  })),
+}));
 
-// Mock Supabase
-vi.mock('@/lib/supabase/server', () => ({
+jest.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: {
-    from: vi.fn(() => ({
-      insert: vi.fn(() => ({ select: vi.fn(() => Promise.resolve({ data: null, error: null })) })),
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            order: vi.fn(() => ({
-              limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
+    from: jest.fn(() => ({
+      insert: jest.fn(() => ({ select: jest.fn(() => Promise.resolve({ data: null, error: null })) })),
+      select: jest.fn(() => ({
+        eq: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            order: jest.fn(() => ({
+              limit: jest.fn(() => Promise.resolve({ data: [], error: null })),
             })),
           })),
         })),
@@ -25,12 +34,15 @@ vi.mock('@/lib/supabase/server', () => ({
   },
 }));
 
+import { AuditService } from '@/lib/services/audit-service';
+import { supabaseAdmin } from '@/lib/supabase/server';
+
 describe('AuditService', () => {
   let auditService: AuditService;
 
   beforeEach(() => {
     auditService = new AuditService();
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   describe('logCreate', () => {
@@ -50,8 +62,8 @@ describe('AuditService', () => {
 
     it('should not throw error if logging fails', async () => {
       // Mock a failure
-      vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
-        insert: vi.fn(() => {
+      (supabaseAdmin.from as jest.Mock).mockReturnValueOnce({
+        insert: jest.fn(() => {
           throw new Error('Database error');
         }),
       } as any);
@@ -156,12 +168,12 @@ describe('AuditService', () => {
         },
       ];
 
-      vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              order: vi.fn(() => ({
-                limit: vi.fn(() => Promise.resolve({ data: mockLogs, error: null })),
+      (supabaseAdmin.from as jest.Mock).mockReturnValueOnce({
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            eq: jest.fn(() => ({
+              order: jest.fn(() => ({
+                limit: jest.fn(() => Promise.resolve({ data: mockLogs, error: null })),
               })),
             })),
           })),
@@ -178,6 +190,22 @@ describe('AuditService', () => {
     it('should handle pagination', async () => {
       const entityType = 'obligation';
       const entityId = '123e4567-e89b-12d3-a456-426614174000';
+
+      // Mock with lt method for cursor-based pagination
+      // Chain: from().select().eq().eq().order().lt().limit()
+      (supabaseAdmin.from as jest.Mock).mockReturnValueOnce({
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            eq: jest.fn(() => ({
+              order: jest.fn(() => ({
+                lt: jest.fn(() => ({
+                  limit: jest.fn(() => Promise.resolve({ data: [], error: null })),
+                })),
+              })),
+            })),
+          })),
+        })),
+      } as any);
 
       const result = await auditService.getAuditLogs(entityType, entityId, {
         limit: 10,
@@ -206,11 +234,11 @@ describe('AuditService', () => {
         },
       ];
 
-      vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            order: vi.fn(() => ({
-              limit: vi.fn(() => Promise.resolve({ data: mockLogs, error: null })),
+      (supabaseAdmin.from as jest.Mock).mockReturnValueOnce({
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            order: jest.fn(() => ({
+              limit: jest.fn(() => Promise.resolve({ data: mockLogs, error: null })),
             })),
           })),
         })),
@@ -242,12 +270,12 @@ describe('AuditService', () => {
         },
       ];
 
-      vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            in: vi.fn(() => ({
-              order: vi.fn(() => ({
-                limit: vi.fn(() => Promise.resolve({ data: mockLogs, error: null })),
+      (supabaseAdmin.from as jest.Mock).mockReturnValueOnce({
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            in: jest.fn(() => ({
+              order: jest.fn(() => ({
+                limit: jest.fn(() => Promise.resolve({ data: mockLogs, error: null })),
               })),
             })),
           })),

@@ -11,6 +11,7 @@ import { requireAuth, requireRole, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
 import { parsePaginationParams, parseFilterParams, parseSortParams, createCursor } from '@/lib/api/pagination';
 import { getQueue, QUEUE_NAMES } from '@/lib/queue/queue-manager';
+import { validateFileMagicBytes, getAllowedMimeTypes, getAllowedExtensions } from '@/lib/utils/file-validation';
 
 export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
@@ -208,12 +209,8 @@ export async function POST(request: NextRequest) {
     const dbDocumentType = typeMap[documentType];
 
     // Validate file type
-    const allowedMimeTypes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    ];
-    const allowedExtensions = ['.pdf', '.doc', '.docx'];
+    const allowedMimeTypes = getAllowedMimeTypes();
+    const allowedExtensions = getAllowedExtensions();
 
     const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
     if (!allowedExtensions.includes(fileExtension) && !allowedMimeTypes.includes(file.type)) {
@@ -234,6 +231,24 @@ export async function POST(request: NextRequest) {
         'File too large. Maximum size is 50MB',
         413,
         { file: `File size ${(file.size / 1024 / 1024).toFixed(2)}MB exceeds maximum of 50MB` },
+        { request_id: requestId }
+      );
+    }
+
+    // SECURITY: Validate magic bytes to prevent MIME type spoofing
+    const fileBuffer = await file.arrayBuffer();
+    const magicByteValidation = await validateFileMagicBytes(fileBuffer, file.type, file.name);
+
+    if (!magicByteValidation.isValid) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'File validation failed: ' + magicByteValidation.error,
+        422,
+        {
+          file: magicByteValidation.error || 'File type validation failed',
+          detected_type: magicByteValidation.detectedType,
+          declared_type: magicByteValidation.declaredType,
+        },
         { request_id: requestId }
       );
     }
@@ -288,8 +303,7 @@ export async function POST(request: NextRequest) {
     const fileExtension2 = file.name.substring(file.name.lastIndexOf('.'));
     const storagePath = `${fileId}${fileExtension2}`;
 
-    // Upload file to Supabase Storage
-    const fileBuffer = await file.arrayBuffer();
+    // Upload file to Supabase Storage (using fileBuffer from validation above)
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from('documents')
       .upload(storagePath, fileBuffer, {

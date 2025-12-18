@@ -146,7 +146,12 @@ export async function GET(request: NextRequest) {
       hasMore,
       { request_id: requestId }
     );
-    return await addRateLimitHeaders(request, user.id, response);
+
+    // Add cache headers for list endpoint (relatively static data)
+    const responseWithCache = await addRateLimitHeaders(request, user.id, response);
+    responseWithCache.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=120');
+
+    return responseWithCache;
   } catch (error: any) {
     console.error('Get obligations error:', error);
     return errorResponse(

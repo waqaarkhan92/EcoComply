@@ -13,14 +13,14 @@ const customJestConfig = {
   },
   testMatch: [
     '**/__tests__/**/*.[jt]s?(x)',
-    '**/?(*.)+(spec|test).[jt]s?(x)',
+    '**/?(*.)+(test).[jt]s?(x)',  // Only .test.ts files, not .spec.ts (Playwright)
   ],
   // Exclude Playwright E2E tests (they should run via 'npx playwright test')
   testPathIgnorePatterns: [
     '/node_modules/',
     '/.next/',
-    '/tests/e2e/',
-    '/e2e/',
+    '<rootDir>/tests/e2e/',
+    '<rootDir>/e2e/',
   ],
   // Default to node environment, override in individual test files for frontend
   testEnvironment: 'node',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -108,8 +108,15 @@ export function SubjectiveInterpretationModal({
     (p) => interpretations[p.phrase]?.trim()
   );
 
-  // Highlight subjective phrases in original text
-  const highlightedText = highlightPhrases(originalText, subjectivePhrases);
+  // Highlight subjective phrases in original text with sanitization
+  const highlightedText = useMemo(() => {
+    // Import DOMPurify dynamically for client-side only
+    if (typeof window !== 'undefined') {
+      const DOMPurify = require('dompurify');
+      return DOMPurify.sanitize(highlightPhrases(originalText, subjectivePhrases));
+    }
+    return highlightPhrases(originalText, subjectivePhrases);
+  }, [originalText, subjectivePhrases]);
 
   return (
     <Modal

@@ -33,26 +33,43 @@ export interface OutlookCalendar {
 }
 
 export class OutlookCalendarClient {
-  private clientId: string;
-  private clientSecret: string;
-  private redirectUri: string;
-  private tenantId: string;
+  private clientId: string = '';
+  private clientSecret: string = '';
+  private redirectUri: string = '';
+  private tenantId: string = 'common';
+  private initialized = false;
 
-  constructor() {
+  /**
+   * Check if Microsoft Calendar integration is configured
+   */
+  isConfigured(): boolean {
+    return !!(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET);
+  }
+
+  /**
+   * Initialize credentials (lazy initialization)
+   */
+  private ensureInitialized(): void {
+    if (this.initialized) return;
+
     this.clientId = process.env.MICROSOFT_CLIENT_ID || '';
     this.clientSecret = process.env.MICROSOFT_CLIENT_SECRET || '';
     this.redirectUri = process.env.MICROSOFT_REDIRECT_URI || `${process.env.BASE_URL}/api/v1/integrations/calendar/callback`;
     this.tenantId = process.env.MICROSOFT_TENANT_ID || 'common';
 
     if (!this.clientId || !this.clientSecret) {
-      throw new Error('Microsoft Calendar credentials not configured');
+      throw new Error('Microsoft Calendar credentials not configured. Set MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET environment variables.');
     }
+
+    this.initialized = true;
   }
 
   /**
    * Get OAuth authorization URL
    */
   getAuthUrl(state?: string): string {
+    this.ensureInitialized();
+
     const params = new URLSearchParams({
       client_id: this.clientId,
       response_type: 'code',
@@ -76,6 +93,8 @@ export class OutlookCalendarClient {
     refresh_token?: string;
     expires_in?: number;
   }> {
+    this.ensureInitialized();
+
     try {
       const response = await fetch(
         `https://login.microsoftonline.com/${this.tenantId}/oauth2/v2.0/token`,
@@ -118,6 +137,8 @@ export class OutlookCalendarClient {
     access_token: string;
     expires_in?: number;
   }> {
+    this.ensureInitialized();
+
     try {
       const response = await fetch(
         `https://login.microsoftonline.com/${this.tenantId}/oauth2/v2.0/token`,
