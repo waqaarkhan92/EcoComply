@@ -119,7 +119,7 @@ export function FormField({
     isValid && showSuccessState ? 'border-green-500 focus:ring-green-500' : ''
   } ${className}`;
 
-  const registerProps = register ? register(name) : {};
+  const registerProps = register ? register(name) : {} as ReturnType<UseFormRegister<any>> | Record<string, never>;
 
   // Merge onChange handlers
   const enhancedRegisterProps = asyncValidator && validateOnChange ? {
@@ -183,7 +183,7 @@ export function FormField({
             id={name}
             disabled={disabled}
             className={`${inputClasses} rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500`}
-            {...enhancedRegisterProps}
+            {...(registerProps as React.SelectHTMLAttributes<HTMLSelectElement>)}
           >
             {children}
           </select>

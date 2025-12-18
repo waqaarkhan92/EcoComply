@@ -3,6 +3,7 @@
 import { use } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,7 +69,9 @@ export default function EditRecurrenceEventPage({
     },
     onError: (error: any) => {
       console.error('Failed to update recurrence event:', error);
-      alert('Failed to update recurrence event. Please try again.');
+      toast.error('Failed to update recurrence event', {
+        description: 'Please try again.',
+      });
     },
     onSettled: () => {
       setIsSubmitting(false);
@@ -83,7 +86,7 @@ export default function EditRecurrenceEventPage({
     try {
       metadata = JSON.parse(formData.event_metadata);
     } catch (e) {
-      alert('Invalid JSON in event metadata');
+      toast.error('Invalid JSON in event metadata');
       setIsSubmitting(false);
       return;
     }

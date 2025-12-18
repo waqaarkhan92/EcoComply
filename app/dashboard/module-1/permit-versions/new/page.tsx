@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +38,9 @@ export default function NewPermitVersionPage() {
     },
     onError: (error: any) => {
       console.error('Failed to create permit version:', error);
-      alert('Failed to create permit version. Please try again.');
+      toast.error('Failed to create permit version', {
+        description: 'Please try again.',
+      });
     },
     onSettled: () => {
       setIsSubmitting(false);

@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Upload, X, FileText, Check } from 'lucide-react';
@@ -60,7 +61,7 @@ export default function DocumentUploadPage() {
       const documentId = response?.data?.id;
 
       if (!documentId) {
-        alert('Upload succeeded but document ID is missing. Please refresh the documents list.');
+        toast.warning('Upload succeeded but document ID is missing. Please refresh the documents list.');
         router.push('/dashboard/documents');
         return;
       }
@@ -111,13 +112,13 @@ export default function DocumentUploadPage() {
   const handleFileSelect = (file: File) => {
     const allowedTypes = ['application/pdf'];
     if (!allowedTypes.includes(file.type)) {
-      alert('Only PDF files are allowed');
+      toast.error('Only PDF files are allowed');
       return;
     }
 
     const maxSize = 50 * 1024 * 1024;
     if (file.size > maxSize) {
-      alert('File size must be less than 50MB');
+      toast.error('File size must be less than 50MB');
       return;
     }
 
@@ -143,12 +144,12 @@ export default function DocumentUploadPage() {
     e.preventDefault();
 
     if (!selectedFile) {
-      alert('Please select a file');
+      toast.error('Please select a file');
       return;
     }
 
     if (!formData.primary_site_id) {
-      alert('Please select a primary site');
+      toast.error('Please select a primary site');
       return;
     }
 

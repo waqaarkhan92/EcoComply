@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import {
   Webhook,
   Plus,
@@ -35,6 +36,7 @@ import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { useConfirmDialog } from '@/components/ui/confirm-dialog';
 
 const webhookEvents = [
   { value: 'obligation.created', label: 'Obligation Created' },
@@ -55,6 +57,7 @@ export function WebhookManagement() {
   const testMutation = useTestWebhook();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const { dialogState, confirmAction, closeDialog, ConfirmDialogComponent } = useConfirmDialog();
 
   const handleCreate = async (data: Partial<WebhookType>) => {
     try {
@@ -66,22 +69,27 @@ export function WebhookManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this webhook?')) {
-      try {
-        await deleteMutation.mutateAsync(id);
-      } catch (error) {
-        console.error('Failed to delete webhook:', error);
-      }
-    }
+    confirmAction(
+      'Delete webhook?',
+      'Are you sure you want to delete this webhook? This action cannot be undone.',
+      async () => {
+        try {
+          await deleteMutation.mutateAsync(id);
+        } catch (error) {
+          console.error('Failed to delete webhook:', error);
+        }
+      },
+      'danger'
+    );
   };
 
   const handleTest = async (id: string) => {
     try {
       await testMutation.mutateAsync(id);
-      alert('Test webhook sent successfully!');
+      toast.success('Test webhook sent successfully!');
     } catch (error) {
       console.error('Failed to test webhook:', error);
-      alert('Failed to send test webhook');
+      toast.error('Failed to send test webhook');
     }
   };
 
@@ -136,6 +144,7 @@ export function WebhookManagement() {
         onCreate={handleCreate}
         isCreating={createMutation.isPending}
       />
+      {ConfirmDialogComponent}
     </div>
   );
 }

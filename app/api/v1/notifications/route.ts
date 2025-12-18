@@ -4,11 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, paginatedResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
-import { parsePaginationParams, parseFilterParams, parseSortParams, createCursor } from '@/lib/api/pagination';
+import { notificationService } from '@/lib/services/notification-service';
 
 export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
@@ -21,85 +20,42 @@ export async function GET(request: NextRequest) {
     }
     const { user } = authResult;
 
-    // Parse pagination and filter params
-    let limit: number;
-    let cursor: string | null;
-    try {
-      const pagination = parsePaginationParams(request);
-      limit = pagination.limit;
-      cursor = pagination.cursor;
-    } catch (error: any) {
-      return errorResponse(
-        ErrorCodes.VALIDATION_ERROR,
-        error.message || 'Invalid pagination parameters',
-        422,
-        { limit: 'Limit must be a positive integer between 1 and 100' },
-        { request_id: requestId }
-      );
-    }
-    const filters = parseFilterParams(request);
-    const sort = parseSortParams(request);
+    // Parse query parameters
+    const { searchParams } = new URL(request.url);
+    const limitParam = searchParams.get('limit');
+    const cursor = searchParams.get('cursor');
+    const unreadOnlyParam = searchParams.get('unread_only');
 
-    // Build query - RLS will automatically filter by user_id
-    let query = supabaseAdmin
-      .from('notifications')
-      .select('id, user_id, company_id, site_id, notification_type, channel, priority, subject, message, status, read_at, created_at, updated_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
-    // Apply filters
-    if (filters.notification_type) {
-      query = query.eq('notification_type', filters.notification_type);
-    }
-    if (filters.channel) {
-      query = query.eq('channel', filters.channel);
-    }
-    if (filters.status) {
-      query = query.eq('status', filters.status);
-    }
-    if (filters.read_at !== undefined) {
-      if (filters.read_at === null || filters.read_at === 'null') {
-        query = query.is('read_at', null);
-      } else {
-        query = query.not('read_at', 'is', null);
+    // Validate limit
+    let limit = 20;
+    if (limitParam) {
+      const parsedLimit = parseInt(limitParam);
+      if (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 100) {
+        return errorResponse(
+          ErrorCodes.VALIDATION_ERROR,
+          'Invalid limit parameter',
+          422,
+          { limit: 'Limit must be a positive integer between 1 and 100' },
+          { request_id: requestId }
+        );
       }
+      limit = parsedLimit;
     }
 
-    // Apply sorting
-    for (const sortItem of sort) {
-      if (sortItem.field === 'created_at') {
-        query = query.order('created_at', { ascending: sortItem.direction === 'asc' });
+    const unreadOnly = unreadOnlyParam === 'true';
+
+    // Get notifications using the service
+    const { notifications, hasMore, nextCursor } = await notificationService.getNotifications(
+      user.id,
+      {
+        limit,
+        cursor: cursor || undefined,
+        unreadOnly,
       }
-    }
-
-    // Add limit and fetch one extra to check if there are more
-    query = query.limit(limit + 1);
-
-    const { data: notifications, error } = await query;
-
-    if (error) {
-      return errorResponse(
-        ErrorCodes.INTERNAL_ERROR,
-        'Failed to fetch notifications',
-        500,
-        { error: error.message },
-        { request_id: requestId }
-      );
-    }
-
-    // Check if there are more results
-    const hasMore = notifications && notifications.length > limit;
-    const results = hasMore ? notifications.slice(0, limit) : notifications || [];
-
-    // Create cursor for next page (if there are more results)
-    let nextCursor: string | undefined;
-    if (hasMore && results.length > 0) {
-      const lastItem = results[results.length - 1];
-      nextCursor = createCursor(lastItem.id, lastItem.created_at);
-    }
+    );
 
     const response = paginatedResponse(
-      results,
+      notifications,
       nextCursor,
       limit,
       hasMore,

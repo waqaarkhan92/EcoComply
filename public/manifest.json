@@ -1,27 +1,43 @@
 {
-  "name": "EcoComply",
+  "name": "EcoComply - Environmental Compliance Management",
   "short_name": "EcoComply",
-  "description": "Environmental compliance management platform",
-  "start_url": "/",
+  "description": "AI-powered environmental permit compliance for UK businesses. Track obligations, manage evidence, generate audit packs.",
+  "start_url": "/dashboard",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#FFFFFF",
   "theme_color": "#104B3A",
-  "orientation": "portrait-primary",
+  "orientation": "any",
+  "prefer_related_applications": false,
+  "dir": "ltr",
+  "lang": "en-GB",
   "icons": [
     {
       "src": "/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": ["business", "productivity"],
+  "categories": ["business", "productivity", "utilities"],
   "screenshots": [],
   "shortcuts": [
     {
@@ -32,12 +48,45 @@
       "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Upload Document",
-      "short_name": "Upload",
-      "description": "Upload a new document",
-      "url": "/dashboard/documents/upload",
+      "name": "Obligations",
+      "short_name": "Obligations",
+      "description": "View and manage obligations",
+      "url": "/dashboard/obligations",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Evidence",
+      "short_name": "Evidence",
+      "description": "Upload and manage evidence",
+      "url": "/dashboard/evidence",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Notifications",
+      "short_name": "Notifications",
+      "description": "View notifications",
+      "url": "/dashboard/notifications",
       "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/dashboard/evidence/upload",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "evidence",
+          "accept": ["image/*", "application/pdf", ".doc", ".docx", ".xls", ".xlsx"]
+        }
+      ]
+    }
+  },
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
 }
 

@@ -25,6 +25,17 @@ interface WasteStream {
   updated_at: string;
 }
 
+interface ConsignmentNote {
+  id: string;
+  waste_stream_id: string;
+  consignment_note_number: string;
+  consignment_date: string;
+  carrier_name: string;
+  destination_site: string;
+  validation_status: string;
+  created_at: string;
+}
+
 export default function WasteStreamDetailPage({
   params,
 }: {
@@ -40,6 +51,14 @@ export default function WasteStreamDetailPage({
     queryFn: async (): Promise<any> => {
       const response = await apiClient.get<WasteStream>(`/module-4/waste-streams/${streamId}`);
       return response.data;
+    },
+  });
+
+  const { data: consignmentNotesData, isLoading: notesLoading } = useQuery({
+    queryKey: ['waste-stream-consignment-notes', streamId],
+    queryFn: async () => {
+      const response = await apiClient.get<{ data: ConsignmentNote[] }>(`/module-4/waste-streams/${streamId}/consignment-notes`);
+      return response;
     },
   });
 
@@ -188,10 +207,45 @@ export default function WasteStreamDetailPage({
       {/* Related Consignment Notes */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold text-text-primary mb-4">Related Consignment Notes</h2>
-        <p className="text-text-secondary text-sm">
-          Consignment notes linked to this waste stream will appear here.
-        </p>
-        {/* TODO: Fetch and display consignment notes */}
+        {notesLoading ? (
+          <p className="text-text-secondary text-sm">Loading consignment notes...</p>
+        ) : consignmentNotesData?.data?.data && consignmentNotesData.data.data.length > 0 ? (
+          <div className="space-y-3">
+            {consignmentNotesData.data.data.map((note) => (
+              <div
+                key={note.id}
+                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex-1">
+                  <Link
+                    href={`/dashboard/module-4/consignment-notes/${note.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {note.consignment_note_number}
+                  </Link>
+                  <div className="text-sm text-text-secondary mt-1">
+                    {note.carrier_name} • {new Date(note.consignment_date).toLocaleDateString()} • {note.destination_site}
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
+                    note.validation_status === 'VALIDATED'
+                      ? 'bg-green-50 text-green-700 border border-green-200'
+                      : note.validation_status === 'REJECTED'
+                      ? 'bg-red-50 text-red-700 border border-red-200'
+                      : 'bg-gray-50 text-gray-700 border border-gray-200'
+                  }`}>
+                    {note.validation_status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-text-secondary text-sm">
+            No consignment notes linked to this waste stream yet.
+          </p>
+        )}
       </div>
     </div>
   );

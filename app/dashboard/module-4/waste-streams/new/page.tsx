@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
+
+interface Site {
+  id: string;
+  name: string;
+}
 
 export default function NewWasteStreamPage() {
   const router = useRouter();
@@ -24,6 +29,14 @@ export default function NewWasteStreamPage() {
     volume_limit_m3: '',
     storage_duration_limit_days: '',
     is_active: true,
+  });
+
+  const { data: sitesData, isLoading: sitesLoading } = useQuery({
+    queryKey: ['sites'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ data: Site[] }>('/sites');
+      return response;
+    },
   });
 
   const createMutation = useMutation({
@@ -42,6 +55,8 @@ export default function NewWasteStreamPage() {
       setIsSubmitting(false);
     },
   });
+
+  const sites = sitesData?.data?.data || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,9 +100,14 @@ export default function NewWasteStreamPage() {
               value={formData.site_id}
               onChange={(e) => setFormData({ ...formData, site_id: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary mt-1"
+              disabled={sitesLoading}
             >
               <option value="">Select a site</option>
-              {/* TODO: Fetch sites from API */}
+              {sites.map((site) => (
+                <option key={site.id} value={site.id}>
+                  {site.name}
+                </option>
+              ))}
             </select>
           </div>
 

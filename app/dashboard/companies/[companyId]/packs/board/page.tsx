@@ -102,7 +102,7 @@ export default function BoardPackGenerationPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!startDate || !endDate || !recipientName) {
-      alert('Please fill in all required fields');
+      toast.error('Please fill in all required fields');
       return;
     }
     generatePack.mutate({ startDate, endDate, recipientName, purpose });

@@ -15,6 +15,7 @@ import {
   ObligationCostList,
 } from '@/components/enhanced-features';
 import { Modal } from '@/components/ui/modal';
+import { CommentThread } from '@/components/comments/comment-thread';
 
 interface Obligation {
   id: string;
@@ -458,6 +459,15 @@ export default function ObligationDetailPage({
           </div>
         </div>
       )}
+
+      {/* Comments Section */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <CommentThread
+          entityType="obligation"
+          entityId={id}
+          currentUserId={undefined}
+        />
+      </div>
         </>
       )}
 

@@ -29,6 +29,11 @@ interface EndPointProofsResponse {
   };
 }
 
+interface Site {
+  id: string;
+  name: string;
+}
+
 export default function EndPointProofsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
@@ -58,9 +63,18 @@ export default function EndPointProofsPage() {
     },
   });
 
+  const { data: sitesData, isLoading: sitesLoading } = useQuery({
+    queryKey: ['sites'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ data: Site[] }>('/sites');
+      return response;
+    },
+  });
+
   const proofs: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
+  const sites = sitesData?.data?.data || [];
 
   const verifiedCount = proofs.filter((p) => p.is_verified).length;
   const unverifiedCount = proofs.filter((p) => !p.is_verified).length;
@@ -159,9 +173,14 @@ export default function EndPointProofsPage() {
               value={filters.site_id}
               onChange={(e) => setFilters({ ...filters, site_id: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              disabled={sitesLoading}
             >
               <option value="">All Sites</option>
-              {/* TODO: Fetch sites from API */}
+              {sites.map((site) => (
+                <option key={site.id} value={site.id}>
+                  {site.name}
+                </option>
+              ))}
             </select>
           </div>
 

@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,14 +70,14 @@ export default function EvidenceUploadPage() {
     const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
 
     if (!allowedExtensions.includes(fileExtension) && !allowedTypes.includes(file.type)) {
-      alert('Invalid file type. Only PDF, images, documents, CSV, Excel, and ZIP files are allowed.');
+      toast.error('Invalid file type. Only PDF, images, documents, CSV, Excel, and ZIP files are allowed.');
       return;
     }
 
     // Validate file size (20MB max)
     const maxSizeBytes = 20 * 1024 * 1024;
     if (file.size > maxSizeBytes) {
-      alert(`File too large. Maximum size is 20MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB.`);
+      toast.error(`File too large. Maximum size is 20MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB.`);
       return;
     }
 
@@ -121,12 +122,12 @@ export default function EvidenceUploadPage() {
     e.preventDefault();
 
     if (!selectedFile) {
-      alert('Please select a file to upload');
+      toast.error('Please select a file to upload');
       return;
     }
 
     if (selectedObligations.length === 0) {
-      alert('Please select at least one obligation to link this evidence to');
+      toast.error('Please select at least one obligation to link this evidence to');
       return;
     }
 

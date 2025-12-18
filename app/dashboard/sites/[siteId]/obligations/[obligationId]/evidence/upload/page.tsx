@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Upload } from 'lucide-react';
@@ -39,7 +40,7 @@ export default function UploadEvidencePage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) {
-      alert('Please select a file');
+      toast.error('Please select a file');
       return;
     }
 

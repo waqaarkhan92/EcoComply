@@ -11,6 +11,7 @@ import { apiClient } from '@/lib/api/client';
 import { queryKeys } from '@/lib/query-keys';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import Image from 'next/image';
 import {
   Camera,
   Upload,
@@ -380,10 +381,12 @@ export function MobileEvidenceUpload({
             {previewUrl && (
               <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
                 {selectedFile.type.startsWith('image/') ? (
-                  <img
+                  <Image
                     src={previewUrl}
                     alt="Preview"
-                    className="w-full h-full object-contain"
+                    fill
+                    className="object-contain"
+                    unoptimized
                   />
                 ) : selectedFile.type.startsWith('video/') ? (
                   <video

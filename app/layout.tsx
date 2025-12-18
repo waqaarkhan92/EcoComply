@@ -8,10 +8,12 @@ import { KeyboardShortcutsProvider } from '@/lib/providers/keyboard-shortcuts-pr
 import { ContextualHelpProvider } from '@/lib/providers/contextual-help-provider';
 import { I18nProvider } from '@/lib/providers/i18n-provider';
 import { PostHogProvider } from '@/lib/providers/posthog-provider';
-import { HelpModal } from '@/components/help/HelpModal';
 import { KeyboardShortcutsHandler } from '@/components/keyboard-shortcuts/KeyboardShortcutsHandler';
+import { HelpModal } from '@/components/help/HelpModal';
 import { WorkerInitializer } from '@/components/system/WorkerInitializer';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { CommandPaletteWrapper } from '@/components/ui/enhanced/command-palette-wrapper';
+import { OfflineIndicator } from '@/components/ui/offline-indicator';
 import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -125,6 +127,8 @@ export default function RootLayout({
                         {children}
                         <HelpModal />
                         <KeyboardShortcutsHandler />
+                        <CommandPaletteWrapper />
+                        <OfflineIndicator />
                         <Toaster position="top-right" richColors expand={true} />
                       </ContextualHelpProvider>
                     </KeyboardShortcutsProvider>

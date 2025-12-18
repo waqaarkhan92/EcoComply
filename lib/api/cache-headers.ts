@@ -63,8 +63,8 @@ export function generateETag(data: unknown): string {
 /**
  * Add cache headers to a NextResponse
  */
-export function addCacheHeaders(
-  response: NextResponse,
+export function addCacheHeaders<T>(
+  response: NextResponse<T>,
   strategy: CacheStrategy,
   options?: {
     /** Custom ETag value */
@@ -76,7 +76,7 @@ export function addCacheHeaders(
     /** Custom max-age override */
     maxAge?: number;
   }
-): NextResponse {
+): NextResponse<T> {
   const config = CACHE_CONFIGS[strategy];
   const maxAge = options?.maxAge ?? config.maxAge;
 

@@ -5,7 +5,7 @@ import { useAuthStore } from '@/lib/store/auth-store';
 import { useRouter } from 'next/navigation';
 import { Search, User, ChevronDown, LogOut, Settings, HelpCircle, Menu } from 'lucide-react';
 import Link from 'next/link';
-import { NotificationDropdown } from './notification-dropdown';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 import { SiteSwitcher } from './site-switcher';
 
 interface HeaderProps {
@@ -132,7 +132,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           </button>
 
           {/* Notifications Bell */}
-          <NotificationDropdown />
+          <NotificationBell />
 
           {/* User Menu */}
           <div className="relative" ref={userMenuRef}>

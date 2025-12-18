@@ -32,6 +32,17 @@ interface ConsignmentNotesResponse {
   };
 }
 
+interface Site {
+  id: string;
+  name: string;
+}
+
+interface WasteStream {
+  id: string;
+  ewc_code: string;
+  waste_description: string;
+}
+
 export default function ConsignmentNotesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
@@ -59,9 +70,27 @@ export default function ConsignmentNotesPage() {
     },
   });
 
+  const { data: sitesData, isLoading: sitesLoading } = useQuery({
+    queryKey: ['sites'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ data: Site[] }>('/sites');
+      return response;
+    },
+  });
+
+  const { data: wasteStreamsData, isLoading: wasteStreamsLoading } = useQuery({
+    queryKey: ['module-4-waste-streams'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ data: WasteStream[] }>('/module-4/waste-streams');
+      return response;
+    },
+  });
+
   const consignmentNotes: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
+  const sites = sitesData?.data?.data || [];
+  const wasteStreams = wasteStreamsData?.data?.data || [];
 
   return (
     <div className="space-y-6">
@@ -102,9 +131,14 @@ export default function ConsignmentNotesPage() {
               value={filters.site_id}
               onChange={(e) => setFilters({ ...filters, site_id: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              disabled={sitesLoading}
             >
               <option value="">All Sites</option>
-              {/* TODO: Fetch sites from API */}
+              {sites.map((site) => (
+                <option key={site.id} value={site.id}>
+                  {site.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -129,9 +163,14 @@ export default function ConsignmentNotesPage() {
               value={filters.waste_stream_id}
               onChange={(e) => setFilters({ ...filters, waste_stream_id: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              disabled={wasteStreamsLoading}
             >
               <option value="">All Waste Streams</option>
-              {/* TODO: Fetch waste streams from API */}
+              {wasteStreams.map((stream) => (
+                <option key={stream.id} value={stream.id}>
+                  {stream.ewc_code} - {stream.waste_description}
+                </option>
+              ))}
             </select>
           </div>
         </div>

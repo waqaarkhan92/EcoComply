@@ -189,7 +189,7 @@ export async function addJobWithPriority<T>(
 ): Promise<string> {
   const queue = getQueue<T>(queueName);
   const jobOptions = createJobOptions(priority, options);
-  const job = await queue.add(jobName, data, jobOptions);
+  const job = await queue.add(jobName as any, data as any, jobOptions);
   return job.id || '';
 }
 

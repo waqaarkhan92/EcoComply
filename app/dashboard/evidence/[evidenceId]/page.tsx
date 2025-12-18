@@ -23,6 +23,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ChainOfCustodyTab,
   ChainOfCustodyExportButton,
@@ -265,12 +266,14 @@ export default function EvidenceDetailPage() {
           {/* Preview */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-base overflow-hidden">
-              <div className="aspect-video bg-gray-100 flex items-center justify-center">
+              <div className="aspect-video bg-gray-100 flex items-center justify-center relative">
                 {isImage(evidence.mime_type) && evidence.file_url ? (
-                  <img
+                  <Image
                     src={previewUrl}
                     alt={evidence.file_name}
-                    className="max-w-full max-h-full object-contain"
+                    fill
+                    className="object-contain"
+                    unoptimized
                   />
                 ) : evidence.mime_type === 'application/pdf' ? (
                   <iframe

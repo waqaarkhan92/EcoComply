@@ -1,16 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { SidebarSkeleton } from '@/components/ui/loading-skeletons';
 import { Header } from '@/components/dashboard/header';
+import { MobileHeader } from '@/components/mobile/mobile-header';
+import { BottomNav } from '@/components/mobile/bottom-nav';
 
 // Lazy load heavy components
 const Sidebar = dynamic(() => import('@/components/dashboard/sidebar').then(mod => ({ default: mod.Sidebar })), {
   loading: () => <SidebarSkeleton />,
   ssr: true,
+});
+
+const MobileSidebar = dynamic(() => import('@/components/dashboard/mobile-sidebar').then(mod => ({ default: mod.MobileSidebar })), {
+  ssr: false,
 });
 
 export default function DashboardLayout({
@@ -21,6 +27,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const { isAuthenticated, user, _hasHydrated } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Check localStorage directly on mount to avoid hydration delay
   useEffect(() => {
@@ -69,6 +76,19 @@ export default function DashboardLayout({
     }
   }, [_hasHydrated, isAuthenticated, user, router]);
 
+  const handleMobileMenuClick = useCallback(() => {
+    setIsMobileSidebarOpen(true);
+  }, []);
+
+  const handleCloseMobileSidebar = useCallback(() => {
+    setIsMobileSidebarOpen(false);
+  }, []);
+
+  const handleSearchClick = useCallback(() => {
+    // Open command palette
+    window.dispatchEvent(new CustomEvent('open-command-palette'));
+  }, []);
+
   // Show loading state while checking
   if (isChecking) {
     return (
@@ -85,12 +105,30 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen bg-background-secondary">
-      <Sidebar />
+      {/* Desktop Sidebar */}
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
+
+      {/* Mobile Sidebar */}
+      <MobileSidebar isOpen={isMobileSidebarOpen} onClose={handleCloseMobileSidebar} />
+
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto bg-background-secondary p-6">
+        {/* Desktop Header */}
+        <div className="hidden md:block">
+          <Header />
+        </div>
+
+        {/* Mobile Header */}
+        <MobileHeader onMenuClick={handleMobileMenuClick} onSearchClick={handleSearchClick} />
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto bg-background-secondary p-4 md:p-6 mt-14 md:mt-0 mb-16 md:mb-0">
           {children}
         </main>
+
+        {/* Mobile Bottom Navigation */}
+        <BottomNav />
       </div>
     </div>
   );

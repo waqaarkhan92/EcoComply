@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Bell, Mail, MessageSquare, Save } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ArrowLeft, Bell, Mail, MessageSquare, Save, Clock } from 'lucide-react';
+import { toast } from 'sonner';
 import Link from 'next/link';
 
 interface NotificationSettings {
@@ -14,7 +16,14 @@ interface NotificationSettings {
   slack_enabled: boolean;
   email_daily_digest: boolean;
   email_weekly_summary: boolean;
+  deadline_reminders: {
+    one_day: boolean;
+    three_days: boolean;
+    seven_days: boolean;
+  };
   notification_types: {
+    compliance_alerts: boolean;
+    evidence_reminders: boolean;
     deadline_approaching: boolean;
     deadline_overdue: boolean;
     obligation_completed: boolean;
@@ -24,6 +33,7 @@ interface NotificationSettings {
 }
 
 export default function NotificationSettingsPage() {
+  const queryClient = useQueryClient();
   const [settings, setSettings] = useState<NotificationSettings>({
     email_enabled: true,
     sms_enabled: false,
@@ -31,7 +41,14 @@ export default function NotificationSettingsPage() {
     slack_enabled: false,
     email_daily_digest: true,
     email_weekly_summary: true,
+    deadline_reminders: {
+      one_day: true,
+      three_days: true,
+      seven_days: false,
+    },
     notification_types: {
+      compliance_alerts: true,
+      evidence_reminders: true,
       deadline_approaching: true,
       deadline_overdue: true,
       obligation_completed: false,
@@ -43,7 +60,7 @@ export default function NotificationSettingsPage() {
   const { data: existingSettings, isLoading } = useQuery({
     queryKey: ['notification-settings'],
     queryFn: async (): Promise<any> => {
-      return apiClient.get<{ data: NotificationSettings }>('/settings/notifications');
+      return apiClient.get<{ data: NotificationSettings }>('/users/me/notification-preferences');
     },
   });
 
@@ -56,10 +73,14 @@ export default function NotificationSettingsPage() {
 
   const updateSettings = useMutation({
     mutationFn: async (data: NotificationSettings) => {
-      return apiClient.put('/settings/notifications', data);
+      return apiClient.put('/users/me/notification-preferences', data);
     },
     onSuccess: () => {
-      alert('Notification settings updated successfully');
+      toast.success('Notification settings updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['notification-settings'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to update notification settings');
     },
   });
 
@@ -94,120 +115,203 @@ export default function NotificationSettingsPage() {
       </div>
 
       {/* Notification Channels */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Notification Channels</h2>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notification Channels
+          </h2>
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-gray-400" />
                 <div>
-                  <p className="font-medium">Email</p>
+                  <p className="font-medium">Email Notifications</p>
                   <p className="text-sm text-gray-500">Receive notifications via email</p>
                 </div>
               </div>
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={settings.email_enabled}
-                onChange={(e) => setSettings({ ...settings, email_enabled: e.target.checked })}
-                className="rounded border-gray-300"
+                onChange={(checked) => setSettings({ ...settings, email_enabled: checked })}
               />
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <Bell className="h-5 w-5 text-gray-400" />
                 <div>
-                  <p className="font-medium">In-App</p>
+                  <p className="font-medium">In-App Notifications</p>
                   <p className="text-sm text-gray-500">Receive notifications in the app</p>
                 </div>
               </div>
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={settings.in_app_enabled}
-                onChange={(e) => setSettings({ ...settings, in_app_enabled: e.target.checked })}
-                className="rounded border-gray-300"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <MessageSquare className="h-5 w-5 text-gray-400" />
-                <div>
-                  <p className="font-medium">SMS</p>
-                  <p className="text-sm text-gray-500">Receive notifications via SMS</p>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={settings.sms_enabled}
-                onChange={(e) => setSettings({ ...settings, sms_enabled: e.target.checked })}
-                className="rounded border-gray-300"
+                onChange={(checked) => setSettings({ ...settings, in_app_enabled: checked })}
               />
             </div>
           </div>
         </div>
 
+        {/* Deadline Reminders */}
+        {settings.email_enabled && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Deadline Reminders
+            </h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Choose when you want to receive reminders before deadlines
+            </p>
+            <div className="space-y-3">
+              <Checkbox
+                checked={settings.deadline_reminders.one_day}
+                onChange={(checked) =>
+                  setSettings({
+                    ...settings,
+                    deadline_reminders: { ...settings.deadline_reminders, one_day: checked },
+                  })
+                }
+                label="1 day before deadline"
+              />
+              <Checkbox
+                checked={settings.deadline_reminders.three_days}
+                onChange={(checked) =>
+                  setSettings({
+                    ...settings,
+                    deadline_reminders: { ...settings.deadline_reminders, three_days: checked },
+                  })
+                }
+                label="3 days before deadline"
+              />
+              <Checkbox
+                checked={settings.deadline_reminders.seven_days}
+                onChange={(checked) =>
+                  setSettings({
+                    ...settings,
+                    deadline_reminders: { ...settings.deadline_reminders, seven_days: checked },
+                  })
+                }
+                label="7 days before deadline"
+              />
+            </div>
+          </div>
+        )}
+
         {/* Email Preferences */}
         {settings.email_enabled && (
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Email Preferences</h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Daily Digest</p>
-                  <p className="text-sm text-gray-500">Receive a daily summary of notifications</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings.email_daily_digest}
-                  onChange={(e) => setSettings({ ...settings, email_daily_digest: e.target.checked })}
-                  className="rounded border-gray-300"
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Weekly Summary</p>
-                  <p className="text-sm text-gray-500">Receive a weekly summary of compliance status</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings.email_weekly_summary}
-                  onChange={(e) => setSettings({ ...settings, email_weekly_summary: e.target.checked })}
-                  className="rounded border-gray-300"
-                />
-              </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Email Preferences
+            </h2>
+            <div className="space-y-3">
+              <Checkbox
+                checked={settings.email_daily_digest}
+                onChange={(checked) => setSettings({ ...settings, email_daily_digest: checked })}
+                label="Daily Digest"
+              />
+              <p className="text-sm text-gray-500 ml-7 -mt-2">
+                Receive a daily summary of notifications
+              </p>
+              <Checkbox
+                checked={settings.email_weekly_summary}
+                onChange={(checked) => setSettings({ ...settings, email_weekly_summary: checked })}
+                label="Weekly Summary Reports"
+              />
+              <p className="text-sm text-gray-500 ml-7 -mt-2">
+                Receive a weekly summary of compliance status
+              </p>
             </div>
           </div>
         )}
 
         {/* Notification Types */}
-        <div>
+        <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Notification Types</h2>
-          <div className="space-y-4">
-            {Object.entries(settings.notification_types).map(([key, value]) => (
-              <div key={key} className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">{key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={value}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      notification_types: { ...settings.notification_types, [key]: e.target.checked },
-                    })
-                  }
-                  className="rounded border-gray-300"
-                />
-              </div>
-            ))}
+          <p className="text-sm text-gray-500 mb-4">
+            Choose which types of notifications you want to receive
+          </p>
+          <div className="space-y-3">
+            <Checkbox
+              checked={settings.notification_types.compliance_alerts}
+              onChange={(checked) =>
+                setSettings({
+                  ...settings,
+                  notification_types: { ...settings.notification_types, compliance_alerts: checked },
+                })
+              }
+              label="Compliance Alerts"
+            />
+            <Checkbox
+              checked={settings.notification_types.evidence_reminders}
+              onChange={(checked) =>
+                setSettings({
+                  ...settings,
+                  notification_types: { ...settings.notification_types, evidence_reminders: checked },
+                })
+              }
+              label="Evidence Reminders"
+            />
+            <Checkbox
+              checked={settings.notification_types.deadline_approaching}
+              onChange={(checked) =>
+                setSettings({
+                  ...settings,
+                  notification_types: { ...settings.notification_types, deadline_approaching: checked },
+                })
+              }
+              label="Deadline Approaching"
+            />
+            <Checkbox
+              checked={settings.notification_types.deadline_overdue}
+              onChange={(checked) =>
+                setSettings({
+                  ...settings,
+                  notification_types: { ...settings.notification_types, deadline_overdue: checked },
+                })
+              }
+              label="Deadline Overdue"
+            />
+            <Checkbox
+              checked={settings.notification_types.obligation_completed}
+              onChange={(checked) =>
+                setSettings({
+                  ...settings,
+                  notification_types: { ...settings.notification_types, obligation_completed: checked },
+                })
+              }
+              label="Obligation Completed"
+            />
+            <Checkbox
+              checked={settings.notification_types.escalation_triggered}
+              onChange={(checked) =>
+                setSettings({
+                  ...settings,
+                  notification_types: { ...settings.notification_types, escalation_triggered: checked },
+                })
+              }
+              label="Escalation Triggered"
+            />
+            <Checkbox
+              checked={settings.notification_types.document_uploaded}
+              onChange={(checked) =>
+                setSettings({
+                  ...settings,
+                  notification_types: { ...settings.notification_types, document_uploaded: checked },
+                })
+              }
+              label="Document Uploaded"
+            />
           </div>
         </div>
 
         {/* Save Button */}
         <div className="flex justify-end">
-          <Button type="submit" disabled={updateSettings.isPending} style={{ backgroundColor: '#026A67' }}>
-            <Save className="h-4 w-4 mr-2" />
+          <Button
+            type="submit"
+            loading={updateSettings.isPending}
+            disabled={updateSettings.isPending}
+            icon={<Save className="h-4 w-4" />}
+          >
             {updateSettings.isPending ? 'Saving...' : 'Save Settings'}
           </Button>
         </div>

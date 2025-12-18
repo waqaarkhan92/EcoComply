@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import NextImage from 'next/image';
 import { Lightbulb, FileText, Image, FileSpreadsheet, Check, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 
 // =============================================================================
@@ -151,12 +152,14 @@ function EvidenceSuggestionCard({
     >
       <div className="flex items-start gap-3">
         {/* File Icon / Thumbnail */}
-        <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
+        <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden relative">
           {suggestion.thumbnailUrl ? (
-            <img
+            <NextImage
               src={suggestion.thumbnailUrl}
               alt={suggestion.fileName}
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
+              unoptimized
             />
           ) : (
             <FileIcon className="h-6 w-6 text-text-tertiary" />

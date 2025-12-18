@@ -1,15 +1,15 @@
 /**
  * Mark All Notifications as Read
- * PUT /api/v1/notifications/read-all
+ * POST/PUT /api/v1/notifications/read-all
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
+import { notificationService } from '@/lib/services/notification-service';
 
-export async function PUT(request: NextRequest) {
+async function handleMarkAllAsRead(request: NextRequest) {
   const requestId = getRequestId(request);
 
   try {
@@ -20,30 +20,13 @@ export async function PUT(request: NextRequest) {
     }
     const { user } = authResult;
 
-    // Update all unread notifications for this user
-    const { data: updated, error: updateError } = await supabaseAdmin
-      .from('notifications')
-      .update({
-        read_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', user.id)
-      .is('read_at', null)
-      .select('id');
-
-    if (updateError) {
-      return errorResponse(
-        ErrorCodes.INTERNAL_ERROR,
-        'Failed to mark notifications as read',
-        500,
-        { error: updateError.message },
-        { request_id: requestId }
-      );
-    }
+    // Mark all notifications as read using service
+    const markedCount = await notificationService.markAllAsRead(user.id);
 
     const response = successResponse(
       {
-        marked_count: updated?.length || 0,
+        message: 'All notifications marked as read',
+        marked_count: markedCount,
       },
       200,
       { request_id: requestId }
@@ -59,5 +42,14 @@ export async function PUT(request: NextRequest) {
       { request_id: requestId }
     );
   }
+}
+
+// Support both POST and PUT methods
+export async function POST(request: NextRequest) {
+  return handleMarkAllAsRead(request);
+}
+
+export async function PUT(request: NextRequest) {
+  return handleMarkAllAsRead(request);
 }
 

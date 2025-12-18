@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Button, ButtonProps } from './button';
-import { Dropdown, DropdownItem } from './dropdown';
 import { Download, FileSpreadsheet, FileText, FileJson, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 export type ExportFormat = 'csv' | 'xlsx' | 'json' | 'pdf';
 
@@ -170,32 +170,61 @@ export function ExportButton({
     );
   }
 
-  // Multiple formats - dropdown
-  const dropdownItems: DropdownItem[] = formats.map((format) => {
-    const Icon = formatIcons[format];
-    return {
-      label: formatLabels[format],
-      icon: <Icon className="w-4 h-4" />,
-      onClick: () => handleExport(format),
+  // Multiple formats - dropdown menu
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
     };
-  });
+
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDropdown]);
 
   return (
-    <Dropdown
-      trigger={
-        <Button
-          {...buttonProps}
-          loading={isExporting}
-          icon={<Download className="w-4 h-4" />}
-          iconPosition="left"
-        >
-          {children || 'Export'}
-          <ChevronDown className="w-4 h-4 ml-1" />
-        </Button>
-      }
-      items={dropdownItems}
-      align="end"
-    />
+    <div className="relative inline-block" ref={dropdownRef}>
+      <Button
+        {...buttonProps}
+        loading={isExporting}
+        icon={<Download className="w-4 h-4" />}
+        iconPosition="left"
+        onClick={() => setShowDropdown(!showDropdown)}
+      >
+        {children || 'Export'}
+        <ChevronDown className={cn("w-4 h-4 ml-1 transition-transform", showDropdown && "rotate-180")} />
+      </Button>
+
+      {showDropdown && (
+        <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+          <ul className="py-1">
+            {formats.map((format) => {
+              const Icon = formatIcons[format];
+              return (
+                <li key={format}>
+                  <button
+                    type="button"
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                    onClick={() => handleExport(format)}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {formatLabels[format]}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 

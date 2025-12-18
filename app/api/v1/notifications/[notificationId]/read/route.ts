@@ -1,6 +1,6 @@
 /**
  * Notification Read Endpoint
- * PUT /api/v1/notifications/{notificationId}/read - Mark notification as read
+ * POST/PUT /api/v1/notifications/{notificationId}/read - Mark notification as read
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -8,9 +8,11 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { successResponse, errorResponse, ErrorCodes } from '@/lib/api/response';
 import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { addRateLimitHeaders } from '@/lib/api/rate-limit';
+import { notificationService } from '@/lib/services/notification-service';
 
-export async function PUT(
-  request: NextRequest, props: { params: Promise<{ notificationId: string }> }
+async function handleMarkAsRead(
+  request: NextRequest,
+  props: { params: Promise<{ notificationId: string }> }
 ) {
   const requestId = getRequestId(request);
 
@@ -20,13 +22,13 @@ export async function PUT(
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-  const { user } = authResult;
+    const { user } = authResult;
 
     const params = await props.params;
-  const { notificationId } = params;
+    const { notificationId } = params;
 
     // Check if notification exists and belongs to user
-  const { data: notification, error: checkError } = await supabaseAdmin
+    const { data: notification, error: checkError } = await supabaseAdmin
       .from('notifications')
       .select('id, user_id, read_at')
       .eq('id', notificationId)
@@ -43,28 +45,23 @@ export async function PUT(
       );
     }
 
-    // Update notification
-  const { data: updatedNotification, error: updateError } = await supabaseAdmin
-      .from('notifications')
-      .update({
-        read_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', notificationId)
-      .select('id, read_at, updated_at')
-      .single();
-
-    if (updateError || !updatedNotification) {
-      return errorResponse(
-        ErrorCodes.INTERNAL_ERROR,
-        'Failed to mark notification as read',
-        500,
-        { error: updateError?.message || 'Unknown error' },
+    // Check if already read
+    if (notification.read_at) {
+      return successResponse(
+        { message: 'Notification already marked as read', notification_id: notificationId },
+        200,
         { request_id: requestId }
       );
     }
 
-    const response = successResponse(updatedNotification, 200, { request_id: requestId });
+    // Mark as read using service
+    await notificationService.markAsRead(notificationId);
+
+    const response = successResponse(
+      { message: 'Notification marked as read', notification_id: notificationId },
+      200,
+      { request_id: requestId }
+    );
     return await addRateLimitHeaders(request, user.id, response);
   } catch (error: any) {
     console.error('Mark notification as read error:', error);
@@ -76,4 +73,19 @@ export async function PUT(
       { request_id: requestId }
     );
   }
+}
+
+// Support both POST and PUT methods
+export async function POST(
+  request: NextRequest,
+  props: { params: Promise<{ notificationId: string }> }
+) {
+  return handleMarkAsRead(request, props);
+}
+
+export async function PUT(
+  request: NextRequest,
+  props: { params: Promise<{ notificationId: string }> }
+) {
+  return handleMarkAsRead(request, props);
 }

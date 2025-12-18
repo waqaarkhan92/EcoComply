@@ -20,6 +20,21 @@ const nextConfig = {
     NEXT_PUBLIC_SUPABASE_URL: process.env.SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
   },
+
+  // Server-side packages that shouldn't be bundled
+  serverExternalPackages: ['pino', 'pino-pretty', 'thread-stream'],
+
+  // Webpack configuration to exclude test files from node_modules
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // Exclude test files from being bundled
+      config.module.rules.push({
+        test: /node_modules[\\/]thread-stream[\\/]test/,
+        use: 'ignore-loader',
+      });
+    }
+    return config;
+  },
 };
 
 // Sentry configuration options

@@ -301,21 +301,22 @@ export async function PUT(
       }
     }
 
-    // Log to audit_logs (if audit_logs table exists)
+    // Log to audit_logs using audit service
     try {
-      await supabaseAdmin
-        .from('audit_logs')
-        .insert({
-          entity_type: 'obligations',
-          entity_id: obligationId,
-          action: 'UPDATE',
-          user_id: user.id,
-          changes: updates,
-          metadata: {
-            previous_version: existingObligation.version_number,
-            new_version: newVersionNumber,
-          },
-        });
+      const { auditService } = await import('@/lib/services/audit-service');
+
+      // Build changes object with old/new values
+      const changes: Record<string, { old: any; new: any }> = {};
+      Object.keys(updates).forEach((key) => {
+        if (key !== 'version_number' && key !== 'version_history' && key !== 'updated_at') {
+          changes[key] = {
+            old: existingObligation[key],
+            new: updates[key],
+          };
+        }
+      });
+
+      await auditService.logUpdate('obligation', obligationId, user.id, changes);
     } catch (auditError) {
       // Log but don't fail if audit logging fails
       console.error('Failed to log to audit_logs:', auditError);

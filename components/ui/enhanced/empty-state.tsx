@@ -1,6 +1,7 @@
 import React from 'react';
 import { LucideIcon, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 
 interface EmptyStateProps {
@@ -31,12 +32,16 @@ export function EmptyState({
     <div className="flex flex-col items-center justify-center py-16 px-4 animate-fade-in">
       {/* Illustration or Icon */}
       {illustration ? (
-        <img
-          src={illustration}
-          alt=""
-          className="w-64 h-64 mb-8 opacity-80"
-          loading="lazy"
-        />
+        <div className="relative w-64 h-64 mb-8 opacity-80">
+          <Image
+            src={illustration}
+            alt=""
+            fill
+            className="object-contain"
+            loading="lazy"
+            unoptimized
+          />
+        </div>
       ) : (
         <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center mb-6 shadow-card">
           <Icon className="h-12 w-12 text-primary" />

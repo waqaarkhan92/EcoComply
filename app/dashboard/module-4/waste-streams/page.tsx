@@ -31,6 +31,11 @@ interface WasteStreamsResponse {
   };
 }
 
+interface Site {
+  id: string;
+  name: string;
+}
+
 export default function WasteStreamsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
@@ -58,9 +63,18 @@ export default function WasteStreamsPage() {
     },
   });
 
+  const { data: sitesData, isLoading: sitesLoading } = useQuery({
+    queryKey: ['sites'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ data: Site[] }>('/sites');
+      return response;
+    },
+  });
+
   const wasteStreams: any[] = data?.data || [];
   const hasMore = data?.pagination?.has_more || false;
   const nextCursor = data?.pagination?.cursor;
+  const sites = sitesData?.data?.data || [];
 
   return (
     <div className="space-y-6">
@@ -101,9 +115,14 @@ export default function WasteStreamsPage() {
               value={filters.site_id}
               onChange={(e) => setFilters({ ...filters, site_id: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              disabled={sitesLoading}
             >
               <option value="">All Sites</option>
-              {/* TODO: Fetch sites from API */}
+              {sites.map((site) => (
+                <option key={site.id} value={site.id}>
+                  {site.name}
+                </option>
+              ))}
             </select>
           </div>
 

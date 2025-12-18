@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { useAuthStore } from '@/lib/store/auth-store';
@@ -9,8 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NoPacksState } from '@/components/ui/empty-state';
 import { ProgressIndicator, useProgressSteps } from '@/components/ui/progress-indicator';
+import { ExportButton } from '@/components/ui/export-button';
 import { Package, Download, Share2, FileText, Calendar, Filter, X, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import { toast as sonnerToast } from 'sonner';
 
 interface Pack {
   id: string;
@@ -127,7 +129,7 @@ export default function PacksPage() {
 
   // Pack generation mutation
   const generateMutation = useMutation({
-    mutationFn: async (packData: any) => {
+    mutationFn: async (packData: any): Promise<{ id: string }> => {
       // Start progress
       progressSteps.startStep('validating');
 
@@ -137,9 +139,9 @@ export default function PacksPage() {
       progressSteps.completeStep('validating');
       progressSteps.startStep('gathering');
 
-      return response.data;
+      return response.data as { id: string };
     },
-    onSuccess: (data) => {
+    onSuccess: (data: { id: string }) => {
       // Store the pack ID to track its progress
       setGeneratingPackId(data.id);
 
@@ -233,25 +235,25 @@ export default function PacksPage() {
 
   const handleGenerate = () => {
     if (!selectedPackType) {
-      alert('Please select a pack type');
+      sonnerToast.error('Please select a pack type');
       return;
     }
 
     if (!company?.id) {
-      alert('Company not found');
+      sonnerToast.error('Company not found');
       return;
     }
 
     // Validate Board Pack requirements
     if (selectedPackType === 'BOARD_MULTI_SITE_RISK') {
       if (!canGenerateBoardPack) {
-        alert('Board Pack requires Owner or Admin role');
+        sonnerToast.error('Board Pack requires Owner or Admin role');
         return;
       }
       // Board Pack doesn't need site_id
     } else {
       if (!selectedSite) {
-        alert('Please select a site');
+        sonnerToast.error('Please select a site');
         return;
       }
     }
@@ -287,6 +289,30 @@ export default function PacksPage() {
     return PACK_TYPES.find(pt => pt.value === packType)?.label || packType;
   };
 
+  // Export config for packs list
+  const exportConfig = useMemo(() => ({
+    data: packs.map((pack) => ({
+      pack_type: getPackTypeLabel(pack.pack_type),
+      date_range: pack.date_range_start && pack.date_range_end
+        ? `${new Date(pack.date_range_start).toLocaleDateString()} - ${new Date(pack.date_range_end).toLocaleDateString()}`
+        : 'All time',
+      status: pack.status,
+      recipient: pack.recipient_name || '—',
+      purpose: pack.purpose || '—',
+      generated: new Date(pack.created_at).toLocaleDateString(),
+    })),
+    filename: 'compliance-packs',
+    columns: {
+      pack_type: 'Pack Type',
+      date_range: 'Date Range',
+      status: 'Status',
+      recipient: 'Recipient',
+      purpose: 'Purpose',
+      generated: 'Generated Date',
+    },
+    title: 'Compliance Packs Report',
+  }), [packs]);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'COMPLETED':
@@ -311,15 +337,25 @@ export default function PacksPage() {
             Generate compliance packs for inspections, tenders, and reporting
           </p>
         </div>
-        <Button
-          variant="primary"
-          size="md"
-          icon={<Package className="h-4 w-4" />}
-          iconPosition="left"
-          onClick={() => setShowGenerateModal(true)}
-        >
-          Generate Pack
-        </Button>
+        <div className="flex items-center gap-3">
+          {packs.length > 0 && (
+            <ExportButton
+              config={exportConfig}
+              variant="outline"
+              size="md"
+              formats={['csv', 'json']}
+            />
+          )}
+          <Button
+            variant="primary"
+            size="md"
+            icon={<Package className="h-4 w-4" />}
+            iconPosition="left"
+            onClick={() => setShowGenerateModal(true)}
+          >
+            Generate Pack
+          </Button>
+        </div>
       </div>
 
       {/* Packs List */}
@@ -424,10 +460,14 @@ export default function PacksPage() {
                     Generating Pack
                   </h3>
                   <ProgressIndicator steps={progressSteps.steps} />
+                  <p className="text-sm text-text-secondary mt-4">
+                    Please wait while we generate your pack. This may take a few moments.
+                  </p>
                 </div>
               )}
 
-              {/* Pack Type Selection */}
+              {/* Pack Type Selection - hide during generation */}
+              {!generatingPackId && (
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-3">
                   Pack Type <span className="text-danger">*</span>
@@ -473,6 +513,7 @@ export default function PacksPage() {
                   })}
                 </div>
               </div>
+              )}
 
               {/* Site Selection (not for Board Pack) */}
               {selectedPackType && selectedPackType !== 'BOARD_MULTI_SITE_RISK' && (
@@ -587,7 +628,7 @@ export default function PacksPage() {
               )}
 
               {/* Error Message */}
-              {generateMutation.isError && (
+              {generateMutation.isError && !generatingPackId && (
                 <div className="bg-danger/10 border border-danger rounded-lg p-4 flex items-start gap-3">
                   <AlertCircle className="h-5 w-5 text-danger flex-shrink-0 mt-0.5" />
                   <div>
