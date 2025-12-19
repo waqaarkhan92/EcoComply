@@ -28,6 +28,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { TabBar, TabItem } from '@/components/ui/tab-bar';
 import { getComplianceStatus, complianceStatusConfig } from '@/lib/utils/status';
 import { useModuleActivation } from '@/lib/hooks/use-module-activation';
+import { ELVHeadroomWidget } from '@/components/dashboard/elv-headroom-widget';
 
 interface SiteDashboardProps {
   params: Promise<{ siteId: string }>;
@@ -282,6 +283,11 @@ export default function SiteDashboardPage({ params }: SiteDashboardProps) {
           </Link>
         </div>
       </div>
+
+      {/* ELV Headroom Widget - Only show for Module 3 (Generators/MCPD) */}
+      {isModule3Active && (
+        <ELVHeadroomWidget siteId={siteId} />
+      )}
 
       {/* Module Status Cards - Only Active Modules */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

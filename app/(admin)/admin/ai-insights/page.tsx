@@ -12,62 +12,96 @@ import {
   TrendingDown,
   Activity,
   AlertCircle,
+  RefreshCw,
+  Clock,
+  Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface AIInsightsData {
-  metrics: {
+// Match the actual API response structure from /api/v1/admin/ai-insights
+interface AIInsightsResponse {
+  summary: {
     patternHitRate: number;
-    patternHitRateTrend: number;
-    totalAICost: number;
-    totalAICostTrend: number;
-    activePatternsCount: number;
-    avgConfidenceScore: number;
+    totalCost: number;
+    costChange: number;
+    activePatterns: number;
+    avgConfidence: number;
+    totalExtractions: number;
   };
-  costTrend: Array<{
-    date: string;
-    cost: number;
-    requests: number;
-  }>;
-  topPatterns: Array<{
-    id: string;
-    name: string;
-    usageCount: number;
+  patternHitRate: {
+    hitRate: number;
+    totalExtractions: number;
+    ruleLibraryHits: number;
+    llmExtractions: number;
+  };
+  costMetrics: {
+    totalCost: number;
+    avgPerDoc: number;
+    byRegulator: Record<string, number>;
+    trend: Array<{ date: string; cost: number }>;
+  };
+  patternHealth: {
+    activePatterns: number;
+    pendingPatterns: number;
+    decliningPatterns: number;
+    topPatterns: Array<{
+      patternId: string;
+      displayName: string;
+      usageCount: number;
+      successRate: number;
+      category?: string;
+      lastUsedAt?: string;
+    }>;
+  };
+  extractionStats: {
+    total: number;
+    byDocType: Record<string, number>;
     successRate: number;
     avgConfidence: number;
-  }>;
-  costByRegulator: Array<{
-    regulator: string;
-    totalCost: number;
-    requestCount: number;
-    avgCostPerRequest: number;
-  }>;
+  };
+  period: {
+    days: number;
+    startDate: string;
+    endDate: string;
+  };
 }
 
 export default function AIInsightsPage() {
   // Fetch AI insights data
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['ai-insights'],
-    queryFn: async (): Promise<AIInsightsData> => {
-      const response = await apiClient.get<AIInsightsData>('/admin/ai-insights');
+    queryFn: async (): Promise<AIInsightsResponse> => {
+      const response = await apiClient.get<AIInsightsResponse>('/admin/ai-insights');
       return response.data;
     },
-    // For now, this will fail gracefully - we'll show the UI structure
-    retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
   });
 
-  const metrics = data?.metrics || {
+  const summary = data?.summary || {
     patternHitRate: 0,
-    patternHitRateTrend: 0,
-    totalAICost: 0,
-    totalAICostTrend: 0,
-    activePatternsCount: 0,
-    avgConfidenceScore: 0,
+    totalCost: 0,
+    costChange: 0,
+    activePatterns: 0,
+    avgConfidence: 0,
+    totalExtractions: 0,
   };
 
-  const costTrend = data?.costTrend || [];
-  const topPatterns = data?.topPatterns || [];
-  const costByRegulator = data?.costByRegulator || [];
+  const costTrend = data?.costMetrics?.trend || [];
+  const topPatterns = data?.patternHealth?.topPatterns || [];
+  const costByRegulator = data?.costMetrics?.byRegulator || {};
+  const patternStats = data?.patternHitRate || {
+    hitRate: 0,
+    totalExtractions: 0,
+    ruleLibraryHits: 0,
+    llmExtractions: 0
+  };
+  const patternHealth = data?.patternHealth || {
+    activePatterns: 0,
+    pendingPatterns: 0,
+    decliningPatterns: 0,
+    topPatterns: [],
+  };
 
   // Show error state
   if (error) {
@@ -79,14 +113,18 @@ export default function AIInsightsPage() {
         />
 
         <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-          <AlertCircle className="h-16 w-16 text-warning mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-text-primary mb-2">API Endpoint Not Yet Configured</h2>
+          <AlertCircle className="h-16 w-16 text-danger mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-text-primary mb-2">Failed to Load AI Insights</h2>
           <p className="text-text-secondary mb-4">
-            The AI insights API endpoint needs to be created at <code className="bg-gray-100 px-2 py-1 rounded text-sm">/api/v1/admin/ai-insights</code>
+            {(error as Error)?.message || 'An error occurred while fetching AI insights data.'}
           </p>
-          <p className="text-sm text-text-tertiary">
-            This page is ready to display data once the backend endpoint is implemented.
-          </p>
+          <button
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -141,6 +179,12 @@ export default function AIInsightsPage() {
     );
   }
 
+  // Convert costByRegulator object to array for display
+  const regulatorCosts = Object.entries(costByRegulator).map(([regulator, cost]) => ({
+    regulator,
+    totalCost: cost,
+  }));
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -154,8 +198,8 @@ export default function AIInsightsPage() {
         {/* Pattern Hit Rate */}
         <MetricCard
           label="Pattern Hit Rate"
-          value={`${metrics.patternHitRate}%`}
-          trend={metrics.patternHitRateTrend}
+          value={`${summary.patternHitRate.toFixed(1)}%`}
+          subtitle={`${patternStats.ruleLibraryHits} of ${patternStats.totalExtractions} extractions`}
           icon={<Target className="h-5 w-5" />}
           iconBgColor="bg-primary/10"
           iconColor="text-primary"
@@ -164,9 +208,9 @@ export default function AIInsightsPage() {
         {/* Total AI Cost */}
         <MetricCard
           label="Total AI Cost"
-          value={`$${metrics.totalAICost.toFixed(2)}`}
-          trend={metrics.totalAICostTrend}
-          subtitle="This month"
+          value={`$${summary.totalCost.toFixed(2)}`}
+          trend={summary.costChange}
+          subtitle="This period"
           icon={<DollarSign className="h-5 w-5" />}
           iconBgColor="bg-warning/10"
           iconColor="text-warning"
@@ -175,7 +219,8 @@ export default function AIInsightsPage() {
         {/* Active Patterns */}
         <MetricCard
           label="Active Patterns"
-          value={metrics.activePatternsCount.toString()}
+          value={summary.activePatterns.toString()}
+          subtitle={`${patternHealth.pendingPatterns} pending, ${patternHealth.decliningPatterns} declining`}
           icon={<Brain className="h-5 w-5" />}
           iconBgColor="bg-success/10"
           iconColor="text-success"
@@ -183,12 +228,81 @@ export default function AIInsightsPage() {
 
         {/* Avg Confidence Score */}
         <MetricCard
-          label="Avg Confidence Score"
-          value={`${metrics.avgConfidenceScore}%`}
+          label="Avg Confidence"
+          value={`${summary.avgConfidence.toFixed(1)}%`}
+          subtitle={`${summary.totalExtractions} total extractions`}
           icon={<Activity className="h-5 w-5" />}
           iconBgColor="bg-info/10"
           iconColor="text-info"
         />
+      </div>
+
+      {/* Extraction Breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Zap className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-text-secondary">Rule Library Hits</p>
+              <p className="text-2xl font-bold text-text-primary">{patternStats.ruleLibraryHits}</p>
+            </div>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all"
+              style={{ width: `${patternStats.totalExtractions > 0 ? (patternStats.ruleLibraryHits / patternStats.totalExtractions) * 100 : 0}%` }}
+            />
+          </div>
+          <p className="text-xs text-text-tertiary mt-2">
+            {patternStats.totalExtractions > 0
+              ? `${((patternStats.ruleLibraryHits / patternStats.totalExtractions) * 100).toFixed(1)}% of extractions`
+              : 'No extractions yet'
+            }
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-warning/10">
+              <Brain className="h-5 w-5 text-warning" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-text-secondary">LLM Extractions</p>
+              <p className="text-2xl font-bold text-text-primary">{patternStats.llmExtractions}</p>
+            </div>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-warning rounded-full transition-all"
+              style={{ width: `${patternStats.totalExtractions > 0 ? (patternStats.llmExtractions / patternStats.totalExtractions) * 100 : 0}%` }}
+            />
+          </div>
+          <p className="text-xs text-text-tertiary mt-2">
+            {patternStats.totalExtractions > 0
+              ? `${((patternStats.llmExtractions / patternStats.totalExtractions) * 100).toFixed(1)}% of extractions`
+              : 'No extractions yet'
+            }
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-success/10">
+              <Clock className="h-5 w-5 text-success" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-text-secondary">Avg Cost/Document</p>
+              <p className="text-2xl font-bold text-text-primary">
+                ${data?.costMetrics?.avgPerDoc?.toFixed(4) || '0.00'}
+              </p>
+            </div>
+          </div>
+          <p className="text-xs text-text-tertiary">
+            Based on {patternStats.totalExtractions} extractions
+          </p>
+        </div>
       </div>
 
       {/* Cost Trend Chart Section */}
@@ -205,20 +319,16 @@ export default function AIInsightsPage() {
                   <tr className="border-b border-gray-200">
                     <th className="text-left text-sm font-medium text-text-secondary pb-3 px-4">Date</th>
                     <th className="text-right text-sm font-medium text-text-secondary pb-3 px-4">Cost</th>
-                    <th className="text-right text-sm font-medium text-text-secondary pb-3 px-4">Requests</th>
-                    <th className="text-right text-sm font-medium text-text-secondary pb-3 px-4">Avg/Request</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {costTrend.map((item, index) => (
+                  {costTrend.slice(-10).map((item, index) => (
                     <tr key={index} className="border-b border-gray-100 last:border-0">
-                      <td className="py-3 px-4 text-sm text-text-primary">{item.date}</td>
-                      <td className="py-3 px-4 text-sm text-text-primary text-right font-medium">
-                        ${item.cost.toFixed(2)}
+                      <td className="py-3 px-4 text-sm text-text-primary">
+                        {new Date(item.date).toLocaleDateString()}
                       </td>
-                      <td className="py-3 px-4 text-sm text-text-secondary text-right">{item.requests}</td>
-                      <td className="py-3 px-4 text-sm text-text-secondary text-right">
-                        ${(item.cost / item.requests).toFixed(4)}
+                      <td className="py-3 px-4 text-sm text-text-primary text-right font-medium">
+                        ${item.cost.toFixed(4)}
                       </td>
                     </tr>
                   ))}
@@ -227,7 +337,9 @@ export default function AIInsightsPage() {
             </div>
           ) : (
             <div className="text-center py-8 text-text-secondary">
+              <DollarSign className="h-12 w-12 mx-auto mb-3 text-gray-300" />
               <p className="text-sm">No cost data available yet</p>
+              <p className="text-xs text-text-tertiary mt-1">Cost data will appear after document extractions</p>
             </div>
           )}
         </div>
@@ -239,44 +351,46 @@ export default function AIInsightsPage() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           <div className="px-6 py-4 border-b border-gray-100">
             <h2 className="text-lg font-semibold text-text-primary">Pattern Library Status</h2>
-            <p className="text-sm text-text-secondary">Top 10 patterns by usage</p>
+            <p className="text-sm text-text-secondary">Top patterns by usage</p>
           </div>
           <div className="p-6">
             {topPatterns.length > 0 ? (
               <div className="space-y-3">
                 {topPatterns.slice(0, 10).map((pattern, index) => (
                   <div
-                    key={pattern.id}
+                    key={pattern.patternId}
                     className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-text-tertiary w-6">#{index + 1}</span>
                         <p className="text-sm font-medium text-text-primary truncate">
-                          {pattern.name}
+                          {pattern.displayName}
                         </p>
                       </div>
                       <div className="flex items-center gap-4 mt-1 ml-8">
                         <span className="text-xs text-text-secondary">
                           {pattern.usageCount} uses
                         </span>
-                        <span className="text-xs text-text-secondary">
-                          {pattern.avgConfidence}% avg confidence
-                        </span>
+                        {pattern.category && (
+                          <span className="text-xs text-text-tertiary">
+                            {pattern.category}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex-shrink-0 ml-4">
                       <div
                         className={cn(
                           'text-sm font-semibold px-2 py-1 rounded',
-                          pattern.successRate >= 90
+                          pattern.successRate >= 0.9
                             ? 'bg-success/10 text-success'
-                            : pattern.successRate >= 70
+                            : pattern.successRate >= 0.7
                             ? 'bg-warning/10 text-warning'
                             : 'bg-danger/10 text-danger'
                         )}
                       >
-                        {pattern.successRate}%
+                        {(pattern.successRate * 100).toFixed(0)}%
                       </div>
                     </div>
                   </div>
@@ -284,7 +398,9 @@ export default function AIInsightsPage() {
               </div>
             ) : (
               <div className="text-center py-8 text-text-secondary">
-                <p className="text-sm">No pattern data available yet</p>
+                <Brain className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-sm">No patterns in library yet</p>
+                <p className="text-xs text-text-tertiary mt-1">Patterns are created from confirmed extractions</p>
               </div>
             )}
           </div>
@@ -297,36 +413,34 @@ export default function AIInsightsPage() {
             <p className="text-sm text-text-secondary">AI extraction costs per regulator</p>
           </div>
           <div className="p-6">
-            {costByRegulator.length > 0 ? (
+            {regulatorCosts.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200">
                       <th className="text-left text-xs font-medium text-text-secondary pb-3">Regulator</th>
                       <th className="text-right text-xs font-medium text-text-secondary pb-3">Total Cost</th>
-                      <th className="text-right text-xs font-medium text-text-secondary pb-3">Requests</th>
-                      <th className="text-right text-xs font-medium text-text-secondary pb-3">Avg/Req</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {costByRegulator.map((item, index) => (
-                      <tr key={index} className="border-b border-gray-100 last:border-0">
-                        <td className="py-3 text-sm text-text-primary font-medium">{item.regulator}</td>
-                        <td className="py-3 text-sm text-text-primary text-right font-semibold">
-                          ${item.totalCost.toFixed(2)}
-                        </td>
-                        <td className="py-3 text-sm text-text-secondary text-right">{item.requestCount}</td>
-                        <td className="py-3 text-sm text-text-secondary text-right">
-                          ${item.avgCostPerRequest.toFixed(4)}
-                        </td>
-                      </tr>
-                    ))}
+                    {regulatorCosts
+                      .sort((a, b) => b.totalCost - a.totalCost)
+                      .map((item, index) => (
+                        <tr key={index} className="border-b border-gray-100 last:border-0">
+                          <td className="py-3 text-sm text-text-primary font-medium">{item.regulator}</td>
+                          <td className="py-3 text-sm text-text-primary text-right font-semibold">
+                            ${item.totalCost.toFixed(4)}
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
             ) : (
               <div className="text-center py-8 text-text-secondary">
-                <p className="text-sm">No cost data available yet</p>
+                <DollarSign className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-sm">No regulator cost data yet</p>
+                <p className="text-xs text-text-tertiary mt-1">Costs will be tracked by regulator type</p>
               </div>
             )}
           </div>
@@ -377,17 +491,17 @@ function MetricCard({
       {hasTrend && (
         <div className="flex items-center gap-1 mt-2">
           {isPositiveTrend ? (
-            <TrendingUp className="h-4 w-4 text-success" />
+            <TrendingUp className="h-4 w-4 text-danger" />
           ) : (
-            <TrendingDown className="h-4 w-4 text-danger" />
+            <TrendingDown className="h-4 w-4 text-success" />
           )}
           <span
             className={cn(
               'text-xs font-medium',
-              isPositiveTrend ? 'text-success' : 'text-danger'
+              isPositiveTrend ? 'text-danger' : 'text-success'
             )}
           >
-            {isPositiveTrend ? '+' : ''}{trend}% vs last month
+            {isPositiveTrend ? '+' : ''}{trend.toFixed(1)}% vs previous period
           </span>
         </div>
       )}

@@ -54,13 +54,14 @@ interface ReviewerMetricsData {
 
 export default function ReviewerMetricsPage() {
   // Fetch reviewer metrics data
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['reviewer-metrics'],
     queryFn: async (): Promise<ReviewerMetricsData> => {
       const response = await apiClient.get<ReviewerMetricsData>('/admin/reviewer-metrics');
       return response.data;
     },
-    retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
   });
 
   const summary = data?.summary || {

@@ -34,6 +34,9 @@ import {
   ArrowLeft,
   Layers,
   History,
+  Brain,
+  UserCog,
+  Share2,
 } from 'lucide-react';
 import { useModuleActivation } from '@/lib/hooks/use-module-activation';
 import { useAuthStore } from '@/lib/store/auth-store';
@@ -68,6 +71,13 @@ const getConsultantNavigation = () => [
 const getAccountNavigation = () => [
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
   { name: 'Help', href: '/dashboard/help', icon: HelpCircle },
+];
+
+// Admin navigation (OWNER/ADMIN only)
+const getAdminNavigation = () => [
+  { name: 'AI Insights', href: '/admin/ai-insights', icon: Brain },
+  { name: 'Reviewer Metrics', href: '/admin/reviewer-metrics', icon: UserCog },
+  { name: 'Shared Patterns', href: '/admin/shared-patterns', icon: Share2 },
 ];
 
 // =============================================================================
@@ -173,9 +183,13 @@ export function Sidebar() {
   // Determine if user is a consultant
   const isConsultant = user?.role === 'CONSULTANT';
 
+  // Determine if user has admin access
+  const isAdmin = user?.role === 'OWNER' || user?.role === 'ADMIN';
+
   // Get the appropriate navigation based on user role
   const globalNavigation = isConsultant ? getConsultantNavigation() : getCompanyUserNavigation();
   const accountNavigation = getAccountNavigation();
+  const adminNavigation = getAdminNavigation();
 
   // Check if any modules are active
   const hasActiveModules = !isLoadingModule2 && !isLoadingModule3 && !isLoadingModule4 &&
@@ -267,6 +281,25 @@ export function Sidebar() {
                           href={`/dashboard/sites/${site.id}/dashboard`}
                           icon={History}
                           isActive={false}
+                          isCollapsed={isCollapsed}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Admin Section - Only for OWNER/ADMIN */}
+                {isAdmin && (
+                  <div className="mt-6">
+                    <NavSectionLabel label="Admin" isCollapsed={isCollapsed} />
+                    <div className="space-y-1">
+                      {adminNavigation.map((item) => (
+                        <NavItem
+                          key={item.name}
+                          name={item.name}
+                          href={item.href}
+                          icon={item.icon}
+                          isActive={pathname === item.href || pathname?.startsWith(item.href + '/')}
                           isCollapsed={isCollapsed}
                         />
                       ))}
