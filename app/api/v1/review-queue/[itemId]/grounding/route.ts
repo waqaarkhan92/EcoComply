@@ -10,13 +10,13 @@ import { requireAuth, getRequestId } from '@/lib/api/middleware';
 import { documentGroundingService } from '@/lib/services/document-grounding-service';
 
 interface RouteContext {
-  params: {
-    id: string;
-  };
+  params: Promise<{
+    itemId: string;
+  }>;
 }
 
 /**
- * GET /api/v1/review-queue/[id]/grounding
+ * GET /api/v1/review-queue/[itemId]/grounding
  * Get grounding validation for a review queue item
  */
 export async function GET(request: NextRequest, context: RouteContext) {
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return authResult;
     }
 
-    const { id } = context.params;
+    const { itemId: id } = await context.params;
 
     // Fetch the review queue item to get obligation_id and document info
     const { data: reviewItem, error: reviewError } = await supabaseAdmin
