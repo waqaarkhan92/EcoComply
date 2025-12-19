@@ -31,10 +31,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Authenticate with Supabase Auth - use regular client (not service role)
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    // Add timeout to prevent hanging
+    const authPromise = supabase.auth.signInWithPassword({
       email: body.email.toLowerCase(),
       password: body.password,
     });
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Authentication timeout - Supabase not responding')), 10000)
+    );
+
+    const { data: authData, error: authError } = await Promise.race([
+      authPromise,
+      timeoutPromise
+    ]) as Awaited<typeof authPromise>;
 
     if (authError || !authData.session || !authData.user) {
       // Check if error is due to unverified email
