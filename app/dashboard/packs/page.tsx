@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { NoPacksState } from '@/components/ui/empty-state';
 import { ProgressIndicator, useProgressSteps } from '@/components/ui/progress-indicator';
 import { ExportButton } from '@/components/ui/export-button';
-import { Package, Download, Share2, FileText, Calendar, Filter, X, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Package, Download, Share2, FileText, Calendar, Filter, X, CheckCircle, Clock, AlertCircle, Trash2, RefreshCw, Search } from 'lucide-react';
 import Link from 'next/link';
 import { toast as sonnerToast } from 'sonner';
 
@@ -21,6 +21,8 @@ interface Pack {
   site_id: string | null;
   document_id: string | null;
   status: string;
+  generation_progress?: number;
+  generation_stage?: string;
   recipient_type?: string;
   recipient_name?: string;
   purpose?: string;
@@ -54,6 +56,14 @@ const PACK_TYPES = [
   { value: 'INSURER_BROKER', label: 'Insurer Pack', icon: '🛡️', description: 'Insurance & broker pack', available: ['growth', 'consultant'] },
 ];
 
+const STATUS_OPTIONS = [
+  { value: 'all', label: 'All Statuses' },
+  { value: 'COMPLETED', label: 'Completed' },
+  { value: 'GENERATING', label: 'Generating' },
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'FAILED', label: 'Failed' },
+];
+
 export default function PacksPage() {
   const { company, user, roles } = useAuthStore();
   const queryClient = useQueryClient();
@@ -67,6 +77,12 @@ export default function PacksPage() {
   const [recipientName, setRecipientName] = useState('');
   const [purpose, setPurpose] = useState('');
   const [generatingPackId, setGeneratingPackId] = useState<string | null>(null);
+
+  // Filter states
+  const [filterPackType, setFilterPackType] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
   // Progress steps for pack generation
   const progressSteps = useProgressSteps([
@@ -174,7 +190,88 @@ export default function PacksPage() {
     },
   });
 
+  // Delete pack mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (packId: string): Promise<void> => {
+      await apiClient.delete(`/packs/${packId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['packs'] });
+      setShowDeleteConfirm(null);
+      toast({
+        title: 'Pack Deleted',
+        description: 'The pack has been deleted successfully.',
+        variant: 'default',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Delete Failed',
+        description: error?.message || 'An error occurred while deleting the pack.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Regenerate pack mutation
+  const regenerateMutation = useMutation({
+    mutationFn: async (pack: Pack): Promise<{ id: string }> => {
+      const packData = {
+        pack_type: pack.pack_type,
+        company_id: pack.company_id,
+        site_id: pack.site_id,
+        document_id: pack.document_id,
+        date_range_start: pack.date_range_start,
+        date_range_end: pack.date_range_end,
+        recipient_name: pack.recipient_name,
+        purpose: pack.purpose,
+      };
+      const response = await apiClient.post('/packs/generate', packData);
+      return response.data as { id: string };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['packs'] });
+      toast({
+        title: 'Pack Regeneration Started',
+        description: 'A new version of the pack is being generated.',
+        variant: 'default',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Regeneration Failed',
+        description: error?.message || 'An error occurred while regenerating the pack.',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const packs: any[] = packsData?.data || [];
+
+  // Filter packs
+  const filteredPacks = useMemo(() => {
+    return packs.filter(pack => {
+      // Filter by pack type
+      if (filterPackType !== 'all' && pack.pack_type !== filterPackType) {
+        return false;
+      }
+      // Filter by status
+      if (filterStatus !== 'all' && pack.status !== filterStatus) {
+        return false;
+      }
+      // Filter by search query (recipient name or purpose)
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesRecipient = pack.recipient_name?.toLowerCase().includes(query);
+        const matchesPurpose = pack.purpose?.toLowerCase().includes(query);
+        const matchesType = getPackTypeLabel(pack.pack_type).toLowerCase().includes(query);
+        if (!matchesRecipient && !matchesPurpose && !matchesType) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [packs, filterPackType, filterStatus, searchQuery]);
 
   // Monitor pack generation progress
   useEffect(() => {
@@ -313,13 +410,26 @@ export default function PacksPage() {
     title: 'Compliance Packs Report',
   }), [packs]);
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (pack: Pack) => {
+    const { status, generation_progress, generation_stage } = pack;
     switch (status) {
       case 'COMPLETED':
         return <span className="px-2 py-1 text-xs font-medium rounded bg-success/10 text-success">Completed</span>;
       case 'GENERATING':
       case 'PENDING':
-        return <span className="px-2 py-1 text-xs font-medium rounded bg-warning/10 text-warning">Generating</span>;
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="px-2 py-1 text-xs font-medium rounded bg-warning/10 text-warning inline-flex items-center gap-1">
+              <Clock className="h-3 w-3 animate-spin" />
+              {generation_progress !== undefined ? `${generation_progress}%` : 'Generating...'}
+            </span>
+            {generation_stage && generation_stage !== 'QUEUED' && (
+              <span className="text-xs text-text-tertiary capitalize">
+                {generation_stage.replace(/_/g, ' ').toLowerCase()}
+              </span>
+            )}
+          </div>
+        );
       case 'FAILED':
         return <span className="px-2 py-1 text-xs font-medium rounded bg-danger/10 text-danger">Failed</span>;
       default:
@@ -358,6 +468,73 @@ export default function PacksPage() {
         </div>
       </div>
 
+      {/* Filters */}
+      {packs.length > 0 && (
+        <div className="bg-white rounded-lg shadow-base p-4">
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Search */}
+            <div className="relative flex-1 min-w-[200px] max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
+              <Input
+                type="text"
+                placeholder="Search by type, recipient, or purpose..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Pack Type Filter */}
+            <select
+              value={filterPackType}
+              onChange={(e) => setFilterPackType(e.target.value)}
+              className="rounded-lg border border-input-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            >
+              <option value="all">All Types</option>
+              {PACK_TYPES.map((pt) => (
+                <option key={pt.value} value={pt.value}>
+                  {pt.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Status Filter */}
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="rounded-lg border border-input-border px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            >
+              {STATUS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Clear Filters */}
+            {(filterPackType !== 'all' || filterStatus !== 'all' || searchQuery) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setFilterPackType('all');
+                  setFilterStatus('all');
+                  setSearchQuery('');
+                }}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Clear
+              </Button>
+            )}
+
+            {/* Results count */}
+            <span className="text-sm text-text-secondary">
+              {filteredPacks.length} of {packs.length} packs
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Packs List */}
       {packsLoading ? (
         <div className="text-center py-12 text-text-secondary">Loading packs...</div>
@@ -365,12 +542,31 @@ export default function PacksPage() {
         <div className="bg-white rounded-lg shadow-base overflow-hidden">
           <NoPacksState onCreate={() => setShowGenerateModal(true)} />
         </div>
+      ) : filteredPacks.length === 0 ? (
+        <div className="bg-white rounded-lg shadow-base p-12 text-center">
+          <Filter className="h-12 w-12 mx-auto text-text-tertiary mb-4" />
+          <h3 className="text-lg font-semibold text-text-primary">No matching packs</h3>
+          <p className="text-text-secondary mt-2">Try adjusting your filters or search query.</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-4"
+            onClick={() => {
+              setFilterPackType('all');
+              setFilterStatus('all');
+              setSearchQuery('');
+            }}
+          >
+            Clear Filters
+          </Button>
+        </div>
       ) : (
         <div className="bg-white rounded-lg shadow-base overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="border-b border-input-border bg-background-tertiary">
                 <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Pack Type</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Recipient</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Date Range</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Status</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Generated</th>
@@ -378,10 +574,16 @@ export default function PacksPage() {
               </tr>
             </thead>
             <tbody>
-              {packs.map((pack) => (
+              {filteredPacks.map((pack) => (
                 <tr key={pack.id} className="border-b border-input-border/50 hover:bg-background-tertiary transition-colors">
                   <td className="py-3 px-4">
-                    <span className="font-medium text-text-primary">{getPackTypeLabel(pack.pack_type)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{PACK_TYPES.find(pt => pt.value === pack.pack_type)?.icon || '📦'}</span>
+                      <span className="font-medium text-text-primary">{getPackTypeLabel(pack.pack_type)}</span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 text-sm text-text-secondary">
+                    {pack.recipient_name || '—'}
                   </td>
                   <td className="py-3 px-4 text-sm text-text-secondary">
                     {pack.date_range_start && pack.date_range_end
@@ -389,30 +591,41 @@ export default function PacksPage() {
                       : 'All time'}
                   </td>
                   <td className="py-3 px-4">
-                    {getStatusBadge(pack.status)}
+                    {getStatusBadge(pack)}
                   </td>
                   <td className="py-3 px-4 text-sm text-text-secondary">
                     {new Date(pack.created_at).toLocaleDateString()}
                   </td>
                   <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       {pack.status === 'COMPLETED' && (
-                        <Link href={pack.site_id ? `/dashboard/sites/${pack.site_id}/packs/${pack.id}` : `/dashboard/packs/${pack.id}`}>
-                          <Button variant="ghost" size="sm" title="View Details">
-                            <FileText className="h-4 w-4" />
-                          </Button>
-                        </Link>
+                        <>
+                          <Link href={pack.site_id ? `/dashboard/sites/${pack.site_id}/packs/${pack.id}` : `/dashboard/packs/${pack.id}`}>
+                            <Button variant="ghost" size="sm" title="View Details">
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <a href={`/api/v1/packs/${pack.id}/download`} download>
+                            <Button variant="ghost" size="sm" title="Download">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </a>
+                          <Link href={pack.site_id ? `/dashboard/sites/${pack.site_id}/packs/${pack.id}/distribute` : `/dashboard/packs/${pack.id}/distribute`}>
+                            <Button variant="ghost" size="sm" title="Share / Distribute">
+                              <Share2 className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </>
                       )}
-                      {pack.status === 'COMPLETED' && (
-                        <a href={`/api/v1/packs/${pack.id}/download`} download>
-                          <Button variant="ghost" size="sm" title="Download">
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </a>
-                      )}
-                      {pack.status === 'COMPLETED' && (
-                        <Button variant="ghost" size="sm" title="Share">
-                          <Share2 className="h-4 w-4" />
+                      {(pack.status === 'COMPLETED' || pack.status === 'FAILED') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Regenerate Pack"
+                          onClick={() => regenerateMutation.mutate(pack)}
+                          disabled={regenerateMutation.isPending}
+                        >
+                          <RefreshCw className={`h-4 w-4 ${regenerateMutation.isPending ? 'animate-spin' : ''}`} />
                         </Button>
                       )}
                       {pack.status === 'PENDING' || pack.status === 'GENERATING' ? (
@@ -422,10 +635,22 @@ export default function PacksPage() {
                         </div>
                       ) : null}
                       {pack.status === 'FAILED' && (
-                        <div className="flex items-center gap-2 text-danger">
+                        <div className="flex items-center gap-1 text-danger ml-1">
                           <AlertCircle className="h-4 w-4" />
                           <span className="text-xs">Failed</span>
                         </div>
+                      )}
+                      {/* Delete button - always show for completed or failed */}
+                      {(pack.status === 'COMPLETED' || pack.status === 'FAILED') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Delete Pack"
+                          onClick={() => setShowDeleteConfirm(pack.id)}
+                          className="text-danger hover:text-danger hover:bg-danger/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       )}
                     </div>
                   </td>
@@ -681,6 +906,46 @@ export default function PacksPage() {
                   Generate Pack
                 </Button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-danger/10 flex items-center justify-center">
+                  <Trash2 className="h-6 w-6 text-danger" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-text-primary">Delete Pack</h3>
+                  <p className="text-sm text-text-secondary mt-1">
+                    Are you sure you want to delete this pack? This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 bg-background-tertiary border-t border-input-border flex justify-end gap-3">
+              <Button
+                variant="outline"
+                size="md"
+                onClick={() => setShowDeleteConfirm(null)}
+                disabled={deleteMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => deleteMutation.mutate(showDeleteConfirm)}
+                loading={deleteMutation.isPending}
+                className="bg-danger hover:bg-danger/90"
+              >
+                Delete Pack
+              </Button>
             </div>
           </div>
         </div>

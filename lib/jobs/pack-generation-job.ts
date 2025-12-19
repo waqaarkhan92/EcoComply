@@ -24,6 +24,10 @@ import { elvHeadroomService, type ELVSummary } from '@/lib/services/elv-headroom
 import { sendEmail } from '@/lib/services/email-service';
 import { baseEmailTemplate } from '@/lib/templates/notification-templates';
 
+// Modular Pack Module (renderers available at @/lib/packs/renderers for future migration)
+import type { PackType, PackData, Section, WatermarkOptions as ModularWatermarkOptions } from '@/lib/packs';
+import { applyWatermarkToAllPages } from '@/lib/packs';
+
 // ========================================================================
 // CHART RENDERING SETUP
 // ========================================================================
@@ -80,6 +84,45 @@ const COLORS = {
   BLACK: '#1F2937',
   WHITE: '#FFFFFF',
 };
+
+// Generation stages and their progress percentages
+type GenerationStage = 'QUEUED' | 'GATHERING_DATA' | 'COLLECTING_EVIDENCE' | 'RENDERING_PDF' | 'UPLOADING' | 'FINALIZING' | 'COMPLETED' | 'FAILED';
+
+const STAGE_PROGRESS: Record<GenerationStage, number> = {
+  QUEUED: 0,
+  GATHERING_DATA: 10,
+  COLLECTING_EVIDENCE: 30,
+  RENDERING_PDF: 50,
+  UPLOADING: 80,
+  FINALIZING: 95,
+  COMPLETED: 100,
+  FAILED: 0,
+};
+
+/**
+ * Update pack generation progress
+ * Updates the generation_progress and generation_stage fields in the database
+ */
+async function updatePackProgress(
+  packId: string,
+  stage: GenerationStage,
+  additionalData?: Record<string, any>
+): Promise<void> {
+  try {
+    await supabaseAdmin
+      .from('audit_packs')
+      .update({
+        generation_progress: STAGE_PROGRESS[stage],
+        generation_stage: stage,
+        updated_at: new Date().toISOString(),
+        ...additionalData,
+      })
+      .eq('id', packId);
+  } catch (error) {
+    console.error(`Failed to update pack progress for ${packId}:`, error);
+    // Don't throw - progress updates shouldn't fail the job
+  }
+}
 
 /**
  * Send pack email distribution
@@ -250,14 +293,12 @@ export async function processPackGenerationJob(job: Job<PackGenerationJobData>):
       throw new Error(`Pack not found: ${packError?.message || 'Unknown error'}`);
     }
 
-    // Update status to GENERATING
-    await supabaseAdmin
-      .from('audit_packs')
-      .update({ status: 'GENERATING', updated_at: new Date().toISOString() })
-      .eq('id', pack_id);
+    // Update status to GENERATING and set initial progress
+    await updatePackProgress(pack_id, 'GATHERING_DATA', { status: 'GENERATING' });
 
     // Collect data based on pack type
     const packData = await collectPackData(pack_type, company_id, site_id, document_id, date_range_start, date_range_end, filters);
+    await updatePackProgress(pack_id, 'COLLECTING_EVIDENCE');
 
     // Calculate pack metrics from collected data
     const obligations = packData.obligations || [];
@@ -285,12 +326,15 @@ export async function processPackGenerationJob(job: Job<PackGenerationJobData>):
 
     // Snapshot evidence and obligations to pack_contents for version-locking
     await snapshotPackContents(pack_id, packData);
+    await updatePackProgress(pack_id, 'RENDERING_PDF');
 
     // Generate PDF based on pack type
     const pdfBuffer = await generatePackPDF(pack_type, packData, pack, watermark);
+    await updatePackProgress(pack_id, 'UPLOADING');
 
     // Upload to Supabase Storage
     const storagePath = await uploadPackToStorage(pack_id, pdfBuffer, pack_type);
+    await updatePackProgress(pack_id, 'FINALIZING');
 
     // Calculate generation time and update pack with SLA tracking
     const generationEndTime = Date.now();
@@ -303,11 +347,13 @@ export async function processPackGenerationJob(job: Job<PackGenerationJobData>):
       console.log(`Pack generation completed in ${generationSlaSeconds} seconds (SLA compliant)`);
     }
 
-    // Update pack record with status, file path, and SLA tracking
+    // Update pack record with status, file path, SLA tracking, and final progress
     await supabaseAdmin
       .from('audit_packs')
       .update({
         status: 'COMPLETED',
+        generation_progress: 100,
+        generation_stage: 'COMPLETED',
         file_path: storagePath,
         generation_sla_seconds: generationSlaSeconds,
         file_size_bytes: pdfBuffer.length,
@@ -347,11 +393,13 @@ export async function processPackGenerationJob(job: Job<PackGenerationJobData>):
   } catch (error: any) {
     console.error(`Pack generation failed: ${pack_id}`, error);
 
-    // Update pack status
+    // Update pack status with FAILED progress
     await supabaseAdmin
       .from('audit_packs')
       .update({
         status: 'FAILED',
+        generation_progress: 0,
+        generation_stage: 'FAILED',
         error_message: error.message || 'Unknown error',
         updated_at: new Date().toISOString(),
       })
@@ -613,86 +661,7 @@ async function collectPackData(
   };
 }
 
-/**
- * Apply Watermark to PDF Document
- * Adds a subtle diagonal watermark to every page of the document
- *
- * @param doc - PDFKit document instance
- * @param options - Watermark configuration options
- */
-function applyWatermark(doc: PDFKit.PDFDocument, options: WatermarkOptions): void {
-  if (!options.enabled) {
-    return;
-  }
-
-  // Default values
-  const opacity = options.opacity ?? 0.1;
-  const angle = options.angle ?? -45;
-  const fontSize = options.fontSize ?? 48;
-  const color = options.color ?? '#CCCCCC';
-
-  // Build watermark text
-  let watermarkText = options.text || 'CONFIDENTIAL';
-
-  // Add recipient name if provided
-  if (options.recipientName) {
-    watermarkText += `\n${options.recipientName}`;
-  }
-
-  // Add expiration date if provided
-  if (options.expirationDate) {
-    watermarkText += `\nExpires: ${options.expirationDate}`;
-  }
-
-  // Save the current state
-  doc.save();
-
-  // Get page dimensions
-  const pageWidth = doc.page.width;
-  const pageHeight = doc.page.height;
-
-  // Calculate center position
-  const centerX = pageWidth / 2;
-  const centerY = pageHeight / 2;
-
-  // Move to center and rotate
-  doc.translate(centerX, centerY);
-  doc.rotate(angle, { origin: [0, 0] });
-
-  // Apply watermark styling
-  doc.fillColor(color, opacity);
-  doc.fontSize(fontSize);
-  doc.font('Helvetica-Bold');
-
-  // Draw the watermark text centered
-  doc.text(watermarkText, -200, -30, {
-    width: 400,
-    align: 'center',
-    lineGap: 10,
-  });
-
-  // Restore the previous state
-  doc.restore();
-}
-
-/**
- * Apply Watermark to All Pages
- * Iterates through all pages in the document and applies the watermark
- *
- * @param doc - PDFKit document instance with bufferPages enabled
- * @param options - Watermark configuration options
- */
-function applyWatermarkToAllPages(doc: PDFKit.PDFDocument, options: WatermarkOptions): void {
-  if (!options.enabled) {
-    return;
-  }
-
-  const range = doc.bufferedPageRange();
-  for (let i = 0; i < range.count; i++) {
-    doc.switchToPage(i);
-    applyWatermark(doc, options);
-  }
-}
+// NOTE: applyWatermark and applyWatermarkToAllPages are now imported from @/lib/packs
 
 /**
  * Generate PDF based on pack type
