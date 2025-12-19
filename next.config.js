@@ -22,7 +22,7 @@ const nextConfig = {
   },
 
   // Server-side packages that shouldn't be bundled
-  serverExternalPackages: ['pino', 'pino-pretty', 'thread-stream'],
+  serverExternalPackages: ['pino', 'pino-pretty', 'thread-stream', 'ioredis', 'bullmq'],
 
   // Webpack configuration to exclude test files from node_modules
   webpack: (config, { isServer }) => {
