@@ -64,7 +64,6 @@ async function example2_ListWebhooks() {
       console.log(`- ${webhook.name}: ${webhook.url}`);
       console.log(`  Events: ${webhook.events.join(', ')}`);
       console.log(`  Active: ${webhook.is_active}`);
-      console.log(`  Last delivery: ${webhook.last_delivery_status}`);
     });
 
     return webhooks;
@@ -255,7 +254,10 @@ async function example8_IntegrationInService() {
  * This is code that would run on the RECEIVING end of webhooks
  * (in the external system that registered the webhook)
  */
-async function example9_WebhookReceiverEndpoint() {
+async function example9_WebhookReceiverEndpoint(
+  req: { headers: Record<string, string>; body: any },
+  res: { status: (code: number) => { json: (data: any) => void } }
+) {
   // Express.js example
   // app.post('/api/webhooks/ecocomply', async (req, res) => {
 
